@@ -31,6 +31,11 @@ export async function createSubmission(dr: SubmissionDraft): Promise<Submission>
   return { ...dr, id, docNumber, createdAt: now, updatedAt: now, printCount: 0, lastPrintedAt: null }
 }
 
+export async function getSubmission(id: string): Promise<Submission | null> {
+  const snap = await getDoc(doc(db, 'submissions', id))
+  return snap.exists() ? (snap.data() as Submission) : null
+}
+
 export async function updateSubmission(id: string, s: Submission): Promise<void> {
   await updateDoc(doc(db, 'submissions', id), {
     header: s.header, items: s.items, totals: s.totals, updatedAt: Date.now(),
