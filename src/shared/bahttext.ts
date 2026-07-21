@@ -19,16 +19,15 @@ function readGroup(numStr: string): string {
 
 function readInteger(n: number): string {
   if (n === 0) return 'ศูนย์'
+  // split into 6-digit groups, high -> low, join with "ล้าน"
+  const groups: string[] = []
   let s = String(n)
-  let result = ''
-  // แยกทีละ 6 หลักด้วยคำว่า "ล้าน"
   while (s.length > 6) {
-    const tail = s.slice(-6)
+    groups.unshift(s.slice(-6))
     s = s.slice(0, -6)
-    result = readGroup(tail) + 'ล้าน' + result
   }
-  result = readGroup(s) + result
-  return result
+  groups.unshift(s)
+  return groups.map(g => readGroup(g)).join('ล้าน')
 }
 
 export function bahtText(amount: number): string {
