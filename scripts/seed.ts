@@ -1,13 +1,51 @@
 // Seed companies + the first admin account. Run ONCE against the emulator or production.
-// Usage: npx tsx scripts/seed.ts
-// (Requires .env.local to point at the target: VITE_USE_EMULATOR=true for the local emulator,
-//  or real Firebase config + VITE_USE_EMULATOR=false for production.)
+// Usage: npx tsx scripts/seed.ts   (or: npm run seed)
+//
+// Default target = local emulator (localhost:9099 auth / localhost:8080 firestore),
+// using projectId from FB_PROJECT_ID env var (defaults to 'demo-expense-form').
+//
+// For production: set SEED_TARGET=production and provide FB_API_KEY, FB_AUTH_DOMAIN,
+// FB_PROJECT_ID, FB_APP_ID env vars.
 //
 // NOTE: creating the admin uses a password. Do this yourself — verify the values below first.
-import { secondaryAuth, db } from '../src/lib/firebase'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
-import { employeeIdToEmail } from '../src/data/auth'
+//
+// employeeIdToEmail is inlined here (rather than imported from src/data/auth) because
+// src/data/auth.ts imports src/lib/firebase.ts, which reads import.meta.env.VITE_FB_*
+// at module load time — that's undefined under Node/tsx and would crash this script.
+import { initializeApp } from 'firebase/app'
+import { getAuth, connectAuthEmulator, createUserWithEmailAndPassword } from 'firebase/auth'
+import { getFirestore, connectFirestoreEmulator, doc, setDoc } from 'firebase/firestore'
+
+function employeeIdToEmail(employeeId: string): string {
+  return `${employeeId.trim()}@globe.local`
+}
+
+const isProduction = process.env.SEED_TARGET === 'production'
+const projectId = process.env.FB_PROJECT_ID || 'demo-expense-form'
+
+// The Firebase Auth SDK validates apiKey's shape client-side even when talking to the
+// emulator, so a placeholder is required (the emulator itself ignores its value).
+const config = isProduction
+  ? {
+      apiKey: process.env.FB_API_KEY,
+      authDomain: process.env.FB_AUTH_DOMAIN,
+      projectId: process.env.FB_PROJECT_ID,
+      appId: process.env.FB_APP_ID,
+    }
+  : {
+      apiKey: 'demo-emulator-key',
+      authDomain: `${projectId}.firebaseapp.com`,
+      projectId,
+    }
+
+const app = initializeApp(config)
+const auth = getAuth(app)
+const db = getFirestore(app)
+
+if (!isProduction) {
+  connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true })
+  connectFirestoreEmulator(db, 'localhost', 8080)
+}
 
 async function main() {
   // --- Companies (edit names/addresses to match reality before running) ---
@@ -22,7 +60,7 @@ async function main() {
 
   // --- First admin (employeeId: admin001, initial password = admin001) ---
   const cred = await createUserWithEmailAndPassword(
-    secondaryAuth,
+    auth,
     employeeIdToEmail('admin001'),
     'admin001',
   )
