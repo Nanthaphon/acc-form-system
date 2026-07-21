@@ -38,3 +38,8 @@ export async function setMustChangePassword(uid: string, value: boolean): Promis
   const snap = await getDoc(doc(db, 'users', uid))
   if (snap.exists()) await setDoc(doc(db, 'users', uid), { ...snap.data(), mustChangePassword: value })
 }
+
+export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<void> {
+  const snap = await getDoc(doc(db, 'users', uid))
+  if (snap.exists()) await setDoc(doc(db, 'users', uid), { ...snap.data(), ...patch })
+}
