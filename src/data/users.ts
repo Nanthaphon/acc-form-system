@@ -3,6 +3,7 @@ import { doc, getDoc, getDocs, collection, setDoc } from 'firebase/firestore'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import type { UserProfile, Role } from '../types/schema'
 import { employeeIdToEmail } from './auth'
+import type { CsvEmployeeRow } from '../shared/csv'
 
 export interface NewEmployee {
   employeeId: string; firstName: string; lastName: string
@@ -42,4 +43,13 @@ export async function setMustChangePassword(uid: string, value: boolean): Promis
 export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<void> {
   const snap = await getDoc(doc(db, 'users', uid))
   if (snap.exists()) await setDoc(doc(db, 'users', uid), { ...snap.data(), ...patch })
+}
+
+export async function importEmployees(rows: CsvEmployeeRow[]): Promise<{ ok: number; failed: { employeeId: string; reason: string }[] }> {
+  let ok = 0; const failed: { employeeId: string; reason: string }[] = []
+  for (const r of rows) {
+    try { await createEmployee(r); ok++ }
+    catch (e: any) { failed.push({ employeeId: r.employeeId, reason: e?.code || 'error' }) }
+  }
+  return { ok, failed }
 }
