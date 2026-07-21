@@ -58,6 +58,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               <td className="border p-1"><input className="w-28" value={it.bankAccount} onChange={e => setItem(i, { bankAccount: e.target.value })} /></td>
               <td className="border p-1 text-right">{computed[i].amountBeforeWht.toLocaleString()}</td>
               <td className="border p-1 text-right">
+                <label className="block text-[10px]"><input type="checkbox" checked={it.applyWht}
+                  onChange={e => setItem(i, { applyWht: e.target.checked })} /> หัก3%</label>
                 <input type="number" className="w-16 text-right" value={computed[i].wht3}
                   onChange={e => setOverride(i, 'wht3', Number(e.target.value), true)} />
                 <label className="block text-[10px]"><input type="checkbox" checked={!!it.overrides.wht3}

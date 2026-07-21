@@ -1,7 +1,7 @@
 import { db } from '../lib/firebase'
 import {
   collection, doc, getDoc, getDocs, query, where, orderBy,
-  runTransaction, updateDoc,
+  runTransaction, updateDoc, increment,
 } from 'firebase/firestore'
 import type { Submission } from '../types/schema'
 import { formatDocNumber } from '../shared/docNumber'
@@ -44,9 +44,7 @@ export async function updateSubmission(id: string, s: Submission): Promise<void>
 
 export async function incrementPrint(id: string): Promise<void> {
   const ref = doc(db, 'submissions', id)
-  const snap = await getDoc(ref)
-  const count = snap.exists() ? (snap.data().printCount as number) : 0
-  await updateDoc(ref, { printCount: count + 1, lastPrintedAt: Date.now() })
+  await updateDoc(ref, { printCount: increment(1), lastPrintedAt: Date.now() })
 }
 
 export async function listMySubmissions(uid: string): Promise<Submission[]> {
