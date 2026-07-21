@@ -1,6 +1,6 @@
 import { db } from '../lib/firebase'
 import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore'
-import { Company } from '../types/schema'
+import type { Company } from '../types/schema'
 
 export async function getCompany(id: string): Promise<Company | null> {
   const snap = await getDoc(doc(db, 'companies', id))

@@ -1,7 +1,7 @@
 import { db, secondaryAuth } from '../lib/firebase'
 import { doc, getDoc, getDocs, collection, setDoc } from 'firebase/firestore'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { UserProfile, Role } from '../types/schema'
+import type { UserProfile, Role } from '../types/schema'
 import { employeeIdToEmail } from './auth'
 
 export interface NewEmployee {

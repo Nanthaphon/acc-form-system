@@ -1,7 +1,7 @@
 import { auth } from '../lib/firebase'
 import {
   signInWithEmailAndPassword, signOut as fbSignOut,
-  updatePassword, User,
+  updatePassword, type User,
 } from 'firebase/auth'
 
 const DOMAIN = 'globe.local'

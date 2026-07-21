@@ -1,4 +1,4 @@
-import { ExpenseItem, ExpenseTotals } from '../../types/schema'
+import type { ExpenseItem, ExpenseTotals } from '../../types/schema'
 import { bahtText } from '../../shared/bahttext'
 
 export function round2(n: number): number {

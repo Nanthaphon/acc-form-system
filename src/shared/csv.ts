@@ -1,5 +1,5 @@
 import Papa from 'papaparse'
-import { Role } from '../types/schema'
+import type { Role } from '../types/schema'
 
 export interface CsvEmployeeRow {
   employeeId: string; firstName: string; lastName: string
