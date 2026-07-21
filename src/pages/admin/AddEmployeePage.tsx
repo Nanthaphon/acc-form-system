@@ -12,9 +12,13 @@ export default function AddEmployeePage() {
   const set = (k: string, v: string) => setF({ ...f, [k]: v })
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    await createEmployee(f as any)
-    alert('เพิ่มพนักงานแล้ว (รหัสผ่านเริ่มต้น = รหัสพนักงาน)')
-    nav('/admin/employees')
+    try {
+      await createEmployee(f as any)
+      alert('เพิ่มพนักงานแล้ว (รหัสผ่านเริ่มต้น = รหัสพนักงาน)')
+      nav('/admin/employees')
+    } catch {
+      alert('เพิ่มพนักงานไม่สำเร็จ: อาจมีรหัสพนักงานนี้อยู่แล้ว')
+    }
   }
   return (
     <form onSubmit={submit} className="max-w-lg space-y-3">

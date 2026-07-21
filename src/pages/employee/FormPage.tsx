@@ -35,24 +35,36 @@ export default function FormPage() {
 
   async function save() {
     const totals = computeTotals(items)
-    if (savedId) {
-      const existing = await getSubmission(savedId)
-      if (existing) await updateSubmission(savedId, { ...existing, header, items, totals })
-    } else {
-      const created = await createSubmission({
-        formType: 'expense-claim', header, items, totals,
-        createdBy: user!.uid, createdByEmployeeId: profile!.employeeId,
-      })
-      setSavedId(created.id); setDocNumber(created.docNumber)
+    const hasAmount = totals.totalBefore > 0
+    if (!hasAmount) {
+      alert('กรุณากรอกรายการอย่างน้อย 1 รายการ (วันทำงาน x วันละ ต้องมากกว่า 0)')
+      return
     }
-    alert('บันทึกแล้ว')
+    if (!header.firstName.trim() || !header.lastName.trim() || !header.position.trim()) {
+      alert('กรุณากรอกชื่อ นามสกุล และตำแหน่งให้ครบถ้วน')
+      return
+    }
+    try {
+      if (savedId) {
+        const existing = await getSubmission(savedId)
+        if (existing) await updateSubmission(savedId, { ...existing, header, items, totals })
+      } else {
+        const created = await createSubmission({
+          formType: 'expense-claim', header, items, totals,
+          createdBy: user!.uid, createdByEmployeeId: profile!.employeeId,
+        })
+        setSavedId(created.id); setDocNumber(created.docNumber)
+      }
+      alert('บันทึกแล้ว')
+    } catch {
+      alert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+    }
   }
 
   async function downloadPdf() {
     const blob = await pdf(<ExpenseClaimPdf company={company} header={header} items={items} docNumber={docNumber} />).toBlob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = `${docNumber}.pdf`; a.click()
-    if (savedId) await incrementPrint(savedId)
   }
   async function print() {
     if (savedId) await incrementPrint(savedId)
@@ -75,7 +87,9 @@ export default function FormPage() {
           <button className="rounded border px-4 py-2" onClick={() => nav('/history')}>ไปหน้าประวัติ</button>
         </div>
       </div>
-      {(showPreview || true) && <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} />}
+      <div className={showPreview ? '' : 'hidden print:block'}>
+        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} />
+      </div>
     </div>
   )
 }
