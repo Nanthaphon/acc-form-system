@@ -9,12 +9,11 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "seed": "tsx scripts/seed.ts"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
-    "firebase": "^12.16.0",
+    "@supabase/supabase-js": "^2.110.8",
     "papaparse": "^5.5.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
