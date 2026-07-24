@@ -5,9 +5,9 @@ import { listMySubmissions } from '../../data/submissions'
 import type { Submission } from '../../types/schema'
 
 export default function HistoryPage() {
-  const { user } = useAuth()
+  const { profile } = useAuth()
   const [rows, setRows] = useState<Submission[]>([])
-  useEffect(() => { if (user) listMySubmissions(user.uid).then(setRows) }, [user])
+  useEffect(() => { if (profile) listMySubmissions(profile.uid).then(setRows) }, [profile])
   return (
     <div>
       <h1 className="mb-4 text-xl font-medium">ประวัติเอกสารของฉัน</h1>

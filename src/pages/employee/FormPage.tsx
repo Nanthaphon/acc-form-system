@@ -13,7 +13,7 @@ import { getCompany } from '../../data/companies'
 
 export default function FormPage() {
   const { id } = useParams()
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
   const nav = useNavigate()
   const [company, setCompany] = useState<Company | null>(null)
   const [docNumber, setDocNumber] = useState('(ยังไม่บันทึก)')
@@ -51,7 +51,7 @@ export default function FormPage() {
       } else {
         const created = await createSubmission({
           formType: 'expense-claim', header, items, totals,
-          createdBy: user!.uid, createdByEmployeeId: profile!.employeeId,
+          createdBy: profile!.uid, createdByEmployeeId: profile!.employeeId,
         })
         setSavedId(created.id); setDocNumber(created.docNumber)
       }

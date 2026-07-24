@@ -6,7 +6,7 @@ import { changeMyPassword } from '../data/auth'
 import { setMustChangePassword } from '../data/users'
 
 export default function ChangePasswordPage() {
-  const { user, refresh } = useAuth()
+  const { profile, refresh } = useAuth()
   const [pw, setPw] = useState(''); const [pw2, setPw2] = useState('')
   const [msg, setMsg] = useState(''); const nav = useNavigate()
 
@@ -14,8 +14,8 @@ export default function ChangePasswordPage() {
     e.preventDefault()
     if (pw.length < 6) return setMsg('รหัสผ่านอย่างน้อย 6 ตัว')
     if (pw !== pw2) return setMsg('รหัสผ่านไม่ตรงกัน')
-    await changeMyPassword(user!, pw)
-    await setMustChangePassword(user!.uid, false)
+    await changeMyPassword(pw)
+    await setMustChangePassword(profile!.uid, false)
     await refresh()
     nav('/')
   }

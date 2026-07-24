@@ -1,20 +1,18 @@
-import { auth } from '../lib/firebase'
-import {
-  signInWithEmailAndPassword, signOut as fbSignOut,
-  updatePassword, type User,
-} from 'firebase/auth'
+import { supabase } from '../lib/supabase'
 
 const DOMAIN = 'globe.local'
 export function employeeIdToEmail(employeeId: string): string {
   return `${employeeId.trim()}@${DOMAIN}`
 }
-
-export function loginWithEmployeeId(employeeId: string, password: string) {
-  return signInWithEmailAndPassword(auth, employeeIdToEmail(employeeId), password)
+export async function loginWithEmployeeId(employeeId: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: employeeIdToEmail(employeeId), password,
+  })
+  if (error) throw error
+  return data
 }
-
-export function logout() { return fbSignOut(auth) }
-
-export function changeMyPassword(user: User, newPassword: string) {
-  return updatePassword(user, newPassword)
+export async function logout() { await supabase.auth.signOut() }
+export async function changeMyPassword(newPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) throw error
 }

@@ -1,8 +1,6 @@
-import { db, secondaryAuth } from '../lib/firebase'
-import { doc, getDoc, getDocs, collection, setDoc } from 'firebase/firestore'
-import { createUserWithEmailAndPassword } from 'firebase/auth'
-import type { UserProfile, Role } from '../types/schema'
+import { supabase, supabaseSecondary } from '../lib/supabase'
 import { employeeIdToEmail } from './auth'
+import type { UserProfile, Role } from '../types/schema'
 import type { CsvEmployeeRow } from '../shared/csv'
 
 export interface NewEmployee {
@@ -11,45 +9,46 @@ export interface NewEmployee {
   defaultJob: string; bankAccount: string; role: Role
 }
 
-// สร้างบัญชี Auth ผ่าน secondary app (ไม่ทำ admin session หลุด) + เขียนโปรไฟล์
 export async function createEmployee(e: NewEmployee): Promise<string> {
-  const cred = await createUserWithEmailAndPassword(
-    secondaryAuth, employeeIdToEmail(e.employeeId), e.employeeId, // รหัสเริ่มต้น = รหัสพนักงาน
-  )
-  const uid = cred.user.uid
+  // 1) create the auth user on the SECONDARY client (default password = employeeId)
+  const { data, error } = await supabaseSecondary.auth.signUp({
+    email: employeeIdToEmail(e.employeeId),
+    password: e.employeeId,
+  })
+  if (error) throw error
+  const uid = data.user!.id
+  await supabaseSecondary.auth.signOut()
+  // 2) insert the profile as the ADMIN (primary client)
   const profile: UserProfile = {
-    uid, ...e, mustChangePassword: true, createdAt: Date.now(),
+    uid, employeeId: e.employeeId, firstName: e.firstName, lastName: e.lastName,
+    position: e.position, department: e.department, companyId: e.companyId,
+    defaultJob: e.defaultJob, bankAccount: e.bankAccount, role: e.role,
+    mustChangePassword: true, createdAt: Date.now(),
   }
-  await setDoc(doc(db, 'users', uid), profile)
-  await secondaryAuth.signOut()
+  const { error: e2 } = await supabase.from('profiles').insert(profile)
+  if (e2) throw e2
   return uid
 }
 
 export async function getProfileByUid(uid: string): Promise<UserProfile | null> {
-  const snap = await getDoc(doc(db, 'users', uid))
-  return snap.exists() ? (snap.data() as UserProfile) : null
+  const { data } = await supabase.from('profiles').select('*').eq('uid', uid).maybeSingle()
+  return (data as UserProfile) ?? null
 }
-
 export async function listEmployees(): Promise<UserProfile[]> {
-  const snap = await getDocs(collection(db, 'users'))
-  return snap.docs.map(d => d.data() as UserProfile)
+  const { data } = await supabase.from('profiles').select('*').order('employeeId')
+  return (data ?? []) as UserProfile[]
 }
-
 export async function setMustChangePassword(uid: string, value: boolean): Promise<void> {
-  const snap = await getDoc(doc(db, 'users', uid))
-  if (snap.exists()) await setDoc(doc(db, 'users', uid), { ...snap.data(), mustChangePassword: value })
+  await supabase.from('profiles').update({ mustChangePassword: value }).eq('uid', uid)
 }
-
 export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<void> {
-  const snap = await getDoc(doc(db, 'users', uid))
-  if (snap.exists()) await setDoc(doc(db, 'users', uid), { ...snap.data(), ...patch })
+  await supabase.from('profiles').update(patch).eq('uid', uid)
 }
-
 export async function importEmployees(rows: CsvEmployeeRow[]): Promise<{ ok: number; failed: { employeeId: string; reason: string }[] }> {
   let ok = 0; const failed: { employeeId: string; reason: string }[] = []
   for (const r of rows) {
     try { await createEmployee(r); ok++ }
-    catch (e: any) { failed.push({ employeeId: r.employeeId, reason: e?.code || 'error' }) }
+    catch (e: any) { failed.push({ employeeId: r.employeeId, reason: e?.message || 'error' }) }
   }
   return { ok, failed }
 }
