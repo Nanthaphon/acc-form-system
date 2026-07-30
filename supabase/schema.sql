@@ -63,6 +63,19 @@ create or replace function increment_print(sub_id uuid) returns void language sq
   where id = sub_id
 $$;
 
+-- ===== Admin-only: fully delete an employee (auth user + profile + submissions) =====
+create or replace function delete_employee(target uuid) returns void language plpgsql security definer as $$
+begin
+  if not is_admin() then
+    raise exception 'only admin can delete employees';
+  end if;
+  if target = auth.uid() then
+    raise exception 'cannot delete yourself';
+  end if;
+  delete from submissions where "createdBy" = target;
+  delete from auth.users where id = target;  -- cascades to profiles (on delete cascade)
+end $$;
+
 -- ===== Prevent non-admins from changing their own role / employeeId =====
 create or replace function protect_profile_fields() returns trigger language plpgsql as $$
 begin

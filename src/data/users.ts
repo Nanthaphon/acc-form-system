@@ -44,6 +44,12 @@ export async function setMustChangePassword(uid: string, value: boolean): Promis
 export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<void> {
   await supabase.from('profiles').update(patch).eq('uid', uid)
 }
+// Fully removes an employee: their login account, profile, and submissions.
+// Runs a SECURITY DEFINER RPC (delete_employee) that checks admin + deletes the auth user.
+export async function deleteEmployee(uid: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_employee', { target: uid })
+  if (error) throw error
+}
 export async function importEmployees(rows: CsvEmployeeRow[]): Promise<{ ok: number; failed: { employeeId: string; reason: string }[] }> {
   let ok = 0; const failed: { employeeId: string; reason: string }[] = []
   for (const r of rows) {
