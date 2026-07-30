@@ -12,12 +12,16 @@ export default function AddEmployeePage() {
   const set = (k: string, v: string) => setF({ ...f, [k]: v })
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (f.employeeId.trim().length < 6) {
+      alert('รหัสพนักงานต้องมีอย่างน้อย 6 ตัวอักษร (เพราะใช้เป็นรหัสผ่านเริ่มต้นด้วย)')
+      return
+    }
     try {
       await createEmployee(f as any)
       alert('เพิ่มพนักงานแล้ว (รหัสผ่านเริ่มต้น = รหัสพนักงาน)')
       nav('/admin/employees')
-    } catch {
-      alert('เพิ่มพนักงานไม่สำเร็จ: อาจมีรหัสพนักงานนี้อยู่แล้ว')
+    } catch (err: any) {
+      alert('เพิ่มพนักงานไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
     }
   }
   return (
