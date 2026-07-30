@@ -7,51 +7,215 @@ Font.register({ family: 'Prompt', fonts: [
   { src: '/fonts/Prompt-Bold.ttf', fontWeight: 'bold' },
 ]})
 
+const DEFAULT_ADDRESS =
+  '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
+
+const CATEGORY_LABELS = [
+  'ค่าไมล์เลทและค่าใช้จ่ายเดินทาง',
+  'ค่าใช้จ่ายต่างๆ',
+  'ค่าล่วงเวลา',
+  'ค่าเบี้ยเลี้ยง',
+]
+
+const MIN_ROWS = 14
+
+// Column width proportions (12 columns) — sum ~100
+const COL = {
+  date: 8, seq: 4, pcCode: 8, pcName: 14, workDays: 6, ratePerDay: 6,
+  bank: 9, pcType: 8, job: 6, before: 10, wht: 10, net: 11,
+}
+
 const s = StyleSheet.create({
-  page: { fontFamily: 'Prompt', fontSize: 9, padding: 28 },
-  center: { textAlign: 'center' }, right: { textAlign: 'right' },
-  row: { flexDirection: 'row' },
-  cell: { borderWidth: 0.5, borderColor: '#000', padding: 2, flexGrow: 1 },
+  page: { fontFamily: 'Prompt', fontSize: 8, padding: 24 },
+  center: { textAlign: 'center' },
+  right: { textAlign: 'right' },
   bold: { fontWeight: 'bold' },
+  row: { flexDirection: 'row' },
+  headerBand: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  logoBox: { width: 32, height: 32, borderWidth: 0.5, borderColor: '#000', alignItems: 'center', justifyContent: 'center', marginRight: 6 },
+  logoText: { fontSize: 6, textAlign: 'center' },
+  companyName: { fontSize: 10, fontWeight: 'bold' },
+  companyAddr: { fontWeight: 'bold', fontSize: 8 },
+  titleBox: { borderWidth: 0.5, borderColor: '#000', paddingHorizontal: 8, paddingVertical: 4 },
+  titleText: { fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
+  thickRule: { borderTopWidth: 1.5, borderTopColor: '#000', marginTop: 6 },
+  docCode: { textAlign: 'right', marginTop: 2 },
+  subjectRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  checkboxGrid: { flexDirection: 'row', flexWrap: 'wrap', width: 260 },
+  checkboxItem: { width: 130, marginBottom: 2 },
+  requesterRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, alignItems: 'flex-end' },
+  requesterValue: { borderBottomWidth: 0.5, borderBottomColor: '#000', minWidth: 60, marginRight: 8, paddingHorizontal: 2 },
+  requesterLabel: { marginRight: 2 },
+  table: { marginTop: 8, borderWidth: 0.5, borderColor: '#000' },
+  cell: { borderWidth: 0.5, borderColor: '#000', padding: 2, justifyContent: 'center' },
+  cellText: { fontSize: 7 },
+  amountBox: { borderWidth: 0.5, borderColor: '#000', marginTop: 4, padding: 3, textAlign: 'center' },
+  sigRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 28 },
+  sigCol: { alignItems: 'center', width: 140 },
+  sigLine: { borderBottomWidth: 0.5, borderBottomColor: '#000', width: 110, marginBottom: 3, height: 14 },
+  sigDate: { marginTop: 6 },
+  notes: { marginTop: 16, fontSize: 6.5 },
 })
+
+function money(n: number): string {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseItem[]; docNumber: string }
 
 export function ExpenseClaimPdf({ company, header, items, docNumber }: Props) {
   const computed = items.map(computeItem)
   const totals = computeTotals(items)
+  const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
+
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        <Text style={[s.center, s.bold]}>{company?.name}</Text>
-        <Text style={s.center}>{company?.address}</Text>
-        <Text style={s.right}>{docNumber}</Text>
-        <Text>เรื่อง ขออนุมัติเบิกค่าใช้จ่าย หมวด: {header.categories.join(', ')}</Text>
-        <Text>ชื่อ {header.firstName} {header.lastName} ตำแหน่ง {header.position} Job {header.job}</Text>
-        <View style={{ marginTop: 6 }}>
-          <View style={[s.row, s.bold]}>
-            {['วันเดือนปี','PC Code','PC Name','วันทำงาน','วันละ','ก่อนหัก','หัก3%','สุทธิ'].map(h => <Text key={h} style={s.cell}>{h}</Text>)}
-          </View>
-          {items.map((it, i) => (
-            <View style={s.row} key={i}>
-              <Text style={s.cell}>{it.date}</Text><Text style={s.cell}>{it.pcCode}</Text>
-              <Text style={s.cell}>{it.pcName}</Text><Text style={s.cell}>{it.workDays}</Text>
-              <Text style={s.cell}>{it.ratePerDay}</Text>
-              <Text style={[s.cell, s.right]}>{computed[i].amountBeforeWht.toLocaleString()}</Text>
-              <Text style={[s.cell, s.right]}>{computed[i].wht3.toLocaleString()}</Text>
-              <Text style={[s.cell, s.right]}>{computed[i].amountNet.toLocaleString()}</Text>
+        {/* Header band */}
+        <View style={s.headerBand}>
+          <View style={{ flexDirection: 'row' }}>
+            <View style={s.logoBox}><Text style={s.logoText}>LOGO</Text></View>
+            <View>
+              <Text style={s.companyName}>GLOBE SYNDICATE (THAILAND) CO.,LTD.</Text>
+              <Text style={s.companyAddr}>{company?.address || DEFAULT_ADDRESS}</Text>
             </View>
-          ))}
-          <View style={[s.row, s.bold]}>
-            <Text style={[s.cell, { flexGrow: 5 }, s.right]}>รวมทั้งสิ้น</Text>
-            <Text style={[s.cell, s.right]}>{totals.totalBefore.toLocaleString()}</Text>
-            <Text style={[s.cell, s.right]}>{totals.totalWht.toLocaleString()}</Text>
-            <Text style={[s.cell, s.right]}>{totals.totalNet.toLocaleString()}</Text>
+          </View>
+          <View style={s.titleBox}>
+            <Text style={s.titleText}>ใบขออนุมัติเบิกค่าใช้จ่าย</Text>
           </View>
         </View>
-        <Text style={{ marginTop: 4 }}>เป็นจำนวนเงิน {totals.amountInThaiText}</Text>
-        <View style={[s.row, { marginTop: 40, justifyContent: 'space-around' }]}>
-          <Text>............... ผู้เบิก</Text><Text>............... หัวหน้าแผนก</Text><Text>............... ผู้อนุมัติ</Text>
+        <View style={s.thickRule} />
+        <Text style={s.docCode}>{docNumber || 'GAC6709-003'}</Text>
+
+        {/* เรื่อง/เรียน + checkboxes */}
+        <View style={s.subjectRow}>
+          <View>
+            <Text>เรื่อง  ขออนุมัติเบิกค่าใช้จ่าย</Text>
+            <Text>เรียน  ท่านผู้จัดการ</Text>
+          </View>
+          <View style={s.checkboxGrid}>
+            {CATEGORY_LABELS.map((label) => (
+              <Text key={label} style={s.checkboxItem}>
+                {header.categories.includes(label) ? '☑' : '☐'} {label}
+              </Text>
+            ))}
+          </View>
+        </View>
+
+        {/* Requester line */}
+        <View style={s.requesterRow}>
+          <Text style={s.requesterLabel}>ชื่อ</Text>
+          <Text style={s.requesterValue}>{header.firstName}</Text>
+          <Text style={s.requesterLabel}>นามสกุล</Text>
+          <Text style={s.requesterValue}>{header.lastName}</Text>
+          <Text style={s.requesterLabel}>ตำแหน่ง</Text>
+          <Text style={s.requesterValue}>{header.position}</Text>
+          <Text style={s.requesterLabel}>Job</Text>
+          <Text style={s.requesterValue}>{header.job}</Text>
+        </View>
+
+        {/* Main table */}
+        <View style={s.table}>
+          <View style={[s.row, s.bold]}>
+            <View style={[s.cell, { width: `${COL.date}%` }]}><Text style={s.cellText}>วันเดือนปี</Text></View>
+            <View style={[s.cell, { width: `${COL.seq}%` }]}><Text style={s.cellText}>ลำดับ</Text></View>
+            <View style={[s.cell, { width: `${COL.pcCode}%` }]}><Text style={s.cellText}>PC Code</Text></View>
+            <View style={[s.cell, { width: `${COL.pcName}%` }]}><Text style={s.cellText}>PC Name</Text></View>
+            <View style={[s.cell, { width: `${COL.workDays}%` }]}><Text style={s.cellText}>วันทำงาน</Text></View>
+            <View style={[s.cell, { width: `${COL.ratePerDay}%` }]}><Text style={s.cellText}>วันละ</Text></View>
+            <View style={[s.cell, { width: `${COL.bank}%` }]}><Text style={s.cellText}>ธนาคาร</Text></View>
+            <View style={[s.cell, { width: `${COL.pcType}%` }]}><Text style={s.cellText}>ประเภทพีซี</Text></View>
+            <View style={[s.cell, { width: `${COL.job}%` }]}><Text style={s.cellText}>Job</Text></View>
+            <View style={[s.cell, { width: `${COL.before}%` }]}><Text style={s.cellText}>ก่อนหัก</Text></View>
+            <View style={[s.cell, { width: `${COL.wht}%` }]}><Text style={s.cellText}>หักภาษี ณ ที่จ่าย 3%</Text></View>
+            <View style={[s.cell, { width: `${COL.net}%` }]}><Text style={s.cellText}>รวม</Text></View>
+          </View>
+
+          {items.map((it, i) => (
+            <View style={s.row} key={i}>
+              <View style={[s.cell, { width: `${COL.date}%` }]}><Text style={s.cellText}>{it.date}</Text></View>
+              <View style={[s.cell, { width: `${COL.seq}%` }]}><Text style={[s.cellText, s.center]}>{i + 1}</Text></View>
+              <View style={[s.cell, { width: `${COL.pcCode}%` }]}><Text style={s.cellText}>{it.pcCode}</Text></View>
+              <View style={[s.cell, { width: `${COL.pcName}%` }]}><Text style={s.cellText}>{it.pcName}</Text></View>
+              <View style={[s.cell, { width: `${COL.workDays}%` }]}><Text style={[s.cellText, s.center]}>{it.workDays}</Text></View>
+              <View style={[s.cell, { width: `${COL.ratePerDay}%` }]}><Text style={[s.cellText, s.right]}>{it.ratePerDay.toLocaleString()}</Text></View>
+              <View style={[s.cell, { width: `${COL.bank}%` }]}><Text style={s.cellText}>{it.bankAccount}</Text></View>
+              <View style={[s.cell, { width: `${COL.pcType}%` }]}><Text style={s.cellText}>{it.pcType}</Text></View>
+              <View style={[s.cell, { width: `${COL.job}%` }]}><Text style={s.cellText}>{it.job}</Text></View>
+              <View style={[s.cell, { width: `${COL.before}%` }]}><Text style={[s.cellText, s.right]}>{money(computed[i].amountBeforeWht)}</Text></View>
+              <View style={[s.cell, { width: `${COL.wht}%` }]}><Text style={[s.cellText, s.right]}>{money(computed[i].wht3)}</Text></View>
+              <View style={[s.cell, { width: `${COL.net}%` }]}><Text style={[s.cellText, s.right]}>{money(computed[i].amountNet)}</Text></View>
+            </View>
+          ))}
+
+          {Array.from({ length: emptyRowCount }).map((_, i) => (
+            <View style={s.row} key={`empty-${i}`}>
+              <View style={[s.cell, { width: `${COL.date}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.seq}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.pcCode}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.pcName}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.workDays}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.ratePerDay}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.bank}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.pcType}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.job}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.before}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.wht}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${COL.net}%` }]}><Text style={s.cellText}> </Text></View>
+            </View>
+          ))}
+
+          <View style={[s.row, s.bold]}>
+            <View style={[s.cell, { width: `${COL.date + COL.seq + COL.pcCode + COL.pcName + COL.workDays + COL.ratePerDay + COL.bank + COL.pcType + COL.job}%` }]}>
+              <Text style={[s.cellText, s.right]}>รวมทั้งสิ้น</Text>
+            </View>
+            <View style={[s.cell, { width: `${COL.before}%` }]}><Text style={[s.cellText, s.right]}>{money(totals.totalBefore)}</Text></View>
+            <View style={[s.cell, { width: `${COL.wht}%` }]}><Text style={[s.cellText, s.right]}>{money(totals.totalWht)}</Text></View>
+            <View style={[s.cell, { width: `${COL.net}%` }]}><Text style={[s.cellText, s.right]}>{money(totals.totalNet)}</Text></View>
+          </View>
+        </View>
+
+        {/* เป็นจำนวนเงิน */}
+        <Text style={s.amountBox}>เป็นจำนวนเงิน  {totals.amountInThaiText}</Text>
+
+        {/* Signature blocks */}
+        <View style={s.sigRow}>
+          <View style={s.sigCol}>
+            <View style={s.sigLine} />
+            <Text>ผู้เบิก</Text>
+            <Text style={s.sigDate}>วันที่ ................</Text>
+          </View>
+          <View style={s.sigCol}>
+            <View style={s.sigLine} />
+            <Text>หัวหน้าแผนก</Text>
+            <Text style={s.sigDate}>วันที่ ................</Text>
+          </View>
+          <View style={s.sigCol}>
+            <View style={s.sigLine} />
+            <Text>ผู้อนุมัติ</Text>
+            <Text style={s.sigDate}>วันที่ ................</Text>
+          </View>
+        </View>
+        <View style={s.sigRow}>
+          <View style={s.sigCol}>
+            <View style={s.sigLine} />
+            <Text>ผู้รับเงิน</Text>
+            <Text style={s.sigDate}>วันที่ ................</Text>
+          </View>
+          <View style={s.sigCol}>
+            <View style={s.sigLine} />
+            <Text>ผู้ตรวจสอบ/ฝ่ายบัญชี</Text>
+            <Text style={s.sigDate}>วันที่ ................</Text>
+          </View>
+        </View>
+
+        {/* หมายเหตุ */}
+        <View style={s.notes}>
+          <Text style={s.bold}>หมายเหตุ:</Text>
+          <Text>1. พนักงานจะต้องเคลียร์ค่าใช้จ่ายทุกวันอังคารและพฤหัสบดี</Text>
+          <Text>2. พนักงานที่ซื้อของด้วยตนเองมีหน้าที่ต้องตรวจชื่อและที่อยู่ที่ลงในใบกำกับภาษีว่าถูกต้องหรือไม่ ถ้าผิดพนักงานต้องรับผิดชอบเปลี่ยนบิลเอง</Text>
+          <Text>3. ใบกำกับภาษีของค่าน้ำมันจะต้องระบุเลขทะเบียนรถคันที่พนักงานเอาไปใช้ด้วยทุกครั้ง</Text>
+          <Text>4. ใบเบิกค่าใช้จ่ายต่อ 1 ชุด ค่าใช้จ่ายทุกรายการจะต้องเป็นบริษัทเดียวกันและเดือนเดียวกัน</Text>
         </View>
       </Page>
     </Document>
