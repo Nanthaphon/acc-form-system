@@ -9,7 +9,7 @@ import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
 import { createSubmission, updateSubmission, getSubmission, incrementPrint } from '../../data/submissions'
-import { getCompany } from '../../data/companies'
+import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
 
 export default function FormPage() {
@@ -17,6 +17,7 @@ export default function FormPage() {
   const { profile } = useAuth()
   const nav = useNavigate()
   const [company, setCompany] = useState<Company | null>(null)
+  const [companies, setCompanies] = useState<Company[]>([])
   const [settings, setSettings] = useState<FormSettings>(EXPENSE_CLAIM_DEFAULTS)
   const [docNumber, setDocNumber] = useState('(ยังไม่บันทึก)')
   const [savedId, setSavedId] = useState<string | null>(id ?? null)
@@ -43,6 +44,7 @@ export default function FormPage() {
   }, [id])
   useEffect(() => { if (header.companyId) getCompany(header.companyId).then(setCompany) }, [header.companyId])
   useEffect(() => { getFormSettings('expense-claim').then(setSettings) }, [])
+  useEffect(() => { listCompanies().then(setCompanies) }, [])
 
   async function save() {
     const totals = buildTotals()
@@ -99,6 +101,21 @@ export default function FormPage() {
             {showPreview ? 'แก้ไข' : 'ดูตัวอย่าง'}
           </button>
         </div>
+        {!showPreview && (
+          <div className="rounded-2xl border border-[#e5eaf3] bg-white p-6 shadow-[0_1px_2px_rgba(16,32,64,0.03)]">
+            <label className="mb-1.5 block text-xs text-[#7a869a]">บริษัท</label>
+            <select
+              className="w-full rounded-[10px] border border-[#e5eaf3] bg-[#fbfcfe] px-3 py-2.5 text-sm focus:border-[#2b5bd7] focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-[#2b5bd7]/[.12]"
+              value={header.companyId}
+              onChange={e => setHeader({ ...header, companyId: e.target.value })}
+            >
+              {!header.companyId && <option value="">— เลือกบริษัท —</option>}
+              {companies.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} />}
         <div className="flex flex-wrap gap-3">
           <button
