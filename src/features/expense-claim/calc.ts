@@ -1,4 +1,5 @@
 import type { FormColumn, ExpenseRow } from '../../types/schema'
+import { calcOperands } from '../../types/schema'
 import { bahtText } from '../../shared/bahttext'
 
 export function round2(n: number): number {
@@ -17,13 +18,14 @@ export function computeRow(columns: FormColumn[], row: ExpenseRow): ExpenseRow {
   const num = (key: string): number => Number(out[key]) || 0
   for (const col of columns) {
     if (col.type !== 'calc' || !col.calc) continue
-    const { op, a, b, percent } = col.calc
+    const { op, percent } = col.calc
+    const ops = calcOperands(col.calc)
     let value = 0
     switch (op) {
-      case 'multiply': value = num(a) * num(b ?? ''); break
-      case 'add': value = num(a) + num(b ?? ''); break
-      case 'subtract': value = num(a) - num(b ?? ''); break
-      case 'percent': value = num(a) * (percent ?? 0) / 100; break
+      case 'multiply': value = ops.length ? ops.reduce((acc, k) => acc * num(k), 1) : 0; break
+      case 'add': value = ops.reduce((acc, k) => acc + num(k), 0); break
+      case 'subtract': value = ops.reduce((acc, k, i) => i === 0 ? num(k) : acc - num(k), 0); break
+      case 'percent': value = num(ops[0] ?? '') * (percent ?? 0) / 100; break
     }
     out[col.key] = round2(value)
   }

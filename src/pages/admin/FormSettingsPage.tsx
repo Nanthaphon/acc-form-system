@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, calcOperands } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
@@ -14,6 +14,9 @@ const iconBtn = 'rounded-[8px] border border-[#e5eaf3] px-2 py-1.5 text-sm hover
 
 const OP_LABELS: Record<CalcDef['op'], string> = {
   multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', percent: '% ร้อยละ',
+}
+const OP_SYMBOL: Record<CalcDef['op'], string> = {
+  multiply: '×', subtract: '−', add: '+', percent: '%',
 }
 
 const MAX_VISIBLE = 12
@@ -71,9 +74,9 @@ export default function FormSettingsPage() {
     const col = settings.columns[idx]
     if (type === 'calc') {
       const others = settings.columns.filter((_, i) => i !== idx)
-      const a = col.calc?.a ?? others[0]?.key ?? col.key
-      const b = col.calc?.b ?? others[1]?.key ?? others[0]?.key ?? col.key
-      patchColumn(idx, { type, calc: col.calc ?? { op: 'multiply', a, b } })
+      const legacyOps = col.calc ? calcOperands(col.calc) : []
+      const operands = legacyOps.length >= 2 ? legacyOps : [others[0]?.key, others[1]?.key].filter((x): x is string => !!x)
+      patchColumn(idx, { type, calc: col.calc ?? { op: 'multiply', operands } })
     } else {
       patchColumn(idx, { type, calc: undefined })
     }
@@ -82,6 +85,43 @@ export default function FormSettingsPage() {
     const col = settings.columns[idx]
     const calc: CalcDef = { op: 'multiply', a: '', ...col.calc, ...patch }
     patchColumn(idx, { calc })
+  }
+  // Switch the calc operator, initializing operands sensibly:
+  // - to percent: collapse to a single operand (from existing operands/a, or the first other column)
+  // - to multiply/add/subtract: reuse existing operands (>=2) if present, else the first two other columns
+  function changeOp(idx: number, op: CalcDef['op']) {
+    const col = settings.columns[idx]
+    const others = settings.columns.filter((_, i) => i !== idx)
+    if (op === 'percent') {
+      const existing = col.calc ? calcOperands(col.calc) : []
+      const a = existing[0] ?? others[0]?.key ?? ''
+      patchColumn(idx, { calc: { op, a, percent: col.calc?.percent ?? 0 } })
+    } else {
+      const legacyOps = col.calc ? calcOperands(col.calc) : []
+      const operands = legacyOps.length >= 2 ? legacyOps : [others[0]?.key, others[1]?.key].filter((x): x is string => !!x)
+      patchColumn(idx, { calc: { op, operands } })
+    }
+  }
+  function setOperand(idx: number, opIdx: number, value: string) {
+    const col = settings.columns[idx]
+    const ops = col.calc ? [...calcOperands(col.calc)] : []
+    ops[opIdx] = value
+    patchColumn(idx, { calc: { ...(col.calc as CalcDef), operands: ops } })
+  }
+  function addOperand(idx: number) {
+    const col = settings.columns[idx]
+    const others = settings.columns.filter((_, i) => i !== idx)
+    const ops = col.calc ? [...calcOperands(col.calc)] : []
+    const unused = others.find(o => !ops.includes(o.key))?.key ?? others[0]?.key ?? ''
+    ops.push(unused)
+    patchColumn(idx, { calc: { ...(col.calc as CalcDef), operands: ops } })
+  }
+  function removeOperand(idx: number, opIdx: number) {
+    const col = settings.columns[idx]
+    const ops = col.calc ? [...calcOperands(col.calc)] : []
+    if (ops.length <= 2) return
+    ops.splice(opIdx, 1)
+    patchColumn(idx, { calc: { ...(col.calc as CalcDef), operands: ops } })
   }
   function insertColumnAt(pos: number) {
     const cols = [...settings.columns]
@@ -236,7 +276,8 @@ export default function FormSettingsPage() {
           <button onClick={() => insertColumnAt(0)} className="text-xs font-medium text-[#2b5bd7] hover:underline">＋ แทรกคอลัมน์ที่ตำแหน่งแรก</button>
           {columns.map((col, i) => {
             const others = columns.filter((_, x) => x !== i)
-            const showB = col.calc?.op !== 'percent'
+            const isPercent = col.calc?.op === 'percent'
+            const operands = col.calc ? calcOperands(col.calc) : []
             return (
               <div key={i}>
                 <div className="rounded-[12px] border border-[#eef2f8] p-3">
@@ -268,29 +309,54 @@ export default function FormSettingsPage() {
                     <div className="mt-3 flex flex-wrap items-end gap-2 rounded-[10px] bg-[#f7f9fd] p-3">
                       <div>
                         <label className="mb-1 block text-[11px] text-[#7a869a]">สูตร</label>
-                        <select className={smallSelect} value={col.calc?.op ?? 'multiply'} onChange={e => patchCalc(i, { op: e.target.value as CalcDef['op'] })}>
+                        <select className={smallSelect} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
                           {(Object.keys(OP_LABELS) as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
                         </select>
                       </div>
-                      <div>
-                        <label className="mb-1 block text-[11px] text-[#7a869a]">ค่า A</label>
-                        <select className={smallSelect} value={col.calc?.a ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
-                          <option value="">— เลือก —</option>
-                          {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
-                        </select>
-                      </div>
-                      {showB ? (
-                        <div>
-                          <label className="mb-1 block text-[11px] text-[#7a869a]">ค่า B</label>
-                          <select className={smallSelect} value={col.calc?.b ?? ''} onChange={e => patchCalc(i, { b: e.target.value })}>
-                            <option value="">— เลือก —</option>
-                            {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
-                          </select>
-                        </div>
+                      {isPercent ? (
+                        <>
+                          <div>
+                            <label className="mb-1 block text-[11px] text-[#7a869a]">ค่า A</label>
+                            <select className={smallSelect} value={operands[0] ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
+                              <option value="">— เลือก —</option>
+                              {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-[11px] text-[#7a869a]">ร้อยละ (%)</label>
+                            <input type="number" className={`${smallSelect} w-24 text-right`} value={col.calc?.percent ?? 0} onChange={e => patchCalc(i, { percent: Number(e.target.value) })} />
+                          </div>
+                        </>
                       ) : (
-                        <div>
-                          <label className="mb-1 block text-[11px] text-[#7a869a]">ร้อยละ (%)</label>
-                          <input type="number" className={`${smallSelect} w-24 text-right`} value={col.calc?.percent ?? 0} onChange={e => patchCalc(i, { percent: Number(e.target.value) })} />
+                        <div className="flex flex-wrap items-end gap-1.5">
+                          {operands.map((opKey, opIdx) => (
+                            <div key={opIdx} className="flex items-end gap-1.5">
+                              {opIdx > 0 && <span className="pb-2.5 text-sm text-[#7a869a]">{OP_SYMBOL[col.calc?.op ?? 'multiply']}</span>}
+                              <div>
+                                <label className="mb-1 block text-[11px] text-[#7a869a]">ค่า {opIdx + 1}</label>
+                                <div className="flex items-center gap-1">
+                                  <select className={smallSelect} value={opKey} onChange={e => setOperand(i, opIdx, e.target.value)}>
+                                    <option value="">— เลือก —</option>
+                                    {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
+                                  </select>
+                                  <button
+                                    type="button"
+                                    className={`${iconBtn} px-1.5 py-1`}
+                                    onClick={() => removeOperand(i, opIdx)}
+                                    disabled={operands.length <= 2}
+                                    title="ลบค่านี้"
+                                  >✕</button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            className="mb-[3px] rounded-[8px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-2.5 py-1.5 text-xs font-medium text-[#2b5bd7]"
+                            onClick={() => addOperand(i)}
+                          >
+                            ＋ เพิ่มค่า
+                          </button>
                         </div>
                       )}
                     </div>

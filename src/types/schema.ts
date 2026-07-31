@@ -4,7 +4,20 @@ export interface Company { id: string; name: string; address: string; logo?: str
 
 // ===== Dynamic column model =====
 export type ColumnType = 'text' | 'number' | 'calc'
-export interface CalcDef { op: 'multiply' | 'subtract' | 'add' | 'percent'; a: string; b?: string; percent?: number }
+export interface CalcDef {
+  op: 'multiply' | 'subtract' | 'add' | 'percent'
+  operands?: string[]   // list of column keys (2+) for multiply/add/subtract
+  a?: string             // legacy single operand (percent uses this or operands[0])
+  b?: string             // legacy second operand
+  percent?: number       // for op==='percent'
+}
+
+// Returns the operand column keys for a calc def: prefers the new `operands`
+// list, falling back to the legacy single `a`/`b` pair for backward compatibility.
+export function calcOperands(def: CalcDef): string[] {
+  if (def.operands && def.operands.length) return def.operands
+  return [def.a, def.b].filter((x): x is string => !!x)
+}
 export interface FormColumn {
   key: string          // stable id, unique within the form
   label: string
