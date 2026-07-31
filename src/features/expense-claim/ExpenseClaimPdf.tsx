@@ -2,9 +2,10 @@ import { Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/rendere
 import type { Company, ExpenseHeader, ExpenseItem } from '../../types/schema'
 import { computeItem, computeTotals } from './calc'
 
-Font.register({ family: 'Prompt', fonts: [
-  { src: '/fonts/Prompt-Regular.ttf' },
-  { src: '/fonts/Prompt-Bold.ttf', fontWeight: 'bold' },
+// เอกสารทางการใช้ฟอนต์ Sarabun (TH Sarabun New) — มาตรฐานเอกสารราชการไทย
+Font.register({ family: 'Sarabun', fonts: [
+  { src: '/fonts/Sarabun-Regular.ttf' },
+  { src: '/fonts/Sarabun-Bold.ttf', fontWeight: 'bold' },
 ]})
 
 const DEFAULT_ADDRESS =
@@ -26,7 +27,7 @@ const COL = {
 }
 
 const s = StyleSheet.create({
-  page: { fontFamily: 'Prompt', fontSize: 8, padding: 24 },
+  page: { fontFamily: 'Sarabun', fontSize: 9, padding: 24 },
   center: { textAlign: 'center' },
   right: { textAlign: 'right' },
   bold: { fontWeight: 'bold' },

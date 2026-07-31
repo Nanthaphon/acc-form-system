@@ -16,6 +16,20 @@
   font-display: swap;
 }
 
+/* Sarabun (TH Sarabun New) — ฟอนต์เอกสารทางการ ใช้เฉพาะหน้า Preview/พิมพ์ */
+@font-face {
+  font-family: 'Sarabun';
+  src: url('/fonts/Sarabun-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sarabun';
+  src: url('/fonts/Sarabun-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
 html, body {
   font-family: 'Prompt', sans-serif;
 }

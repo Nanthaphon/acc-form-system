@@ -25,7 +25,7 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber 
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
 
   return (
-    <div id="print-area" className="mx-auto max-w-3xl border border-black bg-white p-6 text-xs text-black">
+    <div id="print-area" style={{ fontFamily: "'Sarabun', serif" }} className="mx-auto max-w-3xl border border-black bg-white p-6 text-xs text-black">
       {/* Header band */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
