@@ -1,6 +1,31 @@
 export type Role = 'employee' | 'admin'
 
-export interface Company { id: string; name: string; address: string }
+export interface Company { id: string; name: string; address: string; logo?: string | null }
+
+export interface FormSettings {
+  formType: string; title: string; subject: string; attention: string; formCode: string
+  categories: string[]; notes: string[]
+}
+
+export const EXPENSE_CLAIM_DEFAULTS: FormSettings = {
+  formType: 'expense-claim',
+  title: 'ใบขออนุมัติเบิกค่าใช้จ่าย',
+  subject: 'ขออนุมัติเบิกค่าใช้จ่าย',
+  attention: 'ท่านผู้จัดการ',
+  formCode: 'GAC6709-003',
+  categories: [
+    'ค่าไมล์เลทและค่าใช้จ่ายเดินทาง',
+    'ค่าใช้จ่ายต่างๆ',
+    'ค่าล่วงเวลา',
+    'ค่าเบี้ยเลี้ยง',
+  ],
+  notes: [
+    '1. พนักงานจะต้องเคลียร์ค่าใช้จ่ายทุกวันอังคารและพฤหัสบดี',
+    '2. พนักงานที่ซื้อของด้วยตนเองมีหน้าที่ต้องตรวจชื่อและที่อยู่ที่ลงในใบกำกับภาษีว่าถูกต้องหรือไม่ ถ้าผิดพนักงานต้องรับผิดชอบเปลี่ยนบิลเอง',
+    '3. ใบกำกับภาษีของค่าน้ำมันจะต้องระบุเลขทะเบียนรถคันที่พนักงานเอาไปใช้ด้วยทุกครั้ง',
+    '4. ใบเบิกค่าใช้จ่ายต่อ 1 ชุด ค่าใช้จ่ายทุกรายการจะต้องเป็นบริษัทเดียวกันและเดือนเดียวกัน',
+  ],
+}
 
 export interface UserProfile {
   uid: string

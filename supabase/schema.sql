@@ -123,3 +123,21 @@ insert into companies (id, name, address) values
   ('globe', 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด', '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'),
   ('besthrm', 'บริษัท เบสท์ เอช อาร์ เอ็ม จำกัด', '-')
 on conflict (id) do nothing;
+
+-- ===== Form settings (editable form template) + per-company logo =====
+alter table companies add column if not exists logo text;
+create table if not exists form_settings (
+  "formType" text primary key,
+  title text not null default '', subject text not null default '', attention text not null default '',
+  "formCode" text not null default '', categories jsonb not null default '[]', notes jsonb not null default '[]'
+);
+alter table form_settings enable row level security;
+drop policy if exists form_settings_select on form_settings;
+create policy form_settings_select on form_settings for select using (auth.uid() is not null);
+drop policy if exists form_settings_write on form_settings;
+create policy form_settings_write on form_settings for all using (is_admin()) with check (is_admin());
+insert into form_settings ("formType", title, subject, attention, "formCode", categories, notes) values (
+  'expense-claim','ใบขออนุมัติเบิกค่าใช้จ่าย','ขออนุมัติเบิกค่าใช้จ่าย','ท่านผู้จัดการ','GAC6709-003',
+  '["ค่าไมล์เลทและค่าใช้จ่ายเดินทาง","ค่าใช้จ่ายต่างๆ","ค่าล่วงเวลา","ค่าเบี้ยเลี้ยง"]'::jsonb,
+  '["1. พนักงานจะต้องเคลียร์ค่าใช้จ่ายทุกวันอังคารและพฤหัสบดี","2. พนักงานที่ซื้อของด้วยตนเองมีหน้าที่ต้องตรวจชื่อและที่อยู่ที่ลงในใบกำกับภาษีว่าถูกต้องหรือไม่ ถ้าผิดพนักงานต้องรับผิดชอบเปลี่ยนบิลเอง","3. ใบกำกับภาษีของค่าน้ำมันจะต้องระบุเลขทะเบียนรถคันที่พนักงานเอาไปใช้ด้วยทุกครั้ง","4. ใบเบิกค่าใช้จ่ายต่อ 1 ชุด ค่าใช้จ่ายทุกรายการจะต้องเป็นบริษัทเดียวกันและเดือนเดียวกัน"]'::jsonb
+) on conflict ("formType") do nothing;
