@@ -13,7 +13,8 @@ export async function listGroups(): Promise<FormGroup[]> {
 
 export async function createGroup(name: string): Promise<string> {
   const id = crypto.randomUUID()
-  const row: FormGroup = { id, name, sortOrder: Date.now(), createdAt: Date.now() }
+  // sortOrder is an int4 column — use seconds (fits int4), createdAt keeps ms (bigint).
+  const row: FormGroup = { id, name, sortOrder: Math.floor(Date.now() / 1000), createdAt: Date.now() }
   const { error } = await supabase.from('form_groups').insert(row)
   if (error) throw error
   return id
