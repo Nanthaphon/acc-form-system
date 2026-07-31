@@ -25,9 +25,9 @@ const router = createBrowserRouter([
     path: '/', element: <RequireAuth><Layout /></RequireAuth>,
     children: [
       { index: true, element: <DashboardPage /> },
-      { path: 'form', element: <FormPage /> },
-      { path: 'form/expense-claim/edit', element: <RequireAdmin><FormSettingsPage /></RequireAdmin> },
-      { path: 'form/:id', element: <FormPage /> },
+      { path: 'form/:formType/edit', element: <RequireAdmin><FormSettingsPage /></RequireAdmin> },
+      { path: 'form/:formType', element: <FormPage /> },
+      { path: 'submission/:id', element: <FormPage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'change-password', element: <ChangePasswordPage /> },

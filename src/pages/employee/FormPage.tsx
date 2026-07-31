@@ -13,7 +13,7 @@ import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
 
 export default function FormPage() {
-  const { id } = useParams()
+  const { id, formType } = useParams()
   const { profile } = useAuth()
   const nav = useNavigate()
   const [company, setCompany] = useState<Company | null>(null)
@@ -37,13 +37,19 @@ export default function FormPage() {
     }
   }
 
-  useEffect(() => { // โหลดใบเดิมกรณีแก้ไข
-    if (id) getSubmission(id).then(s => {
-      if (s) { setHeader(s.header); setItems(s.items); setDocNumber(s.docNumber); setSavedId(s.id) }
+  useEffect(() => { // EDIT mode: load existing submission + its form settings
+    if (!id) return
+    getSubmission(id).then(s => {
+      if (!s) return
+      setHeader(s.header); setItems(s.items); setDocNumber(s.docNumber); setSavedId(s.id)
+      getFormSettings(s.formType).then(setSettings)
     })
   }, [id])
+  useEffect(() => { // NEW mode: load the form settings for this formType
+    if (id || !formType) return
+    getFormSettings(formType).then(fs => { setSettings(fs); setItems([emptyRow(fs.columns)]) })
+  }, [id, formType])
   useEffect(() => { if (header.companyId) getCompany(header.companyId).then(setCompany) }, [header.companyId])
-  useEffect(() => { getFormSettings('expense-claim').then(setSettings) }, [])
   useEffect(() => { listCompanies().then(setCompanies) }, [])
 
   async function save() {
@@ -63,9 +69,9 @@ export default function FormPage() {
         if (existing) await updateSubmission(savedId, { ...existing, header, items, totals })
       } else {
         const created = await createSubmission({
-          formType: 'expense-claim', header, items, totals,
+          formType: settings.formType, header, items, totals,
           createdBy: profile!.uid, createdByEmployeeId: profile!.employeeId,
-        })
+        }, settings.formCode || settings.formType)
         setSavedId(created.id); setDocNumber(created.docNumber)
       }
       alert('บันทึกแล้ว')
@@ -90,7 +96,7 @@ export default function FormPage() {
         <div className="mb-2 flex items-center gap-3.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]">🧾</div>
           <div>
-            <h1 className="text-xl font-semibold text-[#1f2a3d]">ใบเบิกค่าใช้จ่าย</h1>
+            <h1 className="text-xl font-semibold text-[#1f2a3d]">{settings.name || settings.title}</h1>
             <div className="text-[13px] text-[#7a869a]">กรอกรายการที่ต้องการเบิก · ระบบคำนวณให้อัตโนมัติ</div>
           </div>
           <span className="ml-auto rounded-[10px] bg-[#eaf0ff] px-3.5 py-2 text-[13px] font-semibold text-[#1e46b0]">{docNumber}</span>

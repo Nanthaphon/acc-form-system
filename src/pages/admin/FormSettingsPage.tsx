@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
@@ -40,6 +40,7 @@ function sampleRow(cols: FormColumn[]): ExpenseRow {
 
 export default function FormSettingsPage() {
   const nav = useNavigate()
+  const { formType = 'expense-claim' } = useParams()
   const [settings, setSettings] = useState<FormSettings>(EXPENSE_CLAIM_DEFAULTS)
   const [companies, setCompanies] = useState<Company[]>([])
   const [saving, setSaving] = useState(false)
@@ -47,9 +48,9 @@ export default function FormSettingsPage() {
 
   function loadCompanies() { listCompanies().then(setCompanies) }
   useEffect(() => {
-    getFormSettings('expense-claim').then(setSettings)
+    getFormSettings(formType).then(setSettings)
     loadCompanies()
-  }, [])
+  }, [formType])
 
   function setField<K extends keyof FormSettings>(key: K, value: FormSettings[K]) {
     setSettings(s => ({ ...s, [key]: value }))
@@ -155,7 +156,7 @@ export default function FormSettingsPage() {
   async function save() {
     setSaving(true)
     try {
-      await updateFormSettings({ ...settings, formType: 'expense-claim' })
+      await updateFormSettings({ ...settings, formType })
       alert('บันทึกฟอร์มแล้ว')
     } catch {
       alert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
@@ -195,7 +196,7 @@ export default function FormSettingsPage() {
         <button onClick={() => nav('/')} className="rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]">← กลับ</button>
         <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]">✏️</div>
         <div>
-          <h1 className="text-xl font-semibold text-[#1f2a3d]">แก้ไขฟอร์ม — ใบเบิกค่าใช้จ่าย</h1>
+          <h1 className="text-xl font-semibold text-[#1f2a3d]">แก้ไขฟอร์ม — {settings.name || settings.title}</h1>
           <div className="text-[13px] text-[#7a869a]">แก้ไขหัวฟอร์ม คอลัมน์ตาราง หมวดค่าใช้จ่าย หมายเหตุ และโลโก้บริษัท</div>
         </div>
         <button
