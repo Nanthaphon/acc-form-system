@@ -87,7 +87,7 @@ export function ExpenseClaimPdf({ company, header, items, docNumber, settings = 
               ? <Image src={company.logo} style={s.logoImg} />
               : <View style={s.logoBox}><Text style={s.logoText}>LOGO</Text></View>}
             <View>
-              <Text style={s.companyName}>GLOBE SYNDICATE (THAILAND) CO.,LTD.</Text>
+              <Text style={s.companyName}>{company?.headerName || 'GLOBE SYNDICATE (THAILAND) CO.,LTD.'}</Text>
               <Text style={s.companyAddr}>{company?.address || DEFAULT_ADDRESS}</Text>
             </View>
           </View>

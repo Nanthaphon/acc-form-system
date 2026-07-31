@@ -1,6 +1,6 @@
 export type Role = 'employee' | 'admin'
 
-export interface Company { id: string; name: string; address: string; logo?: string | null }
+export interface Company { id: string; name: string; address: string; logo?: string | null; headerName?: string | null }
 
 // ===== Dynamic column model =====
 export type ColumnType = 'text' | 'number' | 'calc'

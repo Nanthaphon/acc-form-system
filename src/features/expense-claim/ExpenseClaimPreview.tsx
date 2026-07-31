@@ -37,7 +37,7 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber,
                 LOGO
               </div>}
           <div>
-            <div className="text-sm font-bold">GLOBE SYNDICATE (THAILAND) CO.,LTD.</div>
+            <div className="text-sm font-bold">{company?.headerName || 'GLOBE SYNDICATE (THAILAND) CO.,LTD.'}</div>
             <div className="font-bold">{company?.address || DEFAULT_ADDRESS}</div>
           </div>
         </div>
