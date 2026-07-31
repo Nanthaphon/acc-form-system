@@ -1,17 +1,11 @@
-import type { Company, ExpenseHeader, ExpenseItem } from '../../types/schema'
+import type { Company, ExpenseHeader, ExpenseItem, FormSettings } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeItem, computeTotals } from './calc'
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseItem[]; docNumber: string }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseItem[]; docNumber: string; settings?: FormSettings }
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
-
-const CATEGORY_LABELS = [
-  'ค่าไมล์เลทและค่าใช้จ่ายเดินทาง',
-  'ค่าใช้จ่ายต่างๆ',
-  'ค่าล่วงเวลา',
-  'ค่าเบี้ยเลี้ยง',
-]
 
 const MIN_ROWS = 14
 
@@ -19,7 +13,7 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export default function ExpenseClaimPreview({ company, header, items, docNumber }: Props) {
+export default function ExpenseClaimPreview({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
   const computed = items.map(computeItem)
   const totals = computeTotals(items)
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
@@ -29,29 +23,31 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber 
       {/* Header band */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-black text-center text-[9px] leading-tight">
-            LOGO
-          </div>
+          {company?.logo
+            ? <img src={company.logo} alt="logo" className="h-10 w-10 shrink-0 border border-black object-contain" />
+            : <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-black text-center text-[9px] leading-tight">
+                LOGO
+              </div>}
           <div>
             <div className="text-sm font-bold">GLOBE SYNDICATE (THAILAND) CO.,LTD.</div>
             <div className="font-bold">{company?.address || DEFAULT_ADDRESS}</div>
           </div>
         </div>
         <div className="shrink-0 border border-black px-3 py-2 text-center text-sm font-bold">
-          ใบขออนุมัติเบิกค่าใช้จ่าย
+          {settings.title}
         </div>
       </div>
       <div className="mt-2 border-t-2 border-black" />
-      <div className="mt-1 text-right">{docNumber || 'GAC6709-003'}</div>
+      <div className="mt-1 text-right">{docNumber || settings.formCode}</div>
 
       {/* เรื่อง / เรียน + checkboxes */}
       <div className="mt-2 flex items-start justify-between">
         <div>
-          <div>เรื่อง &nbsp; ขออนุมัติเบิกค่าใช้จ่าย</div>
-          <div>เรียน &nbsp; ท่านผู้จัดการ</div>
+          <div>เรื่อง &nbsp; {settings.subject}</div>
+          <div>เรียน &nbsp; {settings.attention}</div>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          {CATEGORY_LABELS.map((label) => (
+          {settings.categories.map((label) => (
             <div key={label} className="whitespace-nowrap">
               <span className="mr-1">{header.categories.includes(label) ? '☑' : '☐'}</span>
               {label}
@@ -166,10 +162,9 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber 
       {/* หมายเหตุ */}
       <div className="mt-6 text-[9px]">
         <div className="font-bold">หมายเหตุ:</div>
-        <div>1. พนักงานจะต้องเคลียร์ค่าใช้จ่ายทุกวันอังคารและพฤหัสบดี</div>
-        <div>2. พนักงานที่ซื้อของด้วยตนเองมีหน้าที่ต้องตรวจชื่อและที่อยู่ที่ลงในใบกำกับภาษีว่าถูกต้องหรือไม่ ถ้าผิดพนักงานต้องรับผิดชอบเปลี่ยนบิลเอง</div>
-        <div>3. ใบกำกับภาษีของค่าน้ำมันจะต้องระบุเลขทะเบียนรถคันที่พนักงานเอาไปใช้ด้วยทุกครั้ง</div>
-        <div>4. ใบเบิกค่าใช้จ่ายต่อ 1 ชุด ค่าใช้จ่ายทุกรายการจะต้องเป็นบริษัทเดียวกันและเดือนเดียวกัน</div>
+        {settings.notes.map((note, i) => (
+          <div key={i}>{note}</div>
+        ))}
       </div>
     </div>
   )

@@ -2,20 +2,22 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
 import { useAuth } from '../../auth/AuthProvider'
-import type { ExpenseHeader, ExpenseItem, Company } from '../../types/schema'
-import { emptyItem } from '../../types/schema'
+import type { ExpenseHeader, ExpenseItem, Company, FormSettings } from '../../types/schema'
+import { emptyItem, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeTotals } from '../../features/expense-claim/calc'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
 import { createSubmission, updateSubmission, getSubmission, incrementPrint } from '../../data/submissions'
 import { getCompany } from '../../data/companies'
+import { getFormSettings } from '../../data/formSettings'
 
 export default function FormPage() {
   const { id } = useParams()
   const { profile } = useAuth()
   const nav = useNavigate()
   const [company, setCompany] = useState<Company | null>(null)
+  const [settings, setSettings] = useState<FormSettings>(EXPENSE_CLAIM_DEFAULTS)
   const [docNumber, setDocNumber] = useState('(ยังไม่บันทึก)')
   const [savedId, setSavedId] = useState<string | null>(id ?? null)
   const [showPreview, setShowPreview] = useState(false)
@@ -32,6 +34,7 @@ export default function FormPage() {
     })
   }, [id])
   useEffect(() => { if (header.companyId) getCompany(header.companyId).then(setCompany) }, [header.companyId])
+  useEffect(() => { getFormSettings('expense-claim').then(setSettings) }, [])
 
   async function save() {
     const totals = computeTotals(items)
@@ -62,7 +65,7 @@ export default function FormPage() {
   }
 
   async function downloadPdf() {
-    const blob = await pdf(<ExpenseClaimPdf company={company} header={header} items={items} docNumber={docNumber} />).toBlob()
+    const blob = await pdf(<ExpenseClaimPdf company={company} header={header} items={items} docNumber={docNumber} settings={settings} />).toBlob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = `${docNumber}.pdf`; a.click()
   }
@@ -88,7 +91,7 @@ export default function FormPage() {
             {showPreview ? 'แก้ไข' : 'ดูตัวอย่าง'}
           </button>
         </div>
-        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} categories={settings.categories} />}
         <div className="flex flex-wrap gap-3">
           <button
             className="inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0]"
@@ -117,7 +120,7 @@ export default function FormPage() {
         </div>
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
-        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} />
+        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} />
       </div>
     </div>
   )

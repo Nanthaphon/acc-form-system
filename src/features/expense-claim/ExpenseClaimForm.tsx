@@ -7,6 +7,7 @@ interface Props {
   items: ExpenseItem[]
   onHeaderChange: (h: ExpenseHeader) => void
   onItemsChange: (items: ExpenseItem[]) => void
+  categories?: string[]
 }
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
@@ -15,9 +16,10 @@ const cardClass = 'rounded-2xl border border-[#e5eaf3] bg-white p-6 shadow-[0_1p
 const cardTitleClass = "flex items-center gap-2 text-sm font-semibold text-[#16233f] before:block before:h-4 before:w-1 before:rounded-[3px] before:bg-[#2b5bd7]"
 const inputClass = 'w-full rounded-[10px] border border-[#e5eaf3] bg-[#fbfcfe] px-3 py-2.5 text-sm placeholder:text-[#7a869a] focus:border-[#2b5bd7] focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-[#2b5bd7]/[.12]'
 
-export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange }: Props) {
+export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, categories }: Props) {
   const computed = items.map(computeItem)
   const totals = computeTotals(items)
+  const categoryOptions = categories ?? CATEGORIES
 
   function setItem(idx: number, patch: Partial<ExpenseItem>) {
     onItemsChange(items.map((it, i) => i === idx ? { ...it, ...patch } : it))
@@ -37,7 +39,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
       <div className={cardClass}>
         <h2 className={`${cardTitleClass} mb-4`}>ประเภทค่าใช้จ่าย</h2>
         <div className="flex flex-wrap gap-2.5">
-          {CATEGORIES.map(c => {
+          {categoryOptions.map(c => {
             const on = header.categories.includes(c)
             return (
               <label

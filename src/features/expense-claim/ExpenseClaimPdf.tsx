@@ -1,5 +1,6 @@
-import { Document, Page, View, Text, StyleSheet, Font } from '@react-pdf/renderer'
-import type { Company, ExpenseHeader, ExpenseItem } from '../../types/schema'
+import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
+import type { Company, ExpenseHeader, ExpenseItem, FormSettings } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeItem, computeTotals } from './calc'
 
 // เอกสารทางการใช้ฟอนต์ Sarabun (TH Sarabun New) — มาตรฐานเอกสารราชการไทย
@@ -10,13 +11,6 @@ Font.register({ family: 'Sarabun', fonts: [
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
-
-const CATEGORY_LABELS = [
-  'ค่าไมล์เลทและค่าใช้จ่ายเดินทาง',
-  'ค่าใช้จ่ายต่างๆ',
-  'ค่าล่วงเวลา',
-  'ค่าเบี้ยเลี้ยง',
-]
 
 const MIN_ROWS = 14
 
@@ -35,6 +29,7 @@ const s = StyleSheet.create({
   headerBand: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   logoBox: { width: 32, height: 32, borderWidth: 0.5, borderColor: '#000', alignItems: 'center', justifyContent: 'center', marginRight: 6 },
   logoText: { fontSize: 6, textAlign: 'center' },
+  logoImg: { width: 32, height: 32, objectFit: 'contain', marginRight: 6 },
   companyName: { fontSize: 10, fontWeight: 'bold' },
   companyAddr: { fontWeight: 'bold', fontSize: 8 },
   titleBox: { borderWidth: 0.5, borderColor: '#000', paddingHorizontal: 8, paddingVertical: 4 },
@@ -62,9 +57,9 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseItem[]; docNumber: string }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseItem[]; docNumber: string; settings?: FormSettings }
 
-export function ExpenseClaimPdf({ company, header, items, docNumber }: Props) {
+export function ExpenseClaimPdf({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
   const computed = items.map(computeItem)
   const totals = computeTotals(items)
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
@@ -75,27 +70,29 @@ export function ExpenseClaimPdf({ company, header, items, docNumber }: Props) {
         {/* Header band */}
         <View style={s.headerBand}>
           <View style={{ flexDirection: 'row' }}>
-            <View style={s.logoBox}><Text style={s.logoText}>LOGO</Text></View>
+            {company?.logo
+              ? <Image src={company.logo} style={s.logoImg} />
+              : <View style={s.logoBox}><Text style={s.logoText}>LOGO</Text></View>}
             <View>
               <Text style={s.companyName}>GLOBE SYNDICATE (THAILAND) CO.,LTD.</Text>
               <Text style={s.companyAddr}>{company?.address || DEFAULT_ADDRESS}</Text>
             </View>
           </View>
           <View style={s.titleBox}>
-            <Text style={s.titleText}>ใบขออนุมัติเบิกค่าใช้จ่าย</Text>
+            <Text style={s.titleText}>{settings.title}</Text>
           </View>
         </View>
         <View style={s.thickRule} />
-        <Text style={s.docCode}>{docNumber || 'GAC6709-003'}</Text>
+        <Text style={s.docCode}>{docNumber || settings.formCode}</Text>
 
         {/* เรื่อง/เรียน + checkboxes */}
         <View style={s.subjectRow}>
           <View>
-            <Text>เรื่อง  ขออนุมัติเบิกค่าใช้จ่าย</Text>
-            <Text>เรียน  ท่านผู้จัดการ</Text>
+            <Text>เรื่อง  {settings.subject}</Text>
+            <Text>เรียน  {settings.attention}</Text>
           </View>
           <View style={s.checkboxGrid}>
-            {CATEGORY_LABELS.map((label) => (
+            {settings.categories.map((label) => (
               <Text key={label} style={s.checkboxItem}>
                 {header.categories.includes(label) ? '☑' : '☐'} {label}
               </Text>
@@ -213,10 +210,9 @@ export function ExpenseClaimPdf({ company, header, items, docNumber }: Props) {
         {/* หมายเหตุ */}
         <View style={s.notes}>
           <Text style={s.bold}>หมายเหตุ:</Text>
-          <Text>1. พนักงานจะต้องเคลียร์ค่าใช้จ่ายทุกวันอังคารและพฤหัสบดี</Text>
-          <Text>2. พนักงานที่ซื้อของด้วยตนเองมีหน้าที่ต้องตรวจชื่อและที่อยู่ที่ลงในใบกำกับภาษีว่าถูกต้องหรือไม่ ถ้าผิดพนักงานต้องรับผิดชอบเปลี่ยนบิลเอง</Text>
-          <Text>3. ใบกำกับภาษีของค่าน้ำมันจะต้องระบุเลขทะเบียนรถคันที่พนักงานเอาไปใช้ด้วยทุกครั้ง</Text>
-          <Text>4. ใบเบิกค่าใช้จ่ายต่อ 1 ชุด ค่าใช้จ่ายทุกรายการจะต้องเป็นบริษัทเดียวกันและเดือนเดียวกัน</Text>
+          {settings.notes.map((note, i) => (
+            <Text key={i}>{note}</Text>
+          ))}
         </View>
       </Page>
     </Document>
