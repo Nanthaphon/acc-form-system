@@ -39,8 +39,11 @@ export function computeColumnTotals(columns: FormColumn[], rows: ExpenseRow[]): 
 // The grand total = column-sum of the isTotal column (fallback: last calc column, else 0).
 export function grandTotal(columns: FormColumn[], rows: ExpenseRow[]): number {
   const totals = computeColumnTotals(columns, rows)
-  const totalCol = columns.find(c => c.isTotal)
+  // Only a numeric/calc column can be the grand total. Ignore an isTotal flag
+  // that landed on a text column, and fall back to the last calc/number column.
+  const totalCol = columns.find(c => c.isTotal && c.type !== 'text')
     ?? [...columns].reverse().find(c => c.type === 'calc')
+    ?? [...columns].reverse().find(c => c.type === 'number')
   if (!totalCol) return 0
   return round2(totals[totalCol.key] ?? 0)
 }
