@@ -69,9 +69,6 @@ export default function FormSettingsPage() {
     const calc: CalcDef = { op: 'multiply', a: '', ...col.calc, ...patch }
     patchColumn(idx, { calc })
   }
-  function setTotalColumn(idx: number) {
-    setColumns(settings.columns.map((c, i) => ({ ...c, isTotal: i === idx ? true : undefined })))
-  }
   function insertColumnAt(pos: number) {
     const cols = [...settings.columns]
     cols.splice(pos, 0, { key: newColumnKey(cols), label: 'คอลัมน์ใหม่', type: 'text' })
@@ -172,7 +169,6 @@ export default function FormSettingsPage() {
                   <th key={c.key} className="px-2 py-1.5 font-semibold text-[#16233f]">
                     {c.label || <span className="text-[#c3ccdb]">(ไม่มีชื่อ)</span>}
                     {c.type === 'calc' && <span className="ml-1 font-normal text-[#7a869a]">ƒ</span>}
-                    {c.isTotal && <span className="ml-1 text-[#2b5bd7]">★</span>}
                   </th>
                 ))}
               </tr>
@@ -201,9 +197,6 @@ export default function FormSettingsPage() {
                         <option value="calc">คำนวณ</option>
                       </select>
                     </div>
-                    <label className="flex items-center gap-1.5 pb-2 text-[12px] text-[#7a869a]">
-                      <input type="checkbox" checked={!!col.isTotal} onChange={() => setTotalColumn(i)} /> ยอดรวม (★)
-                    </label>
                     <div className="ml-auto flex items-center gap-1.5 pb-1">
                       <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น">↑</button>
                       <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง">↓</button>
