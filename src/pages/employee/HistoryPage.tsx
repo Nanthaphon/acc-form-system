@@ -18,7 +18,7 @@ export default function HistoryPage() {
             <tr key={r.id}>
               <td className="border px-2 py-1">{r.docNumber}</td>
               <td className="border px-2 py-1">{new Date(r.createdAt).toLocaleDateString('th-TH')}</td>
-              <td className="border px-2 py-1 text-right">{r.totals.totalNet.toLocaleString()}</td>
+              <td className="border px-2 py-1 text-right">{r.totals.grandTotal.toLocaleString()}</td>
               <td className="border px-2 py-1 text-center">{r.printCount}</td>
               <td className="border px-2 py-1"><Link className="text-blue-600" to={`/form/${r.id}`}>แก้ไข / พิมพ์ใหม่</Link></td>
             </tr>

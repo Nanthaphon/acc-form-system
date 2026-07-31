@@ -1,7 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
-import type { Company, ExpenseHeader, ExpenseItem, FormSettings } from '../../types/schema'
+import type { Company, ExpenseHeader, ExpenseRow, FormSettings, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeItem, computeTotals } from './calc'
+import { computeRow, computeColumnTotals, bahtTextForRows } from './calc'
 
 // เอกสารทางการใช้ฟอนต์ Sarabun (TH Sarabun New) — มาตรฐานเอกสารราชการไทย
 Font.register({ family: 'Sarabun', fonts: [
@@ -13,11 +13,14 @@ const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
 
 const MIN_ROWS = 14
+const SEQ_WIDTH = 5 // percent
 
-// Column width proportions (12 columns) — sum ~100
-const COL = {
-  date: 8, seq: 4, pcCode: 8, pcName: 14, workDays: 6, ratePerDay: 6,
-  bank: 9, pcType: 8, job: 6, before: 10, wht: 10, net: 11,
+// Distribute remaining width across columns by type weight.
+function columnWidths(cols: FormColumn[]): number[] {
+  const weight = (c: FormColumn) => c.type === 'text' ? 1.4 : c.type === 'calc' ? 1.2 : 1
+  const total = cols.reduce((s, c) => s + weight(c), 0) || 1
+  const remaining = 100 - SEQ_WIDTH
+  return cols.map(c => (weight(c) / total) * remaining)
 }
 
 const s = StyleSheet.create({
@@ -57,12 +60,21 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseItem[]; docNumber: string; settings?: FormSettings }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
 
 export function ExpenseClaimPdf({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
-  const computed = items.map(computeItem)
-  const totals = computeTotals(items)
+  const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
+  const widths = columnWidths(cols)
+  const computed = items.map(r => computeRow(cols, r))
+  const columnTotals = computeColumnTotals(cols, items)
+  const bahtWords = bahtTextForRows(cols, items)
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
+
+  // Totals footer: label spans seq + leading text columns up to the first numeric/calc column.
+  const firstNumericIdx = cols.findIndex(c => c.type !== 'text')
+  const labelWidth = firstNumericIdx < 0
+    ? 100
+    : SEQ_WIDTH + widths.slice(0, firstNumericIdx).reduce((a, b) => a + b, 0)
 
   return (
     <Document>
@@ -112,69 +124,51 @@ export function ExpenseClaimPdf({ company, header, items, docNumber, settings = 
           <Text style={s.requesterValue}>{header.job}</Text>
         </View>
 
-        {/* Main table */}
+        {/* Main table — dynamic columns */}
         <View style={s.table}>
           <View style={[s.row, s.bold]}>
-            <View style={[s.cell, { width: `${COL.date}%` }]}><Text style={s.cellText}>วันเดือนปี</Text></View>
-            <View style={[s.cell, { width: `${COL.seq}%` }]}><Text style={s.cellText}>ลำดับ</Text></View>
-            <View style={[s.cell, { width: `${COL.pcCode}%` }]}><Text style={s.cellText}>PC Code</Text></View>
-            <View style={[s.cell, { width: `${COL.pcName}%` }]}><Text style={s.cellText}>PC Name</Text></View>
-            <View style={[s.cell, { width: `${COL.workDays}%` }]}><Text style={s.cellText}>วันทำงาน</Text></View>
-            <View style={[s.cell, { width: `${COL.ratePerDay}%` }]}><Text style={s.cellText}>วันละ</Text></View>
-            <View style={[s.cell, { width: `${COL.bank}%` }]}><Text style={s.cellText}>ธนาคาร</Text></View>
-            <View style={[s.cell, { width: `${COL.pcType}%` }]}><Text style={s.cellText}>ประเภทพีซี</Text></View>
-            <View style={[s.cell, { width: `${COL.job}%` }]}><Text style={s.cellText}>Job</Text></View>
-            <View style={[s.cell, { width: `${COL.before}%` }]}><Text style={s.cellText}>ก่อนหัก</Text></View>
-            <View style={[s.cell, { width: `${COL.wht}%` }]}><Text style={s.cellText}>หักภาษี ณ ที่จ่าย 3%</Text></View>
-            <View style={[s.cell, { width: `${COL.net}%` }]}><Text style={s.cellText}>รวม</Text></View>
+            <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={s.cellText}>ลำดับ</Text></View>
+            {cols.map((col, ci) => (
+              <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}><Text style={s.cellText}>{col.label}</Text></View>
+            ))}
           </View>
 
-          {items.map((it, i) => (
+          {items.map((_, i) => (
             <View style={s.row} key={i}>
-              <View style={[s.cell, { width: `${COL.date}%` }]}><Text style={s.cellText}>{it.date}</Text></View>
-              <View style={[s.cell, { width: `${COL.seq}%` }]}><Text style={[s.cellText, s.center]}>{i + 1}</Text></View>
-              <View style={[s.cell, { width: `${COL.pcCode}%` }]}><Text style={s.cellText}>{it.pcCode}</Text></View>
-              <View style={[s.cell, { width: `${COL.pcName}%` }]}><Text style={s.cellText}>{it.pcName}</Text></View>
-              <View style={[s.cell, { width: `${COL.workDays}%` }]}><Text style={[s.cellText, s.center]}>{it.workDays}</Text></View>
-              <View style={[s.cell, { width: `${COL.ratePerDay}%` }]}><Text style={[s.cellText, s.right]}>{it.ratePerDay.toLocaleString()}</Text></View>
-              <View style={[s.cell, { width: `${COL.bank}%` }]}><Text style={s.cellText}>{it.bankAccount}</Text></View>
-              <View style={[s.cell, { width: `${COL.pcType}%` }]}><Text style={s.cellText}>{it.pcType}</Text></View>
-              <View style={[s.cell, { width: `${COL.job}%` }]}><Text style={s.cellText}>{it.job}</Text></View>
-              <View style={[s.cell, { width: `${COL.before}%` }]}><Text style={[s.cellText, s.right]}>{money(computed[i].amountBeforeWht)}</Text></View>
-              <View style={[s.cell, { width: `${COL.wht}%` }]}><Text style={[s.cellText, s.right]}>{money(computed[i].wht3)}</Text></View>
-              <View style={[s.cell, { width: `${COL.net}%` }]}><Text style={[s.cellText, s.right]}>{money(computed[i].amountNet)}</Text></View>
+              <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={[s.cellText, s.center]}>{i + 1}</Text></View>
+              {cols.map((col, ci) => (
+                <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}>
+                  <Text style={[s.cellText, col.type === 'text' ? {} : s.right]}>
+                    {col.type === 'text' ? (computed[i][col.key] as string) : money(Number(computed[i][col.key]) || 0)}
+                  </Text>
+                </View>
+              ))}
             </View>
           ))}
 
           {Array.from({ length: emptyRowCount }).map((_, i) => (
             <View style={s.row} key={`empty-${i}`}>
-              <View style={[s.cell, { width: `${COL.date}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.seq}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.pcCode}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.pcName}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.workDays}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.ratePerDay}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.bank}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.pcType}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.job}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.before}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.wht}%` }]}><Text style={s.cellText}> </Text></View>
-              <View style={[s.cell, { width: `${COL.net}%` }]}><Text style={s.cellText}> </Text></View>
+              <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={s.cellText}> </Text></View>
+              {cols.map((col, ci) => (
+                <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}><Text style={s.cellText}> </Text></View>
+              ))}
             </View>
           ))}
 
           <View style={[s.row, s.bold]}>
-            <View style={[s.cell, { width: `${COL.date + COL.seq + COL.pcCode + COL.pcName + COL.workDays + COL.ratePerDay + COL.bank + COL.pcType + COL.job}%` }]}>
+            <View style={[s.cell, { width: `${labelWidth}%` }]}>
               <Text style={[s.cellText, s.right]}>รวมทั้งสิ้น</Text>
             </View>
-            <View style={[s.cell, { width: `${COL.before}%` }]}><Text style={[s.cellText, s.right]}>{money(totals.totalBefore)}</Text></View>
-            <View style={[s.cell, { width: `${COL.wht}%` }]}><Text style={[s.cellText, s.right]}>{money(totals.totalWht)}</Text></View>
-            <View style={[s.cell, { width: `${COL.net}%` }]}><Text style={[s.cellText, s.right]}>{money(totals.totalNet)}</Text></View>
+            {firstNumericIdx >= 0 && cols.slice(firstNumericIdx).map((col, k) => (
+              <View key={col.key} style={[s.cell, { width: `${widths[firstNumericIdx + k]}%` }]}>
+                <Text style={[s.cellText, s.right]}>{col.type === 'text' ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
         {/* เป็นจำนวนเงิน */}
-        <Text style={s.amountBox}>เป็นจำนวนเงิน  {totals.amountInThaiText}</Text>
+        <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>
 
         {/* Signature blocks */}
         <View style={s.sigRow}>

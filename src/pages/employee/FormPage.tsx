@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
 import { useAuth } from '../../auth/AuthProvider'
-import type { ExpenseHeader, ExpenseItem, Company, FormSettings } from '../../types/schema'
-import { emptyItem, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeTotals } from '../../features/expense-claim/calc'
+import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings } from '../../types/schema'
+import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import { computeColumnTotals, grandTotal, bahtTextForRows } from '../../features/expense-claim/calc'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
@@ -26,7 +26,15 @@ export default function FormPage() {
     firstName: profile?.firstName ?? '', lastName: profile?.lastName ?? '',
     position: profile?.position ?? '', job: profile?.defaultJob ?? '',
   })
-  const [items, setItems] = useState<ExpenseItem[]>([emptyItem()])
+  const [items, setItems] = useState<ExpenseRow[]>([emptyRow(EXPENSE_CLAIM_DEFAULTS.columns)])
+
+  function buildTotals(): ExpenseTotals {
+    return {
+      columnTotals: computeColumnTotals(settings.columns, items),
+      grandTotal: grandTotal(settings.columns, items),
+      amountInThaiText: bahtTextForRows(settings.columns, items),
+    }
+  }
 
   useEffect(() => { // โหลดใบเดิมกรณีแก้ไข
     if (id) getSubmission(id).then(s => {
@@ -37,8 +45,8 @@ export default function FormPage() {
   useEffect(() => { getFormSettings('expense-claim').then(setSettings) }, [])
 
   async function save() {
-    const totals = computeTotals(items)
-    const hasAmount = totals.totalBefore > 0
+    const totals = buildTotals()
+    const hasAmount = totals.grandTotal > 0
     if (!hasAmount) {
       alert('กรุณากรอกรายการอย่างน้อย 1 รายการ (วันทำงาน x วันละ ต้องมากกว่า 0)')
       return
@@ -91,7 +99,7 @@ export default function FormPage() {
             {showPreview ? 'แก้ไข' : 'ดูตัวอย่าง'}
           </button>
         </div>
-        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} categories={settings.categories} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} />}
         <div className="flex flex-wrap gap-3">
           <button
             className="inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0]"

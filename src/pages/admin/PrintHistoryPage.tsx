@@ -21,7 +21,7 @@ export default function PrintHistoryPage() {
               <td className="border px-2 py-1">{r.docNumber}</td>
               <td className="border px-2 py-1">{r.createdByEmployeeId}</td>
               <td className="border px-2 py-1">{new Date(r.createdAt).toLocaleDateString('th-TH')}</td>
-              <td className="border px-2 py-1 text-right">{r.totals.totalNet.toLocaleString()}</td>
+              <td className="border px-2 py-1 text-right">{r.totals.grandTotal.toLocaleString()}</td>
               <td className="border px-2 py-1 text-center">{r.printCount}</td>
               <td className="border px-2 py-1">{r.lastPrintedAt ? new Date(r.lastPrintedAt).toLocaleString('th-TH') : '-'}</td>
             </tr>

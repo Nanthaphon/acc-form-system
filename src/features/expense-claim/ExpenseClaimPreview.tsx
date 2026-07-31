@@ -1,8 +1,8 @@
-import type { Company, ExpenseHeader, ExpenseItem, FormSettings } from '../../types/schema'
+import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeItem, computeTotals } from './calc'
+import { computeRow, computeColumnTotals, bahtTextForRows } from './calc'
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseItem[]; docNumber: string; settings?: FormSettings }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
@@ -14,9 +14,16 @@ function money(n: number): string {
 }
 
 export default function ExpenseClaimPreview({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
-  const computed = items.map(computeItem)
-  const totals = computeTotals(items)
+  const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
+  const computed = items.map(r => computeRow(cols, r))
+  const columnTotals = computeColumnTotals(cols, items)
+  const bahtWords = bahtTextForRows(cols, items)
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
+  const totalCols = cols.length + 1 // + leading seq column
+
+  // Totals footer: label spans the seq column + leading text columns up to the first numeric/calc column.
+  const firstNumericIdx = cols.findIndex(c => c.type !== 'text')
+  const labelSpan = firstNumericIdx < 0 ? totalCols : firstNumericIdx + 1
 
   return (
     <div id="print-area" style={{ fontFamily: "'Sarabun', serif" }} className="mx-auto max-w-3xl border border-black bg-white p-6 text-xs text-black">
@@ -68,64 +75,50 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber,
         <span className="min-w-[80px] border-b border-black px-1">{header.job}</span>
       </div>
 
-      {/* Main table */}
+      {/* Main table — dynamic columns */}
       <table className="mt-3 w-full border-collapse border border-black text-[10px]">
         <thead>
           <tr>
-            <th rowSpan={2} className="border border-black px-1 py-1">วันเดือนปี</th>
-            <th rowSpan={2} className="border border-black px-1 py-1">ลำดับ</th>
-            <th colSpan={4} className="border border-black px-1 py-1">รายละเอียด</th>
-            <th rowSpan={2} className="border border-black px-1 py-1">ธนาคาร</th>
-            <th rowSpan={2} className="border border-black px-1 py-1">ประเภทพีซี</th>
-            <th rowSpan={2} className="border border-black px-1 py-1">Job</th>
-            <th colSpan={3} className="border border-black px-1 py-1">จำนวนเงิน</th>
-          </tr>
-          <tr>
-            <th className="border border-black px-1 py-1">PC Code</th>
-            <th className="border border-black px-1 py-1">PC Name</th>
-            <th className="border border-black px-1 py-1">วันทำงาน</th>
-            <th className="border border-black px-1 py-1">วันละ</th>
-            <th className="border border-black px-1 py-1">ก่อนหัก</th>
-            <th className="border border-black px-1 py-1">หักภาษี ณ ที่จ่าย 3%</th>
-            <th className="border border-black px-1 py-1">รวม</th>
+            <th className="border border-black px-1 py-1">ลำดับ</th>
+            {cols.map(col => (
+              <th key={col.key} className="border border-black px-1 py-1">{col.label}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {items.map((it, i) => (
+          {items.map((_, i) => (
             <tr key={i}>
-              <td className="border border-black px-1 py-0.5">{it.date}</td>
               <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
-              <td className="border border-black px-1 py-0.5">{it.pcCode}</td>
-              <td className="border border-black px-1 py-0.5">{it.pcName}</td>
-              <td className="border border-black px-1 py-0.5 text-center">{it.workDays}</td>
-              <td className="border border-black px-1 py-0.5 text-right">{it.ratePerDay.toLocaleString()}</td>
-              <td className="border border-black px-1 py-0.5">{it.bankAccount}</td>
-              <td className="border border-black px-1 py-0.5">{it.pcType}</td>
-              <td className="border border-black px-1 py-0.5">{it.job}</td>
-              <td className="border border-black px-1 py-0.5 text-right">{money(computed[i].amountBeforeWht)}</td>
-              <td className="border border-black px-1 py-0.5 text-right">{money(computed[i].wht3)}</td>
-              <td className="border border-black px-1 py-0.5 text-right">{money(computed[i].amountNet)}</td>
+              {cols.map(col => (
+                <td key={col.key} className={`border border-black px-1 py-0.5 ${col.type === 'text' ? '' : 'text-right'}`}>
+                  {col.type === 'text'
+                    ? (computed[i][col.key] as string)
+                    : money(Number(computed[i][col.key]) || 0)}
+                </td>
+              ))}
             </tr>
           ))}
           {Array.from({ length: emptyRowCount }).map((_, i) => (
             <tr key={`empty-${i}`}>
-              {Array.from({ length: 12 }).map((__, j) => (
+              {Array.from({ length: totalCols }).map((__, j) => (
                 <td key={j} className="border border-black px-1 py-0.5">&nbsp;</td>
               ))}
             </tr>
           ))}
           <tr className="font-bold">
-            <td className="border border-black px-1 py-1 text-right" colSpan={9}>รวมทั้งสิ้น</td>
-            <td className="border border-black px-1 py-1 text-right">{money(totals.totalBefore)}</td>
-            <td className="border border-black px-1 py-1 text-right">{money(totals.totalWht)}</td>
-            <td className="border border-black px-1 py-1 text-right">{money(totals.totalNet)}</td>
+            <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
+            {firstNumericIdx >= 0 && cols.slice(firstNumericIdx).map(col => (
+              <td key={col.key} className="border border-black px-1 py-1 text-right">
+                {col.type === 'text' ? '' : money(columnTotals[col.key] ?? 0)}
+              </td>
+            ))}
           </tr>
         </tbody>
       </table>
 
       {/* เป็นจำนวนเงิน */}
       <div className="mt-2 border border-black px-2 py-1 text-center">
-        เป็นจำนวนเงิน &nbsp; {totals.amountInThaiText}
+        เป็นจำนวนเงิน &nbsp; {bahtWords}
       </div>
 
       {/* Signature blocks */}
