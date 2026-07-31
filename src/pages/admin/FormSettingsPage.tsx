@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Company, FormSettings, FormColumn, ColumnType, CalcDef } from '../../types/schema'
+import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
 
@@ -24,11 +25,22 @@ function newColumnKey(existing: FormColumn[]): string {
   return `col${n}`
 }
 
+// Sample row for the preview (text -> 'ตัวอย่าง', number -> 100; calc columns compute from these).
+function sampleRow(cols: FormColumn[]): ExpenseRow {
+  const r: ExpenseRow = {}
+  for (const c of cols) {
+    if (c.type === 'number') r[c.key] = 100
+    else if (c.type === 'text') r[c.key] = 'ตัวอย่าง'
+  }
+  return r
+}
+
 export default function FormSettingsPage() {
   const nav = useNavigate()
   const [settings, setSettings] = useState<FormSettings>(EXPENSE_CLAIM_DEFAULTS)
   const [companies, setCompanies] = useState<Company[]>([])
   const [saving, setSaving] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
 
   function loadCompanies() { listCompanies().then(setCompanies) }
   useEffect(() => {
@@ -130,6 +142,12 @@ export default function FormSettingsPage() {
 
   const columns = settings.columns
   const visibleCount = columns.filter(c => !c.hidden).length
+  const previewCompany = companies[0] ?? null
+  const previewHeader: ExpenseHeader = {
+    subject: settings.subject, categories: settings.categories.slice(0, 1),
+    companyId: previewCompany?.id ?? '', firstName: 'สมชาย', lastName: 'ใจดี', position: 'พนักงาน', job: 'ตัวอย่าง',
+  }
+  const previewItems: ExpenseRow[] = [sampleRow(columns), sampleRow(columns)]
 
   return (
     <div className="space-y-4">
@@ -141,13 +159,28 @@ export default function FormSettingsPage() {
           <div className="text-[13px] text-[#7a869a]">แก้ไขหัวฟอร์ม คอลัมน์ตาราง หมวดค่าใช้จ่าย หมายเหตุ และโลโก้บริษัท</div>
         </div>
         <button
-          className="ml-auto inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0] disabled:opacity-60"
+          className="ml-auto inline-flex items-center gap-2 rounded-[11px] border border-[#e5eaf3] px-4 py-3 text-sm font-medium hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+          onClick={() => setShowPreview(p => !p)}
+        >
+          {showPreview ? '✏️ กลับไปแก้ไข' : '👁️ ดูตัวอย่าง'}
+        </button>
+        <button
+          className="inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0] disabled:opacity-60"
           onClick={save}
           disabled={saving}
         >
           💾 บันทึกฟอร์ม
         </button>
       </div>
+
+      {showPreview && (
+        <div className="overflow-x-auto rounded-2xl border border-[#e5eaf3] bg-[#f4f6fb] p-4">
+          <ExpenseClaimPreview company={previewCompany} header={previewHeader} items={previewItems} docNumber={settings.formCode || 'GAC6709-003'} settings={settings} />
+        </div>
+      )}
+
+      {!showPreview && (
+      <div className="space-y-4">
 
       {/* ข้อความหัวฟอร์ม */}
       <div className={cardClass}>
@@ -343,6 +376,8 @@ export default function FormSettingsPage() {
           ))}
         </div>
       </div>
+      </div>
+      )}
     </div>
   )
 }
