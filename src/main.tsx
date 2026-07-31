@@ -26,6 +26,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'form', element: <FormPage /> },
+      { path: 'form/expense-claim/edit', element: <RequireAdmin><FormSettingsPage /></RequireAdmin> },
       { path: 'form/:id', element: <FormPage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'profile', element: <ProfilePage /> },

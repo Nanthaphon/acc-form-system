@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { Company, FormSettings } from '../../types/schema'
+import { useNavigate } from 'react-router-dom'
+import type { Company, FormSettings, FormColumn, ColumnType, CalcDef } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
@@ -7,8 +8,22 @@ import { listCompanies, updateCompanyLogo } from '../../data/companies'
 const cardClass = 'rounded-2xl border border-[#e5eaf3] bg-white p-6 shadow-[0_1px_2px_rgba(16,32,64,0.03)]'
 const cardTitleClass = "flex items-center gap-2 text-sm font-semibold text-[#16233f] before:block before:h-4 before:w-1 before:rounded-[3px] before:bg-[#2b5bd7]"
 const inputClass = 'w-full rounded-[10px] border border-[#e5eaf3] bg-[#fbfcfe] px-3 py-2.5 text-sm placeholder:text-[#7a869a] focus:border-[#2b5bd7] focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-[#2b5bd7]/[.12]'
+const smallSelect = 'rounded-[8px] border border-[#e5eaf3] bg-white px-2 py-1.5 text-sm'
+const iconBtn = 'rounded-[8px] border border-[#e5eaf3] px-2 py-1.5 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7] disabled:opacity-40 disabled:hover:border-[#e5eaf3] disabled:hover:text-inherit'
+
+const OP_LABELS: Record<CalcDef['op'], string> = {
+  multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', percent: '% ร้อยละ',
+}
+
+function newColumnKey(existing: FormColumn[]): string {
+  let n = existing.length + 1
+  const keys = new Set(existing.map(c => c.key))
+  while (keys.has(`col${n}`)) n++
+  return `col${n}`
+}
 
 export default function FormSettingsPage() {
+  const nav = useNavigate()
   const [settings, setSettings] = useState<FormSettings>(EXPENSE_CLAIM_DEFAULTS)
   const [companies, setCompanies] = useState<Company[]>([])
   const [saving, setSaving] = useState(false)
@@ -22,30 +37,60 @@ export default function FormSettingsPage() {
   function setField<K extends keyof FormSettings>(key: K, value: FormSettings[K]) {
     setSettings(s => ({ ...s, [key]: value }))
   }
-  function setCategory(idx: number, value: string) {
-    setSettings(s => ({ ...s, categories: s.categories.map((c, i) => i === idx ? value : c) }))
+
+  // ----- categories -----
+  function setCategory(idx: number, value: string) { setSettings(s => ({ ...s, categories: s.categories.map((c, i) => i === idx ? value : c) })) }
+  function removeCategory(idx: number) { setSettings(s => ({ ...s, categories: s.categories.filter((_, i) => i !== idx) })) }
+  function addCategory() { setSettings(s => ({ ...s, categories: [...s.categories, ''] })) }
+
+  // ----- notes -----
+  function setNote(idx: number, value: string) { setSettings(s => ({ ...s, notes: s.notes.map((n, i) => i === idx ? value : n) })) }
+  function removeNote(idx: number) { setSettings(s => ({ ...s, notes: s.notes.filter((_, i) => i !== idx) })) }
+  function addNote() { setSettings(s => ({ ...s, notes: [...s.notes, ''] })) }
+
+  // ----- columns -----
+  function setColumns(cols: FormColumn[]) { setSettings(s => ({ ...s, columns: cols })) }
+  function patchColumn(idx: number, patch: Partial<FormColumn>) {
+    setColumns(settings.columns.map((c, i) => i === idx ? { ...c, ...patch } : c))
   }
-  function removeCategory(idx: number) {
-    setSettings(s => ({ ...s, categories: s.categories.filter((_, i) => i !== idx) }))
+  function changeType(idx: number, type: ColumnType) {
+    const col = settings.columns[idx]
+    if (type === 'calc') {
+      const others = settings.columns.filter((_, i) => i !== idx)
+      const a = col.calc?.a ?? others[0]?.key ?? col.key
+      const b = col.calc?.b ?? others[1]?.key ?? others[0]?.key ?? col.key
+      patchColumn(idx, { type, calc: col.calc ?? { op: 'multiply', a, b } })
+    } else {
+      patchColumn(idx, { type, calc: undefined })
+    }
   }
-  function addCategory() {
-    setSettings(s => ({ ...s, categories: [...s.categories, ''] }))
+  function patchCalc(idx: number, patch: Partial<CalcDef>) {
+    const col = settings.columns[idx]
+    const calc: CalcDef = { op: 'multiply', a: '', ...col.calc, ...patch }
+    patchColumn(idx, { calc })
   }
-  function setNote(idx: number, value: string) {
-    setSettings(s => ({ ...s, notes: s.notes.map((n, i) => i === idx ? value : n) }))
+  function setTotalColumn(idx: number) {
+    setColumns(settings.columns.map((c, i) => ({ ...c, isTotal: i === idx ? true : undefined })))
   }
-  function removeNote(idx: number) {
-    setSettings(s => ({ ...s, notes: s.notes.filter((_, i) => i !== idx) }))
+  function insertColumnAt(pos: number) {
+    const cols = [...settings.columns]
+    cols.splice(pos, 0, { key: newColumnKey(cols), label: 'คอลัมน์ใหม่', type: 'text' })
+    setColumns(cols)
   }
-  function addNote() {
-    setSettings(s => ({ ...s, notes: [...s.notes, ''] }))
+  function removeColumn(idx: number) { setColumns(settings.columns.filter((_, i) => i !== idx)) }
+  function moveColumn(idx: number, dir: -1 | 1) {
+    const j = idx + dir
+    if (j < 0 || j >= settings.columns.length) return
+    const cols = [...settings.columns]
+    ;[cols[idx], cols[j]] = [cols[j], cols[idx]]
+    setColumns(cols)
   }
 
   async function save() {
     setSaving(true)
     try {
       await updateFormSettings({ ...settings, formType: 'expense-claim' })
-      alert('บันทึกการตั้งค่าแล้ว')
+      alert('บันทึกฟอร์มแล้ว')
     } catch {
       alert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
     } finally {
@@ -58,37 +103,35 @@ export default function FormSettingsPage() {
     const reader = new FileReader()
     reader.onload = async () => {
       const dataUrl = String(reader.result)
-      if (dataUrl.length > 400000) {
-        alert('ไฟล์ใหญ่เกินไป แนะนำโลโก้เล็กกว่า ~300KB')
-        return
-      }
-      try {
-        await updateCompanyLogo(company.id, dataUrl)
-        loadCompanies()
-      } catch {
-        alert('อัปโหลดโลโก้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
-      }
+      if (dataUrl.length > 400000) { alert('ไฟล์ใหญ่เกินไป แนะนำโลโก้เล็กกว่า ~300KB'); return }
+      try { await updateCompanyLogo(company.id, dataUrl); loadCompanies() }
+      catch { alert('อัปโหลดโลโก้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
     }
     reader.readAsDataURL(file)
   }
-
   async function removeLogo(company: Company) {
-    try {
-      await updateCompanyLogo(company.id, null)
-      loadCompanies()
-    } catch {
-      alert('ลบโลโก้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
-    }
+    try { await updateCompanyLogo(company.id, null); loadCompanies() }
+    catch { alert('ลบโลโก้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
+
+  const columns = settings.columns
 
   return (
     <div className="space-y-4">
       <div className="mb-2 flex items-center gap-3.5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]">⚙️</div>
+        <button onClick={() => nav('/')} className="rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]">← กลับ</button>
+        <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]">✏️</div>
         <div>
-          <h1 className="text-xl font-semibold text-[#1f2a3d]">ตั้งค่าฟอร์ม — ใบเบิกค่าใช้จ่าย</h1>
-          <div className="text-[13px] text-[#7a869a]">แก้ไขข้อความหัวฟอร์ม หมวดค่าใช้จ่าย หมายเหตุ และโลโก้บริษัท</div>
+          <h1 className="text-xl font-semibold text-[#1f2a3d]">แก้ไขฟอร์ม — ใบเบิกค่าใช้จ่าย</h1>
+          <div className="text-[13px] text-[#7a869a]">แก้ไขหัวฟอร์ม คอลัมน์ตาราง หมวดค่าใช้จ่าย หมายเหตุ และโลโก้บริษัท</div>
         </div>
+        <button
+          className="ml-auto inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0] disabled:opacity-60"
+          onClick={save}
+          disabled={saving}
+        >
+          💾 บันทึกฟอร์ม
+        </button>
       </div>
 
       {/* ข้อความหัวฟอร์ม */}
@@ -114,6 +157,106 @@ export default function FormSettingsPage() {
         </div>
       </div>
 
+      {/* คอลัมน์ตาราง (Column builder) */}
+      <div className={cardClass}>
+        <h2 className={`${cardTitleClass} mb-1`}>คอลัมน์ตาราง</h2>
+        <p className="mb-4 text-xs text-[#7a869a]">กำหนดคอลัมน์ในตารางรายการเบิก · คอลัมน์แบบ “คำนวณ” จะคิดค่าให้อัตโนมัติจากคอลัมน์อื่น</p>
+
+        {/* Representative header preview */}
+        <div className="mb-4 overflow-x-auto rounded-[10px] border border-[#eef2f8]">
+          <table className="w-full text-left text-[11px]">
+            <thead>
+              <tr className="bg-[#f7f9fd]">
+                <th className="px-2 py-1.5 text-[#7a869a]">#</th>
+                {columns.map(c => (
+                  <th key={c.key} className="px-2 py-1.5 font-semibold text-[#16233f]">
+                    {c.label || <span className="text-[#c3ccdb]">(ไม่มีชื่อ)</span>}
+                    {c.type === 'calc' && <span className="ml-1 font-normal text-[#7a869a]">ƒ</span>}
+                    {c.isTotal && <span className="ml-1 text-[#2b5bd7]">★</span>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          </table>
+        </div>
+
+        <div className="space-y-3">
+          <button onClick={() => insertColumnAt(0)} className="text-xs font-medium text-[#2b5bd7] hover:underline">＋ แทรกคอลัมน์ที่ตำแหน่งแรก</button>
+          {columns.map((col, i) => {
+            const others = columns.filter((_, x) => x !== i)
+            const showB = col.calc?.op !== 'percent'
+            return (
+              <div key={i}>
+                <div className="rounded-[12px] border border-[#eef2f8] p-3">
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div className="min-w-[180px] flex-1">
+                      <label className="mb-1 block text-[11px] text-[#7a869a]">ชื่อคอลัมน์</label>
+                      <input className={inputClass} value={col.label} onChange={e => patchColumn(i, { label: e.target.value })} />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-[#7a869a]">ชนิด</label>
+                      <select className={smallSelect} value={col.type} onChange={e => changeType(i, e.target.value as ColumnType)}>
+                        <option value="text">Text (ข้อความ)</option>
+                        <option value="number">Number (ตัวเลข)</option>
+                        <option value="calc">คำนวณ</option>
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-1.5 pb-2 text-[12px] text-[#7a869a]">
+                      <input type="checkbox" checked={!!col.isTotal} onChange={() => setTotalColumn(i)} /> ยอดรวม (★)
+                    </label>
+                    <div className="ml-auto flex items-center gap-1.5 pb-1">
+                      <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น">↑</button>
+                      <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง">↓</button>
+                      <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeColumn(i)} title="ลบคอลัมน์">🗑️</button>
+                    </div>
+                  </div>
+
+                  {col.type === 'calc' && (
+                    <div className="mt-3 flex flex-wrap items-end gap-2 rounded-[10px] bg-[#f7f9fd] p-3">
+                      <div>
+                        <label className="mb-1 block text-[11px] text-[#7a869a]">สูตร</label>
+                        <select className={smallSelect} value={col.calc?.op ?? 'multiply'} onChange={e => patchCalc(i, { op: e.target.value as CalcDef['op'] })}>
+                          {(Object.keys(OP_LABELS) as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[11px] text-[#7a869a]">ค่า A</label>
+                        <select className={smallSelect} value={col.calc?.a ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
+                          <option value="">— เลือก —</option>
+                          {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
+                        </select>
+                      </div>
+                      {showB ? (
+                        <div>
+                          <label className="mb-1 block text-[11px] text-[#7a869a]">ค่า B</label>
+                          <select className={smallSelect} value={col.calc?.b ?? ''} onChange={e => patchCalc(i, { b: e.target.value })}>
+                            <option value="">— เลือก —</option>
+                            {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
+                          </select>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="mb-1 block text-[11px] text-[#7a869a]">ร้อยละ (%)</label>
+                          <input type="number" className={`${smallSelect} w-24 text-right`} value={col.calc?.percent ?? 0} onChange={e => patchCalc(i, { percent: Number(e.target.value) })} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => insertColumnAt(i + 1)} className="mt-1.5 text-xs font-medium text-[#2b5bd7] hover:underline">＋ แทรกคอลัมน์ถัดจากนี้</button>
+              </div>
+            )
+          })}
+        </div>
+
+        <button
+          className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]"
+          onClick={() => insertColumnAt(columns.length)}
+        >
+          ＋ เพิ่มคอลัมน์
+        </button>
+      </div>
+
       {/* หมวดค่าใช้จ่าย */}
       <div className={cardClass}>
         <h2 className={`${cardTitleClass} mb-4`}>หมวดค่าใช้จ่าย (ช่องติ๊ก)</h2>
@@ -121,21 +264,11 @@ export default function FormSettingsPage() {
           {settings.categories.map((c, i) => (
             <div key={i} className="flex items-center gap-2">
               <input className={inputClass} value={c} onChange={e => setCategory(i, e.target.value)} />
-              <button
-                onClick={() => removeCategory(i)}
-                className="shrink-0 rounded-[10px] border border-[#e5eaf3] px-3 py-2.5 text-sm text-[#d64545] hover:border-[#d64545]"
-              >
-                ลบ
-              </button>
+              <button onClick={() => removeCategory(i)} className="shrink-0 rounded-[10px] border border-[#e5eaf3] px-3 py-2.5 text-sm text-[#d64545] hover:border-[#d64545]">ลบ</button>
             </div>
           ))}
         </div>
-        <button
-          className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]"
-          onClick={addCategory}
-        >
-          ＋ เพิ่มหมวด
-        </button>
+        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addCategory}>＋ เพิ่มหมวด</button>
       </div>
 
       {/* หมายเหตุท้ายฟอร์ม */}
@@ -145,21 +278,11 @@ export default function FormSettingsPage() {
           {settings.notes.map((n, i) => (
             <div key={i} className="flex items-start gap-2">
               <textarea className={`${inputClass} min-h-[52px] resize-y`} value={n} onChange={e => setNote(i, e.target.value)} />
-              <button
-                onClick={() => removeNote(i)}
-                className="shrink-0 rounded-[10px] border border-[#e5eaf3] px-3 py-2.5 text-sm text-[#d64545] hover:border-[#d64545]"
-              >
-                ลบ
-              </button>
+              <button onClick={() => removeNote(i)} className="shrink-0 rounded-[10px] border border-[#e5eaf3] px-3 py-2.5 text-sm text-[#d64545] hover:border-[#d64545]">ลบ</button>
             </div>
           ))}
         </div>
-        <button
-          className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]"
-          onClick={addNote}
-        >
-          ＋ เพิ่มหมายเหตุ
-        </button>
+        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addNote}>＋ เพิ่มหมายเหตุ</button>
       </div>
 
       <button
@@ -167,7 +290,7 @@ export default function FormSettingsPage() {
         onClick={save}
         disabled={saving}
       >
-        💾 บันทึกการตั้งค่า
+        💾 บันทึกฟอร์ม
       </button>
 
       {/* โลโก้บริษัท */}
@@ -193,12 +316,7 @@ export default function FormSettingsPage() {
                   onChange={e => onLogoPick(company, e.target.files?.[0])}
                 />
                 {company.logo && (
-                  <button
-                    onClick={() => removeLogo(company)}
-                    className="rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm text-[#d64545] hover:border-[#d64545]"
-                  >
-                    ลบโลโก้
-                  </button>
+                  <button onClick={() => removeLogo(company)} className="rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm text-[#d64545] hover:border-[#d64545]">ลบโลโก้</button>
                 )}
               </div>
             </div>

@@ -131,6 +131,10 @@ create table if not exists form_settings (
   title text not null default '', subject text not null default '', attention text not null default '',
   "formCode" text not null default '', categories jsonb not null default '[]', notes jsonb not null default '[]'
 );
+-- Dynamic form-builder columns (added for the dynamic column model).
+-- App falls back to EXPENSE_CLAIM_DEFAULTS.columns when this is empty/missing,
+-- so the app keeps working before this migration is applied.
+alter table form_settings add column if not exists columns jsonb not null default '[]';
 alter table form_settings enable row level security;
 drop policy if exists form_settings_select on form_settings;
 create policy form_settings_select on form_settings for select using (auth.uid() is not null);

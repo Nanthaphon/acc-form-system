@@ -37,9 +37,6 @@ export default function Layout() {
             <NavLink to="/admin/prints" className={navLinkClass}>
               <span className="w-[18px] text-center opacity-85">🖨️</span> ประวัติการพิมพ์
             </NavLink>
-            <NavLink to="/admin/form-settings" className={navLinkClass}>
-              <span className="w-[18px] text-center opacity-85">⚙️</span> ตั้งค่าฟอร์ม
-            </NavLink>
           </>}
         </nav>
         <div className="mt-auto border-t border-white/[.08] px-3 pt-2">
