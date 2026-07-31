@@ -1,6 +1,6 @@
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeRow, computeColumnTotals, bahtTextForRows } from './calc'
+import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
 
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
 
@@ -15,14 +15,15 @@ function money(n: number): string {
 
 export default function ExpenseClaimPreview({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
   const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
+  const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const bahtWords = bahtTextForRows(cols, items)
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
-  const totalCols = cols.length + 1 // + leading seq column
+  const totalCols = vcols.length + 1 // + leading seq column
 
-  // Totals footer: label spans the seq column + leading text columns up to the first numeric/calc column.
-  const firstNumericIdx = cols.findIndex(c => c.type !== 'text')
+  // Totals footer: label spans the seq column + leading text columns up to the first visible numeric/calc column.
+  const firstNumericIdx = vcols.findIndex(c => c.type !== 'text')
   const labelSpan = firstNumericIdx < 0 ? totalCols : firstNumericIdx + 1
 
   return (
@@ -80,7 +81,7 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber,
         <thead>
           <tr>
             <th className="border border-black px-1 py-1">ลำดับ</th>
-            {cols.map(col => (
+            {vcols.map(col => (
               <th key={col.key} className="border border-black px-1 py-1">{col.label}</th>
             ))}
           </tr>
@@ -89,7 +90,7 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber,
           {items.map((_, i) => (
             <tr key={i}>
               <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
-              {cols.map(col => (
+              {vcols.map(col => (
                 <td key={col.key} className={`border border-black px-1 py-0.5 ${col.type === 'text' ? '' : 'text-right'}`}>
                   {col.type === 'text'
                     ? (computed[i][col.key] as string)
@@ -107,7 +108,7 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber,
           ))}
           <tr className="font-bold">
             <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
-            {firstNumericIdx >= 0 && cols.slice(firstNumericIdx).map(col => (
+            {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map(col => (
               <td key={col.key} className="border border-black px-1 py-1 text-right">
                 {col.type === 'text' ? '' : money(columnTotals[col.key] ?? 0)}
               </td>

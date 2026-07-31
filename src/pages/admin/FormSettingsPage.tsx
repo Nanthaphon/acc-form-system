@@ -15,6 +15,8 @@ const OP_LABELS: Record<CalcDef['op'], string> = {
   multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', percent: '% ร้อยละ',
 }
 
+const MAX_VISIBLE = 12
+
 function newColumnKey(existing: FormColumn[]): string {
   let n = existing.length + 1
   const keys = new Set(existing.map(c => c.key))
@@ -71,8 +73,23 @@ export default function FormSettingsPage() {
   }
   function insertColumnAt(pos: number) {
     const cols = [...settings.columns]
-    cols.splice(pos, 0, { key: newColumnKey(cols), label: 'คอลัมน์ใหม่', type: 'text' })
+    // If 12 columns are already visible, add the new one hidden so we never exceed 12 visible.
+    const atMaxVisible = cols.filter(c => !c.hidden).length >= MAX_VISIBLE
+    cols.splice(pos, 0, { key: newColumnKey(cols), label: 'คอลัมน์ใหม่', type: 'text', hidden: atMaxVisible || undefined })
     setColumns(cols)
+  }
+  function toggleVisible(idx: number) {
+    const col = settings.columns[idx]
+    if (col.hidden) {
+      // Making it visible — enforce the max.
+      if (settings.columns.filter(c => !c.hidden).length >= MAX_VISIBLE) {
+        alert('แสดงได้ไม่เกิน 12 คอลัมน์')
+        return
+      }
+      patchColumn(idx, { hidden: false })
+    } else {
+      patchColumn(idx, { hidden: true })
+    }
   }
   function removeColumn(idx: number) { setColumns(settings.columns.filter((_, i) => i !== idx)) }
   function moveColumn(idx: number, dir: -1 | 1) {
@@ -112,6 +129,7 @@ export default function FormSettingsPage() {
   }
 
   const columns = settings.columns
+  const visibleCount = columns.filter(c => !c.hidden).length
 
   return (
     <div className="space-y-4">
@@ -156,8 +174,13 @@ export default function FormSettingsPage() {
 
       {/* คอลัมน์ตาราง (Column builder) */}
       <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-1`}>คอลัมน์ตาราง</h2>
-        <p className="mb-4 text-xs text-[#7a869a]">กำหนดคอลัมน์ในตารางรายการเบิก · คอลัมน์แบบ “คำนวณ” จะคิดค่าให้อัตโนมัติจากคอลัมน์อื่น</p>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h2 className={cardTitleClass}>คอลัมน์ตาราง</h2>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${visibleCount >= MAX_VISIBLE ? 'bg-[#fdecec] text-[#d64545]' : 'bg-[#eaf0ff] text-[#1e46b0]'}`}>
+            แสดงอยู่ {visibleCount} / {MAX_VISIBLE}
+          </span>
+        </div>
+        <p className="mb-4 text-xs text-[#7a869a]">กำหนดคอลัมน์ในตารางรายการเบิก · คอลัมน์แบบ “คำนวณ” จะคิดค่าให้อัตโนมัติจากคอลัมน์อื่น · ติ๊ก “แสดง” เพื่อเลือกคอลัมน์ที่จะแสดงในเอกสาร (สูงสุด {MAX_VISIBLE})</p>
 
         {/* Representative header preview */}
         <div className="mb-4 overflow-x-auto rounded-[10px] border border-[#eef2f8]">
@@ -197,7 +220,11 @@ export default function FormSettingsPage() {
                         <option value="calc">คำนวณ</option>
                       </select>
                     </div>
-                    <div className="ml-auto flex items-center gap-1.5 pb-1">
+                    <label className="ml-auto flex cursor-pointer select-none items-center gap-1.5 pb-2 text-[12px] text-[#16233f]">
+                      <input type="checkbox" checked={!col.hidden} onChange={() => toggleVisible(i)} />
+                      แสดง
+                    </label>
+                    <div className="flex items-center gap-1.5 pb-1">
                       <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น">↑</button>
                       <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง">↓</button>
                       <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeColumn(i)} title="ลบคอลัมน์">🗑️</button>

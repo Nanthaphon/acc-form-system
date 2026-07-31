@@ -5,6 +5,11 @@ export function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100
 }
 
+// Columns to DISPLAY (calc still uses the full columns array).
+export function visibleColumns(columns: FormColumn[]): FormColumn[] {
+  return columns.filter(c => !c.hidden)
+}
+
 // Compute every calc column (in array order) from its calc def.
 // Later calc columns can reference earlier (already-computed) calc columns.
 export function computeRow(columns: FormColumn[], row: ExpenseRow): ExpenseRow {

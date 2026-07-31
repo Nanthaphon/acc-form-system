@@ -1,6 +1,6 @@
 import type { ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS } from '../../types/schema'
-import { computeRow, computeColumnTotals, bahtTextForRows } from './calc'
+import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
 
 interface Props {
   header: ExpenseHeader
@@ -23,6 +23,7 @@ function fmt(n: number): string {
 
 export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
+  const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const bahtWords = bahtTextForRows(cols, items)
@@ -97,7 +98,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
             <thead>
               <tr>
                 <th className="rounded-tl-[10px] border-b border-[#e5eaf3] bg-[#f7f9fd] px-2.5 py-2.5 text-center text-xs font-semibold text-[#16233f]">#</th>
-                {cols.map(col => (
+                {vcols.map(col => (
                   <th
                     key={col.key}
                     className={`border-b border-[#e5eaf3] bg-[#f7f9fd] px-2.5 py-2.5 text-xs font-semibold text-[#16233f] ${
@@ -115,7 +116,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               {items.map((row, i) => (
                 <tr key={i} className="hover:bg-[#fafbff]">
                   <td className="border-b border-[#eef2f8] p-2 text-center text-[#7a869a]">{i + 1}</td>
-                  {cols.map(col => (
+                  {vcols.map(col => (
                     <td key={col.key} className="border-b border-[#eef2f8] p-2">
                       {col.type === 'calc' ? (
                         <div className="min-w-[70px] text-right font-semibold text-[#16233f]">
@@ -145,7 +146,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               {/* Totals row */}
               <tr className="font-semibold text-[#16233f]">
                 <td className="px-2.5 py-2.5"></td>
-                {cols.map((col, idx) => (
+                {vcols.map((col, idx) => (
                   <td key={col.key} className={`px-2.5 py-2.5 ${col.type === 'text' ? 'text-left' : 'text-right'}`}>
                     {idx === 0 ? 'รวม' : col.type !== 'text' ? fmt(columnTotals[col.key] ?? 0) : ''}
                   </td>

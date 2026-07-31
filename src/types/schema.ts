@@ -11,6 +11,7 @@ export interface FormColumn {
   type: ColumnType
   calc?: CalcDef       // required when type==='calc'; references other columns by key
   isTotal?: boolean    // the column whose column-sum becomes the Thai baht text (exactly one should be true)
+  hidden?: boolean     // undefined/false = visible; hidden columns still compute but are not displayed
 }
 
 // One row of the dynamic table, keyed by column.key

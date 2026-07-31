@@ -1,7 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeRow, computeColumnTotals, bahtTextForRows } from './calc'
+import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
 
 // เอกสารทางการใช้ฟอนต์ Sarabun (TH Sarabun New) — มาตรฐานเอกสารราชการไทย
 Font.register({ family: 'Sarabun', fonts: [
@@ -64,14 +64,15 @@ interface Props { company: Company | null; header: ExpenseHeader; items: Expense
 
 export function ExpenseClaimPdf({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
   const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
-  const widths = columnWidths(cols)
+  const vcols = visibleColumns(cols)
+  const widths = columnWidths(vcols)
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const bahtWords = bahtTextForRows(cols, items)
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
 
-  // Totals footer: label spans seq + leading text columns up to the first numeric/calc column.
-  const firstNumericIdx = cols.findIndex(c => c.type !== 'text')
+  // Totals footer: label spans seq + leading text columns up to the first visible numeric/calc column.
+  const firstNumericIdx = vcols.findIndex(c => c.type !== 'text')
   const labelWidth = firstNumericIdx < 0
     ? 100
     : SEQ_WIDTH + widths.slice(0, firstNumericIdx).reduce((a, b) => a + b, 0)
@@ -128,7 +129,7 @@ export function ExpenseClaimPdf({ company, header, items, docNumber, settings = 
         <View style={s.table}>
           <View style={[s.row, s.bold]}>
             <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={s.cellText}>ลำดับ</Text></View>
-            {cols.map((col, ci) => (
+            {vcols.map((col, ci) => (
               <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}><Text style={s.cellText}>{col.label}</Text></View>
             ))}
           </View>
@@ -136,7 +137,7 @@ export function ExpenseClaimPdf({ company, header, items, docNumber, settings = 
           {items.map((_, i) => (
             <View style={s.row} key={i}>
               <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={[s.cellText, s.center]}>{i + 1}</Text></View>
-              {cols.map((col, ci) => (
+              {vcols.map((col, ci) => (
                 <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}>
                   <Text style={[s.cellText, col.type === 'text' ? {} : s.right]}>
                     {col.type === 'text' ? (computed[i][col.key] as string) : money(Number(computed[i][col.key]) || 0)}
@@ -149,7 +150,7 @@ export function ExpenseClaimPdf({ company, header, items, docNumber, settings = 
           {Array.from({ length: emptyRowCount }).map((_, i) => (
             <View style={s.row} key={`empty-${i}`}>
               <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={s.cellText}> </Text></View>
-              {cols.map((col, ci) => (
+              {vcols.map((col, ci) => (
                 <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}><Text style={s.cellText}> </Text></View>
               ))}
             </View>
@@ -159,7 +160,7 @@ export function ExpenseClaimPdf({ company, header, items, docNumber, settings = 
             <View style={[s.cell, { width: `${labelWidth}%` }]}>
               <Text style={[s.cellText, s.right]}>รวมทั้งสิ้น</Text>
             </View>
-            {firstNumericIdx >= 0 && cols.slice(firstNumericIdx).map((col, k) => (
+            {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map((col, k) => (
               <View key={col.key} style={[s.cell, { width: `${widths[firstNumericIdx + k]}%` }]}>
                 <Text style={[s.cellText, s.right]}>{col.type === 'text' ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
               </View>
