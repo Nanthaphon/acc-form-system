@@ -14,6 +14,7 @@ import FormPage from './pages/employee/FormPage'
 import HistoryPage from './pages/employee/HistoryPage'
 import EmployeeListPage from './pages/admin/EmployeeListPage'
 import AddEmployeePage from './pages/admin/AddEmployeePage'
+import EditEmployeePage from './pages/admin/EditEmployeePage'
 import ImportCsvPage from './pages/admin/ImportCsvPage'
 import PrintHistoryPage from './pages/admin/PrintHistoryPage'
 
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: 'change-password', element: <ChangePasswordPage /> },
       { path: 'admin/employees', element: <RequireAdmin><EmployeeListPage /></RequireAdmin> },
       { path: 'admin/employees/new', element: <RequireAdmin><AddEmployeePage /></RequireAdmin> },
+      { path: 'admin/employees/:uid/edit', element: <RequireAdmin><EditEmployeePage /></RequireAdmin> },
       { path: 'admin/import', element: <RequireAdmin><ImportCsvPage /></RequireAdmin> },
       { path: 'admin/prints', element: <RequireAdmin><PrintHistoryPage /></RequireAdmin> },
       { path: '*', element: <Navigate to="/" replace /> },

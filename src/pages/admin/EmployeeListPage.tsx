@@ -42,8 +42,12 @@ export default function EmployeeListPage() {
               <td className="border px-2 py-1">{r.companyId}</td>
               <td className="border px-2 py-1">{r.role}</td>
               <td className="border px-2 py-1 text-center">
+                <Link to={`/admin/employees/${r.uid}/edit`} className="text-blue-600 hover:underline">แก้ไข</Link>
                 {r.uid !== profile?.uid && (
-                  <button onClick={() => onDelete(r)} className="text-red-600 hover:underline">ลบ</button>
+                  <>
+                    {' '}
+                    <button onClick={() => onDelete(r)} className="text-red-600 hover:underline">ลบ</button>
+                  </>
                 )}
               </td>
             </tr>
