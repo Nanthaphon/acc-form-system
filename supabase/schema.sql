@@ -145,3 +145,15 @@ insert into form_settings ("formType", title, subject, attention, "formCode", ca
   '["ค่าไมล์เลทและค่าใช้จ่ายเดินทาง","ค่าใช้จ่ายต่างๆ","ค่าล่วงเวลา","ค่าเบี้ยเลี้ยง"]'::jsonb,
   '["1. พนักงานจะต้องเคลียร์ค่าใช้จ่ายทุกวันอังคารและพฤหัสบดี","2. พนักงานที่ซื้อของด้วยตนเองมีหน้าที่ต้องตรวจชื่อและที่อยู่ที่ลงในใบกำกับภาษีว่าถูกต้องหรือไม่ ถ้าผิดพนักงานต้องรับผิดชอบเปลี่ยนบิลเอง","3. ใบกำกับภาษีของค่าน้ำมันจะต้องระบุเลขทะเบียนรถคันที่พนักงานเอาไปใช้ด้วยทุกครั้ง","4. ใบเบิกค่าใช้จ่ายต่อ 1 ชุด ค่าใช้จ่ายทุกรายการจะต้องเป็นบริษัทเดียวกันและเดือนเดียวกัน"]'::jsonb
 ) on conflict ("formType") do nothing;
+
+-- ===== Form groups + multiple forms (v1) =====
+create table if not exists form_groups ( id text primary key, name text not null, "sortOrder" int not null default 0, "createdAt" bigint not null default 0 );
+alter table form_groups enable row level security;
+drop policy if exists form_groups_select on form_groups;
+create policy form_groups_select on form_groups for select using (auth.uid() is not null);
+drop policy if exists form_groups_write on form_groups;
+create policy form_groups_write on form_groups for all using (is_admin()) with check (is_admin());
+alter table form_settings add column if not exists "groupId" text;
+alter table form_settings add column if not exists name text not null default '';
+insert into form_groups (id, name, "sortOrder") values ('default', 'ฟอร์มทั่วไป', 0) on conflict (id) do nothing;
+update form_settings set "groupId" = 'default', name = 'ใบเบิกค่าใช้จ่าย' where "formType" = 'expense-claim' and (name = '' or name is null);

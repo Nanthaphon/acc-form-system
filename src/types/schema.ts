@@ -30,10 +30,13 @@ export interface FormColumn {
 // One row of the dynamic table, keyed by column.key
 export type ExpenseRow = Record<string, string | number>
 
+export interface FormGroup { id: string; name: string; sortOrder: number; createdAt: number }
+
 export interface FormSettings {
   formType: string; title: string; subject: string; attention: string; formCode: string
   categories: string[]; notes: string[]
   columns: FormColumn[]
+  groupId?: string; name?: string
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
@@ -52,6 +55,8 @@ export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
 
 export const EXPENSE_CLAIM_DEFAULTS: FormSettings = {
   formType: 'expense-claim',
+  name: 'ใบเบิกค่าใช้จ่าย',
+  groupId: 'default',
   title: 'ใบขออนุมัติเบิกค่าใช้จ่าย',
   subject: 'ขออนุมัติเบิกค่าใช้จ่าย',
   attention: 'ท่านผู้จัดการ',
@@ -104,7 +109,7 @@ export interface ExpenseHeader {
 
 export interface Submission {
   id: string
-  formType: 'expense-claim'
+  formType: string
   docNumber: string
   header: ExpenseHeader
   items: ExpenseRow[]
