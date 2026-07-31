@@ -27,6 +27,13 @@ export async function incrementPrint(id: string): Promise<void> {
   const { error } = await supabase.rpc('increment_print', { sub_id: id })
   if (error) throw error
 }
+// Grand total for display — tolerant of old submissions saved before the
+// dynamic-column model (which used { totalNet } instead of { grandTotal }).
+export function submissionAmount(s: Submission): number {
+  const t = s.totals as unknown as { grandTotal?: number; totalNet?: number }
+  return Number(t?.grandTotal ?? t?.totalNet) || 0
+}
+
 export async function getSubmission(id: string): Promise<Submission | null> {
   const { data } = await supabase.from('submissions').select('*').eq('id', id).maybeSingle()
   return (data as Submission) ?? null
