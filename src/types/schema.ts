@@ -2,10 +2,39 @@ export type Role = 'employee' | 'admin'
 
 export interface Company { id: string; name: string; address: string; logo?: string | null }
 
+// ===== Dynamic column model =====
+export type ColumnType = 'text' | 'number' | 'calc'
+export interface CalcDef { op: 'multiply' | 'subtract' | 'add' | 'percent'; a: string; b?: string; percent?: number }
+export interface FormColumn {
+  key: string          // stable id, unique within the form
+  label: string
+  type: ColumnType
+  calc?: CalcDef       // required when type==='calc'; references other columns by key
+  isTotal?: boolean    // the column whose column-sum becomes the Thai baht text (exactly one should be true)
+}
+
+// One row of the dynamic table, keyed by column.key
+export type ExpenseRow = Record<string, string | number>
+
 export interface FormSettings {
   formType: string; title: string; subject: string; attention: string; formCode: string
   categories: string[]; notes: string[]
+  columns: FormColumn[]
 }
+
+export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
+  { key: 'date', label: 'วันเดือนปี', type: 'text' },
+  { key: 'pcCode', label: 'PC Code', type: 'text' },
+  { key: 'pcName', label: 'PC Name', type: 'text' },
+  { key: 'workDays', label: 'วันทำงาน', type: 'number' },
+  { key: 'ratePerDay', label: 'วันละ', type: 'number' },
+  { key: 'bankAccount', label: 'ธนาคาร', type: 'text' },
+  { key: 'pcType', label: 'ประเภทพีซี', type: 'text' },
+  { key: 'job', label: 'Job', type: 'text' },
+  { key: 'amountBeforeWht', label: 'จำนวนเงินก่อนหัก', type: 'calc', calc: { op: 'multiply', a: 'workDays', b: 'ratePerDay' } },
+  { key: 'wht3', label: 'หักภาษี ณ ที่จ่าย 3%', type: 'calc', calc: { op: 'percent', a: 'amountBeforeWht', percent: 3 } },
+  { key: 'amountNet', label: 'จำนวนเงินรวม', type: 'calc', calc: { op: 'subtract', a: 'amountBeforeWht', b: 'wht3' }, isTotal: true },
+]
 
 export const EXPENSE_CLAIM_DEFAULTS: FormSettings = {
   formType: 'expense-claim',
@@ -25,6 +54,7 @@ export const EXPENSE_CLAIM_DEFAULTS: FormSettings = {
     '3. ใบกำกับภาษีของค่าน้ำมันจะต้องระบุเลขทะเบียนรถคันที่พนักงานเอาไปใช้ด้วยทุกครั้ง',
     '4. ใบเบิกค่าใช้จ่ายต่อ 1 ชุด ค่าใช้จ่ายทุกรายการจะต้องเป็นบริษัทเดียวกันและเดือนเดียวกัน',
   ],
+  columns: EXPENSE_CLAIM_DEFAULT_COLUMNS,
 }
 
 export interface UserProfile {
@@ -42,28 +72,9 @@ export interface UserProfile {
   createdAt: number
 }
 
-export interface ItemOverrides { amountBeforeWht?: boolean; wht3?: boolean; amountNet?: boolean }
-
-export interface ExpenseItem {
-  date: string          // 'dd/mm/yyyy'
-  pcCode: string
-  pcName: string
-  workDays: number
-  ratePerDay: number
-  bankAccount: string
-  pcType: string
-  job: string
-  applyWht: boolean
-  amountBeforeWht: number
-  wht3: number
-  amountNet: number
-  overrides: ItemOverrides
-}
-
 export interface ExpenseTotals {
-  totalBefore: number
-  totalWht: number
-  totalNet: number
+  columnTotals: Record<string, number>
+  grandTotal: number
   amountInThaiText: string
 }
 
@@ -82,7 +93,7 @@ export interface Submission {
   formType: 'expense-claim'
   docNumber: string
   header: ExpenseHeader
-  items: ExpenseItem[]
+  items: ExpenseRow[]
   totals: ExpenseTotals
   createdBy: string
   createdByEmployeeId: string
@@ -92,10 +103,9 @@ export interface Submission {
   lastPrintedAt: number | null
 }
 
-export function emptyItem(): ExpenseItem {
-  return {
-    date: '', pcCode: '', pcName: '', workDays: 0, ratePerDay: 0,
-    bankAccount: '', pcType: '', job: '', applyWht: true,
-    amountBeforeWht: 0, wht3: 0, amountNet: 0, overrides: {},
-  }
+// Build a blank row for the given columns: text -> '', number/calc -> 0
+export function emptyRow(columns: FormColumn[]): ExpenseRow {
+  const row: ExpenseRow = {}
+  for (const c of columns) row[c.key] = c.type === 'text' ? '' : 0
+  return row
 }

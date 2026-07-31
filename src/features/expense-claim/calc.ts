@@ -1,22 +1,50 @@
-import type { ExpenseItem, ExpenseTotals } from '../../types/schema'
+import type { FormColumn, ExpenseRow } from '../../types/schema'
 import { bahtText } from '../../shared/bahttext'
 
 export function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100
 }
 
-export function computeItem(item: ExpenseItem): ExpenseItem {
-  const o = item.overrides || {}
-  const amountBeforeWht = o.amountBeforeWht ? item.amountBeforeWht : round2(item.workDays * item.ratePerDay)
-  const wht3 = o.wht3 ? item.wht3 : (item.applyWht ? round2(amountBeforeWht * 0.03) : 0)
-  const amountNet = o.amountNet ? item.amountNet : round2(amountBeforeWht - wht3)
-  return { ...item, amountBeforeWht, wht3, amountNet }
+// Compute every calc column (in array order) from its calc def.
+// Later calc columns can reference earlier (already-computed) calc columns.
+export function computeRow(columns: FormColumn[], row: ExpenseRow): ExpenseRow {
+  const out: ExpenseRow = { ...row }
+  const num = (key: string): number => Number(out[key]) || 0
+  for (const col of columns) {
+    if (col.type !== 'calc' || !col.calc) continue
+    const { op, a, b, percent } = col.calc
+    let value = 0
+    switch (op) {
+      case 'multiply': value = num(a) * num(b ?? ''); break
+      case 'add': value = num(a) + num(b ?? ''); break
+      case 'subtract': value = num(a) - num(b ?? ''); break
+      case 'percent': value = num(a) * (percent ?? 0) / 100; break
+    }
+    out[col.key] = round2(value)
+  }
+  return out
 }
 
-export function computeTotals(items: ExpenseItem[]): ExpenseTotals {
-  const computed = items.map(computeItem)
-  const totalBefore = round2(computed.reduce((s, i) => s + i.amountBeforeWht, 0))
-  const totalWht = round2(computed.reduce((s, i) => s + i.wht3, 0))
-  const totalNet = round2(computed.reduce((s, i) => s + i.amountNet, 0))
-  return { totalBefore, totalWht, totalNet, amountInThaiText: bahtText(totalNet) }
+// Sum each number/calc column across all computed rows.
+export function computeColumnTotals(columns: FormColumn[], rows: ExpenseRow[]): Record<string, number> {
+  const computed = rows.map(r => computeRow(columns, r))
+  const totals: Record<string, number> = {}
+  for (const col of columns) {
+    if (col.type === 'text') continue
+    totals[col.key] = round2(computed.reduce((s, r) => s + (Number(r[col.key]) || 0), 0))
+  }
+  return totals
+}
+
+// The grand total = column-sum of the isTotal column (fallback: last calc column, else 0).
+export function grandTotal(columns: FormColumn[], rows: ExpenseRow[]): number {
+  const totals = computeColumnTotals(columns, rows)
+  const totalCol = columns.find(c => c.isTotal)
+    ?? [...columns].reverse().find(c => c.type === 'calc')
+  if (!totalCol) return 0
+  return round2(totals[totalCol.key] ?? 0)
+}
+
+export function bahtTextForRows(columns: FormColumn[], rows: ExpenseRow[]): string {
+  return bahtText(grandTotal(columns, rows))
 }
