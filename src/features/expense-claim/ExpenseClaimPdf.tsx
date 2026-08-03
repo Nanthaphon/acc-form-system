@@ -104,7 +104,8 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
           </View>
         </View>
         <View style={s.thickRule} />
-        {/* เลขรันเอกสารถูกซ่อนชั่วคราว (docNumber) — เปิดใช้ภายหลังได้ */}
+        {/* รหัสฟอร์ม (ไม่มีเลขรันต่อท้าย) */}
+        {!!settings.formCode && <Text style={s.docCode}>{settings.formCode}</Text>}
 
         {/* เรื่อง/เรียน + checkboxes */}
         <View style={s.subjectRow}>

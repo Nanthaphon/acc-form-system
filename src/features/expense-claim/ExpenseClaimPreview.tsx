@@ -46,7 +46,8 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
         </div>
       </div>
       <div className="mt-2 border-t-2 border-black" />
-      {/* เลขรันเอกสารถูกซ่อนชั่วคราว (docNumber) — เปิดใช้ภายหลังได้ */}
+      {/* รหัสฟอร์ม (ไม่มีเลขรันต่อท้าย) */}
+      {settings.formCode && <div className="mt-1 text-right">{settings.formCode}</div>}
 
       {/* เรื่อง / เรียน + checkboxes */}
       <div className="mt-2 flex items-start justify-between">
