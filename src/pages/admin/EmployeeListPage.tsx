@@ -36,7 +36,7 @@ export default function EmployeeListPage() {
           {filtered.map(r => (
             <tr key={r.uid}>
               <td className="border px-2 py-1">{r.employeeId}</td>
-              <td className="border px-2 py-1">{r.firstName} {r.lastName}</td>
+              <td className="border px-2 py-1"><Link to={`/admin/employees/${r.uid}`} className="text-blue-600 hover:underline">{r.firstName} {r.lastName}</Link></td>
               <td className="border px-2 py-1">{r.position}</td>
               <td className="border px-2 py-1">{r.department}</td>
               <td className="border px-2 py-1">{r.companyId}</td>
