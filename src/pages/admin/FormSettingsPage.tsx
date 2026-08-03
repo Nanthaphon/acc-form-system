@@ -283,6 +283,7 @@ export default function FormSettingsPage() {
               <div key={i}>
                 <div className="rounded-[12px] border border-[#eef2f8] p-3">
                   <div className="flex flex-wrap items-end gap-2">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-[9px] bg-[#eaf0ff] text-sm font-semibold text-[#2b5bd7]">{i + 1}</div>
                     <div className="min-w-[180px] flex-1">
                       <label className="mb-1 block text-[11px] text-[#7a869a]">ชื่อคอลัมน์</label>
                       <input className={inputClass} value={col.label} onChange={e => patchColumn(i, { label: e.target.value })} />

@@ -13,7 +13,7 @@ export default function Layout() {
   const { profile } = useAuth()
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]">
-      <aside className="sticky top-0 flex h-screen w-60 flex-col bg-[#16233f] pb-4 text-[#cdd6e6]">
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-[#16233f] pb-4 text-[#cdd6e6]">
         <div className="flex items-center gap-2.5 px-5 py-5 text-base font-semibold text-white">
           <span className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-gradient-to-br from-[#3b6fe0] to-[#5b8bff] text-lg">
             📋
@@ -56,7 +56,7 @@ export default function Layout() {
           </Link>
         </div>
       </aside>
-      <main className="flex-1 p-6 md:p-8">
+      <main className="min-w-0 flex-1 p-6 md:p-8">
         <Outlet />
       </main>
     </div>
