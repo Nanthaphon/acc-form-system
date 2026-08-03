@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { listMySubmissions, submissionAmount } from '../../data/submissions'
+import { downloadSubmissionPdf } from '../../features/expense-claim/printSubmission'
 import type { Submission } from '../../types/schema'
 
 export default function HistoryPage() {
@@ -20,7 +21,11 @@ export default function HistoryPage() {
               <td className="border px-2 py-1">{new Date(r.createdAt).toLocaleDateString('th-TH')}</td>
               <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
               <td className="border px-2 py-1 text-center">{r.printCount}</td>
-              <td className="border px-2 py-1"><Link className="text-blue-600" to={`/submission/${r.id}`}>แก้ไข / พิมพ์ใหม่</Link></td>
+              <td className="border px-2 py-1 whitespace-nowrap">
+                <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>แก้ไข</Link>
+                <span className="mx-1.5 text-gray-300">|</span>
+                <button className="text-green-700 hover:underline" onClick={() => downloadSubmissionPdf(r)}>พิมพ์</button>
+              </td>
             </tr>
           ))}
         </tbody>
