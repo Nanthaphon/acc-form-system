@@ -102,7 +102,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                 {vcols.map(col => (
                   <th
                     key={col.key}
-                    className={`truncate border-b border-[#e5eaf3] bg-[#f7f9fd] px-1.5 py-2.5 text-[11px] font-semibold text-[#16233f] ${
+                    style={{ width: col.width ? `${col.width}px` : undefined }}
+                    className={`whitespace-normal break-words border-b border-[#e5eaf3] bg-[#f7f9fd] px-1.5 py-2.5 text-[11px] font-semibold text-[#16233f] ${
                       col.type === 'text' ? 'text-left' : 'text-right'
                     }`}
                   >

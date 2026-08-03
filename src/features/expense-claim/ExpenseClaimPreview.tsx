@@ -77,12 +77,18 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
       </div>
 
       {/* Main table — dynamic columns */}
-      <table className="mt-3 w-full border-collapse border border-black text-[10px]">
+      <table className="mt-3 w-full table-fixed border-collapse border border-black text-[10px]">
         <thead>
           <tr>
-            <th className="border border-black px-1 py-1">ลำดับ</th>
+            <th className="w-8 border border-black px-1 py-1">ลำดับ</th>
             {vcols.map(col => (
-              <th key={col.key} className="border border-black px-1 py-1">{col.label}</th>
+              <th
+                key={col.key}
+                style={{ width: col.width ? `${col.width}px` : undefined }}
+                className="break-words border border-black px-1 py-1"
+              >
+                {col.label}
+              </th>
             ))}
           </tr>
         </thead>
@@ -91,7 +97,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             <tr key={i}>
               <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
               {vcols.map(col => (
-                <td key={col.key} className={`border border-black px-1 py-0.5 ${col.type === 'text' ? '' : 'text-right'}`}>
+                <td key={col.key} className={`break-words border border-black px-1 py-0.5 ${col.type === 'text' ? '' : 'text-right'}`}>
                   {col.type === 'text'
                     ? (computed[i][col.key] as string)
                     : money(Number(computed[i][col.key]) || 0)}

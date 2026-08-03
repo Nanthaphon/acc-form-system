@@ -297,6 +297,16 @@ export default function FormSettingsPage() {
                         <option value="calc">คำนวณ</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] text-[#7a869a]">กว้าง (px)</label>
+                      <input
+                        type="number"
+                        placeholder="อัตโนมัติ"
+                        value={col.width ?? ''}
+                        onChange={e => patchColumn(i, { width: e.target.value ? Number(e.target.value) : undefined })}
+                        className={smallSelect + ' w-24'}
+                      />
+                    </div>
                     <label className="ml-auto flex cursor-pointer select-none items-center gap-1.5 pb-2 text-[12px] text-[#16233f]">
                       <input type="checkbox" checked={!col.hidden} onChange={() => toggleVisible(i)} />
                       แสดง

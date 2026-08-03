@@ -14,13 +14,16 @@ const DEFAULT_ADDRESS =
 
 const MIN_ROWS = 14
 const SEQ_WIDTH = 5 // percent
+const PX_TO_PT = 0.75 // CSS px -> PDF pt
 
-// Distribute remaining width across columns by type weight.
-function columnWidths(cols: FormColumn[]): number[] {
+// Per-column layout style: columns WITH a pixel width get a fixed pt width;
+// columns WITHOUT share the remaining horizontal space via flexGrow (weighted by type).
+type ColStyle = { width: number } | { flexGrow: number; flexBasis: number }
+function columnStyles(cols: FormColumn[]): ColStyle[] {
   const weight = (c: FormColumn) => c.type === 'text' ? 1.4 : c.type === 'calc' ? 1.2 : 1
-  const total = cols.reduce((s, c) => s + weight(c), 0) || 1
-  const remaining = 100 - SEQ_WIDTH
-  return cols.map(c => (weight(c) / total) * remaining)
+  return cols.map(c => c.width != null
+    ? { width: c.width * PX_TO_PT }
+    : { flexGrow: weight(c), flexBasis: 0 })
 }
 
 const s = StyleSheet.create({
@@ -65,17 +68,22 @@ interface Props { company: Company | null; header: ExpenseHeader; items: Expense
 export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
   const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
   const vcols = visibleColumns(cols)
-  const widths = columnWidths(vcols)
+  const styles = columnStyles(vcols)
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const bahtWords = bahtTextForRows(cols, items)
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
 
-  // Totals footer: label spans seq + leading text columns up to the first visible numeric/calc column.
+  // Totals footer: label spans the leading text columns up to the first visible numeric/calc column.
   const firstNumericIdx = vcols.findIndex(c => c.type !== 'text')
-  const labelWidth = firstNumericIdx < 0
-    ? 100
-    : SEQ_WIDTH + widths.slice(0, firstNumericIdx).reduce((a, b) => a + b, 0)
+  const leadingCount = firstNumericIdx < 0 ? vcols.length : firstNumericIdx
+  const leadingStyles = styles.slice(0, leadingCount)
+  // Merged label cell: same total footprint as the leading columns combined
+  // (sum of fixed widths as flexBasis + sum of flex weights as flexGrow).
+  const labelStyle = {
+    flexGrow: leadingStyles.reduce((a, st) => a + ('flexGrow' in st ? st.flexGrow : 0), 0),
+    flexBasis: leadingStyles.reduce((a, st) => a + ('width' in st ? st.width : st.flexBasis), 0),
+  }
 
   return (
     <Document>
@@ -130,7 +138,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
           <View style={[s.row, s.bold]}>
             <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={s.cellText}>ลำดับ</Text></View>
             {vcols.map((col, ci) => (
-              <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}><Text style={s.cellText}>{col.label}</Text></View>
+              <View key={col.key} style={[s.cell, styles[ci]]}><Text style={s.cellText}>{col.label}</Text></View>
             ))}
           </View>
 
@@ -138,7 +146,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
             <View style={s.row} key={i}>
               <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={[s.cellText, s.center]}>{i + 1}</Text></View>
               {vcols.map((col, ci) => (
-                <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}>
+                <View key={col.key} style={[s.cell, styles[ci]]}>
                   <Text style={[s.cellText, col.type === 'text' ? {} : s.right]}>
                     {col.type === 'text' ? (computed[i][col.key] as string) : money(Number(computed[i][col.key]) || 0)}
                   </Text>
@@ -151,17 +159,22 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
             <View style={s.row} key={`empty-${i}`}>
               <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={s.cellText}> </Text></View>
               {vcols.map((col, ci) => (
-                <View key={col.key} style={[s.cell, { width: `${widths[ci]}%` }]}><Text style={s.cellText}> </Text></View>
+                <View key={col.key} style={[s.cell, styles[ci]]}><Text style={s.cellText}> </Text></View>
               ))}
             </View>
           ))}
 
           <View style={[s.row, s.bold]}>
-            <View style={[s.cell, { width: `${labelWidth}%` }]}>
-              <Text style={[s.cellText, s.right]}>รวมทั้งสิ้น</Text>
+            <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}>
+              <Text style={[s.cellText, s.right]}>{leadingCount === 0 ? 'รวมทั้งสิ้น' : ' '}</Text>
             </View>
+            {leadingCount > 0 && (
+              <View style={[s.cell, labelStyle]}>
+                <Text style={[s.cellText, s.right]}>รวมทั้งสิ้น</Text>
+              </View>
+            )}
             {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map((col, k) => (
-              <View key={col.key} style={[s.cell, { width: `${widths[firstNumericIdx + k]}%` }]}>
+              <View key={col.key} style={[s.cell, styles[firstNumericIdx + k]]}>
                 <Text style={[s.cellText, s.right]}>{col.type === 'text' ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
               </View>
             ))}
