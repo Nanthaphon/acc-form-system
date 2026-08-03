@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../../types/schema'
-import { listGroups, createGroup, deleteGroup } from '../../data/formGroups'
-import { listForms, createForm, deleteForm } from '../../data/formSettings'
+import { listGroups, createGroup, renameGroup, deleteGroup } from '../../data/formGroups'
+import { listForms } from '../../data/formSettings'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
@@ -25,20 +25,13 @@ export default function DashboardPage() {
     catch { alert('สร้างกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
-  async function onCreateForm(groupId: string) {
-    const name = window.prompt('ชื่อฟอร์มใหม่')?.trim()
-    if (!name) return
-    try {
-      const newId = await createForm(name, groupId)
-      nav(`/form/${newId}/edit`)
-    } catch { alert('สร้างฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+  async function onRenameGroup(g: FormGroup) {
+    const name = window.prompt('ชื่อกลุ่มใหม่', g.name)?.trim()
+    if (!name || name === g.name) return
+    try { await renameGroup(g.id, name); reload() }
+    catch { alert('เปลี่ยนชื่อกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
-  async function onDeleteForm(form: FormSettings) {
-    if (!confirm(`ลบฟอร์ม "${form.name || form.title}" ?\n(เอกสารที่พนักงานเคยกรอกไว้จะยังอยู่)`)) return
-    try { await deleteForm(form.formType); reload() }
-    catch { alert('ลบฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
-  }
   async function onDeleteGroup(g: FormGroup) {
     if (formsForGroup(g).length > 0) { alert('กลุ่มนี้ยังมีฟอร์มอยู่ — กรุณาลบฟอร์มในกลุ่มก่อน'); return }
     if (!confirm(`ลบกลุ่ม "${g.name}" ?`)) return
@@ -60,7 +53,7 @@ export default function DashboardPage() {
         </div>
       )}
       <div className="mb-4 flex items-center gap-3">
-        <h1 className="text-xl font-medium">เลือกฟอร์ม</h1>
+        <h1 className="text-xl font-medium">เลือกกลุ่มฟอร์ม</h1>
         {isAdmin && (
           <button
             onClick={onCreateGroup}
@@ -71,70 +64,44 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="space-y-6">
-        {groups.map(g => (
-          <section key={g.id}>
-            <div className="mb-2 flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-[#16233f]">{g.name}</h2>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        {groups.map(g => {
+          const count = formsForGroup(g).length
+          return (
+            <div
+              key={g.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => nav(`/group/${g.id}`)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${g.id}`) } }}
+              className="relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 text-center hover:shadow"
+            >
+              <div className="text-4xl">📁</div>
+              <div className="mt-2 truncate font-medium text-[#16233f]">{g.name}</div>
+              <div className="text-sm text-gray-500">{count} ฟอร์ม</div>
               {isAdmin && (
-                <button
-                  onClick={() => onCreateForm(g.id)}
-                  className="text-xs font-medium text-[#2b5bd7] hover:underline"
-                >
-                  ＋ สร้างฟอร์ม
-                </button>
-              )}
-              {isAdmin && (
-                <button
-                  onClick={() => onDeleteGroup(g)}
-                  className="text-xs font-medium text-[#d64545] hover:underline"
-                >
-                  ลบกลุ่ม
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              {formsForGroup(g).map(form => (
-                <div
-                  key={form.formType}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => nav(`/form/${form.formType}`)}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/form/${form.formType}`) } }}
-                  className="relative cursor-pointer rounded-lg border bg-white p-6 hover:shadow"
-                >
-                  <div className="font-medium">{form.name || form.title}</div>
-                  <div className="text-sm text-gray-500">{form.formCode}</div>
-                  {isAdmin && (
-                    <div className="absolute right-2 top-2 flex gap-1">
-                      <button
-                        title="แก้ไขฟอร์ม"
-                        aria-label="แก้ไขฟอร์ม"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); nav(`/form/${form.formType}/edit`) }}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        title="ลบฟอร์ม"
-                        aria-label="ลบฟอร์ม"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm text-[#d64545] hover:border-[#d64545]"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteForm(form) }}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {formsForGroup(g).length === 0 && (
-                <div className="col-span-full rounded-lg border border-dashed border-[#e5eaf3] p-6 text-sm text-[#7a869a]">
-                  ยังไม่มีฟอร์มในกลุ่มนี้
+                <div className="absolute right-2 top-2 flex gap-1">
+                  <button
+                    title="เปลี่ยนชื่อกลุ่ม"
+                    aria-label="เปลี่ยนชื่อกลุ่ม"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRenameGroup(g) }}
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    title="ลบกลุ่ม"
+                    aria-label="ลบกลุ่ม"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm text-[#d64545] hover:border-[#d64545]"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteGroup(g) }}
+                  >
+                    🗑️
+                  </button>
                 </div>
               )}
             </div>
-          </section>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

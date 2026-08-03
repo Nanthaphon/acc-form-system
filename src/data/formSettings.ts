@@ -31,6 +31,11 @@ export async function createForm(name: string, groupId: string): Promise<string>
   return newId
 }
 
+export async function renameForm(formType: string, name: string): Promise<void> {
+  const { error } = await supabase.from('form_settings').update({ name }).eq('formType', formType)
+  if (error) throw error
+}
+
 export async function deleteForm(formType: string): Promise<void> {
   const { error } = await supabase.from('form_settings').delete().eq('formType', formType)
   if (error) throw error

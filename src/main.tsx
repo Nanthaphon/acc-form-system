@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProfilePage from './pages/ProfilePage'
 import DashboardPage from './pages/employee/DashboardPage'
+import GroupPage from './pages/GroupPage'
 import FormPage from './pages/employee/FormPage'
 import SubmissionPreviewPage from './pages/SubmissionPreviewPage'
 import HistoryPage from './pages/employee/HistoryPage'
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
     path: '/', element: <RequireAuth><Layout /></RequireAuth>,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: 'group/:groupId', element: <GroupPage /> },
       { path: 'form/:formType/edit', element: <RequireAdmin><FormSettingsPage /></RequireAdmin> },
       { path: 'form/:formType', element: <FormPage /> },
       { path: 'submission/:id', element: <FormPage /> },
