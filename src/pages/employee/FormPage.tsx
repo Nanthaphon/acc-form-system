@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
-import { Download, Printer, Receipt, Save } from 'lucide-react'
+import { ArrowLeft, Download, Printer, Receipt, Save } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
@@ -95,6 +95,12 @@ export default function FormPage() {
     <div>
       <div className="no-print space-y-4">
         <div className="mb-2 flex items-center gap-3.5">
+          <button
+            onClick={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
+            className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+          >
+            <ArrowLeft size={16} /> กลับ
+          </button>
           <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]"><Receipt size={20} /></div>
           <div>
             <h1 className="text-xl font-semibold text-[#1f2a3d]">{settings.name || settings.title}</h1>
