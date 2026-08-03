@@ -46,6 +46,12 @@ export default function DashboardPage() {
     return forms.filter(f => (f.groupId ?? firstGroupId) === g.id)
   }
 
+  // Admins see every group. A non-admin with a groupId sees only that group's
+  // folder(s); a non-admin without a groupId falls back to seeing all groups.
+  const visibleGroups = isAdmin || !profile?.groupId
+    ? groups
+    : groups.filter(g => g.id === profile.groupId)
+
   return (
     <div>
       {profile?.mustChangePassword && (
@@ -66,7 +72,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {groups.map(g => {
+        {visibleGroups.map(g => {
           const count = formsForGroup(g).length
           return (
             <div

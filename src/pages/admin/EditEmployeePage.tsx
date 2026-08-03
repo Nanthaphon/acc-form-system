@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getProfileByUid, updateProfile } from '../../data/users'
 import { listCompanies } from '../../data/companies'
-import type { Company, UserProfile } from '../../types/schema'
+import { listGroups } from '../../data/formGroups'
+import type { Company, FormGroup, UserProfile } from '../../types/schema'
 
 export default function EditEmployeePage() {
   const { uid } = useParams<{ uid: string }>()
   const nav = useNavigate()
   const [companies, setCompanies] = useState<Company[]>([])
+  const [groups, setGroups] = useState<FormGroup[]>([])
   const [f, setF] = useState<UserProfile | null>(null)
 
-  useEffect(() => { listCompanies().then(setCompanies) }, [])
+  useEffect(() => { listCompanies().then(setCompanies); listGroups().then(setGroups) }, [])
   useEffect(() => {
     if (!uid) return
     getProfileByUid(uid).then(p => setF(p))
@@ -25,7 +27,7 @@ export default function EditEmployeePage() {
       await updateProfile(uid, {
         firstName: f.firstName, lastName: f.lastName, position: f.position,
         department: f.department, companyId: f.companyId, defaultJob: f.defaultJob,
-        bankAccount: f.bankAccount, role: f.role,
+        bankAccount: f.bankAccount, role: f.role, groupId: f.groupId,
       })
       alert('บันทึกข้อมูลพนักงานแล้ว')
       nav('/admin/employees')
@@ -46,6 +48,10 @@ export default function EditEmployeePage() {
       <select className="w-full rounded border px-3 py-2" value={f.companyId} onChange={e => set('companyId', e.target.value)}>
         <option value="">— เลือกบริษัท —</option>
         {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+      <select className="w-full rounded border px-3 py-2" value={f.groupId ?? ''} onChange={e => set('groupId', e.target.value)}>
+        <option value="">— ไม่ระบุ —</option>
+        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
       </select>
       <select className="w-full rounded border px-3 py-2" value={f.role} onChange={e => set('role', e.target.value)}>
         <option value="employee">พนักงาน</option><option value="admin">แอดมิน</option>

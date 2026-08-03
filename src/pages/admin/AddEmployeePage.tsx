@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createEmployee } from '../../data/users'
 import { listCompanies } from '../../data/companies'
-import type { Company } from '../../types/schema'
+import { listGroups } from '../../data/formGroups'
+import type { Company, FormGroup } from '../../types/schema'
 
 export default function AddEmployeePage() {
   const nav = useNavigate()
   const [companies, setCompanies] = useState<Company[]>([])
-  const [f, setF] = useState({ employeeId: '', firstName: '', lastName: '', position: '', department: '', companyId: '', defaultJob: '', bankAccount: '', role: 'employee' as const })
-  useEffect(() => { listCompanies().then(setCompanies) }, [])
+  const [groups, setGroups] = useState<FormGroup[]>([])
+  const [f, setF] = useState({ employeeId: '', firstName: '', lastName: '', position: '', department: '', companyId: '', defaultJob: '', bankAccount: '', role: 'employee' as const, groupId: '' })
+  useEffect(() => { listCompanies().then(setCompanies); listGroups().then(setGroups) }, [])
   const set = (k: string, v: string) => setF({ ...f, [k]: v })
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -33,6 +35,10 @@ export default function AddEmployeePage() {
       <select className="w-full rounded border px-3 py-2" value={f.companyId} onChange={e => set('companyId', e.target.value)}>
         <option value="">— เลือกบริษัท —</option>
         {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+      <select className="w-full rounded border px-3 py-2" value={f.groupId} onChange={e => set('groupId', e.target.value)}>
+        <option value="">— ไม่ระบุ —</option>
+        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
       </select>
       <select className="w-full rounded border px-3 py-2" value={f.role} onChange={e => set('role', e.target.value)}>
         <option value="employee">พนักงาน</option><option value="admin">แอดมิน</option>

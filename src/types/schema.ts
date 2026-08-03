@@ -89,6 +89,7 @@ export interface UserProfile {
   bankAccount: string
   role: Role
   mustChangePassword: boolean
+  groupId?: string
   createdAt: number
 }
 

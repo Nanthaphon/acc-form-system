@@ -5,7 +5,8 @@ import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount } from '../../data/submissions'
 import { listForms } from '../../data/formSettings'
 import { listCompanies } from '../../data/companies'
-import type { UserProfile, Submission, FormSettings, Company } from '../../types/schema'
+import { listGroups } from '../../data/formGroups'
+import type { UserProfile, Submission, FormSettings, Company, FormGroup } from '../../types/schema'
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
@@ -22,6 +23,7 @@ export default function EmployeeDetailPage() {
   const [subs, setSubs] = useState<Submission[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
+  const [groups, setGroups] = useState<FormGroup[]>([])
 
   useEffect(() => {
     if (!uid) return
@@ -29,6 +31,7 @@ export default function EmployeeDetailPage() {
     listMySubmissions(uid).then(setSubs)
     listForms().then(setForms)
     listCompanies().then(setCompanies)
+    listGroups().then(setGroups)
   }, [uid])
 
   const formName = (ft: string) => {
@@ -36,6 +39,7 @@ export default function EmployeeDetailPage() {
     return f?.name || f?.title || ft
   }
   const companyName = (id: string) => companies.find(c => c.id === id)?.name || id
+  const groupName = (id?: string) => id ? (groups.find(g => g.id === id)?.name || id) : ''
 
   if (!profile) return <div className="p-4 text-gray-500">กำลังโหลด...</div>
 
@@ -56,6 +60,7 @@ export default function EmployeeDetailPage() {
           <Info label="บริษัท" value={companyName(profile.companyId)} />
           <Info label="Job" value={profile.defaultJob} />
           <Info label="เลขบัญชี" value={profile.bankAccount} />
+          <Info label="กลุ่ม" value={groupName(profile.groupId)} />
           <Info label="สิทธิ์" value={profile.role} />
         </div>
       </div>

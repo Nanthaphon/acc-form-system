@@ -4,7 +4,7 @@ import type { Role } from '../types/schema'
 export interface CsvEmployeeRow {
   employeeId: string; firstName: string; lastName: string
   position: string; department: string; companyId: string
-  defaultJob: string; bankAccount: string; role: Role
+  defaultJob: string; bankAccount: string; role: Role; groupId?: string
 }
 
 const REQUIRED = ['employeeId', 'firstName', 'lastName', 'companyId'] as const
@@ -32,6 +32,7 @@ export function parseEmployeeCsv(text: string): { rows: CsvEmployeeRow[]; errors
       defaultJob: (raw.defaultJob || '').trim(),
       bankAccount: (raw.bankAccount || '').trim(),
       role: (role === 'admin' ? 'admin' : 'employee') as Role,
+      groupId: (raw.groupId || '').trim() || undefined,
     })
   })
   return { rows, errors }
