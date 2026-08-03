@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
-import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow } from '../../types/schema'
+import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, FormGroup } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
+import { listGroups } from '../../data/formGroups'
 
 const cardClass = 'rounded-2xl border border-[#e5eaf3] bg-white p-6 shadow-[0_1px_2px_rgba(16,32,64,0.03)]'
 const cardTitleClass = "flex items-center gap-2 text-sm font-semibold text-[#16233f] before:block before:h-4 before:w-1 before:rounded-[3px] before:bg-[#2b5bd7]"
@@ -47,11 +48,13 @@ export default function FormSettingsPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [groups, setGroups] = useState<FormGroup[]>([])
 
   function loadCompanies() { listCompanies().then(setCompanies) }
   useEffect(() => {
     getFormSettings(formType).then(setSettings)
     loadCompanies()
+    listGroups().then(setGroups)
   }, [formType])
 
   function setField<K extends keyof FormSettings>(key: K, value: FormSettings[K]) {
@@ -224,6 +227,16 @@ export default function FormSettingsPage() {
 
       {!showPreview && (
       <div className="space-y-4">
+
+      {/* กลุ่มของฟอร์ม (ใครเห็นฟอร์มนี้) */}
+      <div className={cardClass}>
+        <h2 className={`${cardTitleClass} mb-2`}>กลุ่มของฟอร์ม</h2>
+        <p className="mb-3 text-xs text-[#7a869a]">เลือกกลุ่มให้ฟอร์มนี้ · พนักงานที่อยู่กลุ่มเดียวกันจะเห็นฟอร์มนี้ในหน้าเลือกฟอร์ม</p>
+        <select className={`${inputClass} sm:max-w-xs`} value={settings.groupId ?? ''} onChange={e => setField('groupId', e.target.value || undefined)}>
+          <option value="">— ไม่ระบุ (อยู่กลุ่มแรก) —</option>
+          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+        </select>
+      </div>
 
       {/* ข้อความหัวฟอร์ม */}
       <div className={cardClass}>
