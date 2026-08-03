@@ -104,7 +104,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                     key={col.key}
                     style={{ width: col.width ? `${col.width}px` : undefined }}
                     className={`whitespace-normal break-words border-b border-[#e5eaf3] bg-[#f7f9fd] px-1.5 py-2.5 text-[11px] font-semibold text-[#16233f] ${
-                      col.type === 'text' ? 'text-left' : 'text-right'
+                      col.type === 'text' || col.type === 'date' ? 'text-left' : 'text-right'
                     }`}
                   >
                     {col.label}
@@ -124,6 +124,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         <div className="truncate text-right font-semibold text-[#16233f]">
                           {fmt(Number(computed[i][col.key]) || 0)}
                         </div>
+                      ) : col.type === 'date' ? (
+                        <input
+                          type="date"
+                          className="w-full min-w-0 rounded-[8px] border border-[#e5eaf3] bg-white px-2 py-1.5 text-xs"
+                          value={row[col.key] as string}
+                          onChange={e => setCell(i, col.key, e.target.value)}
+                        />
                       ) : col.type === 'number' ? (
                         <input
                           type="number"
@@ -149,8 +156,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               <tr className="font-semibold text-[#16233f]">
                 <td className="px-2.5 py-2.5"></td>
                 {vcols.map((col, idx) => (
-                  <td key={col.key} className={`px-2.5 py-2.5 ${col.type === 'text' ? 'text-left' : 'text-right'}`}>
-                    {idx === 0 ? 'รวม' : col.type !== 'text' ? fmt(columnTotals[col.key] ?? 0) : ''}
+                  <td key={col.key} className={`px-2.5 py-2.5 ${col.type === 'text' || col.type === 'date' ? 'text-left' : 'text-right'}`}>
+                    {idx === 0 ? 'รวม' : col.type === 'text' || col.type === 'date' ? '' : fmt(columnTotals[col.key] ?? 0)}
                   </td>
                 ))}
                 <td></td>

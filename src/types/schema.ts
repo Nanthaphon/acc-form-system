@@ -3,7 +3,7 @@ export type Role = 'employee' | 'admin'
 export interface Company { id: string; name: string; address: string; logo?: string | null; headerName?: string | null }
 
 // ===== Dynamic column model =====
-export type ColumnType = 'text' | 'number' | 'calc'
+export type ColumnType = 'text' | 'number' | 'calc' | 'date'
 export interface CalcDef {
   op: 'multiply' | 'subtract' | 'add' | 'percent' | 'divide'
   operands?: string[]   // list of column keys (2+) for multiply/add/subtract
@@ -126,6 +126,6 @@ export interface Submission {
 // Build a blank row for the given columns: text -> '', number/calc -> 0
 export function emptyRow(columns: FormColumn[]): ExpenseRow {
   const row: ExpenseRow = {}
-  for (const c of columns) row[c.key] = c.type === 'text' ? '' : 0
+  for (const c of columns) row[c.key] = c.type === 'text' || c.type === 'date' ? '' : 0
   return row
 }

@@ -35,6 +35,7 @@ function sampleRow(cols: FormColumn[]): ExpenseRow {
   for (const c of cols) {
     if (c.type === 'number') r[c.key] = 100
     else if (c.type === 'text') r[c.key] = 'ตัวอย่าง'
+    else if (c.type === 'date') r[c.key] = '2026-01-01'
   }
   return r
 }
@@ -75,7 +76,7 @@ export default function FormSettingsPage() {
   function changeType(idx: number, type: ColumnType) {
     const col = settings.columns[idx]
     if (type === 'calc') {
-      const others = settings.columns.filter((c, i) => i !== idx && c.type !== 'text')
+      const others = settings.columns.filter((c, i) => i !== idx && (c.type === 'number' || c.type === 'calc'))
       const legacyOps = col.calc ? calcOperands(col.calc) : []
       const operands = legacyOps.length >= 2 ? legacyOps : [others[0]?.key, others[1]?.key].filter((x): x is string => !!x)
       patchColumn(idx, { type, calc: col.calc ?? { op: 'multiply', operands } })
@@ -93,7 +94,7 @@ export default function FormSettingsPage() {
   // - to multiply/add/subtract: reuse existing operands (>=2) if present, else the first two other columns
   function changeOp(idx: number, op: CalcDef['op']) {
     const col = settings.columns[idx]
-    const others = settings.columns.filter((c, i) => i !== idx && c.type !== 'text')
+    const others = settings.columns.filter((c, i) => i !== idx && (c.type === 'number' || c.type === 'calc'))
     if (op === 'percent') {
       const existing = col.calc ? calcOperands(col.calc) : []
       const a = existing[0] ?? others[0]?.key ?? ''
@@ -112,7 +113,7 @@ export default function FormSettingsPage() {
   }
   function addOperand(idx: number) {
     const col = settings.columns[idx]
-    const others = settings.columns.filter((c, i) => i !== idx && c.type !== 'text')
+    const others = settings.columns.filter((c, i) => i !== idx && (c.type === 'number' || c.type === 'calc'))
     const ops = col.calc ? [...calcOperands(col.calc)] : []
     const unused = others.find(o => !ops.includes(o.key))?.key ?? others[0]?.key ?? ''
     ops.push(unused)
@@ -277,7 +278,7 @@ export default function FormSettingsPage() {
         <div className="space-y-3">
           <button onClick={() => insertColumnAt(0)} className="inline-flex items-center gap-1 text-xs font-medium text-[#2b5bd7] hover:underline"><Plus size={14} /> แทรกคอลัมน์ที่ตำแหน่งแรก</button>
           {columns.map((col, i) => {
-            const others = columns.filter((c, x) => x !== i && c.type !== 'text')
+            const others = columns.filter((c, x) => x !== i && (c.type === 'number' || c.type === 'calc'))
             const isPercent = col.calc?.op === 'percent'
             const operands = col.calc ? calcOperands(col.calc) : []
             return (
@@ -294,6 +295,7 @@ export default function FormSettingsPage() {
                       <select className={smallSelect} value={col.type} onChange={e => changeType(i, e.target.value as ColumnType)}>
                         <option value="text">Text (ข้อความ)</option>
                         <option value="number">Number (ตัวเลข)</option>
+                        <option value="date">วันที่ (Date)</option>
                         <option value="calc">คำนวณ</option>
                       </select>
                     </div>

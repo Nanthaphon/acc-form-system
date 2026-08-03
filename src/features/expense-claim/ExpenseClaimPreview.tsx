@@ -23,7 +23,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const totalCols = vcols.length + 1 // + leading seq column
 
   // Totals footer: label spans the seq column + leading text columns up to the first visible numeric/calc column.
-  const firstNumericIdx = vcols.findIndex(c => c.type !== 'text')
+  const firstNumericIdx = vcols.findIndex(c => c.type !== 'text' && c.type !== 'date')
   const labelSpan = firstNumericIdx < 0 ? totalCols : firstNumericIdx + 1
 
   return (
@@ -98,8 +98,8 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             <tr key={i}>
               <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
               {vcols.map(col => (
-                <td key={col.key} className={`break-words border border-black px-1 py-0.5 ${col.type === 'text' ? '' : 'text-right'}`}>
-                  {col.type === 'text'
+                <td key={col.key} className={`break-words border border-black px-1 py-0.5 ${col.type === 'text' || col.type === 'date' ? '' : 'text-right'}`}>
+                  {col.type === 'text' || col.type === 'date'
                     ? (computed[i][col.key] as string)
                     : money(Number(computed[i][col.key]) || 0)}
                 </td>
@@ -117,7 +117,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
             {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map(col => (
               <td key={col.key} className="border border-black px-1 py-1 text-right">
-                {col.type === 'text' ? '' : money(columnTotals[col.key] ?? 0)}
+                {col.type === 'text' || col.type === 'date' ? '' : money(columnTotals[col.key] ?? 0)}
               </td>
             ))}
           </tr>

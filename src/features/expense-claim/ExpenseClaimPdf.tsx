@@ -20,7 +20,7 @@ const PX_TO_PT = 0.75 // CSS px -> PDF pt
 // columns WITHOUT share the remaining horizontal space via flexGrow (weighted by type).
 type ColStyle = { width: number } | { flexGrow: number; flexBasis: number }
 function columnStyles(cols: FormColumn[]): ColStyle[] {
-  const weight = (c: FormColumn) => c.type === 'text' ? 1.4 : c.type === 'calc' ? 1.2 : 1
+  const weight = (c: FormColumn) => c.type === 'text' || c.type === 'date' ? 1.4 : c.type === 'calc' ? 1.2 : 1
   return cols.map(c => c.width != null
     ? { width: c.width * PX_TO_PT }
     : { flexGrow: weight(c), flexBasis: 0 })
@@ -75,7 +75,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
 
   // Totals footer: label spans the leading text columns up to the first visible numeric/calc column.
-  const firstNumericIdx = vcols.findIndex(c => c.type !== 'text')
+  const firstNumericIdx = vcols.findIndex(c => c.type !== 'text' && c.type !== 'date')
   const leadingCount = firstNumericIdx < 0 ? vcols.length : firstNumericIdx
   const leadingStyles = styles.slice(0, leadingCount)
   // Merged label cell: same total footprint as the leading columns combined
@@ -148,8 +148,8 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
               <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={[s.cellText, s.center]}>{i + 1}</Text></View>
               {vcols.map((col, ci) => (
                 <View key={col.key} style={[s.cell, styles[ci]]}>
-                  <Text style={[s.cellText, col.type === 'text' ? {} : s.right]}>
-                    {col.type === 'text' ? (computed[i][col.key] as string) : money(Number(computed[i][col.key]) || 0)}
+                  <Text style={[s.cellText, col.type === 'text' || col.type === 'date' ? {} : s.right]}>
+                    {col.type === 'text' || col.type === 'date' ? (computed[i][col.key] as string) : money(Number(computed[i][col.key]) || 0)}
                   </Text>
                 </View>
               ))}
@@ -176,7 +176,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
             )}
             {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map((col, k) => (
               <View key={col.key} style={[s.cell, styles[firstNumericIdx + k]]}>
-                <Text style={[s.cellText, s.right]}>{col.type === 'text' ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
+                <Text style={[s.cellText, s.right]}>{col.type === 'text' || col.type === 'date' ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
               </View>
             ))}
           </View>

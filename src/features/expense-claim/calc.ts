@@ -38,7 +38,7 @@ export function computeColumnTotals(columns: FormColumn[], rows: ExpenseRow[]): 
   const computed = rows.map(r => computeRow(columns, r))
   const totals: Record<string, number> = {}
   for (const col of columns) {
-    if (col.type === 'text') continue
+    if (col.type === 'text' || col.type === 'date') continue
     totals[col.key] = round2(computed.reduce((s, r) => s + (Number(r[col.key]) || 0), 0))
   }
   return totals
