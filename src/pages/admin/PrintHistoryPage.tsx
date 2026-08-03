@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { listAllSubmissions, submissionAmount } from '../../data/submissions'
 import { listEmployees } from '../../data/users'
 import { listForms } from '../../data/formSettings'
-import { downloadSubmissionPdf } from '../../features/expense-claim/printSubmission'
 import type { Submission, UserProfile, FormSettings } from '../../types/schema'
 
 export default function PrintHistoryPage() {
@@ -63,7 +62,7 @@ export default function PrintHistoryPage() {
                 <td className="border px-2 py-1 whitespace-nowrap text-center">
                   <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>ดู</Link>
                   <span className="mx-1.5 text-gray-300">|</span>
-                  <button className="text-green-700 hover:underline" onClick={() => downloadSubmissionPdf(r)}>พิมพ์</button>
+                  <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
                 </td>
               </tr>
             ))}

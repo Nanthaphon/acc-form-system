@@ -11,6 +11,7 @@ import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProfilePage from './pages/ProfilePage'
 import DashboardPage from './pages/employee/DashboardPage'
 import FormPage from './pages/employee/FormPage'
+import SubmissionPreviewPage from './pages/SubmissionPreviewPage'
 import HistoryPage from './pages/employee/HistoryPage'
 import EmployeeListPage from './pages/admin/EmployeeListPage'
 import AddEmployeePage from './pages/admin/AddEmployeePage'
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
       { path: 'form/:formType/edit', element: <RequireAdmin><FormSettingsPage /></RequireAdmin> },
       { path: 'form/:formType', element: <FormPage /> },
       { path: 'submission/:id', element: <FormPage /> },
+      { path: 'submission/:id/preview', element: <SubmissionPreviewPage /> },
       { path: 'history', element: <HistoryPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'change-password', element: <ChangePasswordPage /> },

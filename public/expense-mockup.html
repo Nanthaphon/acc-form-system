@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — ใบเบิกค่าใช้จ่าย</title>
+<style>
+  @font-face { font-family:'Prompt'; src:url('/fonts/Prompt-Regular.ttf') format('truetype'); font-weight:400; font-display:swap; }
+  @font-face { font-family:'Prompt'; src:url('/fonts/Prompt-Bold.ttf') format('truetype'); font-weight:600; font-display:swap; }
+  :root{
+    --navy:#16233f; --navy2:#1e3357;
+    --blue:#2b5bd7; --blue-dark:#1e46b0; --blue-soft:#eaf0ff;
+    --bg:#f4f6fb; --card:#ffffff; --line:#e5eaf3; --text:#1f2a3d; --muted:#7a869a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Prompt',sans-serif; background:var(--bg); color:var(--text); font-size:14px;}
+  .app{display:flex; min-height:100vh;}
+
+  /* Sidebar */
+  .side{width:240px; background:var(--navy); color:#cdd6e6; display:flex; flex-direction:column; padding:0 0 16px; position:sticky; top:0; height:100vh;}
+  .brand{display:flex; align-items:center; gap:10px; padding:20px 20px; font-weight:600; color:#fff; font-size:16px;}
+  .brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#3b6fe0,#5b8bff);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .nav{display:flex;flex-direction:column;gap:2px;padding:8px 12px;}
+  .nav a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;color:#aeb9cf;text-decoration:none;font-size:14px;}
+  .nav a .i{width:18px;text-align:center;opacity:.85;}
+  .nav a:hover{background:rgba(255,255,255,.06);color:#fff;}
+  .nav a.active{background:var(--blue);color:#fff;box-shadow:0 4px 14px rgba(43,91,215,.35);}
+  .side .bottom{margin-top:auto;padding:8px 12px;border-top:1px solid rgba(255,255,255,.08);}
+
+  /* Main */
+  .main{flex:1;padding:26px 32px;}
+  .top{display:flex;align-items:center;gap:14px;margin-bottom:22px;}
+  .top .titimg{width:40px;height:40px;border-radius:11px;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .top h1{font-size:20px;font-weight:600;}
+  .top .sub{color:var(--muted);font-size:13px;}
+  .docno{margin-left:auto;background:var(--blue-soft);color:var(--blue-dark);font-weight:600;padding:8px 14px;border-radius:10px;font-size:13px;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:18px;box-shadow:0 1px 2px rgba(16,32,64,.03);}
+  .card h2{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .card h2::before{content:'';width:4px;height:16px;border-radius:3px;background:var(--blue);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:10px;}
+  .chip{display:flex;align-items:center;gap:8px;padding:9px 15px;border:1.5px solid var(--line);border-radius:999px;cursor:pointer;color:var(--muted);font-size:13px;user-select:none;}
+  .chip.on{background:var(--blue-soft);border-color:var(--blue);color:var(--blue-dark);font-weight:600;}
+  .chip .dot{width:15px;height:15px;border-radius:5px;border:1.5px solid #c3ccdb;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;}
+  .chip.on .dot{background:var(--blue);border-color:var(--blue);}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .fld label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .fld input,.fld select{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:#fbfcfe;}
+  .fld input:focus,.fld select:focus{outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(43,91,215,.12);}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;}
+  thead th{background:#f7f9fd;color:var(--navy);font-weight:600;padding:11px 10px;text-align:left;border-bottom:1px solid var(--line);font-size:12px;}
+  thead th:first-child{border-top-left-radius:10px;} thead th:last-child{border-top-right-radius:10px;}
+  tbody td{padding:9px 10px;border-bottom:1px solid #eef2f8;}
+  tbody tr:hover{background:#fafbff;}
+  tbody input{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13px;background:#fff;}
+  .num{text-align:right;font-variant-numeric:tabular-nums;}
+  .calc{color:var(--navy);font-weight:600;}
+  .toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+  .addrow{margin-top:12px;display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border:1.5px dashed #b9c4da;border-radius:10px;color:var(--blue);background:#fff;cursor:pointer;font-weight:500;font-size:13px;}
+
+  .summary{display:flex;gap:18px;align-items:stretch;}
+  .sumrows{flex:1;display:flex;flex-direction:column;gap:10px;justify-content:center;}
+  .sumrow{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);}
+  .sumrow b{color:var(--text);font-weight:600;}
+  .sumtotal{display:flex;justify-content:space-between;border-top:1.5px dashed var(--line);padding-top:12px;font-size:16px;}
+  .sumtotal b{color:var(--blue-dark);font-weight:600;}
+  .baht{width:300px;background:linear-gradient(135deg,var(--blue),#3b6fe0);color:#fff;border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;justify-content:center;}
+  .baht .lbl{font-size:12px;opacity:.85;margin-bottom:6px;}
+  .baht .val{font-size:18px;font-weight:600;line-height:1.4;}
+
+  .actions{display:flex;gap:12px;}
+  .btn{padding:12px 22px;border-radius:11px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1.5px solid transparent;display:inline-flex;align-items:center;gap:8px;}
+  .btn.primary{background:var(--blue);color:#fff;box-shadow:0 6px 16px rgba(43,91,215,.28);}
+  .btn.primary:hover{background:var(--blue-dark);}
+  .btn.ghost{background:#fff;border-color:var(--line);color:var(--text);}
+  .btn.ghost:hover{border-color:var(--blue);color:var(--blue);}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="brand"><span class="logo">📋</span> ระบบเบิกค่าใช้จ่าย</div>
+    <nav class="nav">
+      <a class="active"><span class="i">📝</span> แบบฟอร์มเบิกจ่าย</a>
+      <a><span class="i">🕘</span> ประวัติ</a>
+      <a><span class="i">👤</span> ข้อมูลของฉัน</a>
+      <a><span class="i">👥</span> พนักงาน</a>
+      <a><span class="i">🖨️</span> ประวัติการพิมพ์</a>
+    </nav>
+    <div class="bottom">
+      <nav class="nav" style="padding:0;">
+        <a><span class="i">🔑</span> เปลี่ยนรหัสผ่าน</a>
+        <a><span class="i">↩️</span> ออกจากระบบ</a>
+      </nav>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="top">
+      <div class="titimg">🧾</div>
+      <div>
+        <h1>ใบเบิกค่าใช้จ่าย</h1>
+        <div class="sub">กรอกรายการที่ต้องการเบิก · ระบบคำนวณให้อัตโนมัติ</div>
+      </div>
+      <div class="docno">เลขที่ GAC6709-003-6907-0001</div>
+    </div>
+
+    <!-- Category -->
+    <div class="card">
+      <h2>ประเภทค่าใช้จ่าย</h2>
+      <div class="chips">
+        <div class="chip on"><span class="dot">✓</span> ค่าไมล์เลทและค่าใช้จ่ายเดินทาง</div>
+        <div class="chip"><span class="dot"></span> ค่าใช้จ่ายต่างๆ</div>
+        <div class="chip"><span class="dot"></span> ค่าล่วงเวลา</div>
+        <div class="chip"><span class="dot"></span> ค่าเบี้ยเลี้ยง</div>
+      </div>
+    </div>
+
+    <!-- Requester -->
+    <div class="card">
+      <h2>ข้อมูลผู้เบิก</h2>
+      <div class="grid">
+        <div class="fld"><label>ชื่อ</label><input value="หทัยรัตน์"></div>
+        <div class="fld"><label>นามสกุล</label><input value="ไวยขุนทด"></div>
+        <div class="fld"><label>ตำแหน่ง</label><input value="PC Management Specialist"></div>
+        <div class="fld"><label>Job</label><input value="Haier"></div>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="card">
+      <h2>รายการเบิก</h2>
+      <table>
+        <thead><tr>
+          <th>วันเดือนปี</th><th>PC Code</th><th>PC Name</th><th style="width:70px">วันทำงาน</th><th style="width:70px">วันละ</th><th>ธนาคาร</th>
+          <th class="num">ก่อนหัก</th><th class="num">หัก 3%</th><th class="num">สุทธิ</th><th></th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><input value="16 ก.พ.-15 มี.ค."></td>
+            <td><input value="244530"></td>
+            <td><input value="นายอุทัย มังษาอุดม"></td>
+            <td><input class="num" value="27"></td>
+            <td><input class="num" value="500"></td>
+            <td><input value="KTB-664-7-46069-1"></td>
+            <td class="num calc">13,500</td>
+            <td class="num calc">405<br><label class="toggle"><input type="checkbox" checked> หัก</label></td>
+            <td class="num calc">13,095</td>
+            <td style="text-align:center"><span style="color:#d64545;cursor:pointer">🗑️</span></td>
+          </tr>
+          <tr>
+            <td><input value="18 ก.พ.-15 มี.ค."></td>
+            <td><input value="244531"></td>
+            <td><input value="นายโกเมศ อรุณโณ"></td>
+            <td><input class="num" value="25"></td>
+            <td><input class="num" value="500"></td>
+            <td><input value="SCB-5624033396"></td>
+            <td class="num calc">12,500</td>
+            <td class="num calc">375<br><label class="toggle"><input type="checkbox" checked> หัก</label></td>
+            <td class="num calc">12,125</td>
+            <td style="text-align:center"><span style="color:#d64545;cursor:pointer">🗑️</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="addrow">＋ เพิ่มรายการ</div>
+    </div>
+
+    <!-- Summary -->
+    <div class="card">
+      <div class="summary">
+        <div class="sumrows">
+          <div class="sumrow">รวมก่อนหัก <b>26,000.00</b></div>
+          <div class="sumrow">หักภาษี ณ ที่จ่าย 3% <b>780.00</b></div>
+          <div class="sumtotal">รวมสุทธิทั้งสิ้น <b>25,220.00 บาท</b></div>
+        </div>
+        <div class="baht">
+          <div class="lbl">เป็นจำนวนเงิน (ตัวอักษร)</div>
+          <div class="val">สองหมื่นห้าพันสองร้อยยี่สิบบาทถ้วน</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn primary">💾 บันทึก</button>
+      <button class="btn ghost">📄 ดาวน์โหลด PDF</button>
+      <button class="btn ghost">🖨️ สั่งพิมพ์</button>
+    </div>
+  </main>
+</div>
+</body>
+</html>
