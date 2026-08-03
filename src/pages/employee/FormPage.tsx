@@ -100,9 +100,8 @@ export default function FormPage() {
             <h1 className="text-xl font-semibold text-[#1f2a3d]">{settings.name || settings.title}</h1>
             <div className="text-[13px] text-[#7a869a]">กรอกรายการที่ต้องการเบิก · ระบบคำนวณให้อัตโนมัติ</div>
           </div>
-          <span className="ml-auto rounded-[10px] bg-[#eaf0ff] px-3.5 py-2 text-[13px] font-semibold text-[#1e46b0]">{docNumber}</span>
           <button
-            className="inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-4 py-2 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+            className="ml-auto inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-4 py-2 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
             onClick={() => setShowPreview(!showPreview)}
           >
             {showPreview ? 'แก้ไข' : 'ดูตัวอย่าง'}

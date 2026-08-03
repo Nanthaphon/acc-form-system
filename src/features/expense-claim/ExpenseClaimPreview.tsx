@@ -13,7 +13,7 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export default function ExpenseClaimPreview({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
+export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
   const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
@@ -46,7 +46,7 @@ export default function ExpenseClaimPreview({ company, header, items, docNumber,
         </div>
       </div>
       <div className="mt-2 border-t-2 border-black" />
-      <div className="mt-1 text-right">{docNumber || settings.formCode}</div>
+      {/* เลขรันเอกสารถูกซ่อนชั่วคราว (docNumber) — เปิดใช้ภายหลังได้ */}
 
       {/* เรื่อง / เรียน + checkboxes */}
       <div className="mt-2 flex items-start justify-between">

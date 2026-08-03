@@ -62,7 +62,7 @@ function money(n: number): string {
 
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
 
-export function ExpenseClaimPdf({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
+export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
   const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
   const vcols = visibleColumns(cols)
   const widths = columnWidths(vcols)
@@ -96,7 +96,7 @@ export function ExpenseClaimPdf({ company, header, items, docNumber, settings = 
           </View>
         </View>
         <View style={s.thickRule} />
-        <Text style={s.docCode}>{docNumber || settings.formCode}</Text>
+        {/* เลขรันเอกสารถูกซ่อนชั่วคราว (docNumber) — เปิดใช้ภายหลังได้ */}
 
         {/* เรื่อง/เรียน + checkboxes */}
         <View style={s.subjectRow}>
