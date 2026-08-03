@@ -94,14 +94,14 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
       <div className={cardClass}>
         <h2 className={`${cardTitleClass} mb-4`}>รายการเบิก</h2>
         <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-0 text-[13px]">
+          <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
             <thead>
               <tr>
-                <th className="rounded-tl-[10px] border-b border-[#e5eaf3] bg-[#f7f9fd] px-2.5 py-2.5 text-center text-xs font-semibold text-[#16233f]">#</th>
+                <th className="w-8 rounded-tl-[10px] border-b border-[#e5eaf3] bg-[#f7f9fd] px-1.5 py-2.5 text-center text-xs font-semibold text-[#16233f]">#</th>
                 {vcols.map(col => (
                   <th
                     key={col.key}
-                    className={`border-b border-[#e5eaf3] bg-[#f7f9fd] px-2.5 py-2.5 text-xs font-semibold text-[#16233f] ${
+                    className={`truncate border-b border-[#e5eaf3] bg-[#f7f9fd] px-1.5 py-2.5 text-[11px] font-semibold text-[#16233f] ${
                       col.type === 'text' ? 'text-left' : 'text-right'
                     }`}
                   >
@@ -109,7 +109,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                     {col.type === 'calc' && <span className="ml-1 text-[10px] font-normal text-[#7a869a]">(คำนวณ)</span>}
                   </th>
                 ))}
-                <th className="rounded-tr-[10px] border-b border-[#e5eaf3] bg-[#f7f9fd] px-2.5 py-2.5"></th>
+                <th className="w-9 rounded-tr-[10px] border-b border-[#e5eaf3] bg-[#f7f9fd] px-1.5 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -117,21 +117,21 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                 <tr key={i} className="hover:bg-[#fafbff]">
                   <td className="border-b border-[#eef2f8] p-2 text-center text-[#7a869a]">{i + 1}</td>
                   {vcols.map(col => (
-                    <td key={col.key} className="border-b border-[#eef2f8] p-2">
+                    <td key={col.key} className="border-b border-[#eef2f8] p-1">
                       {col.type === 'calc' ? (
-                        <div className="min-w-[70px] text-right font-semibold text-[#16233f]">
+                        <div className="truncate text-right font-semibold text-[#16233f]">
                           {fmt(Number(computed[i][col.key]) || 0)}
                         </div>
                       ) : col.type === 'number' ? (
                         <input
                           type="number"
-                          className="w-24 rounded-[8px] border border-[#e5eaf3] bg-white px-2.5 py-1.5 text-right text-[13px]"
+                          className="w-full min-w-0 rounded-[8px] border border-[#e5eaf3] bg-white px-2 py-1.5 text-right text-xs"
                           value={row[col.key] as number}
                           onChange={e => setCell(i, col.key, Number(e.target.value))}
                         />
                       ) : (
                         <input
-                          className="w-32 rounded-[8px] border border-[#e5eaf3] bg-white px-2.5 py-1.5 text-[13px]"
+                          className="w-full min-w-0 rounded-[8px] border border-[#e5eaf3] bg-white px-2 py-1.5 text-xs"
                           value={row[col.key] as string}
                           onChange={e => setCell(i, col.key, e.target.value)}
                         />
