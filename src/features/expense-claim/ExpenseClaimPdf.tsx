@@ -66,7 +66,7 @@ function money(n: number): string {
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
 
 export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
-  const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
+  const cols = settings.columns
   const vcols = visibleColumns(cols)
   const styles = columnStyles(vcols)
   const computed = items.map(r => computeRow(cols, r))

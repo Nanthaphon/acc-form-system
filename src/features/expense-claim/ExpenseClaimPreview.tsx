@@ -14,7 +14,7 @@ function money(n: number): string {
 }
 
 export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
-  const cols = settings.columns.length ? settings.columns : EXPENSE_CLAIM_DEFAULTS.columns
+  const cols = settings.columns
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
