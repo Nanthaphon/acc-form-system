@@ -27,17 +27,17 @@ export default function Layout() {
           <NavLink to="/history" className={navLinkClass}>
             <span className="w-[18px] text-center opacity-85">🕘</span> ประวัติ
           </NavLink>
-          <NavLink to="/profile" className={navLinkClass}>
-            <span className="w-[18px] text-center opacity-85">👤</span> ข้อมูลของฉัน
-          </NavLink>
           {profile?.role === 'admin' && <>
             <NavLink to="/admin/employees" className={navLinkClass}>
               <span className="w-[18px] text-center opacity-85">👥</span> พนักงาน
             </NavLink>
             <NavLink to="/admin/prints" className={navLinkClass}>
-              <span className="w-[18px] text-center opacity-85">🖨️</span> ประวัติผู้ดูแล
+              <span className="w-[18px] text-center opacity-85">🖨️</span> ประวัติการพิมพ์ทั้งหมด
             </NavLink>
           </>}
+          <NavLink to="/profile" className={navLinkClass}>
+            <span className="w-[18px] text-center opacity-85">👤</span> ข้อมูลของฉัน
+          </NavLink>
         </nav>
         <div className="mt-auto border-t border-white/[.08] px-3 pt-2">
           <nav className="flex flex-col gap-0.5">
