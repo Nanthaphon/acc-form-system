@@ -25,14 +25,16 @@ export async function listForms(): Promise<FormSettings[]> {
 
 export async function createForm(name: string, groupId: string): Promise<string> {
   const newId = crypto.randomUUID()
-  const row: FormSettings = { ...EXPENSE_CLAIM_DEFAULTS, formType: newId, name, groupId, formCode: '' }
+  // New form: the document title (หัวเอกสาร) starts equal to the form name.
+  const row: FormSettings = { ...EXPENSE_CLAIM_DEFAULTS, formType: newId, name, title: name, groupId, formCode: '' }
   const { error } = await supabase.from('form_settings').upsert(row)
   if (error) throw error
   return newId
 }
 
 export async function renameForm(formType: string, name: string): Promise<void> {
-  const { error } = await supabase.from('form_settings').update({ name }).eq('formType', formType)
+  // Keep the document title (หัวเอกสาร) in sync with the form name.
+  const { error } = await supabase.from('form_settings').update({ name, title: name }).eq('formType', formType)
   if (error) throw error
 }
 
