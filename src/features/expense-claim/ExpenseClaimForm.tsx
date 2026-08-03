@@ -1,3 +1,4 @@
+import { Plus, Trash2 } from 'lucide-react'
 import type { ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS } from '../../types/schema'
 import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
@@ -139,7 +140,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                     </td>
                   ))}
                   <td className="border-b border-[#eef2f8] p-2 text-center">
-                    <button className="text-[#d64545]" onClick={() => onItemsChange(items.filter((_, x) => x !== i))}>🗑️</button>
+                    <button className="text-[#d64545]" onClick={() => onItemsChange(items.filter((_, x) => x !== i))}><Trash2 size={16} className="mx-auto" /></button>
                   </td>
                 </tr>
               ))}
@@ -160,7 +161,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
           className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]"
           onClick={() => onItemsChange([...items, emptyRow(cols)])}
         >
-          ＋ เพิ่มรายการ
+          <Plus size={16} /> เพิ่มรายการ
         </button>
       </div>
 

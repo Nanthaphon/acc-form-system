@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import { ClipboardList, FileText, History, KeyRound, LogOut, Printer, User, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { logout } from '../data/auth'
 
@@ -16,39 +17,39 @@ export default function Layout() {
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-[#16233f] pb-4 text-[#cdd6e6]">
         <div className="flex items-center gap-2.5 px-5 py-5 text-base font-semibold text-white">
           <span className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-gradient-to-br from-[#3b6fe0] to-[#5b8bff] text-lg">
-            📋
+            <ClipboardList size={20} />
           </span>
           ระบบเบิกค่าใช้จ่าย
         </div>
         <nav className="flex flex-col gap-0.5 px-3 py-2">
           <NavLink to="/" end className={navLinkClass}>
-            <span className="w-[18px] text-center opacity-85">📝</span> แบบฟอร์มเบิกจ่าย
+            <FileText size={18} className="opacity-85" /> แบบฟอร์มเบิกจ่าย
           </NavLink>
           <NavLink to="/history" className={navLinkClass}>
-            <span className="w-[18px] text-center opacity-85">🕘</span> ประวัติ
+            <History size={18} className="opacity-85" /> ประวัติ
           </NavLink>
           {profile?.role === 'admin' && <>
             <NavLink to="/admin/employees" className={navLinkClass}>
-              <span className="w-[18px] text-center opacity-85">👥</span> พนักงาน
+              <Users size={18} className="opacity-85" /> พนักงาน
             </NavLink>
             <NavLink to="/admin/prints" className={navLinkClass}>
-              <span className="w-[18px] text-center opacity-85">🖨️</span> ประวัติการพิมพ์ทั้งหมด
+              <Printer size={18} className="opacity-85" /> ประวัติการพิมพ์ทั้งหมด
             </NavLink>
           </>}
           <NavLink to="/profile" className={navLinkClass}>
-            <span className="w-[18px] text-center opacity-85">👤</span> ข้อมูลของฉัน
+            <User size={18} className="opacity-85" /> ข้อมูลของฉัน
           </NavLink>
         </nav>
         <div className="mt-auto border-t border-white/[.08] px-3 pt-2">
           <nav className="flex flex-col gap-0.5">
             <NavLink to="/change-password" className={navLinkClass}>
-              <span className="w-[18px] text-center opacity-85">🔑</span> เปลี่ยนรหัสผ่าน
+              <KeyRound size={18} className="opacity-85" /> เปลี่ยนรหัสผ่าน
             </NavLink>
             <button
               onClick={() => logout()}
               className="flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-left text-sm text-[#aeb9cf] transition-colors hover:bg-white/[.06] hover:text-white"
             >
-              <span className="w-[18px] text-center opacity-85">↩️</span> ออกจากระบบ
+              <LogOut size={18} className="opacity-85" /> ออกจากระบบ
             </button>
           </nav>
           <Link to="/profile" className="mt-3 block px-3.5 text-xs text-[#7a869a] hover:text-[#cdd6e6]">

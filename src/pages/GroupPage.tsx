@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Folder, Pencil, Plus, SquarePen, Trash2 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../types/schema'
 import { listGroups, renameGroup } from '../data/formGroups'
@@ -62,9 +63,9 @@ export default function GroupPage() {
           onClick={() => nav('/')}
           className="inline-flex items-center gap-1 rounded-[10px] border border-[#e5eaf3] bg-white px-3 py-1.5 text-sm font-medium text-[#16233f] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
         >
-          ← กลับ
+          <ArrowLeft size={16} /> กลับ
         </button>
-        <span className="text-2xl">📁</span>
+        <span className="text-2xl"><Folder size={24} /></span>
         <h1 className="text-xl font-medium text-[#16233f]">{group?.name ?? 'กลุ่มฟอร์ม'}</h1>
         {isAdmin && group && (
           <button
@@ -73,7 +74,7 @@ export default function GroupPage() {
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
             onClick={onRenameGroup}
           >
-            ✏️
+            <Pencil size={16} />
           </button>
         )}
         {isAdmin && (
@@ -81,7 +82,7 @@ export default function GroupPage() {
             onClick={onCreateForm}
             className="ml-auto inline-flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-3.5 py-2 text-sm font-medium text-[#2b5bd7] hover:border-[#2b5bd7]"
           >
-            ＋ สร้างฟอร์ม
+            <Plus size={16} /> สร้างฟอร์ม
           </button>
         )}
       </div>
@@ -106,7 +107,7 @@ export default function GroupPage() {
                   className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); nav(`/form/${form.formType}/edit`) }}
                 >
-                  ✏️
+                  <Pencil size={16} />
                 </button>
                 <button
                   title="เปลี่ยนชื่อฟอร์ม"
@@ -114,7 +115,7 @@ export default function GroupPage() {
                   className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRenameForm(form) }}
                 >
-                  📝
+                  <SquarePen size={16} />
                 </button>
                 <button
                   title="ลบฟอร์ม"
@@ -122,7 +123,7 @@ export default function GroupPage() {
                   className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm text-[#d64545] hover:border-[#d64545]"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteForm(form) }}
                 >
-                  🗑️
+                  <Trash2 size={16} />
                 </button>
               </div>
             )}

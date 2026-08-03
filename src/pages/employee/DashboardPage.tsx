@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Folder, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../../types/schema'
 import { listGroups, createGroup, renameGroup, deleteGroup } from '../../data/formGroups'
@@ -59,7 +60,7 @@ export default function DashboardPage() {
             onClick={onCreateGroup}
             className="ml-auto inline-flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-3.5 py-2 text-sm font-medium text-[#2b5bd7] hover:border-[#2b5bd7]"
           >
-            ＋ สร้างกลุ่ม
+            <Plus size={16} /> สร้างกลุ่ม
           </button>
         )}
       </div>
@@ -76,7 +77,7 @@ export default function DashboardPage() {
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${g.id}`) } }}
               className="relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 text-center hover:shadow"
             >
-              <div className="text-4xl">📁</div>
+              <div className="flex justify-center text-4xl"><Folder size={32} /></div>
               <div className="mt-2 truncate font-medium text-[#16233f]">{g.name}</div>
               <div className="text-sm text-gray-500">{count} ฟอร์ม</div>
               {isAdmin && (
@@ -87,7 +88,7 @@ export default function DashboardPage() {
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRenameGroup(g) }}
                   >
-                    ✏️
+                    <Pencil size={16} />
                   </button>
                   <button
                     title="ลบกลุ่ม"
@@ -95,7 +96,7 @@ export default function DashboardPage() {
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm text-[#d64545] hover:border-[#d64545]"
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteGroup(g) }}
                   >
-                    🗑️
+                    <Trash2 size={16} />
                   </button>
                 </div>
               )}

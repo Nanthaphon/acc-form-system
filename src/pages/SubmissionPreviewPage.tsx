@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Printer } from 'lucide-react'
 import ExpenseClaimPreview from '../features/expense-claim/ExpenseClaimPreview'
 import { getSubmission, incrementPrint } from '../data/submissions'
 import { getFormSettings } from '../data/formSettings'
@@ -33,9 +34,9 @@ export default function SubmissionPreviewPage() {
   return (
     <div>
       <div className="no-print mb-4 flex items-center gap-3">
-        <button onClick={() => nav(-1)} className="rounded border px-3 py-1.5 text-sm hover:border-blue-500 hover:text-blue-600">← กลับ</button>
+        <button onClick={() => nav(-1)} className="inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-sm hover:border-blue-500 hover:text-blue-600"><ArrowLeft size={16} /> กลับ</button>
         <h1 className="text-lg font-medium">ดูตัวอย่าง — {sub.docNumber}</h1>
-        <button onClick={onPrint} className="ml-auto rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700">🖨️ สั่งพิมพ์</button>
+        <button onClick={onPrint} className="ml-auto inline-flex items-center gap-1.5 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"><Printer size={16} /> สั่งพิมพ์</button>
       </div>
       <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} />
     </div>

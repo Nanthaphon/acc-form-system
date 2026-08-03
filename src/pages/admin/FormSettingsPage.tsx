@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
@@ -193,8 +194,8 @@ export default function FormSettingsPage() {
   return (
     <div className="space-y-4">
       <div className="mb-2 flex items-center gap-3.5">
-        <button onClick={() => nav('/')} className="rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]">← กลับ</button>
-        <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]">✏️</div>
+        <button onClick={() => nav('/')} className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"><ArrowLeft size={16} /> กลับ</button>
+        <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]"><Pencil size={20} /></div>
         <div>
           <h1 className="text-xl font-semibold text-[#1f2a3d]">แก้ไขฟอร์ม — {settings.name || settings.title}</h1>
           <div className="text-[13px] text-[#7a869a]">แก้ไขหัวฟอร์ม คอลัมน์ตาราง หมวดค่าใช้จ่าย หมายเหตุ และโลโก้บริษัท</div>
@@ -203,14 +204,14 @@ export default function FormSettingsPage() {
           className="ml-auto inline-flex items-center gap-2 rounded-[11px] border border-[#e5eaf3] px-4 py-3 text-sm font-medium hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
           onClick={() => setShowPreview(p => !p)}
         >
-          {showPreview ? '✏️ กลับไปแก้ไข' : '👁️ ดูตัวอย่าง'}
+          {showPreview ? <><Pencil size={16} /> กลับไปแก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
         </button>
         <button
           className="inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0] disabled:opacity-60"
           onClick={save}
           disabled={saving}
         >
-          💾 บันทึกฟอร์ม
+          <Save size={16} /> บันทึกฟอร์ม
         </button>
       </div>
 
@@ -274,7 +275,7 @@ export default function FormSettingsPage() {
         </div>
 
         <div className="space-y-3">
-          <button onClick={() => insertColumnAt(0)} className="text-xs font-medium text-[#2b5bd7] hover:underline">＋ แทรกคอลัมน์ที่ตำแหน่งแรก</button>
+          <button onClick={() => insertColumnAt(0)} className="inline-flex items-center gap-1 text-xs font-medium text-[#2b5bd7] hover:underline"><Plus size={14} /> แทรกคอลัมน์ที่ตำแหน่งแรก</button>
           {columns.map((col, i) => {
             const others = columns.filter((c, x) => x !== i && c.type !== 'text')
             const isPercent = col.calc?.op === 'percent'
@@ -301,9 +302,9 @@ export default function FormSettingsPage() {
                       แสดง
                     </label>
                     <div className="flex items-center gap-1.5 pb-1">
-                      <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น">↑</button>
-                      <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง">↓</button>
-                      <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeColumn(i)} title="ลบคอลัมน์">🗑️</button>
+                      <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
+                      <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
+                      <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeColumn(i)} title="ลบคอลัมน์"><Trash2 size={16} /></button>
                     </div>
                   </div>
 
@@ -347,24 +348,24 @@ export default function FormSettingsPage() {
                                     onClick={() => removeOperand(i, opIdx)}
                                     disabled={operands.length <= 2}
                                     title="ลบค่านี้"
-                                  >✕</button>
+                                  ><X size={14} /></button>
                                 </div>
                               </div>
                             </div>
                           ))}
                           <button
                             type="button"
-                            className="mb-[3px] rounded-[8px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-2.5 py-1.5 text-xs font-medium text-[#2b5bd7]"
+                            className="mb-[3px] inline-flex items-center gap-1 rounded-[8px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-2.5 py-1.5 text-xs font-medium text-[#2b5bd7]"
                             onClick={() => addOperand(i)}
                           >
-                            ＋ เพิ่มค่า
+                            <Plus size={14} /> เพิ่มค่า
                           </button>
                         </div>
                       )}
                     </div>
                   )}
                 </div>
-                <button onClick={() => insertColumnAt(i + 1)} className="mt-1.5 text-xs font-medium text-[#2b5bd7] hover:underline">＋ แทรกคอลัมน์ถัดจากนี้</button>
+                <button onClick={() => insertColumnAt(i + 1)} className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[#2b5bd7] hover:underline"><Plus size={14} /> แทรกคอลัมน์ถัดจากนี้</button>
               </div>
             )
           })}
@@ -374,7 +375,7 @@ export default function FormSettingsPage() {
           className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]"
           onClick={() => insertColumnAt(columns.length)}
         >
-          ＋ เพิ่มคอลัมน์
+          <Plus size={16} /> เพิ่มคอลัมน์
         </button>
       </div>
 
@@ -389,7 +390,7 @@ export default function FormSettingsPage() {
             </div>
           ))}
         </div>
-        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addCategory}>＋ เพิ่มหมวด</button>
+        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addCategory}><Plus size={14} /> เพิ่มหมวด</button>
       </div>
 
       {/* หมายเหตุท้ายฟอร์ม */}
@@ -403,7 +404,7 @@ export default function FormSettingsPage() {
             </div>
           ))}
         </div>
-        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addNote}>＋ เพิ่มหมายเหตุ</button>
+        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>
       </div>
 
       <button
@@ -411,7 +412,7 @@ export default function FormSettingsPage() {
         onClick={save}
         disabled={saving}
       >
-        💾 บันทึกฟอร์ม
+        <Save size={16} /> บันทึกฟอร์ม
       </button>
 
       {/* โลโก้บริษัท */}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount } from '../../data/submissions'
 import { listForms } from '../../data/formSettings'
@@ -41,7 +42,7 @@ export default function EmployeeDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link to="/admin/employees" className="rounded border px-3 py-1.5 text-sm hover:border-blue-500 hover:text-blue-600">← กลับ</Link>
+        <Link to="/admin/employees" className="inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-sm hover:border-blue-500 hover:text-blue-600"><ArrowLeft size={16} /> กลับ</Link>
         <h1 className="text-xl font-medium">ข้อมูลพนักงาน</h1>
         <Link to={`/admin/employees/${profile.uid}/edit`} className="ml-auto rounded bg-blue-600 px-3 py-1.5 text-sm text-white">แก้ไขข้อมูล</Link>
       </div>

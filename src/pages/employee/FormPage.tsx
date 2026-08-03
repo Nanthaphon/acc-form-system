@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
+import { Download, Printer, Receipt, Save } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
@@ -94,7 +95,7 @@ export default function FormPage() {
     <div>
       <div className="no-print space-y-4">
         <div className="mb-2 flex items-center gap-3.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]">🧾</div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]"><Receipt size={20} /></div>
           <div>
             <h1 className="text-xl font-semibold text-[#1f2a3d]">{settings.name || settings.title}</h1>
             <div className="text-[13px] text-[#7a869a]">กรอกรายการที่ต้องการเบิก · ระบบคำนวณให้อัตโนมัติ</div>
@@ -128,19 +129,19 @@ export default function FormPage() {
             className="inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0]"
             onClick={save}
           >
-            💾 บันทึก
+            <Save size={16} /> บันทึก
           </button>
           <button
             className="inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-5 py-3 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
             onClick={downloadPdf}
           >
-            📄 ดาวน์โหลด PDF
+            <Download size={16} /> ดาวน์โหลด PDF
           </button>
           <button
             className="inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-5 py-3 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
             onClick={print}
           >
-            🖨️ สั่งพิมพ์
+            <Printer size={16} /> สั่งพิมพ์
           </button>
           <button
             className="inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-5 py-3 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
