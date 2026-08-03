@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listAllSubmissions, submissionAmount } from '../../data/submissions'
+import { listAllSubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import { listEmployees } from '../../data/users'
 import { listForms } from '../../data/formSettings'
 import type { Submission, UserProfile, FormSettings } from '../../types/schema'
@@ -11,11 +11,18 @@ export default function PrintHistoryPage() {
   const [forms, setForms] = useState<FormSettings[]>([])
   const [emp, setEmp] = useState('') // filter by employeeId; '' = all
 
+  function loadRows() { listAllSubmissions().then(setRows) }
   useEffect(() => {
-    listAllSubmissions().then(setRows)
+    loadRows()
     listEmployees().then(setEmployees)
     listForms().then(setForms)
   }, [])
+
+  async function onDelete(r: Submission) {
+    if (!confirm(`ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?\nลบถาวร ยกเลิกไม่ได้`)) return
+    try { await deleteSubmission(r.id); loadRows() }
+    catch { alert('ลบเอกสารไม่สำเร็จ') }
+  }
 
   const empName = (eid: string) => {
     const p = employees.find(e => e.employeeId === eid)
@@ -63,6 +70,8 @@ export default function PrintHistoryPage() {
                   <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>ดู</Link>
                   <span className="mx-1.5 text-gray-300">|</span>
                   <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
+                  <span className="mx-1.5 text-gray-300">|</span>
+                  <button className="text-red-600 hover:underline" onClick={() => onDelete(r)}>ลบ</button>
                 </td>
               </tr>
             ))}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { getProfileByUid } from '../../data/users'
-import { listMySubmissions, submissionAmount } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import { listForms } from '../../data/formSettings'
 import { listCompanies } from '../../data/companies'
 import { listGroups } from '../../data/formGroups'
@@ -25,14 +25,21 @@ export default function EmployeeDetailPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<FormGroup[]>([])
 
+  function loadSubs() { if (uid) listMySubmissions(uid).then(setSubs) }
   useEffect(() => {
     if (!uid) return
     getProfileByUid(uid).then(setProfile)
-    listMySubmissions(uid).then(setSubs)
+    loadSubs()
     listForms().then(setForms)
     listCompanies().then(setCompanies)
     listGroups().then(setGroups)
   }, [uid])
+
+  async function onDeleteSub(r: Submission) {
+    if (!confirm(`ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?\nลบถาวร ยกเลิกไม่ได้`)) return
+    try { await deleteSubmission(r.id); loadSubs() }
+    catch { alert('ลบเอกสารไม่สำเร็จ') }
+  }
 
   const formName = (ft: string) => {
     const f = forms.find(x => x.formType === ft)
@@ -87,6 +94,8 @@ export default function EmployeeDetailPage() {
                     <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>ดู</Link>
                     <span className="mx-1.5 text-gray-300">|</span>
                     <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    <button className="text-red-600 hover:underline" onClick={() => onDeleteSub(r)}>ลบ</button>
                   </td>
                 </tr>
               ))}

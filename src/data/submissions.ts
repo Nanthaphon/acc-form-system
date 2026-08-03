@@ -32,6 +32,11 @@ export function submissionAmount(s: Submission): number {
   return Number(t?.grandTotal ?? t?.totalNet) || 0
 }
 
+export async function deleteSubmission(id: string): Promise<void> {
+  const { error } = await supabase.from('submissions').delete().eq('id', id)
+  if (error) throw error
+}
+
 export async function getSubmission(id: string): Promise<Submission | null> {
   const { data } = await supabase.from('submissions').select('*').eq('id', id).maybeSingle()
   return (data as Submission) ?? null
