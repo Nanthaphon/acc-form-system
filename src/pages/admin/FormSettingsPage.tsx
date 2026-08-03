@@ -14,10 +14,10 @@ const smallSelect = 'rounded-[8px] border border-[#e5eaf3] bg-white px-2 py-1.5 
 const iconBtn = 'rounded-[8px] border border-[#e5eaf3] px-2 py-1.5 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7] disabled:opacity-40 disabled:hover:border-[#e5eaf3] disabled:hover:text-inherit'
 
 const OP_LABELS: Record<CalcDef['op'], string> = {
-  multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', percent: '% ร้อยละ',
+  multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', divide: '÷ หาร', percent: '% ร้อยละ',
 }
 const OP_SYMBOL: Record<CalcDef['op'], string> = {
-  multiply: '×', subtract: '−', add: '+', percent: '%',
+  multiply: '×', subtract: '−', add: '+', divide: '÷', percent: '%',
 }
 
 const MAX_VISIBLE = 12

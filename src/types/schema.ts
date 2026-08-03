@@ -5,7 +5,7 @@ export interface Company { id: string; name: string; address: string; logo?: str
 // ===== Dynamic column model =====
 export type ColumnType = 'text' | 'number' | 'calc'
 export interface CalcDef {
-  op: 'multiply' | 'subtract' | 'add' | 'percent'
+  op: 'multiply' | 'subtract' | 'add' | 'percent' | 'divide'
   operands?: string[]   // list of column keys (2+) for multiply/add/subtract
   a?: string             // legacy single operand (percent uses this or operands[0])
   b?: string             // legacy second operand

@@ -25,6 +25,7 @@ export function computeRow(columns: FormColumn[], row: ExpenseRow): ExpenseRow {
       case 'multiply': value = ops.length ? ops.reduce((acc, k) => acc * num(k), 1) : 0; break
       case 'add': value = ops.reduce((acc, k) => acc + num(k), 0); break
       case 'subtract': value = ops.reduce((acc, k, i) => i === 0 ? num(k) : acc - num(k), 0); break
+      case 'divide': value = ops.reduce((acc, k, i) => i === 0 ? num(k) : (num(k) === 0 ? acc : acc / num(k)), 0); break
       case 'percent': value = num(ops[0] ?? '') * (percent ?? 0) / 100; break
     }
     out[col.key] = round2(value)
