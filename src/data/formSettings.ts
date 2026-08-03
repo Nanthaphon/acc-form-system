@@ -2,11 +2,12 @@ import { supabase } from '../lib/supabase'
 import type { FormSettings } from '../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../types/schema'
 
-// Apply the same columns-fallback as getFormSettings: fall back to the default
-// columns when the stored `columns` is empty/missing (e.g. before the migration).
+// Only the built-in expense-claim form falls back to the default columns when its
+// stored `columns` is empty. Custom forms start BLANK and keep their (empty) columns.
 function withColumnsFallback(fs: FormSettings): FormSettings {
-  const columns = Array.isArray(fs.columns) && fs.columns.length ? fs.columns : EXPENSE_CLAIM_DEFAULTS.columns
-  return { ...fs, columns }
+  if (Array.isArray(fs.columns) && fs.columns.length) return fs
+  if (fs.formType === 'expense-claim') return { ...fs, columns: EXPENSE_CLAIM_DEFAULTS.columns }
+  return { ...fs, columns: Array.isArray(fs.columns) ? fs.columns : [] }
 }
 
 export async function getFormSettings(formType: string): Promise<FormSettings> {
@@ -25,8 +26,13 @@ export async function listForms(): Promise<FormSettings[]> {
 
 export async function createForm(name: string, groupId: string): Promise<string> {
   const newId = crypto.randomUUID()
-  // New form: the document title (หัวเอกสาร) starts equal to the form name.
-  const row: FormSettings = { ...EXPENSE_CLAIM_DEFAULTS, formType: newId, name, title: name, groupId, formCode: '' }
+  // New form starts BLANK — no columns/categories/notes. Admin builds it up.
+  // Document title (หัวเอกสาร) starts equal to the form name.
+  const row: FormSettings = {
+    formType: newId, name, title: name, groupId,
+    subject: '', attention: '', formCode: '',
+    categories: [], notes: [], columns: [],
+  }
   const { error } = await supabase.from('form_settings').upsert(row)
   if (error) throw error
   return newId
