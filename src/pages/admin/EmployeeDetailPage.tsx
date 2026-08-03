@@ -4,6 +4,7 @@ import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount } from '../../data/submissions'
 import { listForms } from '../../data/formSettings'
 import { listCompanies } from '../../data/companies'
+import { downloadSubmissionPdf } from '../../features/expense-claim/printSubmission'
 import type { UserProfile, Submission, FormSettings, Company } from '../../types/schema'
 
 function Info({ label, value }: { label: string; value: string }) {
@@ -77,8 +78,10 @@ export default function EmployeeDetailPage() {
                   <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
                   <td className="border px-2 py-1 text-center">{r.printCount}</td>
                   <td className="border px-2 py-1 whitespace-nowrap">{r.lastPrintedAt ? new Date(r.lastPrintedAt).toLocaleString('th-TH') : '-'}</td>
-                  <td className="border px-2 py-1 text-center">
-                    <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>ดู / พิมพ์</Link>
+                  <td className="border px-2 py-1 whitespace-nowrap text-center">
+                    <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>ดู</Link>
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    <button className="text-green-700 hover:underline" onClick={() => downloadSubmissionPdf(r)}>พิมพ์</button>
                   </td>
                 </tr>
               ))}
