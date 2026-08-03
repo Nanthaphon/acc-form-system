@@ -31,7 +31,7 @@ export default function PrintHistoryPage() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-medium">ประวัติเอกสารของพนักงาน</h1>
+        <h1 className="text-xl font-medium">ประวัติผู้ดูแล — เอกสารพนักงานทั้งหมด</h1>
         <select className="rounded border px-2 py-1 text-sm" value={emp} onChange={e => setEmp(e.target.value)}>
           <option value="">— พนักงานทั้งหมด —</option>
           {employees.map(p => (

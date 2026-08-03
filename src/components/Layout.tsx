@@ -35,7 +35,7 @@ export default function Layout() {
               <span className="w-[18px] text-center opacity-85">👥</span> พนักงาน
             </NavLink>
             <NavLink to="/admin/prints" className={navLinkClass}>
-              <span className="w-[18px] text-center opacity-85">🖨️</span> ประวัติการพิมพ์
+              <span className="w-[18px] text-center opacity-85">🖨️</span> ประวัติผู้ดูแล
             </NavLink>
           </>}
         </nav>
