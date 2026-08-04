@@ -7,11 +7,11 @@ import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPrevie
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
 
-const cardClass = 'rounded-2xl border border-[#e5eaf3] bg-white p-6 shadow-[0_1px_2px_rgba(16,32,64,0.03)]'
-const cardTitleClass = "flex items-center gap-2 text-sm font-semibold text-[#16233f] before:block before:h-4 before:w-1 before:rounded-[3px] before:bg-[#2b5bd7]"
-const inputClass = 'w-full rounded-[10px] border border-[#e5eaf3] bg-[#fbfcfe] px-3 py-2.5 text-sm placeholder:text-[#7a869a] focus:border-[#2b5bd7] focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-[#2b5bd7]/[.12]'
-const smallSelect = 'rounded-[8px] border border-[#e5eaf3] bg-white px-2 py-1.5 text-sm'
-const iconBtn = 'rounded-[8px] border border-[#e5eaf3] px-2 py-1.5 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7] disabled:opacity-40 disabled:hover:border-[#e5eaf3] disabled:hover:text-inherit'
+const cardClass = 'rounded-xl border border-gray-200 bg-white p-6'
+const cardTitleClass = 'text-[15px] font-semibold text-gray-900'
+const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+const smallSelect = 'rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+const iconBtn = 'rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900 disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:text-inherit'
 
 const OP_LABELS: Record<CalcDef['op'], string> = {
   multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', divide: '÷ หาร', percent: '% ร้อยละ',
@@ -194,21 +194,18 @@ export default function FormSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="mb-2 flex items-center gap-3.5">
-        <button onClick={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')} className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"><ArrowLeft size={16} /> กลับ</button>
-        <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]"><Pencil size={20} /></div>
-        <div>
-          <h1 className="text-xl font-semibold text-[#1f2a3d]">แก้ไขฟอร์ม — {settings.name || settings.title}</h1>
-          <div className="text-[13px] text-[#7a869a]">แก้ไขหัวฟอร์ม คอลัมน์ตาราง หมวดค่าใช้จ่าย หมายเหตุ และโลโก้บริษัท</div>
-        </div>
+      <div className="mb-2 flex items-center gap-3">
+        <button onClick={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900"><ArrowLeft size={16} /> กลับ</button>
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><Pencil size={20} /></div>
+        <h1 className="text-xl font-semibold text-gray-900">แก้ไขฟอร์ม — {settings.name || settings.title}</h1>
         <button
-          className="ml-auto inline-flex items-center gap-2 rounded-[11px] border border-[#e5eaf3] px-4 py-3 text-sm font-medium hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+          className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
           onClick={() => setShowPreview(p => !p)}
         >
           {showPreview ? <><Pencil size={16} /> กลับไปแก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
         </button>
         <button
-          className="inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0] disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
           onClick={save}
           disabled={saving}
         >
@@ -217,7 +214,7 @@ export default function FormSettingsPage() {
       </div>
 
       {showPreview && (
-        <div className="overflow-x-auto rounded-2xl border border-[#e5eaf3] bg-[#f4f6fb] p-4">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
           <ExpenseClaimPreview company={previewCompany} header={previewHeader} items={previewItems} docNumber={settings.formCode || 'GAC6709-003'} settings={settings} />
         </div>
       )}
@@ -227,8 +224,7 @@ export default function FormSettingsPage() {
 
       {/* กลุ่มการมองเห็น (Access group) */}
       <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-2`}>กลุ่มการมองเห็น (Access group)</h2>
-        <p className="mb-3 text-xs text-[#7a869a]">เลือกกลุ่มให้ฟอร์มนี้ · เฉพาะพนักงานที่อยู่กลุ่มเดียวกันจะเห็นฟอร์มนี้ (ถ้าไม่เลือก = ทุกคนเห็น)</p>
+        <h2 className={`${cardTitleClass} mb-3`}>กลุ่มการมองเห็น (Access group)</h2>
         <select className={`${inputClass} sm:max-w-xs`} value={settings.accessGroup ?? ''} onChange={e => setField('accessGroup', e.target.value || undefined)}>
           <option value="">— ทุกคนเห็น —</option>
           {ACCESS_GROUPS.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -262,11 +258,11 @@ export default function FormSettingsPage() {
       <div className={cardClass}>
         <div className="mb-1 flex items-center justify-between gap-2">
           <h2 className={cardTitleClass}>คอลัมน์ตาราง</h2>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${visibleCount >= MAX_VISIBLE ? 'bg-[#fdecec] text-[#d64545]' : 'bg-[#eaf0ff] text-[#1e46b0]'}`}>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${visibleCount >= MAX_VISIBLE ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
             แสดงอยู่ {visibleCount} / {MAX_VISIBLE}
           </span>
         </div>
-        <p className="mb-4 text-xs text-[#7a869a]">กำหนดคอลัมน์ในตารางรายการเบิก · คอลัมน์แบบ “คำนวณ” จะคิดค่าให้อัตโนมัติจากคอลัมน์อื่น · ติ๊ก “แสดง” เพื่อเลือกคอลัมน์ที่จะแสดงในเอกสาร (สูงสุด {MAX_VISIBLE})</p>
+        <div className="mb-4" />
 
         {/* Representative header preview */}
         <div className="mb-4 overflow-x-auto rounded-[10px] border border-[#eef2f8]">
@@ -430,7 +426,7 @@ export default function FormSettingsPage() {
       </div>
 
       <button
-        className="inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0] disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
         onClick={save}
         disabled={saving}
       >
