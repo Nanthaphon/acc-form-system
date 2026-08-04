@@ -30,6 +30,14 @@
   font-display: swap;
 }
 
+/* Noto Sans Thai — ฟอนต์หลักของหน้าเว็บ (UI) */
+@font-face {
+  font-family: 'Noto Sans Thai';
+  src: url('/fonts/NotoSansThai.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 html, body {
-  font-family: 'Prompt', sans-serif;
+  font-family: 'Noto Sans Thai', sans-serif;
 }
