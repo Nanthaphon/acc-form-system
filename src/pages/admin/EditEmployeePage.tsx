@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getProfileByUid, updateProfile } from '../../data/users'
 import { listCompanies } from '../../data/companies'
-import type { Company, UserProfile } from '../../types/schema'
-import { ACCESS_GROUPS } from '../../types/schema'
+import { listAccessGroups } from '../../data/accessGroups'
+import type { Company, UserProfile, AccessGroup } from '../../types/schema'
 
 export default function EditEmployeePage() {
   const { uid } = useParams<{ uid: string }>()
   const nav = useNavigate()
   const [companies, setCompanies] = useState<Company[]>([])
+  const [groups, setGroups] = useState<AccessGroup[]>([])
   const [f, setF] = useState<UserProfile | null>(null)
 
-  useEffect(() => { listCompanies().then(setCompanies) }, [])
+  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups) }, [])
   useEffect(() => {
     if (!uid) return
     getProfileByUid(uid).then(p => setF(p))
@@ -50,7 +51,7 @@ export default function EditEmployeePage() {
       </select>
       <select className="w-full rounded border px-3 py-2" value={f.accessGroup ?? ''} onChange={e => set('accessGroup', e.target.value)}>
         <option value="">— ไม่ระบุ —</option>
-        {ACCESS_GROUPS.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+        {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
       </select>
       <select className="w-full rounded border px-3 py-2" value={f.role} onChange={e => set('role', e.target.value)}>
         <option value="employee">พนักงาน</option><option value="admin">แอดมิน</option>

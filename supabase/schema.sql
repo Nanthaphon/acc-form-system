@@ -157,3 +157,25 @@ alter table form_settings add column if not exists "groupId" text;
 alter table form_settings add column if not exists name text not null default '';
 insert into form_groups (id, name, "sortOrder") values ('default', 'ฟอร์มทั่วไป', 0) on conflict (id) do nothing;
 update form_settings set "groupId" = 'default', name = 'ใบเบิกค่าใช้จ่าย' where "formType" = 'expense-claim' and (name = '' or name is null);
+
+-- ===== Access groups (form visibility tags, admin-managed) =====
+-- Which employees / forms belong to a group. A form tagged with a group is
+-- visible only to employees in the same group; an untagged form is for everyone.
+alter table profiles add column if not exists "accessGroup" text;
+alter table form_settings add column if not exists "accessGroup" text;
+create table if not exists access_groups (
+  id text primary key,
+  name text not null,
+  "sortOrder" int not null default 0,
+  "createdAt" bigint not null default 0
+);
+alter table access_groups enable row level security;
+drop policy if exists access_groups_select on access_groups;
+create policy access_groups_select on access_groups for select using (auth.uid() is not null);
+drop policy if exists access_groups_write on access_groups;
+create policy access_groups_write on access_groups for all using (is_admin()) with check (is_admin());
+-- Seed the original two groups so existing employees/forms keep working.
+insert into access_groups (id, name, "sortOrder") values
+  ('dx', 'Design Experience', 0),
+  ('pcms', 'PcMs', 1)
+on conflict (id) do nothing;

@@ -34,8 +34,16 @@ export type ExpenseRow = Record<string, string | number>
 export interface FormGroup { id: string; name: string; sortOrder: number; createdAt: number }
 
 // Access groups control form VISIBILITY (separate from folders/form_groups).
-// Fixed set of two. A form tagged with an access group is visible only to
-// employees in the same access group; an untagged form is visible to everyone.
+// A form tagged with an access group is visible only to employees in the same
+// access group; an untagged form is visible to everyone. Groups are stored in
+// the `access_groups` table and managed by admins; ACCESS_GROUPS below is only
+// the seed/fallback used before the migration runs or if the table is empty.
+export interface AccessGroup {
+  id: string
+  name: string
+  sortOrder: number
+  createdAt: number
+}
 export const ACCESS_GROUPS = [
   { id: 'dx', name: 'Design Experience' },
   { id: 'pcms', name: 'PcMs' },

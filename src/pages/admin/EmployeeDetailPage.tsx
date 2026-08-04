@@ -5,8 +5,8 @@ import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import { listForms } from '../../data/formSettings'
 import { listCompanies } from '../../data/companies'
-import type { UserProfile, Submission, FormSettings, Company } from '../../types/schema'
-import { ACCESS_GROUPS } from '../../types/schema'
+import { listAccessGroups } from '../../data/accessGroups'
+import type { UserProfile, Submission, FormSettings, Company, AccessGroup } from '../../types/schema'
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
@@ -23,6 +23,7 @@ export default function EmployeeDetailPage() {
   const [subs, setSubs] = useState<Submission[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
+  const [groups, setGroups] = useState<AccessGroup[]>([])
 
   function loadSubs() { if (uid) listMySubmissions(uid).then(setSubs) }
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function EmployeeDetailPage() {
     loadSubs()
     listForms().then(setForms)
     listCompanies().then(setCompanies)
+    listAccessGroups().then(setGroups)
   }, [uid])
 
   async function onDeleteSub(r: Submission) {
@@ -44,7 +46,7 @@ export default function EmployeeDetailPage() {
     return f?.name || f?.title || ft
   }
   const companyName = (id: string) => companies.find(c => c.id === id)?.name || id
-  const accessGroupName = (id?: string) => id ? (ACCESS_GROUPS.find(a => a.id === id)?.name || id) : ''
+  const accessGroupName = (id?: string) => id ? (groups.find(a => a.id === id)?.name || id) : ''
 
   if (!profile) return <div className="p-4 text-gray-500">กำลังโหลด...</div>
 

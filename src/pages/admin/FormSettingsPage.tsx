@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
-import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, ACCESS_GROUPS, calcOperands } from '../../types/schema'
+import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, calcOperands } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
+import { listAccessGroups } from '../../data/accessGroups'
 
 const cardClass = 'rounded-xl border border-gray-200 bg-white p-6'
 const cardTitleClass = 'text-[15px] font-semibold text-gray-900'
@@ -45,6 +46,7 @@ export default function FormSettingsPage() {
   const { formType = 'expense-claim' } = useParams()
   const [settings, setSettings] = useState<FormSettings>(EXPENSE_CLAIM_DEFAULTS)
   const [companies, setCompanies] = useState<Company[]>([])
+  const [groups, setGroups] = useState<AccessGroup[]>([])
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
 
@@ -52,6 +54,7 @@ export default function FormSettingsPage() {
   useEffect(() => {
     getFormSettings(formType).then(setSettings)
     loadCompanies()
+    listAccessGroups().then(setGroups)
   }, [formType])
 
   function setField<K extends keyof FormSettings>(key: K, value: FormSettings[K]) {
@@ -227,7 +230,7 @@ export default function FormSettingsPage() {
         <h2 className={`${cardTitleClass} mb-3`}>กลุ่มการมองเห็น (Access group)</h2>
         <select className={`${inputClass} sm:max-w-xs`} value={settings.accessGroup ?? ''} onChange={e => setField('accessGroup', e.target.value || undefined)}>
           <option value="">— ทุกคนเห็น —</option>
-          {ACCESS_GROUPS.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
       </div>
 
