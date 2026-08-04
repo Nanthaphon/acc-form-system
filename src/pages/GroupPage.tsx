@@ -23,7 +23,10 @@ export default function GroupPage() {
   const group = groups.find(g => g.id === groupId)
   // Same fallback rule as the dashboard: forms without a groupId belong to the first group.
   const firstGroupId = groups[0]?.id
-  const groupForms = forms.filter(f => (f.groupId ?? firstGroupId) === groupId)
+  // Visibility is by ACCESS GROUP (not folder): admins see everything; a
+  // non-admin sees a form only if it has no access group or it matches theirs.
+  const canSee = (f: FormSettings) => isAdmin || !f.accessGroup || f.accessGroup === profile?.accessGroup
+  const groupForms = forms.filter(f => (f.groupId ?? firstGroupId) === groupId && canSee(f))
 
   async function onRenameGroup() {
     if (!group) return

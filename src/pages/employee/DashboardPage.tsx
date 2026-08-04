@@ -46,11 +46,23 @@ export default function DashboardPage() {
     return forms.filter(f => (f.groupId ?? firstGroupId) === g.id)
   }
 
-  // Admins see every group. A non-admin with a groupId sees only that group's
-  // folder(s); a non-admin without a groupId falls back to seeing all groups.
-  const visibleGroups = isAdmin || !profile?.groupId
+  // Visibility is by ACCESS GROUP (not folder): admins see everything; a
+  // non-admin sees a form only if it has no access group (everyone) or its
+  // access group matches theirs.
+  function canSee(f: FormSettings): boolean {
+    if (isAdmin) return true
+    return !f.accessGroup || f.accessGroup === profile?.accessGroup
+  }
+  // Forms visible to the current viewer within a folder.
+  function visibleFormsForGroup(g: FormGroup): FormSettings[] {
+    return formsForGroup(g).filter(canSee)
+  }
+
+  // Folders are purely organizational: everyone sees all folders, except that a
+  // non-admin's folders with zero visible forms are hidden.
+  const visibleGroups = isAdmin
     ? groups
-    : groups.filter(g => g.id === profile.groupId)
+    : groups.filter(g => visibleFormsForGroup(g).length > 0)
 
   return (
     <div>
@@ -73,7 +85,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {visibleGroups.map(g => {
-          const count = formsForGroup(g).length
+          const count = isAdmin ? formsForGroup(g).length : visibleFormsForGroup(g).length
           return (
             <div
               key={g.id}

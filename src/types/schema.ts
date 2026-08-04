@@ -33,11 +33,20 @@ export type ExpenseRow = Record<string, string | number>
 
 export interface FormGroup { id: string; name: string; sortOrder: number; createdAt: number }
 
+// Access groups control form VISIBILITY (separate from folders/form_groups).
+// Fixed set of two. A form tagged with an access group is visible only to
+// employees in the same access group; an untagged form is visible to everyone.
+export const ACCESS_GROUPS = [
+  { id: 'dx', name: 'Design Experience' },
+  { id: 'pcms', name: 'PcMs' },
+]
+
 export interface FormSettings {
   formType: string; title: string; subject: string; attention: string; formCode: string
   categories: string[]; notes: string[]
   columns: FormColumn[]
   groupId?: string; name?: string
+  accessGroup?: string
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
@@ -90,6 +99,7 @@ export interface UserProfile {
   role: Role
   mustChangePassword: boolean
   groupId?: string
+  accessGroup?: string
   createdAt: number
 }
 
