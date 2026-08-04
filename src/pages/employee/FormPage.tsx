@@ -102,10 +102,7 @@ export default function FormPage() {
             <ArrowLeft size={16} /> กลับ
           </button>
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><Receipt size={20} /></div>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">{settings.name || settings.title}</h1>
-            <div className="text-[13px] text-gray-500">กรอกรายการที่ต้องการเบิก · ระบบคำนวณให้อัตโนมัติ</div>
-          </div>
+          <h1 className="text-xl font-semibold text-gray-900">{settings.name || settings.title}</h1>
           <button
             className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
             onClick={() => setShowPreview(!showPreview)}
