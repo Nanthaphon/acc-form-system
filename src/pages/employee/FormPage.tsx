@@ -94,30 +94,30 @@ export default function FormPage() {
   return (
     <div>
       <div className="no-print space-y-4">
-        <div className="mb-2 flex items-center gap-3.5">
+        <div className="mb-2 flex items-center gap-3">
           <button
             onClick={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
-            className="inline-flex items-center gap-1.5 rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900"
           >
             <ArrowLeft size={16} /> กลับ
           </button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#eaf0ff] text-xl text-[#2b5bd7]"><Receipt size={20} /></div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><Receipt size={20} /></div>
           <div>
-            <h1 className="text-xl font-semibold text-[#1f2a3d]">{settings.name || settings.title}</h1>
-            <div className="text-[13px] text-[#7a869a]">กรอกรายการที่ต้องการเบิก · ระบบคำนวณให้อัตโนมัติ</div>
+            <h1 className="text-xl font-semibold text-gray-900">{settings.name || settings.title}</h1>
+            <div className="text-[13px] text-gray-500">กรอกรายการที่ต้องการเบิก · ระบบคำนวณให้อัตโนมัติ</div>
           </div>
           <button
-            className="ml-auto inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-4 py-2 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
             onClick={() => setShowPreview(!showPreview)}
           >
             {showPreview ? 'แก้ไข' : 'ดูตัวอย่าง'}
           </button>
         </div>
         {!showPreview && (
-          <div className="rounded-2xl border border-[#e5eaf3] bg-white p-6 shadow-[0_1px_2px_rgba(16,32,64,0.03)]">
-            <label className="mb-1.5 block text-xs text-[#7a869a]">บริษัท</label>
+          <div className="rounded-xl border border-gray-200 bg-white p-6">
+            <label className="mb-1.5 block text-xs font-medium text-gray-500">บริษัท</label>
             <select
-              className="w-full rounded-[10px] border border-[#e5eaf3] bg-[#fbfcfe] px-3 py-2.5 text-sm focus:border-[#2b5bd7] focus:bg-white focus:outline-none focus:ring-[3px] focus:ring-[#2b5bd7]/[.12]"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               value={header.companyId}
               onChange={e => setHeader({ ...header, companyId: e.target.value })}
             >
@@ -129,27 +129,27 @@ export default function FormPage() {
           </div>
         )}
         {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} />}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2.5">
           <button
-            className="inline-flex items-center gap-2 rounded-[11px] bg-[#2b5bd7] px-5 py-3 text-sm font-medium text-white shadow-[0_6px_16px_rgba(43,91,215,0.28)] hover:bg-[#1e46b0]"
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
             onClick={save}
           >
             <Save size={16} /> บันทึก
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-5 py-3 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
             onClick={downloadPdf}
           >
             <Download size={16} /> ดาวน์โหลด PDF
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-5 py-3 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
             onClick={print}
           >
             <Printer size={16} /> สั่งพิมพ์
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-[#e5eaf3] bg-white px-5 py-3 text-sm font-medium text-[#1f2a3d] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+            className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-800"
             onClick={() => nav('/history')}
           >
             ไปหน้าประวัติ
