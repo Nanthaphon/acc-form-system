@@ -3,4 +3,6 @@
   #print-area, #print-area * { visibility: visible; }
   #print-area { position: absolute; left: 0; top: 0; width: 100%; }
   .no-print { display: none !important; }
+  /* Each sheet starts on a fresh printed page (page 2 and onward). */
+  .doc-page + .doc-page { break-before: page; }
 }
