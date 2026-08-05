@@ -65,8 +65,6 @@ export default function EmployeeDetailPage() {
           <Info label="ตำแหน่ง" value={profile.position} />
           <Info label="แผนก" value={profile.department} />
           <Info label="บริษัท" value={companyName(profile.companyId)} />
-          <Info label="Job" value={profile.defaultJob} />
-          <Info label="เลขบัญชี" value={profile.bankAccount} />
           <Info label="กลุ่ม (Access group)" value={accessGroupName(profile.accessGroup)} />
           <Info label="สิทธิ์" value={profile.role} />
         </div>

@@ -42,7 +42,7 @@ export default function EditEmployeePage() {
     <form onSubmit={submit} className="max-w-lg space-y-3">
       <h1 className="text-xl font-medium">แก้ไขข้อมูลพนักงาน</h1>
       <input className="w-full rounded border bg-gray-100 px-3 py-2 text-gray-500" value={f.employeeId} disabled />
-      {([['firstName', 'ชื่อ'], ['lastName', 'นามสกุล'], ['position', 'ตำแหน่ง'], ['department', 'แผนก'], ['defaultJob', 'Job'], ['bankAccount', 'เลขบัญชี']] as const).map(([k, l]) => (
+      {([['firstName', 'ชื่อ'], ['lastName', 'นามสกุล'], ['position', 'ตำแหน่ง'], ['department', 'แผนก']] as const).map(([k, l]) => (
         <input key={k} className="w-full rounded border px-3 py-2" placeholder={l} value={f[k]} onChange={e => set(k, e.target.value)} />
       ))}
       <select className="w-full rounded border px-3 py-2" value={f.companyId} onChange={e => set('companyId', e.target.value)}>

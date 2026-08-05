@@ -29,7 +29,7 @@ export default function AddEmployeePage() {
   return (
     <form onSubmit={submit} className="max-w-lg space-y-3">
       <h1 className="text-xl font-medium">เพิ่มพนักงาน</h1>
-      {[['employeeId','รหัสพนักงาน'],['firstName','ชื่อ'],['lastName','นามสกุล'],['position','ตำแหน่ง'],['department','แผนก'],['defaultJob','Job'],['bankAccount','เลขบัญชี']].map(([k,l]) => (
+      {[['employeeId','รหัสพนักงาน'],['firstName','ชื่อ'],['lastName','นามสกุล'],['position','ตำแหน่ง'],['department','แผนก']].map(([k,l]) => (
         <input key={k} className="w-full rounded border px-3 py-2" placeholder={l} value={(f as any)[k]} onChange={e => set(k, e.target.value)} />
       ))}
       <select className="w-full rounded border px-3 py-2" value={f.companyId} onChange={e => set('companyId', e.target.value)}>
