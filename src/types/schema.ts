@@ -120,6 +120,11 @@ export interface UserProfile {
   accessGroup?: string
   departmentId?: string
   createdAt: number
+  // --- online-approval feature ---
+  canApprove?: boolean            // may sign/approve documents
+  approverAllDepartments?: boolean // covers every department (big boss / GM)
+  approverDepartments?: string[]   // department ids this approver covers
+  signatureImage?: string          // uploaded signature (data URL)
 }
 
 export interface ExpenseTotals {
