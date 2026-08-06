@@ -7,6 +7,7 @@ export interface NewEmployee {
   employeeId: string; firstName: string; lastName: string
   position: string; department: string; companyId: string
   defaultJob: string; bankAccount: string; role: Role; accessGroup?: string
+  departmentId?: string
 }
 
 export async function createEmployee(e: NewEmployee): Promise<string> {
@@ -23,7 +24,8 @@ export async function createEmployee(e: NewEmployee): Promise<string> {
     uid, employeeId: e.employeeId, firstName: e.firstName, lastName: e.lastName,
     position: e.position, department: e.department, companyId: e.companyId,
     defaultJob: e.defaultJob, bankAccount: e.bankAccount, role: e.role,
-    accessGroup: e.accessGroup, mustChangePassword: true, createdAt: Date.now(),
+    accessGroup: e.accessGroup, departmentId: e.departmentId,
+    mustChangePassword: true, createdAt: Date.now(),
   }
   const { error: e2 } = await supabase.from('profiles').insert(profile)
   if (e2) throw e2

@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { ClipboardList, FileText, History, KeyRound, LogOut, Printer, Tags, User, Users } from 'lucide-react'
+import { Building2, ClipboardList, FileText, History, KeyRound, LogOut, Printer, Tags, User, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { logout } from '../data/auth'
 
@@ -37,6 +37,9 @@ export default function Layout() {
             </NavLink>
             <NavLink to="/admin/access-groups" className={navLinkClass}>
               <Tags size={18} className="opacity-85" /> จัดการกลุ่ม
+            </NavLink>
+            <NavLink to="/admin/departments" className={navLinkClass}>
+              <Building2 size={18} className="opacity-85" /> จัดการแผนก
             </NavLink>
           </>}
           <NavLink to="/profile" className={navLinkClass}>

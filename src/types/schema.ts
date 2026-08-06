@@ -49,6 +49,16 @@ export const ACCESS_GROUPS = [
   { id: 'pcms', name: 'PcMs' },
 ]
 
+// Departments are the org unit used to route approvals: an employee belongs to
+// one department; an approver covers one or more departments. Managed by admins
+// in the `departments` table (part of the online-approval feature).
+export interface Department {
+  id: string
+  name: string
+  sortOrder: number
+  createdAt: number
+}
+
 export interface FormSettings {
   formType: string; title: string; subject: string; attention: string; formCode: string
   categories: string[]; notes: string[]
@@ -108,6 +118,7 @@ export interface UserProfile {
   mustChangePassword: boolean
   groupId?: string
   accessGroup?: string
+  departmentId?: string
   createdAt: number
 }
 
