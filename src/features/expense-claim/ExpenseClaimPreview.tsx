@@ -2,7 +2,8 @@ import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../typ
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
+interface Approval { name?: string | null; signature?: string | null; at?: number | null }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; approval?: Approval }
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
@@ -17,7 +18,7 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
+export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, approval }: Props) {
   const cols = settings.columns
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
@@ -166,9 +167,16 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                 <div className="mt-2">วันที่ ................</div>
               </div>
               <div>
-                <div className="border-b border-black">&nbsp;</div>
+                <div className="flex h-10 items-end justify-center border-b border-black">
+                  {approval?.signature && <img src={approval.signature} alt="ลายเซ็น" className="max-h-10 object-contain pb-0.5" />}
+                  {!approval?.signature && <>&nbsp;</>}
+                </div>
                 <div className="mt-1">ผู้อนุมัติ</div>
-                <div className="mt-2">วันที่ ................</div>
+                <div className="mt-2">
+                  {approval?.name
+                    ? <>({approval.name})<br />{approval.at ? `วันที่ ${new Date(approval.at).toLocaleDateString('th-TH')}` : ''}</>
+                    : 'วันที่ ................'}
+                </div>
               </div>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-8 text-center">

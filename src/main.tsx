@@ -21,6 +21,7 @@ import EmployeeDetailPage from './pages/admin/EmployeeDetailPage'
 import ImportCsvPage from './pages/admin/ImportCsvPage'
 import PrintHistoryPage from './pages/admin/PrintHistoryPage'
 import FormSettingsPage from './pages/admin/FormSettingsPage'
+import ApprovalsPage from './pages/ApprovalsPage'
 import AccessGroupsPage from './pages/admin/AccessGroupsPage'
 import DepartmentsPage from './pages/admin/DepartmentsPage'
 
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
       { path: 'submission/:id', element: <FormPage /> },
       { path: 'submission/:id/preview', element: <SubmissionPreviewPage /> },
       { path: 'history', element: <HistoryPage /> },
+      { path: 'approvals', element: <ApprovalsPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'change-password', element: <ChangePasswordPage /> },
       { path: 'admin/employees', element: <RequireAdmin><EmployeeListPage /></RequireAdmin> },

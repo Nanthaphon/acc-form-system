@@ -143,6 +143,8 @@ export interface ExpenseHeader {
   job: string
 }
 
+export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'rejected'
+
 export interface Submission {
   id: string
   formType: string
@@ -156,6 +158,15 @@ export interface Submission {
   updatedAt: number
   printCount: number
   lastPrintedAt: number | null
+  // --- online-approval feature ---
+  status?: SubmissionStatus
+  departmentId?: string | null       // snapshot of requester's department (routing)
+  requestedAt?: number | null
+  approvedBy?: string | null
+  approvedByName?: string | null
+  approverSignature?: string | null  // snapshot of approver's signature image
+  approvedAt?: number | null
+  rejectReason?: string | null
 }
 
 // Build a blank row for the given columns: text -> '', number/calc -> 0

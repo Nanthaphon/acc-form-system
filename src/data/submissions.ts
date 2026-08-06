@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Submission } from '../types/schema'
+import type { Submission, SubmissionStatus } from '../types/schema'
 import { formatDocNumber } from '../shared/docNumber'
 
 export type SubmissionDraft = Omit<Submission,
@@ -36,6 +36,43 @@ export async function deleteSubmission(id: string): Promise<void> {
   const { error } = await supabase.from('submissions').delete().eq('id', id)
   if (error) throw error
 }
+
+// ----- Approval workflow (server-enforced via SECURITY DEFINER RPCs) -----
+export async function requestApproval(id: string): Promise<void> {
+  const { error } = await supabase.rpc('request_approval', { sub_id: id })
+  if (error) throw error
+}
+export async function approveSubmission(id: string): Promise<void> {
+  const { error } = await supabase.rpc('approve_submission', { sub_id: id })
+  if (error) throw error
+}
+export async function rejectSubmission(id: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('reject_submission', { sub_id: id, reason })
+  if (error) throw error
+}
+// Pending documents the current approver may act on (RLS limits to covered depts).
+export async function listPendingForApprover(): Promise<Submission[]> {
+  const { data } = await supabase.from('submissions').select('*')
+    .eq('status', 'pending').order('requestedAt', { ascending: true })
+  return (data ?? []) as Submission[]
+}
+export async function countPendingForApprover(): Promise<number> {
+  const { count } = await supabase.from('submissions')
+    .select('id', { count: 'exact', head: true }).eq('status', 'pending')
+  return count ?? 0
+}
+
+// Effective status (older rows saved before this feature have no status column).
+export function subStatus(s: Submission): SubmissionStatus {
+  return s.status ?? 'draft'
+}
+const STATUS_META: Record<SubmissionStatus, { label: string; className: string }> = {
+  draft: { label: 'ร่าง', className: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'รออนุมัติ', className: 'bg-amber-100 text-amber-700' },
+  approved: { label: 'อนุมัติแล้ว', className: 'bg-green-100 text-green-700' },
+  rejected: { label: 'ตีกลับ', className: 'bg-red-100 text-red-700' },
+}
+export function statusMeta(s: SubmissionStatus) { return STATUS_META[s] }
 
 export async function getSubmission(id: string): Promise<Submission | null> {
   const { data } = await supabase.from('submissions').select('*').eq('id', id).maybeSingle()

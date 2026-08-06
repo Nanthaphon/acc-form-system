@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listAllSubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
+import { listAllSubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta } from '../../data/submissions'
 import { listEmployees } from '../../data/users'
 import { listForms } from '../../data/formSettings'
 import type { Submission, UserProfile, FormSettings } from '../../types/schema'
@@ -50,7 +50,7 @@ export default function PrintHistoryPage() {
       <div className="overflow-x-auto">
         <table className="w-full border text-sm">
           <thead className="bg-gray-50">
-            <tr>{['เลขที่', 'พนักงาน', 'ฟอร์ม', 'วันที่', 'ยอด', 'พิมพ์ (ครั้ง)', 'พิมพ์ล่าสุด', ''].map(h => (
+            <tr>{['เลขที่', 'พนักงาน', 'ฟอร์ม', 'วันที่', 'ยอด', 'สถานะ', 'พิมพ์ (ครั้ง)', 'พิมพ์ล่าสุด', ''].map(h => (
               <th key={h} className="border px-2 py-1 whitespace-nowrap">{h}</th>
             ))}</tr>
           </thead>
@@ -64,6 +64,9 @@ export default function PrintHistoryPage() {
                 <td className="border px-2 py-1">{formName(r.formType)}</td>
                 <td className="border px-2 py-1 whitespace-nowrap">{new Date(r.createdAt).toLocaleDateString('th-TH')}</td>
                 <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
+                <td className="border px-2 py-1 text-center">
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusMeta(subStatus(r)).className}`}>{statusMeta(subStatus(r)).label}</span>
+                </td>
                 <td className="border px-2 py-1 text-center">{r.printCount}</td>
                 <td className="border px-2 py-1 whitespace-nowrap">{r.lastPrintedAt ? new Date(r.lastPrintedAt).toLocaleString('th-TH') : '-'}</td>
                 <td className="border px-2 py-1 whitespace-nowrap text-center">
@@ -76,7 +79,7 @@ export default function PrintHistoryPage() {
               </tr>
             ))}
             {filtered.length === 0 && (
-              <tr><td colSpan={8} className="border px-2 py-6 text-center text-gray-400">ยังไม่มีเอกสาร</td></tr>
+              <tr><td colSpan={9} className="border px-2 py-6 text-center text-gray-400">ยังไม่มีเอกสาร</td></tr>
             )}
           </tbody>
         </table>

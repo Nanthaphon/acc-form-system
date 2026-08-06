@@ -38,7 +38,10 @@ export default function SubmissionPreviewPage() {
         <h1 className="text-lg font-medium">ดูตัวอย่าง — {sub.docNumber}</h1>
         <button onClick={onPrint} className="ml-auto inline-flex items-center gap-1.5 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"><Printer size={16} /> สั่งพิมพ์</button>
       </div>
-      <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} />
+      <ExpenseClaimPreview
+        company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings}
+        approval={sub.approverSignature || sub.approvedByName ? { name: sub.approvedByName, signature: sub.approverSignature, at: sub.approvedAt } : undefined}
+      />
     </div>
   )
 }
