@@ -126,35 +126,35 @@ export default function FormPage() {
           </div>
         )}
         {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} />}
-        <div className="flex flex-wrap gap-2.5">
-          <button
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-            onClick={save}
-          >
-            <Save size={16} /> บันทึก
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
-            onClick={downloadPdf}
-          >
-            <Download size={16} /> ดาวน์โหลด PDF
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
-            onClick={print}
-          >
-            <Printer size={16} /> สั่งพิมพ์
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-800"
-            onClick={() => nav('/history')}
-          >
-            ไปหน้าประวัติ
-          </button>
-        </div>
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
         <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} />
+      </div>
+      <div className="no-print mt-4 flex flex-wrap gap-2.5">
+        <button
+          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+          onClick={save}
+        >
+          <Save size={16} /> บันทึก
+        </button>
+        <button
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
+          onClick={downloadPdf}
+        >
+          <Download size={16} /> ดาวน์โหลด PDF
+        </button>
+        <button
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
+          onClick={print}
+        >
+          <Printer size={16} /> สั่งพิมพ์
+        </button>
+        <button
+          className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-800"
+          onClick={() => nav('/history')}
+        >
+          ไปหน้าประวัติ
+        </button>
       </div>
     </div>
   )
