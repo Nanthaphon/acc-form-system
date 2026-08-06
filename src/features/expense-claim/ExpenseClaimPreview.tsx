@@ -8,7 +8,9 @@ const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
 
 // Rows that fit on a single sheet. When items exceed this, they overflow onto
-// the next sheet (stacked below on screen, a new page when printed).
+// the next sheet (stacked below on screen, a new page when printed). Every
+// sheet is a complete form on its own — same header, requester, grand total,
+// amount-in-words, signatures and notes.
 const ROWS_PER_PAGE = 14
 
 function money(n: number): string {
@@ -39,14 +41,12 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   return (
     <div id="print-area" style={{ fontFamily: "'Sarabun', serif" }} className="mx-auto max-w-3xl space-y-6 text-black print:space-y-0">
       {pages.map((rowIdxs, pageIdx) => {
-        const isFirst = pageIdx === 0
-        const isLast = pageIdx === totalPages - 1
-        // Pad only the last sheet so every sheet keeps a full-height table.
+        // Pad each sheet's table to a full height so every sheet looks identical.
         const emptyRowCount = Math.max(0, ROWS_PER_PAGE - rowIdxs.length)
 
         return (
           <div key={pageIdx} className="doc-page border border-black bg-white p-6 text-xs">
-            {/* Header band — repeats on every sheet */}
+            {/* Header band */}
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">
                 {company?.logo
@@ -72,38 +72,35 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               </div>
             )}
 
-            {/* เรื่อง / เรียน + requester — หน้าแรกเท่านั้น */}
-            {isFirst && (
-              <>
-                <div className="mt-2 flex items-start justify-between">
-                  <div>
-                    <div>เรื่อง &nbsp; {settings.subject}</div>
-                    <div>เรียน &nbsp; {settings.attention}</div>
+            {/* เรื่อง / เรียน + checkboxes */}
+            <div className="mt-2 flex items-start justify-between">
+              <div>
+                <div>เรื่อง &nbsp; {settings.subject}</div>
+                <div>เรียน &nbsp; {settings.attention}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                {settings.categories.map((label) => (
+                  <div key={label} className="whitespace-nowrap">
+                    <span className="mr-1">{header.categories.includes(label) ? '☑' : '☐'}</span>
+                    {label}
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                    {settings.categories.map((label) => (
-                      <div key={label} className="whitespace-nowrap">
-                        <span className="mr-1">{header.categories.includes(label) ? '☑' : '☐'}</span>
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
+              </div>
+            </div>
 
-                <div className="mt-3 flex flex-wrap items-baseline gap-x-2">
-                  <span>ชื่อ</span>
-                  <span className="min-w-[80px] border-b border-black px-1">{header.firstName}</span>
-                  <span>นามสกุล</span>
-                  <span className="min-w-[80px] border-b border-black px-1">{header.lastName}</span>
-                  <span>ตำแหน่ง</span>
-                  <span className="min-w-[80px] border-b border-black px-1">{header.position}</span>
-                  <span>Job</span>
-                  <span className="min-w-[80px] border-b border-black px-1">{header.job}</span>
-                </div>
-              </>
-            )}
+            {/* Requester line */}
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-2">
+              <span>ชื่อ</span>
+              <span className="min-w-[80px] border-b border-black px-1">{header.firstName}</span>
+              <span>นามสกุล</span>
+              <span className="min-w-[80px] border-b border-black px-1">{header.lastName}</span>
+              <span>ตำแหน่ง</span>
+              <span className="min-w-[80px] border-b border-black px-1">{header.position}</span>
+              <span>Job</span>
+              <span className="min-w-[80px] border-b border-black px-1">{header.job}</span>
+            </div>
 
-            {/* ตาราง — หัวตารางซ้ำทุกแผ่น */}
+            {/* ตาราง */}
             <table className="mt-3 w-full table-fixed border-collapse border border-black text-[10px]">
               <thead>
                 <tr>
@@ -139,65 +136,61 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                     ))}
                   </tr>
                 ))}
-                {/* แถวรวม — แผ่นสุดท้ายเท่านั้น */}
-                {isLast && (
-                  <tr className="font-bold">
-                    <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
-                    {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map(col => (
-                      <td key={col.key} className="border border-black px-1 py-1 text-right">
-                        {col.type === 'text' || col.type === 'date' ? '' : money(columnTotals[col.key] ?? 0)}
-                      </td>
-                    ))}
-                  </tr>
-                )}
+                {/* แถวรวม — ยอดรวมทั้งหมด แสดงเหมือนกันทุกแผ่น */}
+                <tr className="font-bold">
+                  <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
+                  {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map(col => (
+                    <td key={col.key} className="border border-black px-1 py-1 text-right">
+                      {col.type === 'text' || col.type === 'date' ? '' : money(columnTotals[col.key] ?? 0)}
+                    </td>
+                  ))}
+                </tr>
               </tbody>
             </table>
 
-            {/* ส่วนท้าย (จำนวนเงิน + ลายเซ็น + หมายเหตุ) — แผ่นสุดท้ายเท่านั้น */}
-            {isLast && (
-              <>
-                <div className="mt-2 border border-black px-2 py-1 text-center">
-                  เป็นจำนวนเงิน &nbsp; {bahtWords}
-                </div>
+            {/* เป็นจำนวนเงิน */}
+            <div className="mt-2 border border-black px-2 py-1 text-center">
+              เป็นจำนวนเงิน &nbsp; {bahtWords}
+            </div>
 
-                <div className="mt-8 grid grid-cols-3 gap-8 text-center">
-                  <div>
-                    <div className="border-b border-black">&nbsp;</div>
-                    <div className="mt-1">ผู้เบิก</div>
-                    <div className="mt-2">วันที่ ................</div>
-                  </div>
-                  <div>
-                    <div className="border-b border-black">&nbsp;</div>
-                    <div className="mt-1">หัวหน้าแผนก</div>
-                    <div className="mt-2">วันที่ ................</div>
-                  </div>
-                  <div>
-                    <div className="border-b border-black">&nbsp;</div>
-                    <div className="mt-1">ผู้อนุมัติ</div>
-                    <div className="mt-2">วันที่ ................</div>
-                  </div>
-                </div>
-                <div className="mt-6 grid grid-cols-2 gap-8 text-center">
-                  <div>
-                    <div className="border-b border-black">&nbsp;</div>
-                    <div className="mt-1">ผู้รับเงิน</div>
-                    <div className="mt-2">วันที่ ................</div>
-                  </div>
-                  <div>
-                    <div className="border-b border-black">&nbsp;</div>
-                    <div className="mt-1">ผู้ตรวจสอบ/ฝ่ายบัญชี</div>
-                    <div className="mt-2">วันที่ ................</div>
-                  </div>
-                </div>
+            {/* Signature blocks */}
+            <div className="mt-8 grid grid-cols-3 gap-8 text-center">
+              <div>
+                <div className="border-b border-black">&nbsp;</div>
+                <div className="mt-1">ผู้เบิก</div>
+                <div className="mt-2">วันที่ ................</div>
+              </div>
+              <div>
+                <div className="border-b border-black">&nbsp;</div>
+                <div className="mt-1">หัวหน้าแผนก</div>
+                <div className="mt-2">วันที่ ................</div>
+              </div>
+              <div>
+                <div className="border-b border-black">&nbsp;</div>
+                <div className="mt-1">ผู้อนุมัติ</div>
+                <div className="mt-2">วันที่ ................</div>
+              </div>
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-8 text-center">
+              <div>
+                <div className="border-b border-black">&nbsp;</div>
+                <div className="mt-1">ผู้รับเงิน</div>
+                <div className="mt-2">วันที่ ................</div>
+              </div>
+              <div>
+                <div className="border-b border-black">&nbsp;</div>
+                <div className="mt-1">ผู้ตรวจสอบ/ฝ่ายบัญชี</div>
+                <div className="mt-2">วันที่ ................</div>
+              </div>
+            </div>
 
-                <div className="mt-6 text-[9px]">
-                  <div className="font-bold">หมายเหตุ:</div>
-                  {settings.notes.map((note, i) => (
-                    <div key={i}>{note}</div>
-                  ))}
-                </div>
-              </>
-            )}
+            {/* หมายเหตุ */}
+            <div className="mt-6 text-[9px]">
+              <div className="font-bold">หมายเหตุ:</div>
+              {settings.notes.map((note, i) => (
+                <div key={i}>{note}</div>
+              ))}
+            </div>
           </div>
         )
       })}
