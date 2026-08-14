@@ -36,9 +36,10 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   function setCell(rowIdx: number, key: string, value: string | number) {
     onItemsChange(items.map((r, i) => i === rowIdx ? { ...r, [key]: value } : r))
   }
-  function toggleCategory(c: string) {
+  // Single-select: pick one category (clicking the selected one clears it).
+  function selectCategory(c: string) {
     const has = header.categories.includes(c)
-    onHeaderChange({ ...header, categories: has ? header.categories.filter(x => x !== c) : [...header.categories, c] })
+    onHeaderChange({ ...header, categories: has ? [] : [c] })
   }
 
   return (
@@ -57,13 +58,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                     on ? 'border-blue-500 bg-blue-50 font-medium text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
                   }`}
                 >
-                  <input type="checkbox" className="hidden" checked={on} onChange={() => toggleCategory(c)} />
+                  <input type="checkbox" className="hidden" checked={on} onChange={() => selectCategory(c)} />
                   <span
-                    className={`flex h-[15px] w-[15px] items-center justify-center rounded border text-[10px] text-white ${
-                      on ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                    className={`flex h-[15px] w-[15px] items-center justify-center rounded-full border ${
+                      on ? 'border-blue-500' : 'border-gray-300'
                     }`}
                   >
-                    {on ? '✓' : ''}
+                    {on && <span className="h-[7px] w-[7px] rounded-full bg-blue-500" />}
                   </span>
                   {c}
                 </label>
