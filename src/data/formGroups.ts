@@ -29,3 +29,9 @@ export async function deleteGroup(id: string): Promise<void> {
   const { error } = await supabase.from('form_groups').delete().eq('id', id)
   if (error) throw error
 }
+
+// Turn a folder on/off. When off, employees don't see it or any form inside it.
+export async function setGroupActive(id: string, active: boolean): Promise<void> {
+  const { error } = await supabase.from('form_groups').update({ active }).eq('id', id)
+  if (error) throw error
+}

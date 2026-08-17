@@ -110,9 +110,21 @@ export default function FormPage() {
     }
   }
 
+  const isAdmin = profile?.role === 'admin'
   const locked = status === 'pending' || status === 'approved'
   const showDoc = showPreview || locked
   const canRequest = !!savedId && (status === 'draft' || status === 'rejected')
+
+  // A closed form (maintenance) is not accessible to employees via direct URL.
+  if (!id && settings.active === false && !isAdmin) {
+    return (
+      <div className="mx-auto max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center">
+        <div className="text-lg font-semibold text-gray-900">ฟอร์มนี้ปิดปรับปรุงชั่วคราว</div>
+        <div className="mt-2 text-sm text-gray-500">กรุณากลับมาใหม่ภายหลัง</div>
+        <button onClick={() => nav('/')} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">กลับหน้าหลัก</button>
+      </div>
+    )
+  }
 
   return (
     <div>

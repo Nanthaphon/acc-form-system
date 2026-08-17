@@ -158,6 +158,11 @@ alter table form_settings add column if not exists name text not null default ''
 insert into form_groups (id, name, "sortOrder") values ('default', 'ฟอร์มทั่วไป', 0) on conflict (id) do nothing;
 update form_settings set "groupId" = 'default', name = 'ใบเบิกค่าใช้จ่าย' where "formType" = 'expense-claim' and (name = '' or name is null);
 
+-- ===== On/off switch for forms and folders (maintenance mode) =====
+-- When inactive, employees don't see the form/folder; admins always do.
+alter table form_settings add column if not exists active boolean not null default true;
+alter table form_groups add column if not exists active boolean not null default true;
+
 -- ===== Access groups (form visibility tags, admin-managed) =====
 -- Which employees / forms belong to a group. A form tagged with a group is
 -- visible only to employees in the same group; an untagged form is for everyone.

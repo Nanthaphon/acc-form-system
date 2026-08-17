@@ -53,3 +53,9 @@ export async function updateFormSettings(fs: FormSettings): Promise<void> {
   const { error } = await supabase.from('form_settings').upsert(fs)
   if (error) throw error
 }
+
+// Turn a form on/off. When off, employees don't see it (maintenance mode).
+export async function setFormActive(formType: string, active: boolean): Promise<void> {
+  const { error } = await supabase.from('form_settings').update({ active }).eq('formType', formType)
+  if (error) throw error
+}

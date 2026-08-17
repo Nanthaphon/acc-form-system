@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Folder, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../../types/schema'
-import { listGroups, createGroup, renameGroup, deleteGroup } from '../../data/formGroups'
+import { isActive } from '../../types/schema'
+import { listGroups, createGroup, renameGroup, deleteGroup, setGroupActive } from '../../data/formGroups'
 import { listForms } from '../../data/formSettings'
+import Switch from '../../components/Switch'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
@@ -40,6 +42,11 @@ export default function DashboardPage() {
     catch { alert('ลบกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
+  async function onToggleGroup(g: FormGroup) {
+    try { await setGroupActive(g.id, !isActive(g)); reload() }
+    catch { alert('เปลี่ยนสถานะกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+  }
+
   // Forms whose groupId matches — for the first group, also catch forms with no groupId.
   const firstGroupId = groups[0]?.id
   function formsForGroup(g: FormGroup): FormSettings[] {
@@ -53,16 +60,17 @@ export default function DashboardPage() {
     if (isAdmin) return true
     return !f.accessGroup || f.accessGroup === profile?.accessGroup
   }
-  // Forms visible to the current viewer within a folder.
+  // Forms visible to the current viewer within a folder (non-admins also need
+  // the form to be active).
   function visibleFormsForGroup(g: FormGroup): FormSettings[] {
-    return formsForGroup(g).filter(canSee)
+    return formsForGroup(g).filter(f => canSee(f) && (isAdmin || isActive(f)))
   }
 
   // Folders are purely organizational: everyone sees all folders, except that a
-  // non-admin's folders with zero visible forms are hidden.
+  // non-admin's inactive folders — or folders with zero visible forms — are hidden.
   const visibleGroups = isAdmin
     ? groups
-    : groups.filter(g => visibleFormsForGroup(g).length > 0)
+    : groups.filter(g => isActive(g) && visibleFormsForGroup(g).length > 0)
 
   return (
     <div>
@@ -93,11 +101,17 @@ export default function DashboardPage() {
               tabIndex={0}
               onClick={() => nav(`/group/${g.id}`)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${g.id}`) } }}
-              className="relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 text-center hover:shadow"
+              className={`relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 text-center hover:shadow ${isAdmin && !isActive(g) ? 'opacity-60' : ''}`}
             >
               <div className="flex justify-center text-4xl"><Folder size={32} /></div>
               <div className="mt-2 truncate font-medium text-[#16233f]">{g.name}</div>
               <div className="text-sm text-gray-500">{count} ฟอร์ม</div>
+              {isAdmin && (
+                <div className="mt-3 flex items-center justify-center gap-2">
+                  <Switch on={isActive(g)} onChange={() => onToggleGroup(g)} />
+                  <span className={`text-xs font-medium ${isActive(g) ? 'text-green-600' : 'text-gray-400'}`}>{isActive(g) ? 'เปิด' : 'ปิด'}</span>
+                </div>
+              )}
               {isAdmin && (
                 <div className="absolute right-2 top-2 flex gap-1">
                   <button

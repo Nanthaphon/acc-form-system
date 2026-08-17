@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Folder, Pencil, Plus, SquarePen, Trash2 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../types/schema'
+import { isActive } from '../types/schema'
 import { listGroups, renameGroup } from '../data/formGroups'
-import { listForms, createForm, renameForm, deleteForm } from '../data/formSettings'
+import { listForms, createForm, renameForm, deleteForm, setFormActive } from '../data/formSettings'
+import Switch from '../components/Switch'
 
 export default function GroupPage() {
   const { groupId } = useParams<{ groupId: string }>()
@@ -26,7 +28,10 @@ export default function GroupPage() {
   // Visibility is by ACCESS GROUP (not folder): admins see everything; a
   // non-admin sees a form only if it has no access group or it matches theirs.
   const canSee = (f: FormSettings) => isAdmin || !f.accessGroup || f.accessGroup === profile?.accessGroup
-  const groupForms = forms.filter(f => (f.groupId ?? firstGroupId) === groupId && canSee(f))
+  const groupActive = !group || isActive(group)
+  const groupForms = forms.filter(f =>
+    (f.groupId ?? firstGroupId) === groupId && canSee(f) && (isAdmin || (isActive(f) && groupActive))
+  )
 
   async function onRenameGroup() {
     if (!group) return
@@ -57,6 +62,11 @@ export default function GroupPage() {
     if (!confirm(`ลบฟอร์ม "${form.name || form.title}" ?\n(เอกสารที่พนักงานเคยกรอกไว้จะยังอยู่)`)) return
     try { await deleteForm(form.formType); reload() }
     catch { alert('ลบฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+  }
+
+  async function onToggleForm(form: FormSettings) {
+    try { await setFormActive(form.formType, !isActive(form)); reload() }
+    catch { alert('เปลี่ยนสถานะฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   return (
@@ -98,10 +108,16 @@ export default function GroupPage() {
             tabIndex={0}
             onClick={() => nav(`/form/${form.formType}`)}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/form/${form.formType}`) } }}
-            className="relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 hover:shadow"
+            className={`relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 hover:shadow ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
           >
             <div className="font-medium text-[#16233f]">{form.name || form.title}</div>
             <div className="text-sm text-gray-500">{form.formCode}</div>
+            {isAdmin && (
+              <div className="mt-3 flex items-center gap-2">
+                <Switch on={isActive(form)} onChange={() => onToggleForm(form)} />
+                <span className={`text-xs font-medium ${isActive(form) ? 'text-green-600' : 'text-gray-400'}`}>{isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}</span>
+              </div>
+            )}
             {isAdmin && (
               <div className="absolute right-2 top-2 flex gap-1">
                 <button

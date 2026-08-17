@@ -31,7 +31,7 @@ export interface FormColumn {
 // One row of the dynamic table, keyed by column.key
 export type ExpenseRow = Record<string, string | number>
 
-export interface FormGroup { id: string; name: string; sortOrder: number; createdAt: number }
+export interface FormGroup { id: string; name: string; sortOrder: number; createdAt: number; active?: boolean }
 
 // Access groups control form VISIBILITY (separate from folders/form_groups).
 // A form tagged with an access group is visible only to employees in the same
@@ -59,12 +59,19 @@ export interface Department {
   createdAt: number
 }
 
+// A form/folder is visible to employees only when active. Admins always see it
+// (with a toggle) so they can close a form for maintenance and reopen it.
+export function isActive(x: { active?: boolean }): boolean {
+  return x.active !== false
+}
+
 export interface FormSettings {
   formType: string; title: string; subject: string; attention: string; formCode: string
   categories: string[]; notes: string[]
   columns: FormColumn[]
   groupId?: string; name?: string
   accessGroup?: string
+  active?: boolean
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
