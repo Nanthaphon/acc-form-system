@@ -163,6 +163,28 @@ update form_settings set "groupId" = 'default', name = 'ใบเบิกค่
 alter table form_settings add column if not exists active boolean not null default true;
 alter table form_groups add column if not exists active boolean not null default true;
 
+-- ===== Document edit history (versions) =====
+-- Each save stores a full snapshot; version 1 = created, +1 on each real edit.
+create table if not exists submission_versions (
+  id uuid primary key default gen_random_uuid(),
+  "submissionId" uuid not null references submissions(id) on delete cascade,
+  version int not null,
+  header jsonb not null,
+  items jsonb not null,
+  totals jsonb not null,
+  "editedBy" uuid,
+  "editedByName" text not null default '',
+  "editedAt" bigint not null,
+  unique ("submissionId", version)
+);
+alter table submission_versions enable row level security;
+drop policy if exists submission_versions_select on submission_versions;
+create policy submission_versions_select on submission_versions for select
+  using (exists (select 1 from submissions s where s.id = "submissionId" and (s."createdBy" = auth.uid() or is_admin())));
+drop policy if exists submission_versions_insert on submission_versions;
+create policy submission_versions_insert on submission_versions for insert
+  with check (exists (select 1 from submissions s where s.id = "submissionId" and (s."createdBy" = auth.uid() or is_admin())));
+
 -- ===== Access groups (form visibility tags, admin-managed) =====
 -- Which employees / forms belong to a group. A form tagged with a group is
 -- visible only to employees in the same group; an untagged form is for everyone.

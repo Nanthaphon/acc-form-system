@@ -176,6 +176,19 @@ export interface Submission {
   rejectReason?: string | null
 }
 
+// One saved snapshot of a document. version 1 = created; +1 on each real edit.
+export interface SubmissionVersion {
+  id: string
+  submissionId: string
+  version: number
+  header: ExpenseHeader
+  items: ExpenseRow[]
+  totals: ExpenseTotals
+  editedBy: string
+  editedByName: string
+  editedAt: number
+}
+
 // Build a blank row for the given columns: text -> '', number/calc -> 0
 export function emptyRow(columns: FormColumn[]): ExpenseRow {
   const row: ExpenseRow = {}

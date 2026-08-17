@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
 import { ArrowLeft, Download, Printer, Receipt, Save, PenLine } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionStatus } from '../../types/schema'
+import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionStatus, SubmissionVersion } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeColumnTotals, grandTotal, bahtTextForRows } from '../../features/expense-claim/calc'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
+import VersionHistory from '../../components/VersionHistory'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
 import { createSubmission, updateSubmission, getSubmission, incrementPrint, requestApproval, subStatus, statusMeta } from '../../data/submissions'
@@ -26,6 +27,7 @@ export default function FormPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [status, setStatus] = useState<SubmissionStatus>('draft')
   const [rejectReason, setRejectReason] = useState<string | null>(null)
+  const [versionRefresh, setVersionRefresh] = useState(0)
   const [approval, setApproval] = useState<{ name?: string | null; signature?: string | null; at?: number | null } | undefined>(undefined)
   const [header, setHeader] = useState<ExpenseHeader>({
     subject: 'ขออนุมัติเบิกค่าใช้จ่าย', categories: [], companyId: profile?.companyId ?? '',
@@ -71,21 +73,29 @@ export default function FormPage() {
       alert('กรุณากรอกชื่อ นามสกุล และตำแหน่งให้ครบถ้วน')
       return
     }
+    const editor = { uid: profile!.uid, name: `${profile!.firstName ?? ''} ${profile!.lastName ?? ''}`.trim() }
     try {
       if (savedId) {
         const existing = await getSubmission(savedId)
-        if (existing) await updateSubmission(savedId, { ...existing, header, items, totals })
+        if (existing) await updateSubmission(savedId, { ...existing, header, items, totals }, editor)
       } else {
         const created = await createSubmission({
           formType: settings.formType, header, items, totals,
           createdBy: profile!.uid, createdByEmployeeId: profile!.employeeId,
-        }, settings.formCode || settings.formType)
+        }, settings.formCode || settings.formType, editor)
         setSavedId(created.id); setDocNumber(created.docNumber)
       }
+      setVersionRefresh(n => n + 1)
       alert('บันทึกแล้ว')
     } catch {
       alert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
     }
+  }
+
+  function handleRestore(v: SubmissionVersion) {
+    if (status === 'pending' || status === 'approved') return
+    setHeader(v.header); setItems(v.items); setShowPreview(false)
+    alert(`ดึงเนื้อหาเวอร์ชัน ${v.version} กลับมาแล้ว — ตรวจสอบแล้วกด "บันทึก" เพื่อสร้างเป็นเวอร์ชันใหม่`)
   }
 
   async function downloadPdf() {
@@ -212,6 +222,19 @@ export default function FormPage() {
           ไปหน้าประวัติ
         </button>
       </div>
+      {savedId && (
+        <div className="no-print mt-4">
+          <VersionHistory
+            submissionId={savedId}
+            columns={settings.columns}
+            settings={settings}
+            company={company}
+            refreshKey={versionRefresh}
+            canRestore={!locked}
+            onRestore={handleRestore}
+          />
+        </div>
+      )}
     </div>
   )
 }

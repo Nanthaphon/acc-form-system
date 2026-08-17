@@ -1,11 +1,14 @@
 import { supabase } from '../lib/supabase'
 import type { Submission, SubmissionStatus } from '../types/schema'
 import { formatDocNumber } from '../shared/docNumber'
+import { addVersion } from './versions'
+
+export interface Editor { uid: string; name: string }
 
 export type SubmissionDraft = Omit<Submission,
   'id' | 'docNumber' | 'createdAt' | 'updatedAt' | 'printCount' | 'lastPrintedAt'>
 
-export async function createSubmission(dr: SubmissionDraft, docPrefix: string): Promise<Submission> {
+export async function createSubmission(dr: SubmissionDraft, docPrefix: string, editor?: Editor): Promise<Submission> {
   const now = Date.now()
   const d = new Date(now)
   // Reset the running number each month: use a per-form, per-month counter key.
@@ -16,13 +19,29 @@ export async function createSubmission(dr: SubmissionDraft, docPrefix: string): 
   const row = { ...dr, docNumber, createdAt: now, updatedAt: now, printCount: 0, lastPrintedAt: null }
   const { data, error: e2 } = await supabase.from('submissions').insert(row).select().single()
   if (e2) throw e2
-  return data as Submission
+  const created = data as Submission
+  // Record version 1 (best-effort — don't fail the create if history insert fails).
+  try {
+    await addVersion(created.id, { header: dr.header, items: dr.items, totals: dr.totals },
+      editor?.uid ?? dr.createdBy, editor?.name ?? `${dr.header.firstName} ${dr.header.lastName}`.trim())
+  } catch { /* ignore */ }
+  return created
 }
-export async function updateSubmission(id: string, s: Submission): Promise<void> {
+export async function updateSubmission(id: string, s: Submission, editor?: Editor): Promise<void> {
+  const before = await getSubmission(id)
   const { error } = await supabase.from('submissions')
     .update({ header: s.header, items: s.items, totals: s.totals, updatedAt: Date.now() })
     .eq('id', id)
   if (error) throw error
+  // Add a version only when the content actually changed.
+  const changed = !before
+    || JSON.stringify(before.header) !== JSON.stringify(s.header)
+    || JSON.stringify(before.items) !== JSON.stringify(s.items)
+    || JSON.stringify(before.totals) !== JSON.stringify(s.totals)
+  if (changed) {
+    try { await addVersion(id, { header: s.header, items: s.items, totals: s.totals }, editor?.uid ?? '', editor?.name ?? '') }
+    catch { /* ignore */ }
+  }
 }
 export async function incrementPrint(id: string): Promise<void> {
   const { error } = await supabase.rpc('increment_print', { sub_id: id })
