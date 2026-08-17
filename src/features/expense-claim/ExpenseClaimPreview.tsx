@@ -44,6 +44,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const bahtWords = bahtTextForRows(cols, items)
+  const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const totalCols = vcols.length + 1 // + leading seq column
 
   // Totals footer: label spans the seq column + leading text columns up to the first visible numeric/calc column.
@@ -188,13 +189,15 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               <div />
             </div>
 
-            {/* หมายเหตุ */}
-            <div className="mt-6 text-[9px]">
-              <div className="font-bold">หมายเหตุ:</div>
-              {settings.notes.map((note, i) => (
-                <div key={i}>{note}</div>
-              ))}
-            </div>
+            {/* หมายเหตุ — ซ่อนทั้งบล็อกเมื่อไม่มีหมายเหตุ */}
+            {notes.length > 0 && (
+              <div className="mt-6 text-[9px]">
+                <div className="font-bold">หมายเหตุ:</div>
+                {notes.map((note, i) => (
+                  <div key={i}>{note}</div>
+                ))}
+              </div>
+            )}
           </div>
         )
       })}

@@ -73,6 +73,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const bahtWords = bahtTextForRows(cols, items)
+  const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
 
   // Totals footer: label spans the leading text columns up to the first visible numeric/calc column.
@@ -221,13 +222,15 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
           </View>
         </View>
 
-        {/* หมายเหตุ */}
-        <View style={s.notes}>
-          <Text style={s.bold}>หมายเหตุ:</Text>
-          {settings.notes.map((note, i) => (
-            <Text key={i}>{note}</Text>
-          ))}
-        </View>
+        {/* หมายเหตุ — ซ่อนทั้งบล็อกเมื่อไม่มีหมายเหตุ */}
+        {notes.length > 0 && (
+          <View style={s.notes}>
+            <Text style={s.bold}>หมายเหตุ:</Text>
+            {notes.map((note, i) => (
+              <Text key={i}>{note}</Text>
+            ))}
+          </View>
+        )}
       </Page>
     </Document>
   )
