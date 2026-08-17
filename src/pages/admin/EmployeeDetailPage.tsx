@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
+import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
@@ -25,12 +26,14 @@ export default function EmployeeDetailPage() {
   const [forms, setForms] = useState<FormSettings[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
+  const [vcounts, setVcounts] = useState<Record<string, number>>({})
 
   function loadSubs() { if (uid) listMySubmissions(uid).then(setSubs) }
   useEffect(() => {
     if (!uid) return
     getProfileByUid(uid).then(setProfile)
     loadSubs()
+    getVersionCounts().then(setVcounts)
     listForms().then(setForms)
     listCompanies().then(setCompanies)
     listAccessGroups().then(setGroups)
@@ -76,7 +79,7 @@ export default function EmployeeDetailPage() {
         <div className="overflow-x-auto">
           <table className="w-full border text-sm">
             <thead className="bg-gray-50">
-              <tr>{['เลขที่', 'ฟอร์ม', 'วันที่', 'ยอด', 'พิมพ์ (ครั้ง)', 'พิมพ์ล่าสุด', ''].map(h => (
+              <tr>{['เลขที่', 'ฟอร์ม', 'วันที่', 'ยอด', 'พิมพ์ (ครั้ง)', 'พิมพ์ล่าสุด', 'แก้ไข', ''].map(h => (
                 <th key={h} className="border px-2 py-1 whitespace-nowrap">{h}</th>
               ))}</tr>
             </thead>
@@ -90,7 +93,12 @@ export default function EmployeeDetailPage() {
                   <td className="border px-2 py-1 text-center">{r.printCount}</td>
                   <td className="border px-2 py-1 whitespace-nowrap">{formatDateTime(r.lastPrintedAt)}</td>
                   <td className="border px-2 py-1 whitespace-nowrap text-center">
-                    <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>ดู</Link>
+                    {editLabel(r, vcounts)
+                      ? <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">✎ {editLabel(r, vcounts)}</span>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
+                  <td className="border px-2 py-1 whitespace-nowrap text-center">
+                    <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>แก้ไข</Link>
                     <span className="mx-1.5 text-gray-300">|</span>
                     <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
                     <span className="mx-1.5 text-gray-300">|</span>
@@ -99,7 +107,7 @@ export default function EmployeeDetailPage() {
                 </tr>
               ))}
               {subs.length === 0 && (
-                <tr><td colSpan={7} className="border px-2 py-6 text-center text-gray-400">ยังไม่มีเอกสาร</td></tr>
+                <tr><td colSpan={8} className="border px-2 py-6 text-center text-gray-400">ยังไม่มีเอกสาร</td></tr>
               )}
             </tbody>
           </table>
