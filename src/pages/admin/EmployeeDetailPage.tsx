@@ -7,6 +7,7 @@ import { listForms } from '../../data/formSettings'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import type { UserProfile, Submission, FormSettings, Company, AccessGroup } from '../../types/schema'
+import { formatDate, formatDateTime } from '../../shared/date'
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
@@ -84,10 +85,10 @@ export default function EmployeeDetailPage() {
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="border px-2 py-1 whitespace-nowrap">{r.docNumber}</td>
                   <td className="border px-2 py-1">{formName(r.formType)}</td>
-                  <td className="border px-2 py-1 whitespace-nowrap">{new Date(r.createdAt).toLocaleDateString('th-TH')}</td>
+                  <td className="border px-2 py-1 whitespace-nowrap">{formatDate(r.createdAt)}</td>
                   <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
                   <td className="border px-2 py-1 text-center">{r.printCount}</td>
-                  <td className="border px-2 py-1 whitespace-nowrap">{r.lastPrintedAt ? new Date(r.lastPrintedAt).toLocaleString('th-TH') : '-'}</td>
+                  <td className="border px-2 py-1 whitespace-nowrap">{formatDateTime(r.lastPrintedAt)}</td>
                   <td className="border px-2 py-1 whitespace-nowrap text-center">
                     <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>ดู</Link>
                     <span className="mx-1.5 text-gray-300">|</span>

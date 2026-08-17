@@ -2,6 +2,7 @@ import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
+import { formatIsoDate } from '../../shared/date'
 
 // เอกสารทางการใช้ฟอนต์ Sarabun (TH Sarabun New) — มาตรฐานเอกสารราชการไทย
 Font.register({ family: 'Sarabun', fonts: [
@@ -149,7 +150,11 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
               {vcols.map((col, ci) => (
                 <View key={col.key} style={[s.cell, styles[ci]]}>
                   <Text style={[s.cellText, col.type === 'text' || col.type === 'date' ? {} : s.right]}>
-                    {col.type === 'text' || col.type === 'date' ? (computed[i][col.key] as string) : money(Number(computed[i][col.key]) || 0)}
+                    {col.type === 'date'
+                      ? formatIsoDate(computed[i][col.key] as string)
+                      : col.type === 'text'
+                      ? (computed[i][col.key] as string)
+                      : money(Number(computed[i][col.key]) || 0)}
                   </Text>
                 </View>
               ))}

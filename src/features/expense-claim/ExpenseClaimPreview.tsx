@@ -1,6 +1,7 @@
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
+import { formatDate, formatIsoDate } from '../../shared/date'
 
 interface Approval { name?: string | null; signature?: string | null; at?: number | null }
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; approval?: Approval }
@@ -123,7 +124,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                     <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
                     {vcols.map(col => (
                       <td key={col.key} className={`break-words border border-black px-1 py-0.5 ${col.type === 'text' || col.type === 'date' ? '' : 'text-right'}`}>
-                        {col.type === 'text' || col.type === 'date'
+                        {col.type === 'date'
+                          ? formatIsoDate(computed[i][col.key] as string)
+                          : col.type === 'text'
                           ? (computed[i][col.key] as string)
                           : money(Number(computed[i][col.key]) || 0)}
                       </td>
@@ -174,7 +177,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                 <div className="mt-1">ผู้อนุมัติ</div>
                 <div className="mt-2">
                   {approval?.name
-                    ? <>({approval.name})<br />{approval.at ? `วันที่ ${new Date(approval.at).toLocaleDateString('th-TH')}` : ''}</>
+                    ? <>({approval.name})<br />{approval.at ? `วันที่ ${formatDate(approval.at)}` : ''}</>
                     : 'วันที่ ................'}
                 </div>
               </div>

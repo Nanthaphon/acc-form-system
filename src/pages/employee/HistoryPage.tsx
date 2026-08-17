@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta } from '../../data/submissions'
 import type { Submission } from '../../types/schema'
+import { formatDate } from '../../shared/date'
 
 export default function HistoryPage() {
   const { profile } = useAuth()
@@ -24,7 +25,7 @@ export default function HistoryPage() {
           {rows.map(r => (
             <tr key={r.id}>
               <td className="border px-2 py-1">{r.docNumber}</td>
-              <td className="border px-2 py-1">{new Date(r.createdAt).toLocaleDateString('th-TH')}</td>
+              <td className="border px-2 py-1">{formatDate(r.createdAt)}</td>
               <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
               <td className="border px-2 py-1 text-center">{r.printCount}</td>
               <td className="border px-2 py-1 text-center">

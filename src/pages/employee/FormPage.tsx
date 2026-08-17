@@ -12,6 +12,7 @@ import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
 import { createSubmission, updateSubmission, getSubmission, incrementPrint, requestApproval, subStatus, statusMeta } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
+import { formatDateTime } from '../../shared/date'
 
 export default function FormPage() {
   const { id, formType } = useParams()
@@ -151,7 +152,7 @@ export default function FormPage() {
           <div className={`rounded-lg px-4 py-3 text-sm ${statusMeta(status).className}`}>
             <span className="font-semibold">สถานะ: {statusMeta(status).label}</span>
             {status === 'pending' && ' · รอหัวหน้าเซ็น — แก้ไขไม่ได้จนกว่าจะถูกตีกลับ (พิมพ์/ดาวน์โหลดได้)'}
-            {status === 'approved' && approval?.name && ` · อนุมัติโดย ${approval.name}${approval.at ? ` เมื่อ ${new Date(approval.at).toLocaleString('th-TH')}` : ''}`}
+            {status === 'approved' && approval?.name && ` · อนุมัติโดย ${approval.name}${approval.at ? ` เมื่อ ${formatDateTime(approval.at)}` : ''}`}
             {status === 'rejected' && rejectReason && ` · เหตุผล: ${rejectReason}`}
           </div>
         )}

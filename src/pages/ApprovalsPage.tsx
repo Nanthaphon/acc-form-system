@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider'
 import type { Submission, FormSettings } from '../types/schema'
 import { listPendingForApprover, approveSubmission, rejectSubmission, submissionAmount } from '../data/submissions'
 import { listForms } from '../data/formSettings'
+import { formatDateTime } from '../shared/date'
 
 export default function ApprovalsPage() {
   const { profile } = useAuth()
@@ -69,7 +70,7 @@ export default function ApprovalsPage() {
                 <td className="px-3 py-2">{formName(r.formType)}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{r.header.firstName} {r.header.lastName}</td>
                 <td className="px-3 py-2 text-right">{submissionAmount(r).toLocaleString()}</td>
-                <td className="px-3 py-2 whitespace-nowrap text-gray-500">{r.requestedAt ? new Date(r.requestedAt).toLocaleString('th-TH') : '-'}</td>
+                <td className="px-3 py-2 whitespace-nowrap text-gray-500">{formatDateTime(r.requestedAt)}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-right">
                   <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}/preview`}>ดู</Link>
                   <span className="mx-1.5 text-gray-300">|</span>
