@@ -79,7 +79,7 @@ export default function PrintHistoryPage() {
                 <td className="border px-2 py-1 text-center">{r.printCount}</td>
                 <td className="border px-2 py-1 whitespace-nowrap">{formatDateTime(r.lastPrintedAt)}</td>
                 <td className="border px-2 py-1 whitespace-nowrap text-center">
-                  <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>ดู</Link>
+                  <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>แก้ไข</Link>
                   <span className="mx-1.5 text-gray-300">|</span>
                   <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
                   <span className="mx-1.5 text-gray-300">|</span>
