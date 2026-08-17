@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import type { ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, visibleColumns } from './calc'
+import DateInput from '../../components/DateInput'
 
 interface Props {
   header: ExpenseHeader
@@ -138,11 +139,10 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                               {fmt(Number(computed[i][col.key]) || 0)}
                             </div>
                           ) : col.type === 'date' ? (
-                            <input
-                              type="date"
+                            <DateInput
                               className="w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                               value={row[col.key] as string}
-                              onChange={e => setCell(i, col.key, e.target.value)}
+                              onChange={v => setCell(i, col.key, v)}
                             />
                           ) : col.type === 'number' ? (
                             <input
