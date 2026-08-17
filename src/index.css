@@ -30,14 +30,32 @@
   font-display: swap;
 }
 
-/* Noto Sans Thai — ฟอนต์หลักของหน้าเว็บ (UI) */
+/* Bai Jamjuree — ฟอนต์หลักของหน้าเว็บ (UI) */
 @font-face {
-  font-family: 'Noto Sans Thai';
-  src: url('/fonts/NotoSansThai.ttf') format('truetype');
-  font-weight: 100 900;
+  font-family: 'Bai Jamjuree';
+  src: url('/fonts/BaiJamjuree-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bai Jamjuree';
+  src: url('/fonts/BaiJamjuree-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bai Jamjuree';
+  src: url('/fonts/BaiJamjuree-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bai Jamjuree';
+  src: url('/fonts/BaiJamjuree-Bold.ttf') format('truetype');
+  font-weight: 700;
   font-display: swap;
 }
 
 html, body {
-  font-family: 'Noto Sans Thai', sans-serif;
+  font-family: 'Bai Jamjuree', sans-serif;
 }
