@@ -7,9 +7,12 @@ export type SubmissionDraft = Omit<Submission,
 
 export async function createSubmission(dr: SubmissionDraft, docPrefix: string): Promise<Submission> {
   const now = Date.now()
-  const { data: seq, error } = await supabase.rpc('next_doc_number', { form_type: dr.formType })
+  const d = new Date(now)
+  // Reset the running number each month: use a per-form, per-month counter key.
+  const period = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
+  const { data: seq, error } = await supabase.rpc('next_doc_number', { form_type: `${dr.formType}:${period}` })
   if (error) throw error
-  const docNumber = formatDocNumber(docPrefix, new Date(now), seq as number)
+  const docNumber = formatDocNumber(docPrefix, d, seq as number)
   const row = { ...dr, docNumber, createdAt: now, updatedAt: now, printCount: 0, lastPrintedAt: null }
   const { data, error: e2 } = await supabase.from('submissions').insert(row).select().single()
   if (e2) throw e2
