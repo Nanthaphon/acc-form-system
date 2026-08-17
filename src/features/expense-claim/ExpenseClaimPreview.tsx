@@ -19,6 +19,25 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// One signature cell. Every cell has the same fixed-height signing area so all
+// lines and labels line up across the row; only the approver cell fills in the
+// online signature + name + date.
+function SignatureBlock({ label, approval }: { label: string; approval?: Approval }) {
+  return (
+    <div>
+      <div className="flex h-10 items-end justify-center border-b border-black">
+        {approval?.signature ? <img src={approval.signature} alt="ลายเซ็น" className="max-h-10 object-contain pb-0.5" /> : <>&nbsp;</>}
+      </div>
+      <div className="mt-1">{label}</div>
+      <div className="mt-2 leading-tight">
+        {approval?.name
+          ? <>({approval.name})<br />{approval.at ? `วันที่ ${formatDate(approval.at)}` : ''}</>
+          : 'วันที่ ................'}
+      </div>
+    </div>
+  )
+}
+
 export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, approval }: Props) {
   const cols = settings.columns
   const vcols = visibleColumns(cols)
@@ -157,42 +176,16 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               เป็นจำนวนเงิน &nbsp; {bahtWords}
             </div>
 
-            {/* Signature blocks */}
+            {/* Signature blocks — every cell shares the same layout so lines align */}
             <div className="mt-8 grid grid-cols-3 gap-8 text-center">
-              <div>
-                <div className="border-b border-black">&nbsp;</div>
-                <div className="mt-1">ผู้เบิก</div>
-                <div className="mt-2">วันที่ ................</div>
-              </div>
-              <div>
-                <div className="border-b border-black">&nbsp;</div>
-                <div className="mt-1">หัวหน้าแผนก</div>
-                <div className="mt-2">วันที่ ................</div>
-              </div>
-              <div>
-                <div className="flex h-10 items-end justify-center border-b border-black">
-                  {approval?.signature && <img src={approval.signature} alt="ลายเซ็น" className="max-h-10 object-contain pb-0.5" />}
-                  {!approval?.signature && <>&nbsp;</>}
-                </div>
-                <div className="mt-1">ผู้อนุมัติ</div>
-                <div className="mt-2">
-                  {approval?.name
-                    ? <>({approval.name})<br />{approval.at ? `วันที่ ${formatDate(approval.at)}` : ''}</>
-                    : 'วันที่ ................'}
-                </div>
-              </div>
+              <SignatureBlock label="ผู้เบิก" />
+              <SignatureBlock label="หัวหน้าแผนก" />
+              <SignatureBlock label="ผู้อนุมัติ" approval={approval} />
             </div>
-            <div className="mt-6 grid grid-cols-2 gap-8 text-center">
-              <div>
-                <div className="border-b border-black">&nbsp;</div>
-                <div className="mt-1">ผู้รับเงิน</div>
-                <div className="mt-2">วันที่ ................</div>
-              </div>
-              <div>
-                <div className="border-b border-black">&nbsp;</div>
-                <div className="mt-1">ผู้ตรวจสอบ/ฝ่ายบัญชี</div>
-                <div className="mt-2">วันที่ ................</div>
-              </div>
+            <div className="mt-8 grid grid-cols-3 gap-8 text-center">
+              <SignatureBlock label="ผู้รับเงิน" />
+              <SignatureBlock label="ผู้ตรวจสอบ/ฝ่ายบัญชี" />
+              <div />
             </div>
 
             {/* หมายเหตุ */}
