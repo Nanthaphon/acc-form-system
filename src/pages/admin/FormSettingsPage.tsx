@@ -37,6 +37,7 @@ function sampleRow(cols: FormColumn[]): ExpenseRow {
     if (c.type === 'number') r[c.key] = 100
     else if (c.type === 'text') r[c.key] = 'ตัวอย่าง'
     else if (c.type === 'date') r[c.key] = '2026-01-01'
+    else if (c.type === 'select') r[c.key] = c.options?.find(o => o.trim()) ?? 'ตัวอย่าง'
   }
   return r
 }
@@ -83,9 +84,21 @@ export default function FormSettingsPage() {
       const legacyOps = col.calc ? calcOperands(col.calc) : []
       const operands = legacyOps.length >= 2 ? legacyOps : [others[0]?.key, others[1]?.key].filter((x): x is string => !!x)
       patchColumn(idx, { type, calc: col.calc ?? { op: 'multiply', operands } })
+    } else if (type === 'select') {
+      patchColumn(idx, { type, calc: undefined, options: col.options?.length ? col.options : [''] })
     } else {
       patchColumn(idx, { type, calc: undefined })
     }
+  }
+
+  // ----- select options -----
+  function setOption(idx: number, optIdx: number, value: string) {
+    const opts = [...(settings.columns[idx].options ?? [])]; opts[optIdx] = value
+    patchColumn(idx, { options: opts })
+  }
+  function addOption(idx: number) { patchColumn(idx, { options: [...(settings.columns[idx].options ?? []), ''] }) }
+  function removeOption(idx: number, optIdx: number) {
+    patchColumn(idx, { options: (settings.columns[idx].options ?? []).filter((_, i) => i !== optIdx) })
   }
   function patchCalc(idx: number, patch: Partial<CalcDef>) {
     const col = settings.columns[idx]
@@ -305,6 +318,7 @@ export default function FormSettingsPage() {
                         <option value="text">Text (ข้อความ)</option>
                         <option value="number">Number (ตัวเลข)</option>
                         <option value="date">วันที่ (Date)</option>
+                        <option value="select">Dropdown (ตัวเลือก)</option>
                         <option value="calc">คำนวณ</option>
                       </select>
                     </div>
@@ -385,6 +399,33 @@ export default function FormSettingsPage() {
                           </button>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {col.type === 'select' && (
+                    <div className="mt-3 rounded-[10px] bg-[#f7f9fd] p-3">
+                      <label className="mb-1.5 block text-[11px] text-[#7a869a]">ตัวเลือกใน Dropdown (พนักงานเลือกตอนกรอก)</label>
+                      <div className="space-y-2">
+                        {(col.options ?? []).map((opt, optIdx) => (
+                          <div key={optIdx} className="flex items-center gap-2">
+                            <span className="w-5 shrink-0 text-right text-xs text-[#7a869a]">{optIdx + 1}.</span>
+                            <input
+                              className={`${smallSelect} flex-1`}
+                              value={opt}
+                              placeholder={`ตัวเลือกที่ ${optIdx + 1}`}
+                              onChange={e => setOption(i, optIdx, e.target.value)}
+                            />
+                            <button type="button" className={`${iconBtn} px-1.5 py-1`} onClick={() => removeOption(i, optIdx)} title="ลบตัวเลือก"><X size={14} /></button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="mt-2 inline-flex items-center gap-1 rounded-[8px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-2.5 py-1.5 text-xs font-medium text-[#2b5bd7]"
+                        onClick={() => addOption(i)}
+                      >
+                        <Plus size={14} /> เพิ่มตัวเลือก
+                      </button>
                     </div>
                   )}
                 </div>

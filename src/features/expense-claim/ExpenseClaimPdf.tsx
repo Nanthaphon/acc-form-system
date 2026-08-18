@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatIsoDate } from '../../shared/date'
@@ -22,7 +23,7 @@ const PX_TO_PT = 0.75 // CSS px -> PDF pt
 // columns WITHOUT share the remaining horizontal space via flexGrow (weighted by type).
 type ColStyle = { width: number } | { flexGrow: number; flexBasis: number }
 function columnStyles(cols: FormColumn[]): ColStyle[] {
-  const weight = (c: FormColumn) => c.type === 'text' || c.type === 'date' ? 1.4 : c.type === 'calc' ? 1.2 : 1
+  const weight = (c: FormColumn) => isTextCol(c.type) ? 1.4 : c.type === 'calc' ? 1.2 : 1
   return cols.map(c => c.width != null
     ? { width: c.width * PX_TO_PT }
     : { flexGrow: weight(c), flexBasis: 0 })
@@ -83,7 +84,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
 
   // Totals footer: label spans the leading text columns up to the first visible numeric/calc column.
-  const firstNumericIdx = vcols.findIndex(c => c.type !== 'text' && c.type !== 'date')
+  const firstNumericIdx = vcols.findIndex(c => !isTextCol(c.type))
   const leadingCount = firstNumericIdx < 0 ? vcols.length : firstNumericIdx
   const leadingStyles = styles.slice(0, leadingCount)
   // Merged label cell: same total footprint as the leading columns combined
@@ -156,10 +157,10 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
               <View style={[s.cell, { width: `${SEQ_WIDTH}%` }]}><Text style={[s.cellText, s.center]}>{i + 1}</Text></View>
               {vcols.map((col, ci) => (
                 <View key={col.key} style={[s.cell, styles[ci]]}>
-                  <Text style={[s.cellText, col.type === 'text' || col.type === 'date' ? {} : s.right]}>
+                  <Text style={[s.cellText, isTextCol(col.type) ? {} : s.right]}>
                     {col.type === 'date'
                       ? formatIsoDate(computed[i][col.key] as string)
-                      : col.type === 'text'
+                      : isTextCol(col.type)
                       ? (computed[i][col.key] as string)
                       : money(Number(computed[i][col.key]) || 0)}
                   </Text>
@@ -188,7 +189,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
             )}
             {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map((col, k) => (
               <View key={col.key} style={[s.cell, styles[firstNumericIdx + k]]}>
-                <Text style={[s.cellText, s.right]}>{col.type === 'text' || col.type === 'date' ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
+                <Text style={[s.cellText, s.right]}>{isTextCol(col.type) ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
               </View>
             ))}
           </View>

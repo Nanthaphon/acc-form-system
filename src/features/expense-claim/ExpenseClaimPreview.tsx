@@ -1,5 +1,6 @@
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -51,7 +52,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const totalCols = vcols.length + 1 // + leading seq column
 
   // Totals footer: label spans the seq column + leading text columns up to the first visible numeric/calc column.
-  const firstNumericIdx = vcols.findIndex(c => c.type !== 'text' && c.type !== 'date')
+  const firstNumericIdx = vcols.findIndex(c => !isTextCol(c.type))
   const labelSpan = firstNumericIdx < 0 ? totalCols : firstNumericIdx + 1
 
   // Split the row indices into pages of ROWS_PER_PAGE. Always at least one page
@@ -146,10 +147,10 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                   <tr key={i}>
                     <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
                     {vcols.map(col => (
-                      <td key={col.key} className={`break-words border border-black px-1 py-0.5 ${col.type === 'text' || col.type === 'date' ? '' : 'text-right'}`}>
+                      <td key={col.key} className={`break-words border border-black px-1 py-0.5 ${isTextCol(col.type) ? '' : 'text-right'}`}>
                         {col.type === 'date'
                           ? formatIsoDate(computed[i][col.key] as string)
-                          : col.type === 'text'
+                          : isTextCol(col.type)
                           ? (computed[i][col.key] as string)
                           : money(Number(computed[i][col.key]) || 0)}
                       </td>
@@ -168,7 +169,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                   <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
                   {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map(col => (
                     <td key={col.key} className="border border-black px-1 py-1 text-right">
-                      {col.type === 'text' || col.type === 'date' ? '' : money(columnTotals[col.key] ?? 0)}
+                      {isTextCol(col.type) ? '' : money(columnTotals[col.key] ?? 0)}
                     </td>
                   ))}
                 </tr>

@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react'
 import type { ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
-import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS } from '../../types/schema'
+import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import DateInput from '../../components/DateInput'
@@ -119,7 +119,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         key={col.key}
                         style={{ width: col.width ? `${col.width}px` : undefined }}
                         className={`whitespace-normal break-words border-b border-gray-200 bg-gray-50 px-1.5 py-2.5 text-[11px] font-medium text-gray-600 ${
-                          col.type === 'text' || col.type === 'date' ? 'text-left' : 'text-right'
+                          isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
                       >
                         {col.label}
@@ -152,6 +152,15 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                               value={row[col.key] as number}
                               onChange={e => setCell(i, col.key, Number(e.target.value))}
                             />
+                          ) : col.type === 'select' ? (
+                            <select
+                              className="w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              value={row[col.key] as string}
+                              onChange={e => setCell(i, col.key, e.target.value)}
+                            >
+                              <option value="">— เลือก —</option>
+                              {(col.options ?? []).filter(o => o.trim()).map((o, oi) => <option key={oi} value={o}>{o}</option>)}
+                            </select>
                           ) : (
                             <input
                               className="w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
@@ -177,8 +186,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                   <tr className="font-semibold text-gray-900">
                     <td className="border-t border-gray-200 px-2.5 py-2.5"></td>
                     {vcols.map((col, idx) => (
-                      <td key={col.key} className={`border-t border-gray-200 px-2.5 py-2.5 ${col.type === 'text' || col.type === 'date' ? 'text-left' : 'text-right'}`}>
-                        {idx === 0 ? 'รวม' : col.type === 'text' || col.type === 'date' ? '' : fmt(columnTotals[col.key] ?? 0)}
+                      <td key={col.key} className={`border-t border-gray-200 px-2.5 py-2.5 ${isTextCol(col.type) ? 'text-left' : 'text-right'}`}>
+                        {idx === 0 ? 'รวม' : isTextCol(col.type) ? '' : fmt(columnTotals[col.key] ?? 0)}
                       </td>
                     ))}
                     <td className="border-t border-gray-200"></td>

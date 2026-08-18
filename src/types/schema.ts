@@ -3,7 +3,12 @@ export type Role = 'employee' | 'admin'
 export interface Company { id: string; name: string; address: string; logo?: string | null; headerName?: string | null }
 
 // ===== Dynamic column model =====
-export type ColumnType = 'text' | 'number' | 'calc' | 'date'
+export type ColumnType = 'text' | 'number' | 'calc' | 'date' | 'select'
+
+// Textual columns (string values, left-aligned, never summed).
+export function isTextCol(type: ColumnType): boolean {
+  return type === 'text' || type === 'date' || type === 'select'
+}
 export interface CalcDef {
   op: 'multiply' | 'subtract' | 'add' | 'percent' | 'divide'
   operands?: string[]   // list of column keys (2+) for multiply/add/subtract
@@ -26,6 +31,7 @@ export interface FormColumn {
   isTotal?: boolean    // the column whose column-sum becomes the Thai baht text (exactly one should be true)
   hidden?: boolean     // undefined/false = visible; hidden columns still compute but are not displayed
   width?: number       // optional fixed column width in pixels; undefined = auto/flex width
+  options?: string[]   // choices for type==='select' (dropdown)
 }
 
 // One row of the dynamic table, keyed by column.key
@@ -197,6 +203,6 @@ export interface SubmissionVersion {
 // Build a blank row for the given columns: text -> '', number/calc -> 0
 export function emptyRow(columns: FormColumn[]): ExpenseRow {
   const row: ExpenseRow = {}
-  for (const c of columns) row[c.key] = c.type === 'text' || c.type === 'date' ? '' : 0
+  for (const c of columns) row[c.key] = isTextCol(c.type) ? '' : 0
   return row
 }
