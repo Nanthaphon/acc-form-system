@@ -9,6 +9,9 @@ import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import type { UserProfile, Submission, FormSettings, Company, AccessGroup } from '../../types/schema'
 import { formatDate, formatDateTime } from '../../shared/date'
+import type { Filters } from '../../shared/submissionFilter'
+import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
+import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
@@ -27,6 +30,7 @@ export default function EmployeeDetailPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
+  const [filters, setFilters] = useState<Filters>(emptyFilters)
 
   function loadSubs() { if (uid) listMySubmissions(uid).then(setSubs) }
   useEffect(() => {
@@ -54,6 +58,8 @@ export default function EmployeeDetailPage() {
 
   if (!profile) return <div className="p-4 text-gray-500">กำลังโหลด...</div>
 
+  const filtered = applyFilters(subs, filters, () => `${profile.firstName} ${profile.lastName}`)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -76,6 +82,9 @@ export default function EmployeeDetailPage() {
 
       <div>
         <h2 className="mb-2 text-sm font-semibold text-[#16233f]">เอกสารที่พิมพ์ ({subs.length})</h2>
+        <div className="mb-3">
+          <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} resultCount={filtered.length} />
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full border text-sm">
             <thead className="bg-gray-50">
@@ -84,7 +93,7 @@ export default function EmployeeDetailPage() {
               ))}</tr>
             </thead>
             <tbody>
-              {subs.map(r => (
+              {filtered.map(r => (
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="border px-2 py-1 whitespace-nowrap">{r.docNumber}</td>
                   <td className="border px-2 py-1">{formName(r.formType)}</td>
@@ -106,7 +115,7 @@ export default function EmployeeDetailPage() {
                   </td>
                 </tr>
               ))}
-              {subs.length === 0 && (
+              {filtered.length === 0 && (
                 <tr><td colSpan={8} className="border px-2 py-6 text-center text-gray-400">ยังไม่มีเอกสาร</td></tr>
               )}
             </tbody>

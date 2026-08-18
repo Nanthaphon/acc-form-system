@@ -3,15 +3,25 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
-import type { Submission } from '../../types/schema'
+import { listForms } from '../../data/formSettings'
+import type { Submission, FormSettings } from '../../types/schema'
 import { formatDate } from '../../shared/date'
+import type { Filters } from '../../shared/submissionFilter'
+import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
+import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 
 export default function HistoryPage() {
   const { profile } = useAuth()
   const [rows, setRows] = useState<Submission[]>([])
+  const [forms, setForms] = useState<FormSettings[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
+  const [filters, setFilters] = useState<Filters>(emptyFilters)
   function load() { if (profile) listMySubmissions(profile.uid).then(setRows) }
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
+  useEffect(() => { listForms().then(setForms) }, [])
+
+  const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
+  const filtered = applyFilters(rows, filters, myName)
 
   async function onDelete(r: Submission) {
     if (!confirm(`ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?\nลบถาวร ยกเลิกไม่ได้`)) return
@@ -20,11 +30,14 @@ export default function HistoryPage() {
   }
   return (
     <div>
-      <h1 className="mb-4 text-xl font-medium">ประวัติเอกสารของฉัน</h1>
+      <div className="mb-4 space-y-3">
+        <h1 className="text-xl font-medium">ประวัติเอกสารของฉัน</h1>
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} resultCount={filtered.length} />
+      </div>
       <table className="w-full border text-sm">
         <thead className="bg-gray-50"><tr>{['เลขที่','วันที่','ยอดสุทธิ','พิมพ์แล้ว(ครั้ง)','สถานะ','แก้ไข',''].map(h => <th key={h} className="border px-2 py-1">{h}</th>)}</tr></thead>
         <tbody>
-          {rows.map(r => (
+          {filtered.map(r => (
             <tr key={r.id}>
               <td className="border px-2 py-1">{r.docNumber}</td>
               <td className="border px-2 py-1">{formatDate(r.createdAt)}</td>
