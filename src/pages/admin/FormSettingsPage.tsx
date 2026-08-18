@@ -334,7 +334,9 @@ export default function FormSettingsPage() {
                       <div>
                         <label className="mb-1 block text-[11px] text-[#7a869a]">สูตร</label>
                         <select className={smallSelect} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
-                          {(Object.keys(OP_LABELS) as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
+                          {(['multiply', 'subtract', 'add', 'divide'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
+                          {/* ร้อยละ ถูกยกเลิก — คงไว้เฉพาะคอลัมน์เดิมที่ใช้อยู่ ให้ยังแก้ไขได้ */}
+                          {col.calc?.op === 'percent' && <option value="percent">{OP_LABELS.percent}</option>}
                         </select>
                       </div>
                       {isPercent ? (
