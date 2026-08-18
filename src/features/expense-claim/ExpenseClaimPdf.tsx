@@ -1,7 +1,8 @@
 import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
+import { bahtText } from '../../shared/bahttext'
 import { formatIsoDate } from '../../shared/date'
 
 // เอกสารทางการใช้ฟอนต์ Sarabun (TH Sarabun New) — มาตรฐานเอกสารราชการไทย
@@ -53,6 +54,9 @@ const s = StyleSheet.create({
   cell: { borderWidth: 0.5, borderColor: '#000', padding: 2, justifyContent: 'center' },
   cellText: { fontSize: 7 },
   amountBox: { borderWidth: 0.5, borderColor: '#000', marginTop: 4, padding: 3, textAlign: 'center' },
+  taxBox: { marginTop: 4, marginLeft: 'auto', width: 150, fontSize: 7 },
+  taxRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 0.5 },
+  taxNet: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: '#000', paddingTop: 1 },
   sigRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 28 },
   sigCol: { alignItems: 'center', width: 140 },
   sigLine: { borderBottomWidth: 0.5, borderBottomColor: '#000', width: 110, marginBottom: 3, height: 14 },
@@ -72,7 +76,9 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
   const styles = columnStyles(vcols)
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
-  const bahtWords = bahtTextForRows(cols, items)
+  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate)
+  const hasTax = !!header.vat || !!header.whtRate
+  const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
 
@@ -187,6 +193,16 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
             ))}
           </View>
         </View>
+
+        {/* VAT / หัก ณ ที่จ่าย / ยอดสุทธิ */}
+        {hasTax && (
+          <View style={s.taxBox}>
+            <View style={s.taxRow}><Text>ยอดรวม (ก่อนภาษี)</Text><Text>{money(tax.subtotal)}</Text></View>
+            {header.vat && <View style={s.taxRow}><Text>ภาษีมูลค่าเพิ่ม 7%</Text><Text>{money(tax.vatAmount)}</Text></View>}
+            {!!header.whtRate && <View style={s.taxRow}><Text>หัก ณ ที่จ่าย {header.whtRate}%</Text><Text>-{money(tax.whtAmount)}</Text></View>}
+            <View style={s.taxNet}><Text style={s.bold}>ยอดสุทธิ</Text><Text style={s.bold}>{money(tax.netTotal)}</Text></View>
+          </View>
+        )}
 
         {/* เป็นจำนวนเงิน */}
         <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>

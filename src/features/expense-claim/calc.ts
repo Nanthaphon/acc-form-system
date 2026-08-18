@@ -59,3 +59,13 @@ export function grandTotal(columns: FormColumn[], rows: ExpenseRow[]): number {
 export function bahtTextForRows(columns: FormColumn[], rows: ExpenseRow[]): string {
   return bahtText(grandTotal(columns, rows))
 }
+
+// VAT (7%) and withholding tax are computed on the items subtotal (pre-VAT),
+// the standard Thai basis. Net = subtotal + VAT − withholding.
+export interface TaxResult { subtotal: number; vatAmount: number; whtAmount: number; netTotal: number }
+export function taxSummary(subtotal: number, vat?: boolean, whtRate?: number): TaxResult {
+  const vatAmount = vat ? round2(subtotal * 0.07) : 0
+  const whtAmount = whtRate ? round2(subtotal * whtRate / 100) : 0
+  const netTotal = round2(subtotal + vatAmount - whtAmount)
+  return { subtotal, vatAmount, whtAmount, netTotal }
+}

@@ -1,6 +1,7 @@
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeRow, computeColumnTotals, bahtTextForRows, visibleColumns } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
+import { bahtText } from '../../shared/bahttext'
 import { formatDate, formatIsoDate } from '../../shared/date'
 
 interface Approval { name?: string | null; signature?: string | null; at?: number | null }
@@ -43,7 +44,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
-  const bahtWords = bahtTextForRows(cols, items)
+  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate)
+  const hasTax = !!header.vat || !!header.whtRate
+  const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const totalCols = vcols.length + 1 // + leading seq column
 
@@ -171,6 +174,16 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                 </tr>
               </tbody>
             </table>
+
+            {/* VAT / หัก ณ ที่จ่าย / ยอดสุทธิ */}
+            {hasTax && (
+              <div className="mt-2 ml-auto w-56 text-[10px]">
+                <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
+                {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>{money(tax.vatAmount)}</span></div>}
+                {!!header.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>-{money(tax.whtAmount)}</span></div>}
+                <div className="flex justify-between border-t border-black font-bold"><span>ยอดสุทธิ</span><span>{money(tax.netTotal)}</span></div>
+              </div>
+            )}
 
             {/* เป็นจำนวนเงิน */}
             <div className="mt-2 border border-black px-2 py-1 text-center">

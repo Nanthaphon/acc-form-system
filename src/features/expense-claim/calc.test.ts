@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, round2 } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, round2, taxSummary } from './calc'
 import { EXPENSE_CLAIM_DEFAULT_COLUMNS, emptyRow } from '../../types/schema'
 
 const cols = EXPENSE_CLAIM_DEFAULT_COLUMNS
@@ -39,4 +39,16 @@ describe('grandTotal + bahtTextForRows', () => {
 
 describe('round2', () => {
   it('ปัด 2 ตำแหน่ง', () => expect(round2(405.005)).toBe(405.01))
+})
+
+describe('taxSummary', () => {
+  it('VAT 7% + หัก ณ ที่จ่าย 3% จากยอดก่อนภาษี', () => {
+    expect(taxSummary(10000, true, 3)).toEqual({ subtotal: 10000, vatAmount: 700, whtAmount: 300, netTotal: 10400 })
+  })
+  it('หัก ณ ที่จ่าย 5% อย่างเดียว', () => {
+    expect(taxSummary(10000, false, 5)).toEqual({ subtotal: 10000, vatAmount: 0, whtAmount: 500, netTotal: 9500 })
+  })
+  it('ไม่ติ๊กอะไร = ยอดสุทธิเท่ายอดรวม', () => {
+    expect(taxSummary(10000)).toEqual({ subtotal: 10000, vatAmount: 0, whtAmount: 0, netTotal: 10000 })
+  })
 })

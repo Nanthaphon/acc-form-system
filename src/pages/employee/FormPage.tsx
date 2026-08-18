@@ -5,7 +5,8 @@ import { ArrowLeft, Download, Printer, Receipt, Save, PenLine } from 'lucide-rea
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionStatus, SubmissionVersion } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeColumnTotals, grandTotal, bahtTextForRows } from '../../features/expense-claim/calc'
+import { computeColumnTotals, grandTotal, taxSummary } from '../../features/expense-claim/calc'
+import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
@@ -37,10 +38,15 @@ export default function FormPage() {
   const [items, setItems] = useState<ExpenseRow[]>([emptyRow(EXPENSE_CLAIM_DEFAULTS.columns)])
 
   function buildTotals(): ExpenseTotals {
+    const subtotal = grandTotal(settings.columns, items)
+    const tax = taxSummary(subtotal, header.vat, header.whtRate)
     return {
       columnTotals: computeColumnTotals(settings.columns, items),
-      grandTotal: grandTotal(settings.columns, items),
-      amountInThaiText: bahtTextForRows(settings.columns, items),
+      grandTotal: subtotal,
+      amountInThaiText: bahtText(tax.netTotal),
+      vatAmount: tax.vatAmount,
+      whtAmount: tax.whtAmount,
+      netTotal: tax.netTotal,
     }
   }
 

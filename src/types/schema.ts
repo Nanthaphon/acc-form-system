@@ -136,8 +136,11 @@ export interface UserProfile {
 
 export interface ExpenseTotals {
   columnTotals: Record<string, number>
-  grandTotal: number
-  amountInThaiText: string
+  grandTotal: number          // items subtotal (before VAT / withholding)
+  amountInThaiText: string     // baht text of the net total
+  vatAmount?: number           // 7% of subtotal when VAT is ticked
+  whtAmount?: number           // withholding tax deducted (3% or 5% of subtotal)
+  netTotal?: number            // subtotal + VAT − withholding
 }
 
 export interface ExpenseHeader {
@@ -148,6 +151,8 @@ export interface ExpenseHeader {
   lastName: string
   position: string
   job: string
+  vat?: boolean                // add 7% VAT
+  whtRate?: number             // withholding tax rate: 0 | 3 | 5
 }
 
 export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'rejected'

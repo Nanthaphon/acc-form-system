@@ -50,8 +50,8 @@ export async function incrementPrint(id: string): Promise<void> {
 // Grand total for display — tolerant of old submissions saved before the
 // dynamic-column model (which used { totalNet } instead of { grandTotal }).
 export function submissionAmount(s: Submission): number {
-  const t = s.totals as unknown as { grandTotal?: number; totalNet?: number }
-  return Number(t?.grandTotal ?? t?.totalNet) || 0
+  const t = s.totals as unknown as { netTotal?: number; grandTotal?: number; totalNet?: number }
+  return Number(t?.netTotal ?? t?.grandTotal ?? t?.totalNet) || 0
 }
 
 export async function deleteSubmission(id: string): Promise<void> {

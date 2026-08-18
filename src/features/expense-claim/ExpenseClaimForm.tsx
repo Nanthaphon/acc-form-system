@@ -1,7 +1,8 @@
 import { Plus, Trash2 } from 'lucide-react'
 import type { ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, visibleColumns } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
+import { bahtText } from '../../shared/bahttext'
 import DateInput from '../../components/DateInput'
 
 interface Props {
@@ -31,7 +32,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const total = grandTotal(cols, items)
-  const bahtWords = bahtTextForRows(cols, items)
+  const tax = taxSummary(total, header.vat, header.whtRate)
   const categoryOptions = categories ?? CATEGORIES
 
   function setCell(rowIdx: number, key: string, value: string | number) {
@@ -195,15 +196,36 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
         )}
       </div>
 
-      {/* Summary */}
+      {/* Summary + tax options */}
       {hasColumns && (
-        <div className="flex flex-col gap-1 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-xs text-gray-500">รวมเป็นเงินทั้งสิ้น (ตัวอักษร)</div>
-            <div className="text-sm text-gray-700">{bahtWords}</div>
+        <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-5">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-700">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" checked={!!header.vat} onChange={e => onHeaderChange({ ...header, vat: e.target.checked })} />
+              ภาษีมูลค่าเพิ่ม (VAT) 7%
+            </label>
+            <div className="flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input type="checkbox" checked={!!header.whtRate} onChange={e => onHeaderChange({ ...header, whtRate: e.target.checked ? 3 : 0 })} />
+                หัก ณ ที่จ่าย
+              </label>
+              {!!header.whtRate && [3, 5].map(r => (
+                <label key={r} className="flex cursor-pointer items-center gap-1">
+                  <input type="radio" name="whtRate" checked={header.whtRate === r} onChange={() => onHeaderChange({ ...header, whtRate: r })} />
+                  {r}%
+                </label>
+              ))}
+            </div>
           </div>
-          <div className="text-2xl font-semibold text-gray-900">
-            {fmt(total)} <span className="text-sm font-normal text-gray-500">บาท</span>
+
+          <div className="space-y-1 border-t border-gray-200 pt-3 text-sm">
+            <div className="flex justify-between text-gray-600"><span>ยอดรวม (ก่อนภาษี)</span><span>{fmt(tax.subtotal)}</span></div>
+            {header.vat && <div className="flex justify-between text-gray-600"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>+{fmt(tax.vatAmount)}</span></div>}
+            {!!header.whtRate && <div className="flex justify-between text-red-600"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>−{fmt(tax.whtAmount)}</span></div>}
+            <div className="flex justify-between border-t border-gray-200 pt-2 text-base font-semibold text-gray-900">
+              <span>ยอดสุทธิ</span><span>{fmt(tax.netTotal)} บาท</span>
+            </div>
+            <div className="text-xs text-gray-500">{`(${bahtText(tax.netTotal)})`}</div>
           </div>
         </div>
       )}
