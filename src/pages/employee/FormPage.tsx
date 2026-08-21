@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
-import { ArrowLeft, Download, Printer, Receipt, Save, PenLine } from 'lucide-react'
+import { ArrowLeft, Download, Printer, Receipt, Save } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionStatus, SubmissionVersion } from '../../types/schema'
+import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeColumnTotals, grandTotal, taxSummary } from '../../features/expense-claim/calc'
 import { bahtText } from '../../shared/bahttext'
@@ -11,10 +11,9 @@ import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
-import { createSubmission, updateSubmission, getSubmission, incrementPrint, requestApproval, subStatus, statusMeta } from '../../data/submissions'
+import { createSubmission, updateSubmission, getSubmission, incrementPrint } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
-import { formatDateTime } from '../../shared/date'
 
 export default function FormPage() {
   const { id, formType } = useParams()
@@ -26,10 +25,7 @@ export default function FormPage() {
   const [docNumber, setDocNumber] = useState('(ยังไม่บันทึก)')
   const [savedId, setSavedId] = useState<string | null>(id ?? null)
   const [showPreview, setShowPreview] = useState(false)
-  const [status, setStatus] = useState<SubmissionStatus>('draft')
-  const [rejectReason, setRejectReason] = useState<string | null>(null)
   const [versionRefresh, setVersionRefresh] = useState(0)
-  const [approval, setApproval] = useState<{ name?: string | null; signature?: string | null; at?: number | null } | undefined>(undefined)
   const [header, setHeader] = useState<ExpenseHeader>({
     subject: 'ขออนุมัติเบิกค่าใช้จ่าย', categories: [], companyId: profile?.companyId ?? '',
     firstName: profile?.firstName ?? '', lastName: profile?.lastName ?? '',
@@ -55,9 +51,6 @@ export default function FormPage() {
     getSubmission(id).then(s => {
       if (!s) return
       setHeader(s.header); setItems(s.items); setDocNumber(s.docNumber); setSavedId(s.id)
-      setStatus(subStatus(s)); setRejectReason(s.rejectReason ?? null)
-      setApproval(s.approverSignature || s.approvedByName
-        ? { name: s.approvedByName, signature: s.approverSignature, at: s.approvedAt } : undefined)
       getFormSettings(s.formType).then(setSettings)
     })
   }, [id])
@@ -99,7 +92,6 @@ export default function FormPage() {
   }
 
   function handleRestore(v: SubmissionVersion) {
-    if (status === 'pending' || status === 'approved') return
     setHeader(v.header); setItems(v.items); setShowPreview(false)
     alert(`ดึงเนื้อหาเวอร์ชัน ${v.version} กลับมาแล้ว — ตรวจสอบแล้วกด "บันทึก" เพื่อสร้างเป็นเวอร์ชันใหม่`)
   }
@@ -114,23 +106,7 @@ export default function FormPage() {
     window.print()
   }
 
-  async function askApproval() {
-    if (!savedId) { alert('กรุณาบันทึกเอกสารก่อนขออนุมัติ'); return }
-    if (!profile?.departmentId) { alert('บัญชีคุณยังไม่ได้กำหนดแผนก — แจ้งแอดมินให้ตั้งแผนกก่อน'); return }
-    if (!confirm('ส่งเอกสารนี้ให้หัวหน้าอนุมัติ?\nหลังส่งจะแก้ไขไม่ได้จนกว่าจะถูกตีกลับ')) return
-    try {
-      await requestApproval(savedId)
-      setStatus('pending'); setRejectReason(null)
-      alert('ส่งขออนุมัติแล้ว — รอหัวหน้าเซ็น')
-    } catch {
-      alert('ส่งขออนุมัติไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
-    }
-  }
-
   const isAdmin = profile?.role === 'admin'
-  const locked = status === 'pending' || status === 'approved'
-  const showDoc = showPreview || locked
-  const canRequest = !!savedId && (status === 'draft' || status === 'rejected')
 
   // A closed form (maintenance) is not accessible to employees via direct URL.
   if (!id && settings.active === false && !isAdmin) {
@@ -155,24 +131,14 @@ export default function FormPage() {
           </button>
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><Receipt size={20} /></div>
           <h1 className="text-xl font-semibold text-gray-900">{settings.name || settings.title}</h1>
-          {!locked && (
-            <button
-              className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
-              onClick={() => setShowPreview(!showPreview)}
-            >
-              {showPreview ? 'แก้ไข' : 'ดูตัวอย่าง'}
-            </button>
-          )}
+          <button
+            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
+            onClick={() => setShowPreview(!showPreview)}
+          >
+            {showPreview ? 'แก้ไข' : 'ดูตัวอย่าง'}
+          </button>
         </div>
-        {savedId && status !== 'draft' && (
-          <div className={`rounded-lg px-4 py-3 text-sm ${statusMeta(status).className}`}>
-            <span className="font-semibold">สถานะ: {statusMeta(status).label}</span>
-            {status === 'pending' && ' · รอหัวหน้าเซ็น — แก้ไขไม่ได้จนกว่าจะถูกตีกลับ (พิมพ์/ดาวน์โหลดได้)'}
-            {status === 'approved' && approval?.name && ` · อนุมัติโดย ${approval.name}${approval.at ? ` เมื่อ ${formatDateTime(approval.at)}` : ''}`}
-            {status === 'rejected' && rejectReason && ` · เหตุผล: ${rejectReason}`}
-          </div>
-        )}
-        {!showDoc && (
+        {!showPreview && (
           <div className="rounded-xl border border-gray-200 bg-white p-6">
             <label className="mb-1.5 block text-xs font-medium text-gray-500">บริษัท</label>
             <select
@@ -187,28 +153,18 @@ export default function FormPage() {
             </select>
           </div>
         )}
-        {!showDoc && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} />}
       </div>
-      <div className={showDoc ? '' : 'hidden print:block'}>
-        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} approval={approval} />
+      <div className={showPreview ? '' : 'hidden print:block'}>
+        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} />
       </div>
       <div className="no-print mt-4 flex flex-wrap gap-2.5">
-        {!locked && (
-          <button
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-            onClick={save}
-          >
-            <Save size={16} /> บันทึก
-          </button>
-        )}
-        {canRequest && (
-          <button
-            className="inline-flex items-center gap-2 rounded-lg border-[1.5px] border-blue-600 bg-white px-5 py-2.5 text-sm font-medium text-blue-700 hover:bg-blue-50"
-            onClick={askApproval}
-          >
-            <PenLine size={16} /> ขอลายเซ็นอนุมัติ
-          </button>
-        )}
+        <button
+          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+          onClick={save}
+        >
+          <Save size={16} /> บันทึก
+        </button>
         <button
           className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
           onClick={downloadPdf}
@@ -236,7 +192,7 @@ export default function FormPage() {
             settings={settings}
             company={company}
             refreshKey={versionRefresh}
-            canRestore={!locked}
+            canRestore={true}
             onRestore={handleRestore}
           />
         </div>

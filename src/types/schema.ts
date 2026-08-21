@@ -133,11 +133,7 @@ export interface UserProfile {
   accessGroup?: string
   departmentId?: string
   createdAt: number
-  // --- online-approval feature ---
-  canApprove?: boolean            // may sign/approve documents
-  approverAllDepartments?: boolean // covers every department (big boss / GM)
-  approverDepartments?: string[]   // department ids this approver covers
-  signatureImage?: string          // uploaded signature (data URL)
+  signatureImage?: string          // saved signature (data URL), reused when signing documents
 }
 
 export interface ExpenseTotals {
@@ -161,7 +157,19 @@ export interface ExpenseHeader {
   whtRate?: number             // withholding tax rate: 0 | 3 | 5
 }
 
-export type SubmissionStatus = 'draft' | 'pending' | 'approved' | 'rejected'
+export type SubmissionStatus = 'draft' | 'pending' | 'signed'
+
+// One online signature slot on a document: the block it fills, who was assigned,
+// and (once they sign) a snapshot of their signature image.
+export interface DocSignature {
+  blockId: string
+  blockLabel: string
+  assignedUid: string
+  assignedName: string
+  status: 'pending' | 'signed'
+  signatureImage?: string
+  signedAt?: number
+}
 
 export interface Submission {
   id: string
@@ -176,15 +184,7 @@ export interface Submission {
   updatedAt: number
   printCount: number
   lastPrintedAt: number | null
-  // --- online-approval feature ---
-  status?: SubmissionStatus
-  departmentId?: string | null       // snapshot of requester's department (routing)
-  requestedAt?: number | null
-  approvedBy?: string | null
-  approvedByName?: string | null
-  approverSignature?: string | null  // snapshot of approver's signature image
-  approvedAt?: number | null
-  rejectReason?: string | null
+  signatures?: DocSignature[]        // online signature assignments for this document
 }
 
 // One saved snapshot of a document. version 1 = created; +1 on each real edit.

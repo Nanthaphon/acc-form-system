@@ -3,10 +3,9 @@ import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
-import { formatDate, formatIsoDate } from '../../shared/date'
+import { formatIsoDate } from '../../shared/date'
 
-interface Approval { name?: string | null; signature?: string | null; at?: number | null }
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; approval?: Approval }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
@@ -21,26 +20,18 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// One signature cell. Every cell has the same fixed-height signing area so all
-// lines and labels line up across the row; only the approver cell fills in the
-// online signature + name + date.
-function SignatureBlock({ label, approval }: { label: string; approval?: Approval }) {
+// One signature cell — fixed-height signing area so all lines and labels line up.
+function SignatureBlock({ label }: { label: string }) {
   return (
     <div>
-      <div className="flex h-10 items-end justify-center border-b border-black">
-        {approval?.signature ? <img src={approval.signature} alt="ลายเซ็น" className="max-h-10 object-contain pb-0.5" /> : <>&nbsp;</>}
-      </div>
+      <div className="flex h-10 items-end justify-center border-b border-black">&nbsp;</div>
       <div className="mt-1">{label}</div>
-      <div className="mt-2 leading-tight">
-        {approval?.name
-          ? <>({approval.name})<br />{approval.at ? `วันที่ ${formatDate(approval.at)}` : ''}</>
-          : 'วันที่ ................'}
-      </div>
+      <div className="mt-2 leading-tight">วันที่ ................</div>
     </div>
   )
 }
 
-export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, approval }: Props) {
+export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
   const cols = settings.columns
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
@@ -195,7 +186,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             <div className="mt-8 grid grid-cols-3 gap-8 text-center">
               <SignatureBlock label="ผู้เบิก" />
               <SignatureBlock label="หัวหน้าแผนก" />
-              <SignatureBlock label="ผู้อนุมัติ" approval={approval} />
+              <SignatureBlock label="ผู้อนุมัติ" />
             </div>
             <div className="mt-8 grid grid-cols-3 gap-8 text-center">
               <SignatureBlock label="ผู้รับเงิน" />

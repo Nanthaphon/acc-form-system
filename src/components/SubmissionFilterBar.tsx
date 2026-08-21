@@ -4,7 +4,7 @@ import type { Filters } from '../shared/submissionFilter'
 import { emptyFilters } from '../shared/submissionFilter'
 import DateInput from './DateInput'
 
-const STATUSES: SubmissionStatus[] = ['pending', 'approved', 'rejected', 'draft']
+const STATUSES: SubmissionStatus[] = ['pending', 'signed', 'draft']
 const cls = 'rounded border px-2 py-1.5 text-sm'
 
 interface Props {

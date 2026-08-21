@@ -47,9 +47,8 @@ export default function ProfilePage() {
           {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </label>
-      {form.canApprove && (
-        <div className="space-y-2 rounded-lg border border-gray-200 p-3">
-          <div className="text-sm font-medium text-gray-800">ลายเซ็นสำหรับอนุมัติเอกสาร</div>
+      <div className="space-y-2 rounded-lg border border-gray-200 p-3">
+          <div className="text-sm font-medium text-gray-800">ลายเซ็นของฉัน (ใช้เซ็นเอกสาร)</div>
           <div className="flex items-center gap-3">
             <div className="flex h-16 w-40 shrink-0 items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-50">
               {form.signatureImage
@@ -69,8 +68,7 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="text-xs text-gray-500">แนะนำรูปพื้นหลังโปร่ง (PNG) จะดูเหมือนเซ็นจริงมากกว่า</div>
-        </div>
-      )}
+      </div>
 
       <button onClick={save} className="rounded bg-blue-600 px-4 py-2 text-white">บันทึก</button>
     </div>
