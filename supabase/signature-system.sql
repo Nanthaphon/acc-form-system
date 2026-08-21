@@ -35,7 +35,11 @@ alter table submissions drop column if exists "rejectReason";
 
 -- Kept on purpose: profiles.signatureImage, profiles."departmentId", departments table.
 
--- ---- 2) New: online signature assignments on a document ---------------------
+-- ---- 2) New: configurable signature blocks on a form ------------------------
+-- Array of { id, label, online }. Empty = fall back to the built-in 5 blocks.
+alter table form_settings add column if not exists "signatureBlocks" jsonb not null default '[]';
+
+-- ---- 3) New: online signature assignments on a document ---------------------
 -- Array of { blockId, blockLabel, assignedUid, assignedName, status, signatureImage?, signedAt? }
 alter table submissions add column if not exists signatures jsonb not null default '[]';
 
