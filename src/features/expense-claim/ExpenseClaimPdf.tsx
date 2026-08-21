@@ -2,10 +2,10 @@ import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { isTextCol, DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
-import type { SignatureBlock as SigBlock } from '../../types/schema'
+import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
-import { formatIsoDate } from '../../shared/date'
+import { formatIsoDate, formatDate } from '../../shared/date'
 
 // เอกสารทางการใช้ฟอนต์ Sarabun (TH Sarabun New) — มาตรฐานเอกสารราชการไทย
 Font.register({ family: 'Sarabun', fonts: [
@@ -70,9 +70,9 @@ function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
 
-export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
+export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures }: Props) {
   const cols = settings.columns
   const vcols = visibleColumns(cols)
   const styles = columnStyles(vcols)
@@ -215,13 +215,19 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
         {/* Signature blocks — configured per form, in rows of 3 */}
         {sigRows.map((row, ri) => (
           <View key={ri} style={s.sigRow}>
-            {row.map(b => (
-              <View key={b.id} style={s.sigCol}>
-                <View style={s.sigLine} />
-                <Text>{b.label}</Text>
-                <Text style={s.sigDate}>วันที่ ................</Text>
-              </View>
-            ))}
+            {row.map(b => {
+              const sig = signatures?.find(x => x.blockId === b.id && x.status === 'signed')
+              return (
+                <View key={b.id} style={s.sigCol}>
+                  <View style={s.sigLine}>
+                    {sig?.signatureImage ? <Image src={sig.signatureImage} style={{ height: 13, objectFit: 'contain' }} /> : null}
+                  </View>
+                  <Text>{b.label}</Text>
+                  <Text style={s.sigDate}>{sig ? `(${sig.assignedName})` : 'วันที่ ................'}</Text>
+                  {sig?.signedAt ? <Text>{`วันที่ ${formatDate(sig.signedAt)}`}</Text> : null}
+                </View>
+              )
+            })}
             {Array.from({ length: 3 - row.length }).map((_, k) => <View key={`e${k}`} style={s.sigCol} />)}
           </View>
         ))}

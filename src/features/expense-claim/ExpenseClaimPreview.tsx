@@ -1,12 +1,12 @@
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
-import type { SignatureBlock as SigBlock } from '../../types/schema'
+import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
-import { formatIsoDate } from '../../shared/date'
+import { formatDate, formatIsoDate } from '../../shared/date'
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
@@ -22,17 +22,25 @@ function money(n: number): string {
 }
 
 // One signature cell — fixed-height signing area so all lines and labels line up.
-function SignatureBlock({ label }: { label: string }) {
+// When the block has a signed online signature, stamp the image + name + date.
+function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
+  const signed = sig?.status === 'signed'
   return (
     <div>
-      <div className="flex h-10 items-end justify-center border-b border-black">&nbsp;</div>
+      <div className="flex h-10 items-end justify-center border-b border-black">
+        {signed && sig?.signatureImage ? <img src={sig.signatureImage} alt="ลายเซ็น" className="max-h-10 object-contain pb-0.5" /> : <>&nbsp;</>}
+      </div>
       <div className="mt-1">{label}</div>
-      <div className="mt-2 leading-tight">วันที่ ................</div>
+      <div className="mt-2 leading-tight">
+        {signed
+          ? <>({sig?.assignedName})<br />{sig?.signedAt ? `วันที่ ${formatDate(sig.signedAt)}` : ''}</>
+          : 'วันที่ ................'}
+      </div>
     </div>
   )
 }
 
-export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS }: Props) {
+export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures }: Props) {
   const cols = settings.columns
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
@@ -191,7 +199,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             {/* Signature blocks — configured per form, laid out in rows of 3 */}
             {sigRows.map((row, ri) => (
               <div key={ri} className="mt-8 grid grid-cols-3 gap-8 text-center">
-                {row.map(b => <SignatureBlock key={b.id} label={b.label} />)}
+                {row.map(b => <SignatureBlock key={b.id} label={b.label} sig={signatures?.find(x => x.blockId === b.id)} />)}
                 {Array.from({ length: 3 - row.length }).map((_, k) => <div key={`e${k}`} />)}
               </div>
             ))}

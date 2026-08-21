@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Submission, SubmissionStatus } from '../types/schema'
+import type { Submission, SubmissionStatus, DocSignature } from '../types/schema'
 import { formatDocNumber } from '../shared/docNumber'
 import { addVersion } from './versions'
 
@@ -57,6 +57,32 @@ export function submissionAmount(s: Submission): number {
 export async function deleteSubmission(id: string): Promise<void> {
   const { error } = await supabase.from('submissions').delete().eq('id', id)
   if (error) throw error
+}
+
+// ----- Online signatures -----
+export interface Signer { uid: string; name: string }
+// Everyone can list possible signers (name + uid only) via a SECURITY DEFINER RPC.
+export async function listSigners(): Promise<Signer[]> {
+  const { data } = await supabase.rpc('list_signers')
+  return (data ?? []) as Signer[]
+}
+// Owner assigns signers to online blocks (already-signed blocks are preserved).
+export async function assignSigners(subId: string, assignments: DocSignature[]): Promise<void> {
+  const { error } = await supabase.rpc('assign_signers', { sub_id: subId, assignments })
+  if (error) throw error
+}
+// Assigned signer stamps their saved signature onto a block.
+export async function signDocument(subId: string, blockId: string): Promise<void> {
+  const { error } = await supabase.rpc('sign_document', { sub_id: subId, block_id: blockId })
+  if (error) throw error
+}
+// Documents where the current user is assigned and still has a pending block.
+export async function listMyPendingToSign(uid: string): Promise<Submission[]> {
+  const { data } = await supabase.from('submissions').select('*').order('createdAt', { ascending: false })
+  return ((data ?? []) as Submission[]).filter(s => (s.signatures ?? []).some(x => x.assignedUid === uid && x.status === 'pending'))
+}
+export async function countMyPendingToSign(uid: string): Promise<number> {
+  return (await listMyPendingToSign(uid)).length
 }
 
 // Document status derived from its online-signature assignments:

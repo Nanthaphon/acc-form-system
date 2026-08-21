@@ -38,3 +38,58 @@ alter table submissions drop column if exists "rejectReason";
 -- ---- 2) New: online signature assignments on a document ---------------------
 -- Array of { blockId, blockLabel, assignedUid, assignedName, status, signatureImage?, signedAt? }
 alter table submissions add column if not exists signatures jsonb not null default '[]';
+
+-- Everyone may read the list of possible signers (uid + name only, no sensitive fields).
+create or replace function list_signers() returns table(uid uuid, name text) language sql security definer stable as $$
+  select uid, trim("firstName" || ' ' || "lastName") as name from profiles order by "firstName", "lastName"
+$$;
+
+-- An assigned signer may read the documents they must sign.
+create or replace function is_assigned_signer(sigs jsonb) returns boolean language sql stable as $$
+  select exists (
+    select 1 from jsonb_array_elements(coalesce(sigs, '[]'::jsonb)) e
+    where e->>'assignedUid' = auth.uid()::text
+  )
+$$;
+drop policy if exists submissions_signer_select on submissions;
+create policy submissions_signer_select on submissions for select using (is_assigned_signer(signatures));
+
+-- The document owner sets/updates signer assignments (already-signed blocks are kept).
+create or replace function assign_signers(sub_id uuid, assignments jsonb) returns void language plpgsql security definer as $$
+declare r submissions;
+begin
+  select * into r from submissions where id = sub_id;
+  if not found then raise exception 'not found'; end if;
+  if r."createdBy" <> auth.uid() then raise exception 'only the creator can assign signers'; end if;
+  update submissions set signatures = (
+    select coalesce(jsonb_agg(x), '[]'::jsonb) from (
+      select e as x from jsonb_array_elements(coalesce(r.signatures, '[]'::jsonb)) e where e->>'status' = 'signed'
+      union all
+      select a as x from jsonb_array_elements(coalesce(assignments, '[]'::jsonb)) a
+        where a->>'blockId' not in (
+          select s->>'blockId' from jsonb_array_elements(coalesce(r.signatures, '[]'::jsonb)) s where s->>'status' = 'signed'
+        )
+    ) q
+  ) where id = sub_id;
+end $$;
+
+-- An assigned signer stamps their saved signature onto one block.
+create or replace function sign_document(sub_id uuid, block_id text) returns void language plpgsql security definer as $$
+declare r submissions; me profiles;
+begin
+  select * into r from submissions where id = sub_id;
+  if not found then raise exception 'not found'; end if;
+  select * into me from profiles where uid = auth.uid();
+  if me."signatureImage" is null then raise exception 'no signature uploaded'; end if;
+  update submissions set signatures = (
+    select jsonb_agg(
+      case when e->>'blockId' = block_id and e->>'assignedUid' = auth.uid()::text and e->>'status' = 'pending'
+        then e || jsonb_build_object('status', 'signed', 'signatureImage', me."signatureImage", 'signedAt', (extract(epoch from now()) * 1000)::bigint)
+        else e end)
+    from jsonb_array_elements(coalesce(r.signatures, '[]'::jsonb)) e
+  ) where id = sub_id;
+  if not exists (
+    select 1 from jsonb_array_elements((select signatures from submissions where id = sub_id)) e
+    where e->>'blockId' = block_id and e->>'assignedUid' = auth.uid()::text and e->>'status' = 'signed'
+  ) then raise exception 'not assigned to sign this block'; end if;
+end $$;

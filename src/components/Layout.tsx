@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { Building2, ClipboardList, FileText, History, KeyRound, LogOut, Printer, Tags, User, Users } from 'lucide-react'
+import { Building2, ClipboardList, FileText, History, Inbox, KeyRound, LogOut, Printer, Tags, User, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { logout } from '../data/auth'
+import { countMyPendingToSign } from '../data/submissions'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-sm transition-colors ${
@@ -12,6 +14,8 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 export default function Layout() {
   const { profile } = useAuth()
+  const [toSign, setToSign] = useState(0)
+  useEffect(() => { if (profile?.uid) countMyPendingToSign(profile.uid).then(setToSign) }, [profile?.uid])
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]">
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-[#16233f] pb-4 text-[#cdd6e6]">
@@ -27,6 +31,10 @@ export default function Layout() {
           </NavLink>
           <NavLink to="/history" className={navLinkClass}>
             <History size={18} className="opacity-85" /> ประวัติ
+          </NavLink>
+          <NavLink to="/sign" className={navLinkClass}>
+            <Inbox size={18} className="opacity-85" /> รอฉันเซ็น
+            {toSign > 0 && <span className="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-[#16233f]">{toSign}</span>}
           </NavLink>
           {profile?.role === 'admin' && <>
             <NavLink to="/admin/employees" className={navLinkClass}>
