@@ -1,5 +1,6 @@
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
+import type { SignatureBlock as SigBlock } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
@@ -54,6 +55,11 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   }
   if (pages.length === 0) pages.push([])
   const totalPages = pages.length
+
+  // Signature blocks (configured per form), laid out in rows of 3.
+  const sigBlocks = settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
+  const sigRows: SigBlock[][] = []
+  for (let i = 0; i < sigBlocks.length; i += 3) sigRows.push(sigBlocks.slice(i, i + 3))
 
   return (
     <div id="print-area" style={{ fontFamily: "'Sarabun', serif" }} className="mx-auto max-w-3xl space-y-6 text-black print:space-y-0">
@@ -182,17 +188,13 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               เป็นจำนวนเงิน &nbsp; {bahtWords}
             </div>
 
-            {/* Signature blocks — every cell shares the same layout so lines align */}
-            <div className="mt-8 grid grid-cols-3 gap-8 text-center">
-              <SignatureBlock label="ผู้เบิก" />
-              <SignatureBlock label="หัวหน้าแผนก" />
-              <SignatureBlock label="ผู้อนุมัติ" />
-            </div>
-            <div className="mt-8 grid grid-cols-3 gap-8 text-center">
-              <SignatureBlock label="ผู้รับเงิน" />
-              <SignatureBlock label="ผู้ตรวจสอบ/ฝ่ายบัญชี" />
-              <div />
-            </div>
+            {/* Signature blocks — configured per form, laid out in rows of 3 */}
+            {sigRows.map((row, ri) => (
+              <div key={ri} className="mt-8 grid grid-cols-3 gap-8 text-center">
+                {row.map(b => <SignatureBlock key={b.id} label={b.label} />)}
+                {Array.from({ length: 3 - row.length }).map((_, k) => <div key={`e${k}`} />)}
+              </div>
+            ))}
 
             {/* หมายเหตุ — ซ่อนทั้งบล็อกเมื่อไม่มีหมายเหตุ */}
             {notes.length > 0 && (

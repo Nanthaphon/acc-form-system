@@ -1,7 +1,8 @@
 import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { isTextCol } from '../../types/schema'
+import { isTextCol, DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
+import type { SignatureBlock as SigBlock } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatIsoDate } from '../../shared/date'
@@ -82,6 +83,9 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
+  const sigBlocks = settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
+  const sigRows: SigBlock[][] = []
+  for (let i = 0; i < sigBlocks.length; i += 3) sigRows.push(sigBlocks.slice(i, i + 3))
 
   // Totals footer: label spans the leading text columns up to the first visible numeric/calc column.
   const firstNumericIdx = vcols.findIndex(c => !isTextCol(c.type))
@@ -208,36 +212,19 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
         {/* เป็นจำนวนเงิน */}
         <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>
 
-        {/* Signature blocks */}
-        <View style={s.sigRow}>
-          <View style={s.sigCol}>
-            <View style={s.sigLine} />
-            <Text>ผู้เบิก</Text>
-            <Text style={s.sigDate}>วันที่ ................</Text>
+        {/* Signature blocks — configured per form, in rows of 3 */}
+        {sigRows.map((row, ri) => (
+          <View key={ri} style={s.sigRow}>
+            {row.map(b => (
+              <View key={b.id} style={s.sigCol}>
+                <View style={s.sigLine} />
+                <Text>{b.label}</Text>
+                <Text style={s.sigDate}>วันที่ ................</Text>
+              </View>
+            ))}
+            {Array.from({ length: 3 - row.length }).map((_, k) => <View key={`e${k}`} style={s.sigCol} />)}
           </View>
-          <View style={s.sigCol}>
-            <View style={s.sigLine} />
-            <Text>หัวหน้าแผนก</Text>
-            <Text style={s.sigDate}>วันที่ ................</Text>
-          </View>
-          <View style={s.sigCol}>
-            <View style={s.sigLine} />
-            <Text>ผู้อนุมัติ</Text>
-            <Text style={s.sigDate}>วันที่ ................</Text>
-          </View>
-        </View>
-        <View style={s.sigRow}>
-          <View style={s.sigCol}>
-            <View style={s.sigLine} />
-            <Text>ผู้รับเงิน</Text>
-            <Text style={s.sigDate}>วันที่ ................</Text>
-          </View>
-          <View style={s.sigCol}>
-            <View style={s.sigLine} />
-            <Text>ผู้ตรวจสอบ/ฝ่ายบัญชี</Text>
-            <Text style={s.sigDate}>วันที่ ................</Text>
-          </View>
-        </View>
+        ))}
 
         {/* หมายเหตุ — ซ่อนทั้งบล็อกเมื่อไม่มีหมายเหตุ */}
         {notes.length > 0 && (

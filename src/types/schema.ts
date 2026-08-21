@@ -78,6 +78,7 @@ export interface FormSettings {
   groupId?: string; name?: string
   accessGroup?: string
   active?: boolean
+  signatureBlocks?: SignatureBlock[]   // configurable signature blocks (falls back to DEFAULT_SIGNATURE_BLOCKS)
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
@@ -158,6 +159,23 @@ export interface ExpenseHeader {
 }
 
 export type SubmissionStatus = 'draft' | 'pending' | 'signed'
+
+// A signature block configured on a form (up to 6, first is normally ผู้เบิก).
+// `online` = this block needs an online signature (a signer is assigned when
+// filling); otherwise it prints as a blank line for a wet signature.
+export interface SignatureBlock {
+  id: string
+  label: string
+  online: boolean
+}
+export const MAX_SIGNATURE_BLOCKS = 6
+export const DEFAULT_SIGNATURE_BLOCKS: SignatureBlock[] = [
+  { id: 'requester', label: 'ผู้เบิก', online: false },
+  { id: 'head', label: 'หัวหน้าแผนก', online: false },
+  { id: 'approver', label: 'ผู้อนุมัติ', online: false },
+  { id: 'receiver', label: 'ผู้รับเงิน', online: false },
+  { id: 'checker', label: 'ผู้ตรวจสอบ/ฝ่ายบัญชี', online: false },
+]
 
 // One online signature slot on a document: the block it fills, who was assigned,
 // and (once they sign) a snapshot of their signature image.

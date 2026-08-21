@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
-import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, calcOperands } from '../../types/schema'
+import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, calcOperands, DEFAULT_SIGNATURE_BLOCKS, MAX_SIGNATURE_BLOCKS } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
@@ -71,6 +71,23 @@ export default function FormSettingsPage() {
   function setNote(idx: number, value: string) { setSettings(s => ({ ...s, notes: s.notes.map((n, i) => i === idx ? value : n) })) }
   function removeNote(idx: number) { setSettings(s => ({ ...s, notes: s.notes.filter((_, i) => i !== idx) })) }
   function addNote() { setSettings(s => ({ ...s, notes: [...s.notes, ''] })) }
+
+  // ----- signature blocks -----
+  const sigBlocks = (): SignatureBlock[] => settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
+  function setSigBlocks(blocks: SignatureBlock[]) { setSettings(s => ({ ...s, signatureBlocks: blocks })) }
+  function addSigBlock() {
+    const b = sigBlocks()
+    if (b.length >= MAX_SIGNATURE_BLOCKS) { alert(`ช่องลายเซ็นได้ไม่เกิน ${MAX_SIGNATURE_BLOCKS} ช่อง`); return }
+    setSigBlocks([...b, { id: crypto.randomUUID(), label: 'ตำแหน่งใหม่', online: false }])
+  }
+  function setSigLabel(idx: number, label: string) { setSigBlocks(sigBlocks().map((b, i) => i === idx ? { ...b, label } : b)) }
+  function toggleSigOnline(idx: number) { setSigBlocks(sigBlocks().map((b, i) => i === idx ? { ...b, online: !b.online } : b)) }
+  function removeSigBlock(idx: number) { setSigBlocks(sigBlocks().filter((_, i) => i !== idx)) }
+  function moveSigBlock(idx: number, dir: -1 | 1) {
+    const b = [...sigBlocks()]; const j = idx + dir
+    if (j < 0 || j >= b.length) return
+    ;[b[idx], b[j]] = [b[j], b[idx]]; setSigBlocks(b)
+  }
 
   // ----- columns -----
   function setColumns(cols: FormColumn[]) { setSettings(s => ({ ...s, columns: cols })) }
@@ -469,6 +486,37 @@ export default function FormSettingsPage() {
           ))}
         </div>
         <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>
+      </div>
+
+      {/* ช่องลายเซ็น */}
+      <div className={cardClass}>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h2 className={cardTitleClass}>ช่องลายเซ็น</h2>
+          <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">{sigBlocks().length} / {MAX_SIGNATURE_BLOCKS}</span>
+        </div>
+        <p className="mb-3 text-xs text-[#7a869a]">ช่องลายเซ็นบนเอกสาร (สูงสุด {MAX_SIGNATURE_BLOCKS} ช่อง รวมผู้เบิก) · ติ๊ก “เซ็นออนไลน์” สำหรับช่องที่ให้เลือกคนเซ็นในระบบ ช่องที่ไม่ติ๊กจะเว้นเส้นให้เซ็นสด</p>
+        <div className="space-y-2">
+          {sigBlocks().map((b, i) => (
+            <div key={b.id} className="flex flex-wrap items-center gap-2">
+              <input className={`${inputClass} min-w-[160px] flex-1`} value={b.label} placeholder="ชื่อตำแหน่ง" onChange={e => setSigLabel(i, e.target.value)} />
+              <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm text-[#16233f]">
+                <input type="checkbox" checked={b.online} onChange={() => toggleSigOnline(i)} /> เซ็นออนไลน์
+              </label>
+              <div className="flex items-center gap-1.5">
+                <button className={iconBtn} onClick={() => moveSigBlock(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
+                <button className={iconBtn} onClick={() => moveSigBlock(i, 1)} disabled={i === sigBlocks().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
+                <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeSigBlock(i)} title="ลบช่อง"><Trash2 size={16} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7] disabled:opacity-40"
+          onClick={addSigBlock}
+          disabled={sigBlocks().length >= MAX_SIGNATURE_BLOCKS}
+        >
+          <Plus size={14} /> เพิ่มช่องลายเซ็น
+        </button>
       </div>
 
       <button
