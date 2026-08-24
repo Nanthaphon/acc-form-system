@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta, statusLabel } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta, statusLabel, listSigners } from '../../data/submissions'
+import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
 import type { Submission, FormSettings } from '../../types/schema'
+import { DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
 import { formatDate } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
+import AssignSignersModal from '../../components/AssignSignersModal'
 
 export default function HistoryPage() {
   const { profile } = useAuth()
@@ -16,12 +19,21 @@ export default function HistoryPage() {
   const [forms, setForms] = useState<FormSettings[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
+  const [signers, setSigners] = useState<Signer[]>([])
+  const [signModal, setSignModal] = useState<Submission | null>(null)
   function load() { if (profile) listMySubmissions(profile.uid).then(setRows) }
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
-  useEffect(() => { listForms().then(setForms) }, [])
+  useEffect(() => { listForms().then(setForms); listSigners().then(setSigners) }, [])
 
   const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
   const filtered = applyFilters(rows, filters, myName)
+
+  const formOf = (ft: string) => forms.find(f => f.formType === ft)
+  // A doc can be sent for signing if its form has online blocks and it isn't fully signed.
+  const canSend = (r: Submission) => {
+    const blocks = formOf(r.formType)?.signatureBlocks ?? DEFAULT_SIGNATURE_BLOCKS
+    return blocks.some(b => b.online) && subStatus(r) !== 'signed'
+  }
 
   async function onDelete(r: Submission) {
     if (!confirm(`ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?\nลบถาวร ยกเลิกไม่ได้`)) return
@@ -55,6 +67,12 @@ export default function HistoryPage() {
                 <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>แก้ไข</Link>
                 <span className="mx-1.5 text-gray-300">|</span>
                 <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
+                {canSend(r) && (
+                  <>
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    <button className="font-medium text-blue-600 hover:underline" onClick={() => setSignModal(r)}>ส่งให้เซ็น</button>
+                  </>
+                )}
                 <span className="mx-1.5 text-gray-300">|</span>
                 <button className="text-red-600 hover:underline" onClick={() => onDelete(r)}>ลบ</button>
               </td>
@@ -62,6 +80,19 @@ export default function HistoryPage() {
           ))}
         </tbody>
       </table>
+
+      {signModal && profile && (
+        <AssignSignersModal
+          submission={signModal}
+          settings={formOf(signModal.formType) ?? ({ signatureBlocks: DEFAULT_SIGNATURE_BLOCKS } as FormSettings)}
+          signers={signers}
+          currentUid={profile.uid}
+          currentName={myName()}
+          currentSignature={profile.signatureImage}
+          onClose={() => setSignModal(null)}
+          onDone={load}
+        />
+      )}
     </div>
   )
 }

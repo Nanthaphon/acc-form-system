@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
-import { ArrowLeft, Download, PenLine, Printer, Receipt, Save } from 'lucide-react'
+import { ArrowLeft, Download, Printer, Receipt, Save } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature } from '../../types/schema'
-import { emptyRow, EXPENSE_CLAIM_DEFAULTS, DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
+import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeColumnTotals, grandTotal, taxSummary } from '../../features/expense-claim/calc'
 import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
-import SignerSelect from '../../components/SignerSelect'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
-import { createSubmission, updateSubmission, getSubmission, incrementPrint, assignSigners, signDocument, listSigners } from '../../data/submissions'
-import type { Signer } from '../../data/submissions'
+import { createSubmission, updateSubmission, getSubmission, incrementPrint } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
 
@@ -28,9 +26,7 @@ export default function FormPage() {
   const [savedId, setSavedId] = useState<string | null>(id ?? null)
   const [showPreview, setShowPreview] = useState(false)
   const [versionRefresh, setVersionRefresh] = useState(0)
-  const [sigs, setSigs] = useState<DocSignature[]>([])
-  const [assign, setAssign] = useState<Record<string, string>>({}) // blockId -> signer uid
-  const [signers, setSigners] = useState<Signer[]>([])
+  const [sigs, setSigs] = useState<DocSignature[]>([]) // signed signatures, to stamp on the document
   const [header, setHeader] = useState<ExpenseHeader>({
     subject: 'ขออนุมัติเบิกค่าใช้จ่าย', categories: [], companyId: profile?.companyId ?? '',
     firstName: profile?.firstName ?? '', lastName: profile?.lastName ?? '',
@@ -51,15 +47,12 @@ export default function FormPage() {
     }
   }
 
-  useEffect(() => { listSigners().then(setSigners) }, [])
   useEffect(() => { // EDIT mode: load existing submission + its form settings
     if (!id) return
     getSubmission(id).then(s => {
       if (!s) return
       setHeader(s.header); setItems(s.items); setDocNumber(s.docNumber); setSavedId(s.id)
-      const list = s.signatures ?? []
-      setSigs(list)
-      setAssign(Object.fromEntries(list.map(x => [x.blockId, x.assignedUid])))
+      setSigs(s.signatures ?? [])
       getFormSettings(s.formType).then(setSettings)
     })
   }, [id])
@@ -95,7 +88,7 @@ export default function FormPage() {
         setSavedId(created.id); setDocNumber(created.docNumber)
       }
       setVersionRefresh(n => n + 1)
-      alert('บันทึกแล้ว')
+      alert('บันทึกแล้ว — ส่งให้เซ็นได้ที่หน้าประวัติ')
     } catch {
       alert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
     }
@@ -114,41 +107,6 @@ export default function FormPage() {
   async function print() {
     if (savedId) await incrementPrint(savedId)
     window.print()
-  }
-
-  const allBlocks = settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
-  const requesterBlockId = allBlocks[0]?.id           // first block is always the requester (ผู้เบิก)
-  const isSelfBlock = (id: string) => id === requesterBlockId
-  const onlineBlocks = allBlocks.filter(b => b.online)
-  const signerName = (uid: string) => signers.find(s => s.uid === uid)?.name ?? ''
-  const sigFor = (blockId: string) => sigs.find(x => x.blockId === blockId)
-
-  const myName = () => `${profile!.firstName ?? ''} ${profile!.lastName ?? ''}`.trim()
-
-  async function sendForSign() {
-    if (!savedId) { alert('กรุณาบันทึกเอกสารก่อนส่งให้เซ็น'); return }
-    const pending = onlineBlocks.filter(b => sigFor(b.id)?.status !== 'signed')
-    // signer must be picked for every non-self block; self blocks are the requester
-    if (pending.some(b => !isSelfBlock(b.id) && !assign[b.id])) { alert('กรุณาเลือกผู้เซ็นให้ครบทุกช่อง'); return }
-    const assignments: DocSignature[] = pending.map(b => {
-      const uid = isSelfBlock(b.id) ? profile!.uid : assign[b.id]
-      return { blockId: b.id, blockLabel: b.label, assignedUid: uid, assignedName: isSelfBlock(b.id) ? myName() : signerName(uid), status: 'pending' as const }
-    })
-    try {
-      await assignSigners(savedId, assignments)
-      // Auto-sign the requester's own block if they have a saved signature.
-      if (profile?.signatureImage) {
-        for (const b of pending.filter(b => isSelfBlock(b.id))) {
-          try { await signDocument(savedId, b.id) } catch { /* leave pending on failure */ }
-        }
-      }
-      const updated = await getSubmission(savedId)
-      if (updated) setSigs(updated.signatures ?? [])
-      alert('ส่งให้เซ็นแล้ว — ผู้ถูกเลือกจะเห็นในเมนู "รอฉันเซ็น"'
-        + (profile?.signatureImage ? '' : '\n(ช่องผู้เบิกจะเซ็นได้เมื่อคุณอัปโหลดลายเซ็นในหน้าข้อมูลของฉัน)'))
-    } catch (e: any) {
-      alert('ส่งให้เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด'))
-    }
   }
 
   const isAdmin = profile?.role === 'admin'
@@ -199,47 +157,6 @@ export default function FormPage() {
           </div>
         )}
         {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} />}
-        {!showPreview && onlineBlocks.length > 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <div className="mb-1 text-[15px] font-semibold text-gray-900">ผู้เซ็นเอกสาร (ออนไลน์)</div>
-            <p className="mb-3 text-xs text-gray-500">
-              เลือกคนที่จะให้เซ็นแต่ละช่อง แล้วกด “ส่งให้เซ็น” — คนนั้นจะเห็นในเมนู “รอฉันเซ็น”
-              {!savedId && ' · บันทึกเอกสารก่อนจึงจะส่งได้'}
-            </p>
-            <div className="space-y-2">
-              {onlineBlocks.map(b => {
-                const sig = sigFor(b.id)
-                return (
-                  <div key={b.id} className="flex flex-wrap items-center gap-2">
-                    <span className="w-36 shrink-0 text-sm text-gray-700">{b.label}</span>
-                    {sig?.status === 'signed' ? (
-                      <span className="text-sm font-medium text-green-700">✔ เซ็นแล้วโดย {sig.assignedName}</span>
-                    ) : isSelfBlock(b.id) ? (
-                      <span className="text-sm text-gray-700">ตัวเอง (คุณ){sig?.status === 'pending' ? ' · รอเซ็น' : ''}</span>
-                    ) : (
-                      <>
-                        <SignerSelect
-                          className="w-56 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                          value={assign[b.id] ?? ''}
-                          onChange={uid => setAssign({ ...assign, [b.id]: uid })}
-                          signers={signers}
-                        />
-                        {sig?.status === 'pending' && <span className="text-xs font-medium text-amber-600">รอเซ็น</span>}
-                      </>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <button
-              className="mt-3 inline-flex items-center gap-2 rounded-lg border-[1.5px] border-blue-600 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-40"
-              onClick={sendForSign}
-              disabled={!savedId}
-            >
-              <PenLine size={16} /> ส่งให้เซ็น
-            </button>
-          </div>
-        )}
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
         <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sigs} />
