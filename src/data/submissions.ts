@@ -94,10 +94,22 @@ export function subStatus(s: Submission): SubmissionStatus {
 }
 const STATUS_META: Record<SubmissionStatus, { label: string; className: string }> = {
   draft: { label: 'ร่าง', className: 'bg-gray-100 text-gray-600' },
-  pending: { label: 'รอเซ็น', className: 'bg-amber-100 text-amber-700' },
+  pending: { label: 'รอลายเซ็น', className: 'bg-amber-100 text-amber-700' },
   signed: { label: 'เซ็นครบ', className: 'bg-green-100 text-green-700' },
 }
 export function statusMeta(s: SubmissionStatus) { return STATUS_META[s] }
+
+// How many of the assigned signatures are done.
+export function signProgress(s: Submission): { signed: number; total: number } {
+  const sigs = s.signatures ?? []
+  return { signed: sigs.filter(x => x.status === 'signed').length, total: sigs.length }
+}
+// Display label incl. progress count while waiting for signatures.
+export function statusLabel(s: Submission): string {
+  const st = subStatus(s)
+  if (st === 'pending') { const p = signProgress(s); return `รอลายเซ็น (${p.signed}/${p.total})` }
+  return statusMeta(st).label
+}
 
 export async function getSubmission(id: string): Promise<Submission | null> {
   const { data } = await supabase.from('submissions').select('*').eq('id', id).maybeSingle()

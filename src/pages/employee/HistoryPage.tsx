@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta, statusLabel } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
 import type { Submission, FormSettings } from '../../types/schema'
@@ -44,7 +44,7 @@ export default function HistoryPage() {
               <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
               <td className="border px-2 py-1 text-center">{r.printCount}</td>
               <td className="border px-2 py-1 text-center">
-                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusMeta(subStatus(r)).className}`}>{statusMeta(subStatus(r)).label}</span>
+                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusMeta(subStatus(r)).className}`}>{statusLabel(r)}</span>
               </td>
               <td className="border px-2 py-1 whitespace-nowrap text-center">
                 {editLabel(r, vcounts)
