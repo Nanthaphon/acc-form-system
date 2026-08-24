@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta, statusLabel, listSigners } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta, statusLabel, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -43,6 +43,16 @@ export default function HistoryPage() {
     try { await deleteSubmission(r.id); load() }
     catch { alert('ลบเอกสารไม่สำเร็จ') }
   }
+
+  async function onCancelSign(r: Submission) {
+    const signed = (r.signatures ?? []).filter(x => x.status === 'signed').length
+    const msg = signed > 0
+      ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับเป็นร่าง`
+      : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับเป็นร่าง`
+    if (!confirm(msg)) return
+    try { await cancelSigning(r.id); load() }
+    catch (e: any) { alert('ยกเลิกไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
+  }
   return (
     <div>
       <div className="mb-4 space-y-3">
@@ -74,6 +84,12 @@ export default function HistoryPage() {
                   <>
                     <span className="mx-1.5 text-gray-300">|</span>
                     <button className="font-medium text-blue-600 hover:underline" onClick={() => setSignModal(r)}>ส่งให้เซ็น</button>
+                  </>
+                )}
+                {subStatus(r) === 'pending' && (
+                  <>
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    <button className="text-amber-700 hover:underline" onClick={() => onCancelSign(r)}>ยกเลิกส่งเซ็น</button>
                   </>
                 )}
                 {subStatus(r) === 'draft' && (

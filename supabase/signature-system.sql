@@ -97,3 +97,10 @@ begin
     where e->>'blockId' = block_id and e->>'assignedUid' = auth.uid()::text and e->>'status' = 'signed'
   ) then raise exception 'not assigned to sign this block'; end if;
 end $$;
+
+-- The owner recalls a document from signing — clears all assignments (back to draft).
+create or replace function cancel_signing(sub_id uuid) returns void language plpgsql security definer as $$
+begin
+  update submissions set signatures = '[]'::jsonb where id = sub_id and "createdBy" = auth.uid();
+  if not found then raise exception 'cannot cancel signing'; end if;
+end $$;

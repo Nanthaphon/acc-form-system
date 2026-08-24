@@ -76,6 +76,11 @@ export async function signDocument(subId: string, blockId: string): Promise<void
   const { error } = await supabase.rpc('sign_document', { sub_id: subId, block_id: blockId })
   if (error) throw error
 }
+// Owner recalls a document from signing — clears all assignments (back to draft).
+export async function cancelSigning(subId: string): Promise<void> {
+  const { error } = await supabase.rpc('cancel_signing', { sub_id: subId })
+  if (error) throw error
+}
 // Documents where the current user is assigned and still has a pending block.
 export async function listMyPendingToSign(uid: string): Promise<Submission[]> {
   const { data } = await supabase.from('submissions').select('*').order('createdAt', { ascending: false })
