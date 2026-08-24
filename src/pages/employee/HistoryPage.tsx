@@ -76,8 +76,12 @@ export default function HistoryPage() {
                     <button className="font-medium text-blue-600 hover:underline" onClick={() => setSignModal(r)}>ส่งให้เซ็น</button>
                   </>
                 )}
-                <span className="mx-1.5 text-gray-300">|</span>
-                <button className="text-red-600 hover:underline" onClick={() => onDelete(r)}>ลบ</button>
+                {subStatus(r) === 'draft' && (
+                  <>
+                    <span className="mx-1.5 text-gray-300">|</span>
+                    <button className="text-red-600 hover:underline" onClick={() => onDelete(r)}>ลบ</button>
+                  </>
+                )}
               </td>
             </tr>
           ))}
