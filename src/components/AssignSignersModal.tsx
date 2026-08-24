@@ -32,11 +32,14 @@ export default function AssignSignersModal({ submission, settings, signers, curr
 
   async function send() {
     const pending = onlineBlocks.filter(b => sigFor(b.id)?.status !== 'signed')
-    if (pending.some(b => !isSelf(b.id) && !assign[b.id])) { alert('กรุณาเลือกผู้เซ็นให้ครบทุกช่อง'); return }
-    const assignments: DocSignature[] = pending.map(b => {
-      const uid = isSelf(b.id) ? currentUid : assign[b.id]
-      return { blockId: b.id, blockLabel: b.label, assignedUid: uid, assignedName: isSelf(b.id) ? currentName : signerName(uid), status: 'pending' as const }
-    })
+    // Not required to fill every block — unselected blocks are left blank for a
+    // wet signature (print & sign on paper). Only assign blocks that have a signer.
+    const assignments: DocSignature[] = pending
+      .filter(b => isSelf(b.id) || assign[b.id])
+      .map(b => {
+        const uid = isSelf(b.id) ? currentUid : assign[b.id]
+        return { blockId: b.id, blockLabel: b.label, assignedUid: uid, assignedName: isSelf(b.id) ? currentName : signerName(uid), status: 'pending' as const }
+      })
     setBusy(true)
     try {
       await assignSigners(submission.id, assignments)
@@ -61,7 +64,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
           <div className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">ฟอร์มนี้ไม่มีช่องเซ็นออนไลน์</div>
         ) : (
           <>
-            <p className="mb-3 text-xs text-gray-500">เลือกคนที่จะให้เซ็นแต่ละช่อง (ช่องผู้เบิก = ตัวคุณเอง)</p>
+            <p className="mb-3 text-xs text-gray-500">เลือกคนที่จะให้เซ็นแต่ละช่อง (ช่องผู้เบิก = ตัวคุณเอง) · ช่องที่ไม่เลือกจะเว้นว่างไว้เซ็นบนกระดาษ</p>
             <div className="space-y-2">
               {onlineBlocks.map(b => {
                 const sig = sigFor(b.id)
