@@ -114,7 +114,10 @@ export default function FormPage() {
     window.print()
   }
 
-  const onlineBlocks = (settings.signatureBlocks ?? DEFAULT_SIGNATURE_BLOCKS).filter(b => b.online)
+  const allBlocks = settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
+  const requesterBlockId = allBlocks[0]?.id           // first block is always the requester (ผู้เบิก)
+  const isSelfBlock = (id: string) => id === requesterBlockId
+  const onlineBlocks = allBlocks.filter(b => b.online)
   const signerName = (uid: string) => signers.find(s => s.uid === uid)?.name ?? ''
   const sigFor = (blockId: string) => sigs.find(x => x.blockId === blockId)
 
@@ -124,16 +127,16 @@ export default function FormPage() {
     if (!savedId) { alert('กรุณาบันทึกเอกสารก่อนส่งให้เซ็น'); return }
     const pending = onlineBlocks.filter(b => sigFor(b.id)?.status !== 'signed')
     // signer must be picked for every non-self block; self blocks are the requester
-    if (pending.some(b => !b.self && !assign[b.id])) { alert('กรุณาเลือกผู้เซ็นให้ครบทุกช่อง'); return }
+    if (pending.some(b => !isSelfBlock(b.id) && !assign[b.id])) { alert('กรุณาเลือกผู้เซ็นให้ครบทุกช่อง'); return }
     const assignments: DocSignature[] = pending.map(b => {
-      const uid = b.self ? profile!.uid : assign[b.id]
-      return { blockId: b.id, blockLabel: b.label, assignedUid: uid, assignedName: b.self ? myName() : signerName(uid), status: 'pending' as const }
+      const uid = isSelfBlock(b.id) ? profile!.uid : assign[b.id]
+      return { blockId: b.id, blockLabel: b.label, assignedUid: uid, assignedName: isSelfBlock(b.id) ? myName() : signerName(uid), status: 'pending' as const }
     })
     try {
       await assignSigners(savedId, assignments)
-      // Auto-sign the requester's own blocks if they have a saved signature.
+      // Auto-sign the requester's own block if they have a saved signature.
       if (profile?.signatureImage) {
-        for (const b of pending.filter(b => b.self)) {
+        for (const b of pending.filter(b => isSelfBlock(b.id))) {
           try { await signDocument(savedId, b.id) } catch { /* leave pending on failure */ }
         }
       }
@@ -209,7 +212,7 @@ export default function FormPage() {
                     <span className="w-36 shrink-0 text-sm text-gray-700">{b.label}</span>
                     {sig?.status === 'signed' ? (
                       <span className="text-sm font-medium text-green-700">✔ เซ็นแล้วโดย {sig.assignedName}</span>
-                    ) : b.self ? (
+                    ) : isSelfBlock(b.id) ? (
                       <span className="text-sm text-gray-700">ตัวเอง (คุณ){sig?.status === 'pending' ? ' · รอเซ็น' : ''}</span>
                     ) : (
                       <>

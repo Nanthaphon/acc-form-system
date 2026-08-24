@@ -82,7 +82,6 @@ export default function FormSettingsPage() {
   }
   function setSigLabel(idx: number, label: string) { setSigBlocks(sigBlocks().map((b, i) => i === idx ? { ...b, label } : b)) }
   function toggleSigOnline(idx: number) { setSigBlocks(sigBlocks().map((b, i) => i === idx ? { ...b, online: !b.online } : b)) }
-  function toggleSigSelf(idx: number) { setSigBlocks(sigBlocks().map((b, i) => i === idx ? { ...b, self: !b.self } : b)) }
   function removeSigBlock(idx: number) { setSigBlocks(sigBlocks().filter((_, i) => i !== idx)) }
   function moveSigBlock(idx: number, dir: -1 | 1) {
     const b = [...sigBlocks()]; const j = idx + dir
@@ -503,11 +502,7 @@ export default function FormSettingsPage() {
               <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm text-[#16233f]">
                 <input type="checkbox" checked={b.online} onChange={() => toggleSigOnline(i)} /> เซ็นออนไลน์
               </label>
-              {b.online && (
-                <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm text-[#16233f]">
-                  <input type="checkbox" checked={!!b.self} onChange={() => toggleSigSelf(i)} /> ผู้เบิกเซ็นเอง
-                </label>
-              )}
+              {i === 0 && <span className="shrink-0 text-xs text-gray-400">(ช่องผู้เบิก — เซ็นเองอัตโนมัติ)</span>}
               <div className="flex items-center gap-1.5">
                 <button className={iconBtn} onClick={() => moveSigBlock(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
                 <button className={iconBtn} onClick={() => moveSigBlock(i, 1)} disabled={i === sigBlocks().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>

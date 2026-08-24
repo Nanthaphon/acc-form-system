@@ -167,8 +167,9 @@ export interface SignatureBlock {
   id: string
   label: string
   online: boolean
-  self?: boolean   // online block signed by the requester (the person filling) — no signer dropdown
 }
+// The first signature block is always the requester (ผู้เบิก) — signed by the
+// person filling the form (auto, no signer dropdown).
 export const MAX_SIGNATURE_BLOCKS = 6
 export const DEFAULT_SIGNATURE_BLOCKS: SignatureBlock[] = [
   { id: 'requester', label: 'ผู้เบิก', online: false },
