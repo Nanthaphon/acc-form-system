@@ -9,6 +9,7 @@ import { computeColumnTotals, grandTotal, taxSummary } from '../../features/expe
 import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
+import SignerSelect from '../../components/SignerSelect'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
 import { createSubmission, updateSubmission, getSubmission, incrementPrint, assignSigners, signDocument, listSigners } from '../../data/submissions'
@@ -217,14 +218,12 @@ export default function FormPage() {
                       <span className="text-sm text-gray-700">ตัวเอง (คุณ){sig?.status === 'pending' ? ' · รอเซ็น' : ''}</span>
                     ) : (
                       <>
-                        <select
-                          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                        <SignerSelect
+                          className="w-56 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                           value={assign[b.id] ?? ''}
-                          onChange={e => setAssign({ ...assign, [b.id]: e.target.value })}
-                        >
-                          <option value="">— เลือกผู้เซ็น —</option>
-                          {signers.map(s => <option key={s.uid} value={s.uid}>{s.name}</option>)}
-                        </select>
+                          onChange={uid => setAssign({ ...assign, [b.id]: uid })}
+                          signers={signers}
+                        />
                         {sig?.status === 'pending' && <span className="text-xs font-medium text-amber-600">รอเซ็น</span>}
                       </>
                     )}
