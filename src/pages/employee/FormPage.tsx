@@ -71,9 +71,10 @@ export default function FormPage() {
 
   async function save() {
     const totals = buildTotals()
-    const hasAmount = totals.grandTotal > 0
-    if (!hasAmount) {
-      alert('กรุณากรอกรายการอย่างน้อย 1 รายการ (วันทำงาน x วันละ ต้องมากกว่า 0)')
+    // Require a total > 0 only for forms that actually have amount columns.
+    const hasNumericCol = settings.columns.some(c => c.type === 'number' || c.type === 'calc')
+    if (hasNumericCol && totals.grandTotal <= 0) {
+      alert('กรุณากรอกยอดเงินอย่างน้อย 1 รายการ (ยอดรวมต้องมากกว่า 0)')
       return
     }
     if (!header.firstName.trim() || !header.lastName.trim() || !header.position.trim()) {
