@@ -4,7 +4,8 @@ import { listAllSubmissions, submissionAmount, deleteSubmission, subStatus, stat
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listEmployees } from '../../data/users'
 import { listForms } from '../../data/formSettings'
-import type { Submission, UserProfile, FormSettings } from '../../types/schema'
+import { listGroups } from '../../data/formGroups'
+import type { Submission, UserProfile, FormSettings, FormGroup } from '../../types/schema'
 import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
@@ -14,6 +15,7 @@ export default function PrintHistoryPage() {
   const [rows, setRows] = useState<Submission[]>([])
   const [employees, setEmployees] = useState<UserProfile[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
+  const [groups, setGroups] = useState<FormGroup[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
 
@@ -22,6 +24,7 @@ export default function PrintHistoryPage() {
     loadRows()
     listEmployees().then(setEmployees)
     listForms().then(setForms)
+    listGroups().then(setGroups)
     getVersionCounts().then(setVcounts)
   }, [])
 
@@ -40,13 +43,14 @@ export default function PrintHistoryPage() {
     return f?.name || f?.title || ft
   }
 
-  const filtered = applyFilters(rows, filters, empName)
+  const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? groups[0]?.id
+  const filtered = applyFilters(rows, filters, empName, formGroup)
 
   return (
     <div>
       <div className="mb-4 space-y-3">
         <h1 className="text-xl font-medium">ประวัติการพิมพ์ทั้งหมด</h1>
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} employees={employees} resultCount={filtered.length} />
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} employees={employees} resultCount={filtered.length} />
       </div>
       <div className="overflow-x-auto">
         <table className="w-full border text-sm">

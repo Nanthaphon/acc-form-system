@@ -5,9 +5,10 @@ import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
+import { listGroups } from '../../data/formGroups'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
-import type { UserProfile, Submission, FormSettings, Company, AccessGroup } from '../../types/schema'
+import type { UserProfile, Submission, FormSettings, Company, AccessGroup, FormGroup } from '../../types/schema'
 import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
@@ -29,6 +30,7 @@ export default function EmployeeDetailPage() {
   const [forms, setForms] = useState<FormSettings[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
+  const [folders, setFolders] = useState<FormGroup[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
 
@@ -41,6 +43,7 @@ export default function EmployeeDetailPage() {
     listForms().then(setForms)
     listCompanies().then(setCompanies)
     listAccessGroups().then(setGroups)
+    listGroups().then(setFolders)
   }, [uid])
 
   async function onDeleteSub(r: Submission) {
@@ -58,7 +61,8 @@ export default function EmployeeDetailPage() {
 
   if (!profile) return <div className="p-4 text-gray-500">กำลังโหลด...</div>
 
-  const filtered = applyFilters(subs, filters, () => `${profile.firstName} ${profile.lastName}`)
+  const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? folders[0]?.id
+  const filtered = applyFilters(subs, filters, () => `${profile.firstName} ${profile.lastName}`, formGroup)
 
   return (
     <div className="space-y-6">
@@ -83,7 +87,7 @@ export default function EmployeeDetailPage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-[#16233f]">เอกสารที่พิมพ์ ({subs.length})</h2>
         <div className="mb-3">
-          <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} resultCount={filtered.length} />
+          <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} resultCount={filtered.length} />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full border text-sm">

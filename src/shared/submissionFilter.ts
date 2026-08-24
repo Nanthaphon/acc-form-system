@@ -4,6 +4,7 @@ import { subStatus } from '../data/submissions'
 export interface Filters {
   q: string          // search: doc number / employee name
   formType: string   // '' = all
+  groupId: string    // folder / form group; '' = all
   status: string     // '' = all
   emp: string        // employeeId; '' = all (only used where an employee filter is shown)
   datePreset: string // all | today | thisMonth | lastMonth | thisYear | custom
@@ -11,7 +12,7 @@ export interface Filters {
   toD: string
 }
 
-export const emptyFilters: Filters = { q: '', formType: '', status: '', emp: '', datePreset: 'all', fromD: '', toD: '' }
+export const emptyFilters: Filters = { q: '', formType: '', groupId: '', status: '', emp: '', datePreset: 'all', fromD: '', toD: '' }
 
 export function dateBounds(f: Filters): [number, number] {
   const now = new Date()
@@ -30,12 +31,16 @@ export function dateBounds(f: Filters): [number, number] {
   }
 }
 
-export function applyFilters(rows: Submission[], f: Filters, empName: (eid: string) => string): Submission[] {
+export function applyFilters(
+  rows: Submission[], f: Filters, empName: (eid: string) => string,
+  formGroup?: (formType: string) => string | undefined,   // resolve a form's folder
+): Submission[] {
   const [dStart, dEnd] = dateBounds(f)
   const needle = f.q.trim().toLowerCase()
   return rows.filter(r => {
     if (f.emp && r.createdByEmployeeId !== f.emp) return false
     if (f.formType && r.formType !== f.formType) return false
+    if (f.groupId && formGroup && formGroup(r.formType) !== f.groupId) return false
     if (f.status && subStatus(r) !== f.status) return false
     if (r.createdAt < dStart || r.createdAt > dEnd) return false
     if (needle) {

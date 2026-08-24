@@ -1,4 +1,4 @@
-import type { FormSettings, UserProfile, SubmissionStatus } from '../types/schema'
+import type { FormSettings, FormGroup, UserProfile, SubmissionStatus } from '../types/schema'
 import { statusMeta } from '../data/submissions'
 import type { Filters } from '../shared/submissionFilter'
 import { emptyFilters } from '../shared/submissionFilter'
@@ -11,11 +11,12 @@ interface Props {
   value: Filters
   onChange: (f: Filters) => void
   forms: FormSettings[]
+  groups?: FormGroup[]        // when provided, show a folder filter
   employees?: UserProfile[]   // when provided, show an employee filter
   resultCount: number
 }
 
-export default function SubmissionFilterBar({ value, onChange, forms, employees, resultCount }: Props) {
+export default function SubmissionFilterBar({ value, onChange, forms, groups, employees, resultCount }: Props) {
   const set = (patch: Partial<Filters>) => onChange({ ...value, ...patch })
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -25,6 +26,12 @@ export default function SubmissionFilterBar({ value, onChange, forms, employees,
         value={value.q}
         onChange={e => set({ q: e.target.value })}
       />
+      {groups && groups.length > 0 && (
+        <select className={cls} value={value.groupId} onChange={e => set({ groupId: e.target.value })}>
+          <option value="">— ทุกโฟลเดอร์ —</option>
+          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+        </select>
+      )}
       <select className={cls} value={value.formType} onChange={e => set({ formType: e.target.value })}>
         <option value="">— ฟอร์มทั้งหมด —</option>
         {forms.map(f => <option key={f.formType} value={f.formType}>{f.name || f.title}</option>)}

@@ -5,7 +5,8 @@ import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statu
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
-import type { Submission, FormSettings } from '../../types/schema'
+import { listGroups } from '../../data/formGroups'
+import type { Submission, FormSettings, FormGroup } from '../../types/schema'
 import { DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
 import { formatDate } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
@@ -20,13 +21,15 @@ export default function HistoryPage() {
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
   const [signers, setSigners] = useState<Signer[]>([])
+  const [groups, setGroups] = useState<FormGroup[]>([])
   const [signModal, setSignModal] = useState<Submission | null>(null)
   function load() { if (profile) listMySubmissions(profile.uid).then(setRows) }
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
-  useEffect(() => { listForms().then(setForms); listSigners().then(setSigners) }, [])
+  useEffect(() => { listForms().then(setForms); listSigners().then(setSigners); listGroups().then(setGroups) }, [])
 
   const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
-  const filtered = applyFilters(rows, filters, myName)
+  const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? groups[0]?.id
+  const filtered = applyFilters(rows, filters, myName, formGroup)
 
   const formOf = (ft: string) => forms.find(f => f.formType === ft)
   // A doc can be sent for signing if its form has online blocks and it isn't fully signed.
@@ -44,7 +47,7 @@ export default function HistoryPage() {
     <div>
       <div className="mb-4 space-y-3">
         <h1 className="text-xl font-medium">ประวัติเอกสารของฉัน</h1>
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} resultCount={filtered.length} />
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} resultCount={filtered.length} />
       </div>
       <table className="w-full border text-sm">
         <thead className="bg-gray-50"><tr>{['เลขที่','วันที่','ยอดสุทธิ','พิมพ์แล้ว(ครั้ง)','สถานะ','แก้ไข',''].map(h => <th key={h} className="border px-2 py-1">{h}</th>)}</tr></thead>
