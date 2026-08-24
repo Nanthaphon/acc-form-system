@@ -84,6 +84,12 @@ export async function listMyPendingToSign(uid: string): Promise<Submission[]> {
 export async function countMyPendingToSign(uid: string): Promise<number> {
   return (await listMyPendingToSign(uid)).length
 }
+// Every document the current user is assigned to (pending or already signed) —
+// so signers keep a record of what they signed.
+export async function listMyAssigned(uid: string): Promise<Submission[]> {
+  const { data } = await supabase.from('submissions').select('*').order('createdAt', { ascending: false })
+  return ((data ?? []) as Submission[]).filter(s => (s.signatures ?? []).some(x => x.assignedUid === uid))
+}
 
 // Document status derived from its online-signature assignments:
 // no assignments = ร่าง, all signed = เซ็นครบ, otherwise = รอเซ็น.
