@@ -35,8 +35,16 @@ export function describeChanges(prev: Snap, curr: Snap, columns: FormColumn[]): 
   for (let i = common; i < cn; i++) out.push(`เพิ่มรายการที่ ${i + 1}`)
   for (let i = common; i < pn; i++) out.push(`ลบรายการที่ ${i + 1}`)
 
-  const pg = prev.totals?.grandTotal ?? 0, cg = curr.totals?.grandTotal ?? 0
-  if (pg !== cg) out.push(`ยอดรวม ${pg.toLocaleString()} → ${cg.toLocaleString()}`)
+  // VAT / withholding tax toggles
+  if (!!prev.header.vat !== !!curr.header.vat)
+    out.push(`ภาษีมูลค่าเพิ่ม 7%: ${prev.header.vat ? 'เปิด' : 'ปิด'} → ${curr.header.vat ? 'เปิด' : 'ปิด'}`)
+  const pw = prev.header.whtRate ?? 0, cw = curr.header.whtRate ?? 0
+  if (pw !== cw) out.push(`หัก ณ ที่จ่าย: ${pw ? pw + '%' : 'ปิด'} → ${cw ? cw + '%' : 'ปิด'}`)
+
+  // Net total (captures both item edits and VAT/WHT changes)
+  const pnet = prev.totals?.netTotal ?? prev.totals?.grandTotal ?? 0
+  const cnet = curr.totals?.netTotal ?? curr.totals?.grandTotal ?? 0
+  if (pnet !== cnet) out.push(`ยอดสุทธิ ${pnet.toLocaleString()} → ${cnet.toLocaleString()}`)
 
   return out
 }

@@ -25,8 +25,16 @@ describe('describeChanges', () => {
     const b = snap(header(), [{ detail: 'x', qty: 150, amt: 150 }], 150)
     const r = describeChanges(a, b, cols)
     expect(r).toContain('รายการที่ 1: จำนวน 100 → 150')
-    expect(r).toContain('ยอดรวม 100 → 150')
+    expect(r).toContain('ยอดสุทธิ 100 → 150')
     expect(r.some(s => s.includes('จำนวนเงิน'))).toBe(false) // calc column not reported
+  })
+
+  it('detects VAT and withholding-tax changes', () => {
+    const a = snap(header({ vat: false, whtRate: 0 }), [{ qty: 1 }], 100)
+    const b = snap(header({ vat: true, whtRate: 3 }), [{ qty: 1 }], 100)
+    const r = describeChanges(a, b, cols)
+    expect(r).toContain('ภาษีมูลค่าเพิ่ม 7%: ปิด → เปิด')
+    expect(r).toContain('หัก ณ ที่จ่าย: ปิด → 3%')
   })
 
   it('detects added and removed rows', () => {
