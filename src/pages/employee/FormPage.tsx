@@ -11,7 +11,7 @@ import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
-import { createSubmission, updateSubmission, getSubmission, incrementPrint, assignSigners, listSigners } from '../../data/submissions'
+import { createSubmission, updateSubmission, getSubmission, incrementPrint, assignSigners, signDocument, listSigners } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
@@ -118,19 +118,29 @@ export default function FormPage() {
   const signerName = (uid: string) => signers.find(s => s.uid === uid)?.name ?? ''
   const sigFor = (blockId: string) => sigs.find(x => x.blockId === blockId)
 
+  const myName = () => `${profile!.firstName ?? ''} ${profile!.lastName ?? ''}`.trim()
+
   async function sendForSign() {
     if (!savedId) { alert('กรุณาบันทึกเอกสารก่อนส่งให้เซ็น'); return }
     const pending = onlineBlocks.filter(b => sigFor(b.id)?.status !== 'signed')
-    if (pending.some(b => !assign[b.id])) { alert('กรุณาเลือกผู้เซ็นให้ครบทุกช่อง'); return }
-    const assignments: DocSignature[] = pending.map(b => ({
-      blockId: b.id, blockLabel: b.label, assignedUid: assign[b.id],
-      assignedName: signerName(assign[b.id]), status: 'pending',
-    }))
+    // signer must be picked for every non-self block; self blocks are the requester
+    if (pending.some(b => !b.self && !assign[b.id])) { alert('กรุณาเลือกผู้เซ็นให้ครบทุกช่อง'); return }
+    const assignments: DocSignature[] = pending.map(b => {
+      const uid = b.self ? profile!.uid : assign[b.id]
+      return { blockId: b.id, blockLabel: b.label, assignedUid: uid, assignedName: b.self ? myName() : signerName(uid), status: 'pending' as const }
+    })
     try {
       await assignSigners(savedId, assignments)
+      // Auto-sign the requester's own blocks if they have a saved signature.
+      if (profile?.signatureImage) {
+        for (const b of pending.filter(b => b.self)) {
+          try { await signDocument(savedId, b.id) } catch { /* leave pending on failure */ }
+        }
+      }
       const updated = await getSubmission(savedId)
       if (updated) setSigs(updated.signatures ?? [])
-      alert('ส่งให้เซ็นแล้ว — ผู้ถูกเลือกจะเห็นในเมนู "รอฉันเซ็น"')
+      alert('ส่งให้เซ็นแล้ว — ผู้ถูกเลือกจะเห็นในเมนู "รอฉันเซ็น"'
+        + (profile?.signatureImage ? '' : '\n(ช่องผู้เบิกจะเซ็นได้เมื่อคุณอัปโหลดลายเซ็นในหน้าข้อมูลของฉัน)'))
     } catch (e: any) {
       alert('ส่งให้เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด'))
     }
@@ -199,6 +209,8 @@ export default function FormPage() {
                     <span className="w-36 shrink-0 text-sm text-gray-700">{b.label}</span>
                     {sig?.status === 'signed' ? (
                       <span className="text-sm font-medium text-green-700">✔ เซ็นแล้วโดย {sig.assignedName}</span>
+                    ) : b.self ? (
+                      <span className="text-sm text-gray-700">ตัวเอง (คุณ){sig?.status === 'pending' ? ' · รอเซ็น' : ''}</span>
                     ) : (
                       <>
                         <select

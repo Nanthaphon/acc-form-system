@@ -167,6 +167,7 @@ export interface SignatureBlock {
   id: string
   label: string
   online: boolean
+  self?: boolean   // online block signed by the requester (the person filling) — no signer dropdown
 }
 export const MAX_SIGNATURE_BLOCKS = 6
 export const DEFAULT_SIGNATURE_BLOCKS: SignatureBlock[] = [
