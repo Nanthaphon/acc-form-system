@@ -59,3 +59,15 @@
 html, body {
   font-family: 'Bai Jamjuree', sans-serif;
 }
+
+/* App UI text is read-only: not selectable and no text caret (also blocks a
+   stray caret from the browser's Caret Browsing/F7 mode). Form fields and the
+   printable document stay selectable so users can still type and copy there. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea, select, [contenteditable="true"], #print-area, #print-area * {
+  -webkit-user-select: text;
+  user-select: text;
+}
