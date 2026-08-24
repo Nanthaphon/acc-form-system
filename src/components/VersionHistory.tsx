@@ -41,7 +41,7 @@ export default function VersionHistory({ submissionId, columns, settings, compan
                 {v.editedByName && <><span className="text-gray-300">·</span><span className="text-gray-500">โดย {v.editedByName}</span></>}
                 <span className="ml-auto flex gap-3">
                   <button className="text-blue-600 hover:underline" onClick={() => setViewing(v)}>ดู</button>
-                  {canRestore && !isLatest && <button className="text-gray-700 hover:underline" onClick={() => onRestore(v)}>กู้คืน</button>}
+                  {canRestore && <button className="text-gray-700 hover:underline" onClick={() => onRestore(v)}>กู้คืน</button>}
                 </span>
               </div>
               <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-gray-600">
