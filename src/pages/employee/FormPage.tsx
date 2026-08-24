@@ -91,7 +91,7 @@ export default function FormPage() {
         const created = await createSubmission({
           formType: settings.formType, header, items, totals,
           createdBy: profile!.uid, createdByEmployeeId: profile!.employeeId,
-        }, settings.formCode || settings.formType, editor)
+        }, settings.formCode || '', editor)
         setSavedId(created.id); setDocNumber(created.docNumber)
       }
       setVersionRefresh(n => n + 1)

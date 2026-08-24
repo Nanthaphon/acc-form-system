@@ -8,4 +8,7 @@ describe('formatDocNumber', () => {
   it('running เกิน 9999 ไม่ตัด', () => {
     expect(formatDocNumber('X', new Date('2026-01-01'), 12345)).toBe('X-202601-12345')
   })
+  it('ไม่มีรหัสฟอร์ม → เหลือแค่ ปีเดือน-เลขรัน', () => {
+    expect(formatDocNumber('', new Date('2026-08-01'), 7)).toBe('202608-0007')
+  })
 })
