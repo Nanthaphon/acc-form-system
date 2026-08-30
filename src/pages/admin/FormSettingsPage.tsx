@@ -510,6 +510,18 @@ export default function FormSettingsPage() {
         <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addCategory}><Plus size={14} /> เพิ่มหมวด</button>
       </div>
 
+      {/* ข้อความรับรอง / คำประกาศ */}
+      <div className={cardClass}>
+        <h2 className={`${cardTitleClass} mb-1`}>ข้อความรับรอง / คำประกาศ</h2>
+        <p className="mb-3 text-xs text-[#7a869a]">ย่อหน้าข้อความที่แสดงใต้ตาราง เหนือช่องลายเซ็น (เช่น คำรับรองในใบรับรองแทนใบเสร็จ) · เว้นว่างไว้ถ้าไม่ใช้</p>
+        <textarea
+          className={`${inputClass} min-h-[96px] resize-y`}
+          value={settings.bodyText ?? ''}
+          placeholder="เช่น ขอรับรองว่า รายจ่ายข้างต้นนี้ไม่อาจเรียกเก็บเป็นใบเสร็จรับเงินจากผู้รับได้ …"
+          onChange={e => setSettings(s => ({ ...s, bodyText: e.target.value }))}
+        />
+      </div>
+
       {/* หมายเหตุท้ายฟอร์ม */}
       <div className={cardClass}>
         <h2 className={`${cardTitleClass} mb-4`}>หมายเหตุท้ายฟอร์ม</h2>

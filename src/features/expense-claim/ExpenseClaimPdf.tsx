@@ -62,6 +62,7 @@ const s = StyleSheet.create({
   sigLine: { borderBottomWidth: 0.5, borderBottomColor: '#000', width: 110, marginBottom: 3, height: 14 },
   sigDate: { marginTop: 6 },
   notes: { marginTop: 16, fontSize: 6.5 },
+  bodyText: { marginTop: 12, textAlign: 'justify', lineHeight: 1.5 },
 })
 
 function money(n: number): string {
@@ -219,6 +220,9 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
 
         {/* เป็นจำนวนเงิน (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
         {hasNumericCols && <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>}
+
+        {/* ข้อความรับรอง / คำประกาศ (ถ้ามี) */}
+        {!!settings.bodyText?.trim() && <Text style={s.bodyText}>{settings.bodyText}</Text>}
 
         {/* Signature blocks — configured per form, in rows of 3 */}
         {sigRows.map((row, ri) => (

@@ -88,6 +88,7 @@ export interface FormSettings {
   active?: boolean
   signatureBlocks?: SignatureBlock[]   // configurable signature blocks (falls back to DEFAULT_SIGNATURE_BLOCKS)
   headerFields?: HeaderField[]         // extra header fields shown above the table
+  bodyText?: string                    // free declaration/certification paragraph shown below the table, above signatures
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [

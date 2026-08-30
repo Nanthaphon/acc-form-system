@@ -221,6 +221,11 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               </div>
             )}
 
+            {/* ข้อความรับรอง / คำประกาศ (ถ้ามี) */}
+            {settings.bodyText?.trim() && (
+              <div className="mt-4 whitespace-pre-line text-justify leading-relaxed">{settings.bodyText}</div>
+            )}
+
             {/* Signature blocks — configured per form, laid out in rows of 3 */}
             {sigRows.map((row, ri) => (
               <div key={ri} className="mt-8 grid grid-cols-3 gap-8 text-center">
