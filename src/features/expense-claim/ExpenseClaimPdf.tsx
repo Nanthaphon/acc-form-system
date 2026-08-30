@@ -63,6 +63,7 @@ const s = StyleSheet.create({
   sigDate: { marginTop: 6 },
   notes: { marginTop: 16, fontSize: 6.5 },
   bodyText: { marginTop: 12, textAlign: 'justify', lineHeight: 1.5 },
+  introText: { marginTop: 8, textAlign: 'justify', lineHeight: 1.5 },
 })
 
 function money(n: number): string {
@@ -133,6 +134,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
         </View>
 
         {/* Requester line */}
+        {settings.showRequester !== false && (
         <View style={s.requesterRow}>
           <Text style={s.requesterLabel}>ชื่อ</Text>
           <Text style={s.requesterValue}>{header.firstName}</Text>
@@ -143,6 +145,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
           <Text style={s.requesterLabel}>Job</Text>
           <Text style={s.requesterValue}>{header.job}</Text>
         </View>
+        )}
 
         {/* Custom header fields */}
         {(settings.headerFields ?? []).map(f => (
@@ -153,6 +156,9 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
             </Text>
           </View>
         ))}
+
+        {/* ข้อความหัวฟอร์ม (เหนือตาราง) ถ้ามี */}
+        {!!settings.introText?.trim() && <Text style={s.introText}>{settings.introText}</Text>}
 
         {/* Main table — dynamic columns */}
         <View style={s.table}>
@@ -218,8 +224,8 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
           </View>
         )}
 
-        {/* เป็นจำนวนเงิน (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
-        {hasNumericCols && <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>}
+        {/* เป็นจำนวนเงิน (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข หรือปิดการแสดง) */}
+        {hasNumericCols && settings.showAmountWords !== false && <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>}
 
         {/* ข้อความรับรอง / คำประกาศ (ถ้ามี) */}
         {!!settings.bodyText?.trim() && <Text style={s.bodyText}>{settings.bodyText}</Text>}

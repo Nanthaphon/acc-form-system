@@ -88,7 +88,10 @@ export interface FormSettings {
   active?: boolean
   signatureBlocks?: SignatureBlock[]   // configurable signature blocks (falls back to DEFAULT_SIGNATURE_BLOCKS)
   headerFields?: HeaderField[]         // extra header fields shown above the table
+  introText?: string                   // free paragraph shown above the table (below the header)
   bodyText?: string                    // free declaration/certification paragraph shown below the table, above signatures
+  showRequester?: boolean              // show the ชื่อ/นามสกุล/ตำแหน่ง/Job line (default true)
+  showAmountWords?: boolean            // show the "เป็นจำนวนเงิน ... บาทถ้วน" box (default true)
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [

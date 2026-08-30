@@ -510,16 +510,37 @@ export default function FormSettingsPage() {
         <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addCategory}><Plus size={14} /> เพิ่มหมวด</button>
       </div>
 
-      {/* ข้อความรับรอง / คำประกาศ */}
+      {/* ข้อความ / การแสดงผล */}
       <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-1`}>ข้อความรับรอง / คำประกาศ</h2>
-        <p className="mb-3 text-xs text-[#7a869a]">ย่อหน้าข้อความที่แสดงใต้ตาราง เหนือช่องลายเซ็น (เช่น คำรับรองในใบรับรองแทนใบเสร็จ) · เว้นว่างไว้ถ้าไม่ใช้</p>
+        <h2 className={`${cardTitleClass} mb-1`}>ข้อความ / การแสดงผล</h2>
+        <p className="mb-3 text-xs text-[#7a869a]">ย่อหน้าข้อความและตัวเลือกการแสดงผลของเอกสาร · เว้นว่างไว้ถ้าไม่ใช้</p>
+
+        <label className="mb-1 block text-sm font-medium text-[#16233f]">ข้อความหัวฟอร์ม (เหนือตาราง)</label>
         <textarea
-          className={`${inputClass} min-h-[96px] resize-y`}
+          className={`${inputClass} min-h-[72px] resize-y`}
+          value={settings.introText ?? ''}
+          placeholder="เช่น บริษัท … ได้รับเงินจาก …………… ครบถ้วนตามจำนวนเงิน …………… บาท"
+          onChange={e => setSettings(s => ({ ...s, introText: e.target.value }))}
+        />
+
+        <label className="mb-1 mt-4 block text-sm font-medium text-[#16233f]">ข้อความรับรอง / คำประกาศ (ใต้ตาราง เหนือลายเซ็น)</label>
+        <textarea
+          className={`${inputClass} min-h-[72px] resize-y`}
           value={settings.bodyText ?? ''}
           placeholder="เช่น ขอรับรองว่า รายจ่ายข้างต้นนี้ไม่อาจเรียกเก็บเป็นใบเสร็จรับเงินจากผู้รับได้ …"
           onChange={e => setSettings(s => ({ ...s, bodyText: e.target.value }))}
         />
+
+        <div className="mt-4 space-y-2">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[#16233f]">
+            <input type="checkbox" checked={settings.showRequester !== false} onChange={e => setSettings(s => ({ ...s, showRequester: e.target.checked }))} />
+            แสดงบรรทัด ชื่อ / นามสกุล / ตำแหน่ง / Job
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[#16233f]">
+            <input type="checkbox" checked={settings.showAmountWords !== false} onChange={e => setSettings(s => ({ ...s, showAmountWords: e.target.checked }))} />
+            แสดงกล่อง “เป็นจำนวนเงิน … บาทถ้วน”
+          </label>
+        </div>
       </div>
 
       {/* หมายเหตุท้ายฟอร์ม */}

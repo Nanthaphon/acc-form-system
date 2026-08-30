@@ -131,6 +131,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             </div>
 
             {/* Requester line */}
+            {settings.showRequester !== false && (
             <div className="mt-3 flex flex-wrap items-baseline gap-x-2">
               <span>ชื่อ</span>
               <span className="min-w-[80px] border-b border-black px-1">{header.firstName}</span>
@@ -141,6 +142,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               <span>Job</span>
               <span className="min-w-[80px] border-b border-black px-1">{header.job}</span>
             </div>
+            )}
 
             {/* Custom header fields */}
             {(settings.headerFields ?? []).map(f => (
@@ -151,6 +153,11 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                 </span>
               </div>
             ))}
+
+            {/* ข้อความหัวฟอร์ม (เหนือตาราง) ถ้ามี */}
+            {settings.introText?.trim() && (
+              <div className="mt-3 whitespace-pre-line text-justify leading-relaxed">{settings.introText}</div>
+            )}
 
             {/* ตาราง */}
             <table className="mt-3 w-full table-fixed border-collapse border border-black text-[10px]">
@@ -214,8 +221,8 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               </div>
             )}
 
-            {/* เป็นจำนวนเงิน (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
-            {hasNumericCols && (
+            {/* เป็นจำนวนเงิน (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข หรือปิดการแสดง) */}
+            {hasNumericCols && settings.showAmountWords !== false && (
               <div className="mt-2 border border-black px-2 py-1 text-center">
                 เป็นจำนวนเงิน &nbsp; {bahtWords}
               </div>
