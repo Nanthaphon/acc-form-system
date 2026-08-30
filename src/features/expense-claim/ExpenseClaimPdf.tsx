@@ -147,6 +147,16 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
           <Text style={s.requesterValue}>{header.job}</Text>
         </View>
 
+        {/* Custom header fields */}
+        {(settings.headerFields ?? []).map(f => (
+          <View key={f.id} style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: 3 }}>
+            <Text>{f.label}  </Text>
+            <Text style={{ flexGrow: 1, borderBottomWidth: 0.5, borderBottomColor: '#000' }}>
+              {f.type === 'date' ? formatIsoDate(header.fields?.[f.id] ?? '') : (header.fields?.[f.id] ?? '')}
+            </Text>
+          </View>
+        ))}
+
         {/* Main table — dynamic columns */}
         <View style={s.table}>
           <View style={[s.row, s.bold]}>

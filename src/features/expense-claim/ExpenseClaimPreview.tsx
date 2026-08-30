@@ -131,6 +131,16 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               <span className="min-w-[80px] border-b border-black px-1">{header.job}</span>
             </div>
 
+            {/* Custom header fields */}
+            {(settings.headerFields ?? []).map(f => (
+              <div key={f.id} className="mt-2 flex items-baseline gap-x-2">
+                <span>{f.label}</span>
+                <span className="min-w-[120px] flex-1 border-b border-black px-1">
+                  {f.type === 'date' ? formatIsoDate(header.fields?.[f.id] ?? '') : (header.fields?.[f.id] ?? '')}
+                </span>
+              </div>
+            ))}
+
             {/* ตาราง */}
             <table className="mt-3 w-full table-fixed border-collapse border border-black text-[10px]">
               <thead>

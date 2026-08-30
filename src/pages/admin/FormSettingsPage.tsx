@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
-import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock } from '../../types/schema'
+import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, DEFAULT_SIGNATURE_BLOCKS, MAX_SIGNATURE_BLOCKS } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
@@ -71,6 +71,19 @@ export default function FormSettingsPage() {
   function setNote(idx: number, value: string) { setSettings(s => ({ ...s, notes: s.notes.map((n, i) => i === idx ? value : n) })) }
   function removeNote(idx: number) { setSettings(s => ({ ...s, notes: s.notes.filter((_, i) => i !== idx) })) }
   function addNote() { setSettings(s => ({ ...s, notes: [...s.notes, ''] })) }
+
+  // ----- custom header fields -----
+  const headerFields = (): HeaderField[] => settings.headerFields ?? []
+  function setHeaderFields(fs: HeaderField[]) { setSettings(s => ({ ...s, headerFields: fs })) }
+  function addHeaderField() { setHeaderFields([...headerFields(), { id: crypto.randomUUID(), label: 'ช่องใหม่', type: 'text' }]) }
+  function setHFieldLabel(idx: number, label: string) { setHeaderFields(headerFields().map((f, i) => i === idx ? { ...f, label } : f)) }
+  function setHFieldType(idx: number, type: HeaderField['type']) { setHeaderFields(headerFields().map((f, i) => i === idx ? { ...f, type } : f)) }
+  function removeHeaderField(idx: number) { setHeaderFields(headerFields().filter((_, i) => i !== idx)) }
+  function moveHeaderField(idx: number, dir: -1 | 1) {
+    const a = [...headerFields()]; const j = idx + dir
+    if (j < 0 || j >= a.length) return
+    ;[a[idx], a[j]] = [a[j], a[idx]]; setHeaderFields(a)
+  }
 
   // ----- signature blocks -----
   const sigBlocks = (): SignatureBlock[] => settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
@@ -285,6 +298,29 @@ export default function FormSettingsPage() {
             <input className={inputClass} value={settings.attention} onChange={e => setField('attention', e.target.value)} />
           </div>
         </div>
+      </div>
+
+      {/* ช่องหัวฟอร์ม (เพิ่มเติม) */}
+      <div className={cardClass}>
+        <h2 className={cardTitleClass}>ช่องหัวฟอร์ม (เพิ่มเติม)</h2>
+        <p className="mb-3 text-xs text-[#7a869a]">ช่องข้อมูลใต้ชื่อผู้เบิก นอกเหนือจาก ชื่อ/นามสกุล/ตำแหน่ง/Job เช่น “วันที่ต้องการใช้เงิน”, “วัตถุประสงค์”</p>
+        <div className="space-y-2">
+          {headerFields().map((f, i) => (
+            <div key={f.id} className="flex flex-wrap items-center gap-2">
+              <input className={`${inputClass} min-w-[160px] flex-1`} value={f.label} placeholder="ชื่อช่อง" onChange={e => setHFieldLabel(i, e.target.value)} />
+              <select className={smallSelect} value={f.type} onChange={e => setHFieldType(i, e.target.value as HeaderField['type'])}>
+                <option value="text">ข้อความ</option>
+                <option value="date">วันที่</option>
+              </select>
+              <div className="flex items-center gap-1.5">
+                <button className={iconBtn} onClick={() => moveHeaderField(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
+                <button className={iconBtn} onClick={() => moveHeaderField(i, 1)} disabled={i === headerFields().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
+                <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeHeaderField(i)} title="ลบช่อง"><Trash2 size={16} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addHeaderField}><Plus size={14} /> เพิ่มช่องหัวฟอร์ม</button>
       </div>
 
       {/* คอลัมน์ตาราง (Column builder) */}

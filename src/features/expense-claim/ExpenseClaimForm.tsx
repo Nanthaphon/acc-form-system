@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
-import type { ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
+import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
@@ -12,6 +12,7 @@ interface Props {
   onItemsChange: (items: ExpenseRow[]) => void
   columns?: FormColumn[]
   categories?: string[]
+  headerFields?: HeaderField[]
 }
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
@@ -25,8 +26,9 @@ function fmt(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
-export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories }: Props) {
+export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
+  const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
   const vcols = visibleColumns(cols)
   const hasColumns = vcols.length > 0
   const computed = items.map(r => computeRow(cols, r))
@@ -96,6 +98,14 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
             <label className={labelClass}>Job</label>
             <input className={inputClass} placeholder="Job" value={header.job} onChange={e => onHeaderChange({ ...header, job: e.target.value })} />
           </div>
+          {(headerFields ?? []).map(f => (
+            <div key={f.id}>
+              <label className={labelClass}>{f.label || 'ช่องเพิ่มเติม'}</label>
+              {f.type === 'date'
+                ? <DateInput className={inputClass} value={header.fields?.[f.id] ?? ''} onChange={v => setHField(f.id, v)} />
+                : <input className={inputClass} placeholder={f.label} value={header.fields?.[f.id] ?? ''} onChange={e => setHField(f.id, e.target.value)} />}
+            </div>
+          ))}
         </div>
       </div>
 

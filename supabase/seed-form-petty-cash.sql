@@ -7,7 +7,7 @@ with g as (
   values (gen_random_uuid(), 'เบิกค่าใช้จ่าย', extract(epoch from now())::int, (extract(epoch from now()) * 1000)::bigint)
   returning id
 )
-insert into form_settings ("formType", name, title, subject, attention, "formCode", categories, notes, columns, "groupId", active)
+insert into form_settings ("formType", name, title, subject, attention, "formCode", categories, notes, columns, "headerFields", "groupId", active)
 select
   gen_random_uuid(),
   'ใบขอเบิกเงินทดรองจ่าย',
@@ -18,6 +18,7 @@ select
   '[]'::jsonb,
   '["1. พนักงานจะต้องเคลียร์ค่าใช้จ่ายทุกวันอังคารและพฤหัสบดี","2. พนักงานที่ซื้อของด้วยตนเองมีหน้าที่ต้องตรวจชื่อและที่อยู่ที่ลงในใบกำกับภาษีว่าถูกต้องหรือไม่ ถ้าผิดพนักงานต้องรับผิดชอบเปลี่ยนบิลเอง","3. ใบกำกับภาษีของค่าน้ำมันจะต้องระบุเลขทะเบียนรถคันที่พนักงานเอาไปใช้ด้วยทุกครั้ง","4. ใบเบิกค่าใช้จ่ายต่อ 1 ชุด ค่าใช้จ่ายทุกรายการจะต้องเป็นบริษัทเดียวกันและเดือนเดียวกัน"]'::jsonb,
   '[{"key":"detail","label":"รายการเบิก","type":"text"},{"key":"account","label":"เลขที่บัญชี","type":"text","width":120},{"key":"amount","label":"จำนวนเงินประมาณ (บาท)","type":"number","width":140,"isTotal":true}]'::jsonb,
+  '[{"id":"useDate","label":"วันที่ต้องการใช้เงิน","type":"date"},{"id":"clearDate","label":"วันที่ต้องเคลียร์เงิน","type":"date"},{"id":"purpose","label":"วัตถุประสงค์การเบิกเงินทดรองจ่าย","type":"text"}]'::jsonb,
   g.id,
   true
 from g;

@@ -23,6 +23,14 @@ export function calcOperands(def: CalcDef): string[] {
   if (def.operands && def.operands.length) return def.operands
   return [def.a, def.b].filter((x): x is string => !!x)
 }
+// Extra header field on a form (beyond the fixed ชื่อ/นามสกุล/ตำแหน่ง/Job),
+// e.g. วันที่ต้องการใช้เงิน, วัตถุประสงค์. Values live in ExpenseHeader.fields.
+export interface HeaderField {
+  id: string
+  label: string
+  type: 'text' | 'date'
+}
+
 export interface FormColumn {
   key: string          // stable id, unique within the form
   label: string
@@ -79,6 +87,7 @@ export interface FormSettings {
   accessGroup?: string
   active?: boolean
   signatureBlocks?: SignatureBlock[]   // configurable signature blocks (falls back to DEFAULT_SIGNATURE_BLOCKS)
+  headerFields?: HeaderField[]         // extra header fields shown above the table
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
@@ -156,6 +165,7 @@ export interface ExpenseHeader {
   job: string
   vat?: boolean                // add 7% VAT
   whtRate?: number             // withholding tax rate: 0 | 3 | 5
+  fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
 
 export type SubmissionStatus = 'draft' | 'pending' | 'signed'
