@@ -84,6 +84,8 @@ export default function HistoryPage() {
                 <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>แก้ไข</Link>
                 <span className="mx-1.5 text-gray-300">|</span>
                 <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
+                <span className="mx-1.5 text-gray-300">|</span>
+                <Link className="text-indigo-600 hover:underline" to={`/form/${r.formType}?clone=${r.id}`}>คัดลอก</Link>
                 {canSend(r) && (
                   <>
                     <span className="mx-1.5 text-gray-300">|</span>

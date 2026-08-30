@@ -1,6 +1,6 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
 import { ArrowLeft, Download, Printer, Receipt, Save } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
@@ -18,6 +18,8 @@ import { getFormSettings } from '../../data/formSettings'
 
 export default function FormPage() {
   const { id, formType } = useParams()
+  const [searchParams] = useSearchParams()
+  const cloneId = searchParams.get('clone')
   const { profile } = useAuth()
   const nav = useNavigate()
   const [company, setCompany] = useState<Company | null>(null)
@@ -58,9 +60,17 @@ export default function FormPage() {
     })
   }, [id])
   useEffect(() => { // NEW mode: load the form settings for this formType
-    if (id || !formType) return
+    if (id || !formType || cloneId) return
     getFormSettings(formType).then(fs => { setSettings(fs); setItems([emptyRow(fs.columns)]) })
-  }, [id, formType])
+  }, [id, formType, cloneId])
+  useEffect(() => { // CLONE mode: prefill from a source doc but stay a NEW (unsaved) doc
+    if (id || !cloneId) return
+    getSubmission(cloneId).then(s => {
+      if (!s) return
+      setHeader(s.header); setItems(s.items) // copy content only — new number is assigned on save
+      getFormSettings(s.formType).then(setSettings)
+    })
+  }, [id, cloneId])
   useEffect(() => { if (header.companyId) getCompany(header.companyId).then(setCompany) }, [header.companyId])
   useEffect(() => { listCompanies().then(setCompanies) }, [])
 

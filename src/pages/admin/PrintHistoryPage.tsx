@@ -86,6 +86,8 @@ export default function PrintHistoryPage() {
                   <span className="mx-1.5 text-gray-300">|</span>
                   <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
                   <span className="mx-1.5 text-gray-300">|</span>
+                  <Link className="text-indigo-600 hover:underline" to={`/form/${r.formType}?clone=${r.id}`}>คัดลอก</Link>
+                  <span className="mx-1.5 text-gray-300">|</span>
                   <button className="text-red-600 hover:underline" onClick={() => onDelete(r)}>ลบ</button>
                 </td>
               </tr>
