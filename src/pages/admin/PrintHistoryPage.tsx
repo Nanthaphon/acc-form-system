@@ -57,18 +57,18 @@ export default function PrintHistoryPage() {
       <div className="overflow-x-auto">
         <table className="w-full border text-sm">
           <thead className="bg-gray-50">
-            <tr>{['เลขที่', 'พนักงาน', 'ฟอร์ม', 'วันที่', 'ยอด', 'สถานะ', 'แก้ไข', 'พิมพ์ (ครั้ง)', 'พิมพ์ล่าสุด', ''].map(h => (
+            <tr>{['ชื่อฟอร์ม', 'เลขที่', 'พนักงาน', 'วันที่', 'ยอด', 'สถานะ', 'แก้ไข', 'พิมพ์ (ครั้ง)', 'พิมพ์ล่าสุด', ''].map(h => (
               <th key={h} className="border px-2 py-1 whitespace-nowrap">{h}</th>
             ))}</tr>
           </thead>
           <tbody>
             {filtered.map(r => (
               <tr key={r.id} className="hover:bg-gray-50">
+                <td className="border px-2 py-1">{formName(r.formType)}</td>
                 <td className="border px-2 py-1 whitespace-nowrap">{r.docNumber}</td>
                 <td className="border px-2 py-1 whitespace-nowrap">
                   {empName(r.createdByEmployeeId)} <span className="text-gray-400">({r.createdByEmployeeId})</span>
                 </td>
-                <td className="border px-2 py-1">{formName(r.formType)}</td>
                 <td className="border px-2 py-1 whitespace-nowrap">{formatDate(r.createdAt)}</td>
                 <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
                 <td className="border px-2 py-1 text-center">
