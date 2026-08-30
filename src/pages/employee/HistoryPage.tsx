@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, statusMeta, statusLabel, listSigners, cancelSigning } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -13,6 +13,7 @@ import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
+import StatusBadge from '../../components/StatusBadge'
 
 export default function HistoryPage() {
   const { profile } = useAuth()
@@ -32,6 +33,7 @@ export default function HistoryPage() {
   const filtered = applyFilters(rows, filters, myName, formGroup)
 
   const formOf = (ft: string) => forms.find(f => f.formType === ft)
+  const formName = (ft: string) => { const f = formOf(ft); return f?.name || f?.title || '—' }
   // A doc can be sent for signing if its form has online blocks and it isn't fully signed.
   const canSend = (r: Submission) => {
     const blocks = formOf(r.formType)?.signatureBlocks ?? DEFAULT_SIGNATURE_BLOCKS
@@ -60,16 +62,17 @@ export default function HistoryPage() {
         <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} resultCount={filtered.length} />
       </div>
       <table className="w-full border text-sm">
-        <thead className="bg-gray-50"><tr>{['เลขที่','วันที่','ยอดสุทธิ','พิมพ์แล้ว(ครั้ง)','สถานะ','แก้ไข',''].map(h => <th key={h} className="border px-2 py-1">{h}</th>)}</tr></thead>
+        <thead className="bg-gray-50"><tr>{['ชื่อฟอร์ม','เลขที่','วันที่','ยอดสุทธิ','พิมพ์แล้ว(ครั้ง)','สถานะ','แก้ไข',''].map(h => <th key={h} className="border px-2 py-1">{h}</th>)}</tr></thead>
         <tbody>
           {filtered.map(r => (
             <tr key={r.id}>
-              <td className="border px-2 py-1">{r.docNumber}</td>
+              <td className="border px-2 py-1">{formName(r.formType)}</td>
+              <td className="border px-2 py-1 whitespace-nowrap">{r.docNumber}</td>
               <td className="border px-2 py-1">{formatDate(r.createdAt)}</td>
               <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
               <td className="border px-2 py-1 text-center">{r.printCount}</td>
               <td className="border px-2 py-1 text-center">
-                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusMeta(subStatus(r)).className}`}>{statusLabel(r)}</span>
+                <StatusBadge sub={r} />
               </td>
               <td className="border px-2 py-1 whitespace-nowrap text-center">
                 {editLabel(r, vcounts)
