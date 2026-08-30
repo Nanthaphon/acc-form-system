@@ -103,11 +103,11 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               </div>
             )}
 
-            {/* เรื่อง / เรียน + checkboxes */}
+            {/* เรื่อง / เรียน + checkboxes (each hidden when empty) */}
             <div className="mt-2 flex items-start justify-between">
               <div>
-                <div>เรื่อง &nbsp; {settings.subject}</div>
-                <div>เรียน &nbsp; {settings.attention}</div>
+                {settings.subject && <div>เรื่อง &nbsp; {settings.subject}</div>}
+                {settings.attention && <div>เรียน &nbsp; {settings.attention}</div>}
               </div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                 {settings.categories.map((label) => (

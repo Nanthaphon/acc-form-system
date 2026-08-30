@@ -123,8 +123,8 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
         {/* เรื่อง/เรียน + checkboxes */}
         <View style={s.subjectRow}>
           <View>
-            <Text>เรื่อง  {settings.subject}</Text>
-            <Text>เรียน  {settings.attention}</Text>
+            {!!settings.subject && <Text>เรื่อง  {settings.subject}</Text>}
+            {!!settings.attention && <Text>เรียน  {settings.attention}</Text>}
           </View>
           <View style={s.checkboxGrid}>
             {settings.categories.map((label) => (
