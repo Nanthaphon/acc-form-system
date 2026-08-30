@@ -89,6 +89,8 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
   // Totals footer: label spans the leading text columns up to the first visible numeric/calc column.
   const firstNumericIdx = vcols.findIndex(c => !isTextCol(c.type))
   const leadingCount = firstNumericIdx < 0 ? vcols.length : firstNumericIdx
+  // Forms with no numeric/calc columns have nothing to sum — hide totals + amount box.
+  const hasNumericCols = firstNumericIdx >= 0
   // Merged label cell: same total width as the leading columns combined.
   const labelStyle = { width: `${colPcts.slice(0, leadingCount).reduce((a, b) => a + b, 0)}%` }
 
@@ -186,21 +188,23 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
             </View>
           ))}
 
-          <View style={[s.row, s.bold]}>
-            <View style={[s.cell, { width: `${seqPct}%` }]}>
-              <Text style={[s.cellText, s.right]}>{leadingCount === 0 ? 'รวมทั้งสิ้น' : ' '}</Text>
+          {hasNumericCols && (
+            <View style={[s.row, s.bold]}>
+              <View style={[s.cell, { width: `${seqPct}%` }]}>
+                <Text style={[s.cellText, s.right]}>{leadingCount === 0 ? 'รวมทั้งสิ้น' : ' '}</Text>
+              </View>
+              {leadingCount > 0 && (
+                <View style={[s.cell, labelStyle]}>
+                  <Text style={[s.cellText, s.right]}>รวมทั้งสิ้น</Text>
+                </View>
+              )}
+              {vcols.slice(firstNumericIdx).map((col, k) => (
+                <View key={col.key} style={[s.cell, styles[firstNumericIdx + k]]}>
+                  <Text style={[s.cellText, s.right]}>{isTextCol(col.type) ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
+                </View>
+              ))}
             </View>
-            {leadingCount > 0 && (
-              <View style={[s.cell, labelStyle]}>
-                <Text style={[s.cellText, s.right]}>รวมทั้งสิ้น</Text>
-              </View>
-            )}
-            {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map((col, k) => (
-              <View key={col.key} style={[s.cell, styles[firstNumericIdx + k]]}>
-                <Text style={[s.cellText, s.right]}>{isTextCol(col.type) ? ' ' : money(columnTotals[col.key] ?? 0)}</Text>
-              </View>
-            ))}
-          </View>
+          )}
         </View>
 
         {/* VAT / หัก ณ ที่จ่าย / ยอดสุทธิ */}
@@ -213,8 +217,8 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
           </View>
         )}
 
-        {/* เป็นจำนวนเงิน */}
-        <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>
+        {/* เป็นจำนวนเงิน (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
+        {hasNumericCols && <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>}
 
         {/* Signature blocks — configured per form, in rows of 3 */}
         {sigRows.map((row, ri) => (

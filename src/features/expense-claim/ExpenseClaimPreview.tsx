@@ -62,6 +62,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   // Totals footer: label spans the seq column + leading text columns up to the first visible numeric/calc column.
   const firstNumericIdx = vcols.findIndex(c => !isTextCol(c.type))
   const labelSpan = firstNumericIdx < 0 ? totalCols : firstNumericIdx + 1
+  // Forms with no numeric/calc columns (e.g. a work-report) have nothing to sum,
+  // so hide the grand-total row and the amount-in-words box.
+  const hasNumericCols = firstNumericIdx >= 0
 
   // Split the row indices into pages of ROWS_PER_PAGE. Always at least one page
   // (so an empty form still renders a blank sheet).
@@ -187,15 +190,17 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                     ))}
                   </tr>
                 ))}
-                {/* แถวรวม — ยอดรวมทั้งหมด แสดงเหมือนกันทุกแผ่น */}
-                <tr className="font-bold">
-                  <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
-                  {firstNumericIdx >= 0 && vcols.slice(firstNumericIdx).map(col => (
-                    <td key={col.key} className="border border-black px-1 py-1 text-right">
-                      {isTextCol(col.type) ? '' : money(columnTotals[col.key] ?? 0)}
-                    </td>
-                  ))}
-                </tr>
+                {/* แถวรวม — ยอดรวมทั้งหมด แสดงเหมือนกันทุกแผ่น (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
+                {hasNumericCols && (
+                  <tr className="font-bold">
+                    <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
+                    {vcols.slice(firstNumericIdx).map(col => (
+                      <td key={col.key} className="border border-black px-1 py-1 text-right">
+                        {isTextCol(col.type) ? '' : money(columnTotals[col.key] ?? 0)}
+                      </td>
+                    ))}
+                  </tr>
+                )}
               </tbody>
             </table>
 
@@ -209,10 +214,12 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               </div>
             )}
 
-            {/* เป็นจำนวนเงิน */}
-            <div className="mt-2 border border-black px-2 py-1 text-center">
-              เป็นจำนวนเงิน &nbsp; {bahtWords}
-            </div>
+            {/* เป็นจำนวนเงิน (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
+            {hasNumericCols && (
+              <div className="mt-2 border border-black px-2 py-1 text-center">
+                เป็นจำนวนเงิน &nbsp; {bahtWords}
+              </div>
+            )}
 
             {/* Signature blocks — configured per form, laid out in rows of 3 */}
             {sigRows.map((row, ri) => (
