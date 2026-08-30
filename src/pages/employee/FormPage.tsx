@@ -1,3 +1,4 @@
+import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
@@ -68,11 +69,11 @@ export default function FormPage() {
     // Require a total > 0 only for forms that actually have amount columns.
     const hasNumericCol = settings.columns.some(c => c.type === 'number' || c.type === 'calc')
     if (hasNumericCol && totals.grandTotal <= 0) {
-      alert('กรุณากรอกยอดเงินอย่างน้อย 1 รายการ (ยอดรวมต้องมากกว่า 0)')
+      uiAlert('กรุณากรอกยอดเงินอย่างน้อย 1 รายการ (ยอดรวมต้องมากกว่า 0)')
       return
     }
     if (!header.firstName.trim() || !header.lastName.trim() || !header.position.trim()) {
-      alert('กรุณากรอกชื่อ นามสกุล และตำแหน่งให้ครบถ้วน')
+      uiAlert('กรุณากรอกชื่อ นามสกุล และตำแหน่งให้ครบถ้วน')
       return
     }
     const editor = { uid: profile!.uid, name: `${profile!.firstName ?? ''} ${profile!.lastName ?? ''}`.trim() }
@@ -88,15 +89,15 @@ export default function FormPage() {
         setSavedId(created.id); setDocNumber(created.docNumber)
       }
       setVersionRefresh(n => n + 1)
-      alert('บันทึกแล้ว — ส่งให้เซ็นได้ที่หน้าประวัติ')
+      uiAlert('บันทึกแล้ว — ส่งให้เซ็นได้ที่หน้าประวัติ', { tone: 'success' })
     } catch {
-      alert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+      uiAlert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
     }
   }
 
   function handleRestore(v: SubmissionVersion) {
     setHeader(v.header); setItems(v.items); setShowPreview(false)
-    alert(`ดึงเนื้อหาเวอร์ชัน ${v.version} กลับมาแล้ว — ตรวจสอบแล้วกด "บันทึก" เพื่อสร้างเป็นเวอร์ชันใหม่`)
+    uiAlert(`ดึงเนื้อหาเวอร์ชัน ${v.version} กลับมาแล้ว — ตรวจสอบแล้วกด "บันทึก" เพื่อสร้างเป็นเวอร์ชันใหม่`)
   }
 
   async function downloadPdf() {

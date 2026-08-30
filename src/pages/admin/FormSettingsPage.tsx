@@ -1,3 +1,4 @@
+import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
@@ -90,7 +91,7 @@ export default function FormSettingsPage() {
   function setSigBlocks(blocks: SignatureBlock[]) { setSettings(s => ({ ...s, signatureBlocks: blocks })) }
   function addSigBlock() {
     const b = sigBlocks()
-    if (b.length >= MAX_SIGNATURE_BLOCKS) { alert(`ช่องลายเซ็นได้ไม่เกิน ${MAX_SIGNATURE_BLOCKS} ช่อง`); return }
+    if (b.length >= MAX_SIGNATURE_BLOCKS) { uiAlert(`ช่องลายเซ็นได้ไม่เกิน ${MAX_SIGNATURE_BLOCKS} ช่อง`); return }
     setSigBlocks([...b, { id: crypto.randomUUID(), label: 'ตำแหน่งใหม่', online: false }])
   }
   function setSigLabel(idx: number, label: string) { setSigBlocks(sigBlocks().map((b, i) => i === idx ? { ...b, label } : b)) }
@@ -184,7 +185,7 @@ export default function FormSettingsPage() {
     if (col.hidden) {
       // Making it visible — enforce the max.
       if (settings.columns.filter(c => !c.hidden).length >= MAX_VISIBLE) {
-        alert('แสดงได้ไม่เกิน 12 คอลัมน์')
+        uiAlert('แสดงได้ไม่เกิน 12 คอลัมน์')
         return
       }
       patchColumn(idx, { hidden: false })
@@ -205,9 +206,9 @@ export default function FormSettingsPage() {
     setSaving(true)
     try {
       await updateFormSettings({ ...settings, formType })
-      alert('บันทึกฟอร์มแล้ว')
+      uiAlert('บันทึกฟอร์มแล้ว', { tone: 'success' })
     } catch {
-      alert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+      uiAlert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
     } finally {
       setSaving(false)
     }
@@ -218,15 +219,15 @@ export default function FormSettingsPage() {
     const reader = new FileReader()
     reader.onload = async () => {
       const dataUrl = String(reader.result)
-      if (dataUrl.length > 400000) { alert('ไฟล์ใหญ่เกินไป แนะนำโลโก้เล็กกว่า ~300KB'); return }
+      if (dataUrl.length > 400000) { uiAlert('ไฟล์ใหญ่เกินไป แนะนำโลโก้เล็กกว่า ~300KB'); return }
       try { await updateCompanyLogo(company.id, dataUrl); loadCompanies() }
-      catch { alert('อัปโหลดโลโก้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+      catch { uiAlert('อัปโหลดโลโก้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
     }
     reader.readAsDataURL(file)
   }
   async function removeLogo(company: Company) {
     try { await updateCompanyLogo(company.id, null); loadCompanies() }
-    catch { alert('ลบโลโก้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('ลบโลโก้ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   const columns = settings.columns

@@ -1,3 +1,4 @@
+import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Inbox, PenLine } from 'lucide-react'
@@ -26,12 +27,12 @@ export default function SignInboxPage() {
 
   async function onSign(s: Submission, blockId: string, blockLabel: string) {
     if (!profile?.signatureImage) {
-      alert('คุณยังไม่ได้อัปโหลดลายเซ็น — ไปที่หน้า “ข้อมูลของฉัน” เพื่ออัปโหลดก่อน แล้วจึงเซ็นได้')
+      uiAlert('คุณยังไม่ได้อัปโหลดลายเซ็น — ไปที่หน้า “ข้อมูลของฉัน” เพื่ออัปโหลดก่อน แล้วจึงเซ็นได้')
       return
     }
-    if (!confirm(`เซ็นช่อง "${blockLabel}" ของเอกสาร ${s.docNumber} ?\nลายเซ็นของคุณจะถูกแปะลงเอกสาร`)) return
+    if (!(await uiConfirm(`ลายเซ็นของคุณจะถูกแปะลงเอกสาร`, { title: `เซ็นช่อง "${blockLabel}" ของเอกสาร ${s.docNumber} ?`, confirmText: 'เซ็น' }))) return
     try { await signDocument(s.id, blockId); reload() }
-    catch (e: any) { alert('เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
+    catch (e: any) { uiAlert('เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
   }
 
   return (

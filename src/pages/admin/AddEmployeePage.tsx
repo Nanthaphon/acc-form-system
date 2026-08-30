@@ -1,3 +1,4 @@
+import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createEmployee } from '../../data/users'
@@ -19,15 +20,15 @@ export default function AddEmployeePage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (f.employeeId.trim().length < 6) {
-      alert('รหัสพนักงานต้องมีอย่างน้อย 6 ตัวอักษร (เพราะใช้เป็นรหัสผ่านเริ่มต้นด้วย)')
+      uiAlert('รหัสพนักงานต้องมีอย่างน้อย 6 ตัวอักษร (เพราะใช้เป็นรหัสผ่านเริ่มต้นด้วย)')
       return
     }
     try {
       await createEmployee(f as any)
-      alert('เพิ่มพนักงานแล้ว (รหัสผ่านเริ่มต้น = รหัสพนักงาน)')
+      uiAlert('เพิ่มพนักงานแล้ว (รหัสผ่านเริ่มต้น = รหัสพนักงาน)', { tone: 'success' })
       nav('/admin/employees')
     } catch (err: any) {
-      alert('เพิ่มพนักงานไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
+      uiAlert('เพิ่มพนักงานไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
     }
   }
   return (

@@ -1,3 +1,4 @@
+import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
@@ -41,9 +42,9 @@ export default function HistoryPage() {
   }
 
   async function onDelete(r: Submission) {
-    if (!confirm(`ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?\nลบถาวร ยกเลิกไม่ได้`)) return
+    if (!(await uiConfirm(`ลบถาวร ยกเลิกไม่ได้`, { title: `ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteSubmission(r.id); load() }
-    catch { alert('ลบเอกสารไม่สำเร็จ') }
+    catch { uiAlert('ลบเอกสารไม่สำเร็จ') }
   }
 
   async function onCancelSign(r: Submission) {
@@ -51,9 +52,9 @@ export default function HistoryPage() {
     const msg = signed > 0
       ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับเป็นร่าง`
       : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับเป็นร่าง`
-    if (!confirm(msg)) return
+    if (!(await uiConfirm(msg, { tone: 'danger', confirmText: 'ยกเลิกส่งเซ็น' }))) return
     try { await cancelSigning(r.id); load() }
-    catch (e: any) { alert('ยกเลิกไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
+    catch (e: any) { uiAlert('ยกเลิกไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
   }
   return (
     <div>

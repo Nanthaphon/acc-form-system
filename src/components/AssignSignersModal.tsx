@@ -1,3 +1,4 @@
+import { uiAlert } from './dialog/dialogService'
 import { useState } from 'react'
 import { PenLine, X } from 'lucide-react'
 import type { Submission, FormSettings, DocSignature } from '../types/schema'
@@ -46,10 +47,10 @@ export default function AssignSignersModal({ submission, settings, signers, curr
       if (currentSignature) {
         for (const b of pending.filter(b => isSelf(b.id))) { try { await signDocument(submission.id, b.id) } catch { /* leave pending */ } }
       }
-      alert('ส่งให้เซ็นแล้ว — ผู้ถูกเลือกจะเห็นในเมนู "รอฉันเซ็น"')
+      uiAlert('ส่งให้เซ็นแล้ว — ผู้ถูกเลือกจะเห็นในเมนู "รอฉันเซ็น"', { tone: 'success' })
       onDone(); onClose()
     } catch (e: any) {
-      alert('ส่งให้เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด'))
+      uiAlert('ส่งให้เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด'))
     } finally { setBusy(false) }
   }
 

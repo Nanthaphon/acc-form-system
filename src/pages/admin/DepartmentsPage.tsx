@@ -1,3 +1,4 @@
+import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Building2, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -15,25 +16,25 @@ export default function DepartmentsPage() {
     const name = window.prompt('ชื่อแผนกใหม่')?.trim()
     if (!name) return
     try { await createDepartment(name); reload() }
-    catch { alert('เพิ่มแผนกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เพิ่มแผนกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onRename(d: Department) {
     const name = window.prompt('ชื่อแผนกใหม่', d.name)?.trim()
     if (!name || name === d.name) return
     try { await renameDepartment(d.id, name); reload() }
-    catch { alert('เปลี่ยนชื่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เปลี่ยนชื่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onDelete(d: Department) {
     const used = await departmentUsage(d.id)
     if (used > 0) {
-      alert(`ลบไม่ได้ — ยังมีพนักงาน ${used} คนอยู่แผนกนี้\nกรุณาย้ายพนักงานออกจากแผนกนี้ก่อน`)
+      uiAlert(`ลบไม่ได้ — ยังมีพนักงาน ${used} คนอยู่แผนกนี้\nกรุณาย้ายพนักงานออกจากแผนกนี้ก่อน`)
       return
     }
-    if (!confirm(`ลบแผนก "${d.name}" ?`)) return
+    if (!(await uiConfirm(`ลบแผนก "${d.name}" ?`, { tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteDepartment(d.id); reload() }
-    catch { alert('ลบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('ลบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   return (

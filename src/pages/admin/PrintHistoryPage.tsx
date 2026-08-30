@@ -1,3 +1,4 @@
+import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listAllSubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
@@ -30,9 +31,9 @@ export default function PrintHistoryPage() {
   }, [])
 
   async function onDelete(r: Submission) {
-    if (!confirm(`ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?\nลบถาวร ยกเลิกไม่ได้`)) return
+    if (!(await uiConfirm(`ลบถาวร ยกเลิกไม่ได้`, { title: `ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteSubmission(r.id); loadRows() }
-    catch { alert('ลบเอกสารไม่สำเร็จ') }
+    catch { uiAlert('ลบเอกสารไม่สำเร็จ') }
   }
 
   const empName = (eid: string) => {

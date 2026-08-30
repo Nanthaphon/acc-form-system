@@ -1,3 +1,4 @@
+import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Folder, Pencil, Plus, SquarePen, Trash2 } from 'lucide-react'
@@ -38,7 +39,7 @@ export default function GroupPage() {
     const name = window.prompt('ชื่อกลุ่มใหม่', group.name)?.trim()
     if (!name || name === group.name) return
     try { await renameGroup(group.id, name); reload() }
-    catch { alert('เปลี่ยนชื่อกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เปลี่ยนชื่อกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onCreateForm() {
@@ -48,25 +49,25 @@ export default function GroupPage() {
     try {
       const newId = await createForm(name, groupId)
       nav(`/form/${newId}/edit`)
-    } catch { alert('สร้างฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    } catch { uiAlert('สร้างฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onRenameForm(form: FormSettings) {
     const name = window.prompt('ชื่อฟอร์มใหม่', form.name || form.title)?.trim()
     if (!name) return
     try { await renameForm(form.formType, name); reload() }
-    catch { alert('เปลี่ยนชื่อฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เปลี่ยนชื่อฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onDeleteForm(form: FormSettings) {
-    if (!confirm(`ลบฟอร์ม "${form.name || form.title}" ?\n(เอกสารที่พนักงานเคยกรอกไว้จะยังอยู่)`)) return
+    if (!(await uiConfirm(`เอกสารที่พนักงานเคยกรอกไว้จะยังอยู่`, { title: `ลบฟอร์ม "${form.name || form.title}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteForm(form.formType); reload() }
-    catch { alert('ลบฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('ลบฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onToggleForm(form: FormSettings) {
     try { await setFormActive(form.formType, !isActive(form)); reload() }
-    catch { alert('เปลี่ยนสถานะฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เปลี่ยนสถานะฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   return (

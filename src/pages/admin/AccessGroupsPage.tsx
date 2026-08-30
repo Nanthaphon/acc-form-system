@@ -1,3 +1,4 @@
+import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Pencil, Plus, Tags, Trash2 } from 'lucide-react'
@@ -15,25 +16,25 @@ export default function AccessGroupsPage() {
     const name = window.prompt('ชื่อกลุ่มใหม่')?.trim()
     if (!name) return
     try { await createAccessGroup(name); reload() }
-    catch { alert('เพิ่มกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เพิ่มกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onRename(g: AccessGroup) {
     const name = window.prompt('ชื่อกลุ่มใหม่', g.name)?.trim()
     if (!name || name === g.name) return
     try { await renameAccessGroup(g.id, name); reload() }
-    catch { alert('เปลี่ยนชื่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เปลี่ยนชื่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onDelete(g: AccessGroup) {
     const usage = await accessGroupUsage(g.id)
     if (usage.employees > 0 || usage.forms > 0) {
-      alert(`ลบไม่ได้ — กลุ่มนี้ยังถูกใช้อยู่ (พนักงาน ${usage.employees} คน, ฟอร์ม ${usage.forms} ฟอร์ม)\nกรุณาย้ายพนักงานและฟอร์มออกจากกลุ่มนี้ก่อน`)
+      uiAlert(`ลบไม่ได้ — กลุ่มนี้ยังถูกใช้อยู่ (พนักงาน ${usage.employees} คน, ฟอร์ม ${usage.forms} ฟอร์ม)\nกรุณาย้ายพนักงานและฟอร์มออกจากกลุ่มนี้ก่อน`)
       return
     }
-    if (!confirm(`ลบกลุ่ม "${g.name}" ?`)) return
+    if (!(await uiConfirm(`ลบกลุ่ม "${g.name}" ?`, { tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteAccessGroup(g.id); reload() }
-    catch { alert('ลบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('ลบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   return (

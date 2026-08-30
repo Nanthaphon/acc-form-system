@@ -1,3 +1,4 @@
+import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Folder, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -25,26 +26,26 @@ export default function DashboardPage() {
     const name = window.prompt('ชื่อกลุ่มฟอร์ม')?.trim()
     if (!name) return
     try { await createGroup(name); reload() }
-    catch { alert('สร้างกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('สร้างกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onRenameGroup(g: FormGroup) {
     const name = window.prompt('ชื่อกลุ่มใหม่', g.name)?.trim()
     if (!name || name === g.name) return
     try { await renameGroup(g.id, name); reload() }
-    catch { alert('เปลี่ยนชื่อกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เปลี่ยนชื่อกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onDeleteGroup(g: FormGroup) {
-    if (formsForGroup(g).length > 0) { alert('กลุ่มนี้ยังมีฟอร์มอยู่ — กรุณาลบฟอร์มในกลุ่มก่อน'); return }
-    if (!confirm(`ลบกลุ่ม "${g.name}" ?`)) return
+    if (formsForGroup(g).length > 0) { uiAlert('กลุ่มนี้ยังมีฟอร์มอยู่ — กรุณาลบฟอร์มในกลุ่มก่อน'); return }
+    if (!(await uiConfirm(`ลบกลุ่ม "${g.name}" ?`, { tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteGroup(g.id); reload() }
-    catch { alert('ลบกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('ลบกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onToggleGroup(g: FormGroup) {
     try { await setGroupActive(g.id, !isActive(g)); reload() }
-    catch { alert('เปลี่ยนสถานะกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('เปลี่ยนสถานะกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   // Forms whose groupId matches — for the first group, also catch forms with no groupId.

@@ -1,3 +1,4 @@
+import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listEmployees, deleteEmployee } from '../../data/users'
@@ -13,12 +14,12 @@ export default function EmployeeListPage() {
   const filtered = rows.filter(r => (r.employeeId + r.firstName + r.lastName).includes(q))
 
   async function onDelete(r: UserProfile) {
-    if (!confirm(`ลบพนักงาน "${r.firstName} ${r.lastName}" (${r.employeeId})?\nจะลบบัญชี login และประวัติทั้งหมดของคนนี้อย่างถาวร`)) return
+    if (!(await uiConfirm(`จะลบบัญชี login และประวัติทั้งหมดของคนนี้อย่างถาวร`, { title: `ลบพนักงาน "${r.firstName} ${r.lastName}" (${r.employeeId}) ?`, tone: 'danger', confirmText: 'ลบ' }))) return
     try {
       await deleteEmployee(r.uid)
       load()
     } catch (err: any) {
-      alert('ลบไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
+      uiAlert('ลบไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
     }
   }
 

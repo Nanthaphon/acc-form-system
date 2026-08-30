@@ -1,3 +1,4 @@
+import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getProfileByUid, updateProfile } from '../../data/users'
@@ -33,10 +34,10 @@ export default function EditEmployeePage() {
         department: f.department, departmentId: f.departmentId, companyId: f.companyId, defaultJob: f.defaultJob,
         bankAccount: f.bankAccount, role: f.role, accessGroup: f.accessGroup,
       })
-      alert('บันทึกข้อมูลพนักงานแล้ว')
+      uiAlert('บันทึกข้อมูลพนักงานแล้ว', { tone: 'success' })
       nav('/admin/employees')
     } catch (err: any) {
-      alert('บันทึกไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
+      uiAlert('บันทึกไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
     }
   }
 

@@ -6,6 +6,7 @@ import { AuthProvider } from './auth/AuthProvider'
 import { RequireAuth } from './auth/RequireAuth'
 import { RequireAdmin } from './auth/RequireAdmin'
 import Layout from './components/Layout'
+import DialogHost from './components/dialog/DialogHost'
 import LoginPage from './pages/LoginPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProfilePage from './pages/ProfilePage'
@@ -56,6 +57,6 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider><RouterProvider router={router} /></AuthProvider>
+    <AuthProvider><RouterProvider router={router} /><DialogHost /></AuthProvider>
   </StrictMode>,
 )

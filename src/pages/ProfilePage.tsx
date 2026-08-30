@@ -1,3 +1,4 @@
+import { uiAlert } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { updateProfile } from '../data/users'
@@ -20,15 +21,15 @@ export default function ProfilePage() {
     const reader = new FileReader()
     reader.onload = async () => {
       const dataUrl = String(reader.result)
-      if (dataUrl.length > 400000) { alert('ไฟล์ใหญ่เกินไป แนะนำลายเซ็นเล็กกว่า ~300KB'); return }
+      if (dataUrl.length > 400000) { uiAlert('ไฟล์ใหญ่เกินไป แนะนำลายเซ็นเล็กกว่า ~300KB'); return }
       try { await updateProfile(form!.uid, { signatureImage: dataUrl }); await refresh() }
-      catch { alert('อัปโหลดลายเซ็นไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+      catch { uiAlert('อัปโหลดลายเซ็นไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
     }
     reader.readAsDataURL(file)
   }
   async function removeSignature() {
     try { await updateProfile(form!.uid, { signatureImage: null } as any); await refresh() }
-    catch { alert('ลบลายเซ็นไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    catch { uiAlert('ลบลายเซ็นไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   return (
