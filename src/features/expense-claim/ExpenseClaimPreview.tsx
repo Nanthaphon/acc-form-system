@@ -51,6 +51,14 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const totalCols = vcols.length + 1 // + leading seq column
 
+  // Column widths as proportional percentages (not px) so the table always fits
+  // the page frame exactly, no matter how many columns or how wide their hints.
+  // Columns without a width hint fall back to a default weight.
+  const SEQ_WEIGHT = 30
+  const widthWeights = vcols.map(c => c.width ?? 70)
+  const weightTotal = SEQ_WEIGHT + widthWeights.reduce((a, b) => a + b, 0)
+  const pct = (w: number) => `${((w / weightTotal) * 100).toFixed(3)}%`
+
   // Totals footer: label spans the seq column + leading text columns up to the first visible numeric/calc column.
   const firstNumericIdx = vcols.findIndex(c => !isTextCol(c.type))
   const labelSpan = firstNumericIdx < 0 ? totalCols : firstNumericIdx + 1
@@ -145,11 +153,11 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             <table className="mt-3 w-full table-fixed border-collapse border border-black text-[10px]">
               <thead>
                 <tr>
-                  <th className="w-8 border border-black px-1 py-1">ลำดับ</th>
-                  {vcols.map(col => (
+                  <th style={{ width: pct(SEQ_WEIGHT) }} className="border border-black px-1 py-1">ลำดับ</th>
+                  {vcols.map((col, ci) => (
                     <th
                       key={col.key}
-                      style={{ width: col.width ? `${col.width}px` : undefined }}
+                      style={{ width: pct(widthWeights[ci]) }}
                       className="break-words border border-black px-1 py-1"
                     >
                       {col.label}
