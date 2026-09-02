@@ -1,6 +1,6 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Copy, Pencil, Printer, RotateCcw, Send, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
@@ -15,6 +15,7 @@ import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
 import StatusBadge from '../../components/StatusBadge'
+import ActionIconButton from '../../components/ActionIconButton'
 
 export default function HistoryPage() {
   const { profile } = useAuth()
@@ -29,12 +30,12 @@ export default function HistoryPage() {
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
   useEffect(() => { listForms().then(setForms); listSigners().then(setSigners); listGroups().then(setGroups) }, [])
 
-  const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? groups[0]?.id
-  const filtered = applyFilters(rows, filters, myName, formGroup)
 
   const formOf = (ft: string) => forms.find(f => f.formType === ft)
   const formName = (ft: string) => { const f = formOf(ft); return f?.name || f?.title || '—' }
+  const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
+  const filtered = applyFilters(rows, filters, myName, formGroup, formName)
   // A doc can be sent for signing if its form has online blocks and it isn't fully signed.
   const canSend = (r: Submission) => {
     const blocks = formOf(r.formType)?.signatureBlocks ?? DEFAULT_SIGNATURE_BLOCKS
@@ -81,29 +82,20 @@ export default function HistoryPage() {
                   : <span className="text-gray-300">—</span>}
               </td>
               <td className="border px-2 py-1 whitespace-nowrap">
-                <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>แก้ไข</Link>
-                <span className="mx-1.5 text-gray-300">|</span>
-                <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
-                <span className="mx-1.5 text-gray-300">|</span>
-                <Link className="text-indigo-600 hover:underline" to={`/form/${r.formType}?clone=${r.id}`}>คัดลอก</Link>
+                <div className="flex items-center justify-center gap-1.5">
+                <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
+                <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
+                <ActionIconButton label="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
                 {canSend(r) && (
-                  <>
-                    <span className="mx-1.5 text-gray-300">|</span>
-                    <button className="font-medium text-blue-600 hover:underline" onClick={() => setSignModal(r)}>ส่งให้เซ็น</button>
-                  </>
+                  <ActionIconButton label="ส่งให้เซ็น" onClick={() => setSignModal(r)} tone="blue" icon={<Send size={16} />} />
                 )}
                 {subStatus(r) === 'pending' && (
-                  <>
-                    <span className="mx-1.5 text-gray-300">|</span>
-                    <button className="text-amber-700 hover:underline" onClick={() => onCancelSign(r)}>ยกเลิกส่งเซ็น</button>
-                  </>
+                  <ActionIconButton label="ยกเลิกส่งเซ็น" onClick={() => onCancelSign(r)} tone="amber" icon={<RotateCcw size={16} />} />
                 )}
                 {subStatus(r) === 'draft' && (
-                  <>
-                    <span className="mx-1.5 text-gray-300">|</span>
-                    <button className="text-red-600 hover:underline" onClick={() => onDelete(r)}>ลบ</button>
-                  </>
+                  <ActionIconButton label="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
                 )}
+                </div>
               </td>
             </tr>
           ))}

@@ -22,7 +22,7 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, em
     <div className="flex flex-wrap items-center gap-2">
       <input
         className={`${cls} w-52`}
-        placeholder="ค้นหา เลขที่ / ชื่อพนักงาน"
+        placeholder="ค้นหา เลขที่ / ชื่อฟอร์ม"
         value={value.q}
         onChange={e => set({ q: e.target.value })}
       />

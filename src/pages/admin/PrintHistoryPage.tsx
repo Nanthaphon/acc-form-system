@@ -1,6 +1,6 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Copy, Pencil, Printer, Trash2 } from 'lucide-react'
 import { listAllSubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import StatusBadge from '../../components/StatusBadge'
 import { getVersionCounts, editLabel } from '../../data/versions'
@@ -12,6 +12,7 @@ import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
+import ActionIconButton from '../../components/ActionIconButton'
 
 export default function PrintHistoryPage() {
   const [rows, setRows] = useState<Submission[]>([])
@@ -46,7 +47,7 @@ export default function PrintHistoryPage() {
   }
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? groups[0]?.id
-  const filtered = applyFilters(rows, filters, empName, formGroup)
+  const filtered = applyFilters(rows, filters, empName, formGroup, formName)
 
   return (
     <div>
@@ -82,13 +83,12 @@ export default function PrintHistoryPage() {
                 <td className="border px-2 py-1 text-center">{r.printCount}</td>
                 <td className="border px-2 py-1 whitespace-nowrap">{formatDateTime(r.lastPrintedAt)}</td>
                 <td className="border px-2 py-1 whitespace-nowrap text-center">
-                  <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>แก้ไข</Link>
-                  <span className="mx-1.5 text-gray-300">|</span>
-                  <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
-                  <span className="mx-1.5 text-gray-300">|</span>
-                  <Link className="text-indigo-600 hover:underline" to={`/form/${r.formType}?clone=${r.id}`}>คัดลอก</Link>
-                  <span className="mx-1.5 text-gray-300">|</span>
-                  <button className="text-red-600 hover:underline" onClick={() => onDelete(r)}>ลบ</button>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
+                    <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
+                    <ActionIconButton label="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
+                    <ActionIconButton label="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
+                  </div>
                 </td>
               </tr>
             ))}

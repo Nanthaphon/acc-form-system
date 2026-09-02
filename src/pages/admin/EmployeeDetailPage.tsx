@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Pencil, Printer, Trash2 } from 'lucide-react'
 import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
@@ -14,6 +14,7 @@ import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
+import ActionIconButton from '../../components/ActionIconButton'
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
@@ -63,7 +64,7 @@ export default function EmployeeDetailPage() {
   if (!profile) return <div className="p-4 text-gray-500">กำลังโหลด...</div>
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? folders[0]?.id
-  const filtered = applyFilters(subs, filters, () => `${profile.firstName} ${profile.lastName}`, formGroup)
+  const filtered = applyFilters(subs, filters, () => `${profile.firstName} ${profile.lastName}`, formGroup, formName)
 
   return (
     <div className="space-y-6">
@@ -112,11 +113,11 @@ export default function EmployeeDetailPage() {
                       : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="border px-2 py-1 whitespace-nowrap text-center">
-                    <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}`}>แก้ไข</Link>
-                    <span className="mx-1.5 text-gray-300">|</span>
-                    <Link className="text-green-700 hover:underline" to={`/submission/${r.id}/preview`}>พิมพ์</Link>
-                    <span className="mx-1.5 text-gray-300">|</span>
-                    <button className="text-red-600 hover:underline" onClick={() => onDeleteSub(r)}>ลบ</button>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
+                      <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
+                      <ActionIconButton label="ลบ" onClick={() => onDeleteSub(r)} tone="red" icon={<Trash2 size={16} />} />
+                    </div>
                   </td>
                 </tr>
               ))}

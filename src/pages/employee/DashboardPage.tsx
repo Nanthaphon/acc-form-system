@@ -1,13 +1,14 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Folder, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../../types/schema'
 import { isActive } from '../../types/schema'
 import { listGroups, createGroup, renameGroup, deleteGroup, setGroupActive } from '../../data/formGroups'
 import { listForms } from '../../data/formSettings'
 import Switch from '../../components/Switch'
+import FolderCardIcon from '../../components/FolderCardIcon'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
@@ -104,8 +105,8 @@ export default function DashboardPage() {
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${g.id}`) } }}
               className={`relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 text-center hover:shadow ${isAdmin && !isActive(g) ? 'opacity-60' : ''}`}
             >
-              <div className="flex justify-center text-4xl"><Folder size={32} /></div>
-              <div className="mt-2 truncate font-medium text-[#16233f]">{g.name}</div>
+              <FolderCardIcon count={count} />
+              <div className="mt-3 truncate font-medium text-[#16233f]">{g.name}</div>
               <div className="text-sm text-gray-500">{count} ฟอร์ม</div>
               {isAdmin && (
                 <div className="mt-3 flex items-center justify-center gap-2">

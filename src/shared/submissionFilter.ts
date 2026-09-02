@@ -2,7 +2,7 @@ import type { Submission } from '../types/schema'
 import { subStatus } from '../data/submissions'
 
 export interface Filters {
-  q: string          // search: doc number / employee name
+  q: string          // search: doc number / form name
   formType: string   // '' = all
   groupId: string    // folder / form group; '' = all
   status: string     // '' = all
@@ -32,8 +32,9 @@ export function dateBounds(f: Filters): [number, number] {
 }
 
 export function applyFilters(
-  rows: Submission[], f: Filters, empName: (eid: string) => string,
+  rows: Submission[], f: Filters, _empName: (eid: string) => string,
   formGroup?: (formType: string) => string | undefined,   // resolve a form's folder
+  formName?: (formType: string) => string,
 ): Submission[] {
   const [dStart, dEnd] = dateBounds(f)
   const needle = f.q.trim().toLowerCase()
@@ -44,7 +45,7 @@ export function applyFilters(
     if (f.status && subStatus(r) !== f.status) return false
     if (r.createdAt < dStart || r.createdAt > dEnd) return false
     if (needle) {
-      const hay = `${r.docNumber} ${empName(r.createdByEmployeeId)} ${r.createdByEmployeeId}`.toLowerCase()
+      const hay = `${r.docNumber} ${formName?.(r.formType) ?? ''}`.toLowerCase()
       if (!hay.includes(needle)) return false
     }
     return true
