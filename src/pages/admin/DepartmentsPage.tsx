@@ -1,4 +1,4 @@
-import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Building2, Pencil, Plus, Trash2 } from 'lucide-react'
@@ -13,14 +13,14 @@ export default function DepartmentsPage() {
   useEffect(() => { reload() }, [])
 
   async function onAdd() {
-    const name = window.prompt('ชื่อแผนกใหม่')?.trim()
+    const name = (await uiPrompt('ตั้งชื่อแผนกใหม่', { title: 'เพิ่มแผนก', confirmText: 'เพิ่ม' }))?.trim()
     if (!name) return
     try { await createDepartment(name); reload() }
     catch { uiAlert('เพิ่มแผนกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onRename(d: Department) {
-    const name = window.prompt('ชื่อแผนกใหม่', d.name)?.trim()
+    const name = (await uiPrompt('ตั้งชื่อแผนกใหม่', { title: 'เปลี่ยนชื่อแผนก', defaultValue: d.name, confirmText: 'บันทึก' }))?.trim()
     if (!name || name === d.name) return
     try { await renameDepartment(d.id, name); reload() }
     catch { uiAlert('เปลี่ยนชื่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }

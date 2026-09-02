@@ -1,4 +1,4 @@
-import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
@@ -24,14 +24,14 @@ export default function DashboardPage() {
   useEffect(() => { reload() }, [])
 
   async function onCreateGroup() {
-    const name = window.prompt('ชื่อกลุ่มฟอร์ม')?.trim()
+    const name = (await uiPrompt('ตั้งชื่อกลุ่มฟอร์ม', { title: 'สร้างกลุ่มฟอร์ม', placeholder: 'เช่น เบิกค่าใช้จ่าย', confirmText: 'สร้าง' }))?.trim()
     if (!name) return
     try { await createGroup(name); reload() }
     catch { uiAlert('สร้างกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onRenameGroup(g: FormGroup) {
-    const name = window.prompt('ชื่อกลุ่มใหม่', g.name)?.trim()
+    const name = (await uiPrompt('ตั้งชื่อกลุ่มใหม่', { title: 'เปลี่ยนชื่อกลุ่ม', defaultValue: g.name, confirmText: 'บันทึก' }))?.trim()
     if (!name || name === g.name) return
     try { await renameGroup(g.id, name); reload() }
     catch { uiAlert('เปลี่ยนชื่อกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }

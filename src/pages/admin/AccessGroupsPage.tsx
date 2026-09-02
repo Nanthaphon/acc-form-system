@@ -1,4 +1,4 @@
-import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Pencil, Plus, Tags, Trash2 } from 'lucide-react'
@@ -13,14 +13,14 @@ export default function AccessGroupsPage() {
   useEffect(() => { reload() }, [])
 
   async function onAdd() {
-    const name = window.prompt('ชื่อกลุ่มใหม่')?.trim()
+    const name = (await uiPrompt('ตั้งชื่อกลุ่มการเข้าถึงใหม่', { title: 'เพิ่มกลุ่ม', confirmText: 'เพิ่ม' }))?.trim()
     if (!name) return
     try { await createAccessGroup(name); reload() }
     catch { uiAlert('เพิ่มกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
   async function onRename(g: AccessGroup) {
-    const name = window.prompt('ชื่อกลุ่มใหม่', g.name)?.trim()
+    const name = (await uiPrompt('ตั้งชื่อกลุ่มใหม่', { title: 'เปลี่ยนชื่อกลุ่ม', defaultValue: g.name, confirmText: 'บันทึก' }))?.trim()
     if (!name || name === g.name) return
     try { await renameAccessGroup(g.id, name); reload() }
     catch { uiAlert('เปลี่ยนชื่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }

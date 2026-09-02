@@ -1,4 +1,4 @@
-import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
+import { uiAlert, uiConfirm, uiPrompt } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Folder, Pencil, Plus, SquarePen, Trash2 } from 'lucide-react'
@@ -36,7 +36,7 @@ export default function GroupPage() {
 
   async function onRenameGroup() {
     if (!group) return
-    const name = window.prompt('ชื่อกลุ่มใหม่', group.name)?.trim()
+    const name = (await uiPrompt('ตั้งชื่อกลุ่มใหม่', { title: 'เปลี่ยนชื่อกลุ่ม', defaultValue: group.name, confirmText: 'บันทึก' }))?.trim()
     if (!name || name === group.name) return
     try { await renameGroup(group.id, name); reload() }
     catch { uiAlert('เปลี่ยนชื่อกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
@@ -44,7 +44,7 @@ export default function GroupPage() {
 
   async function onCreateForm() {
     if (!groupId) return
-    const name = window.prompt('ชื่อฟอร์มใหม่')?.trim()
+    const name = (await uiPrompt('ตั้งชื่อฟอร์มใหม่', { title: 'สร้างฟอร์ม', placeholder: 'เช่น ใบเบิกค่าใช้จ่าย', confirmText: 'สร้าง' }))?.trim()
     if (!name) return
     try {
       const newId = await createForm(name, groupId)
@@ -53,7 +53,7 @@ export default function GroupPage() {
   }
 
   async function onRenameForm(form: FormSettings) {
-    const name = window.prompt('ชื่อฟอร์มใหม่', form.name || form.title)?.trim()
+    const name = (await uiPrompt('ตั้งชื่อฟอร์มใหม่', { title: 'เปลี่ยนชื่อฟอร์ม', defaultValue: form.name || form.title, confirmText: 'บันทึก' }))?.trim()
     if (!name) return
     try { await renameForm(form.formType, name); reload() }
     catch { uiAlert('เปลี่ยนชื่อฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
