@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { Building2, ClipboardList, FileText, History, Inbox, KeyRound, LogOut, Printer, Tags, User, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { logout } from '../data/auth'
 import { countMyPendingToSign } from '../data/submissions'
+import { onPendingSignChanged } from '../shared/pendingSignBus'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-sm transition-colors ${
@@ -15,7 +16,15 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export default function Layout() {
   const { profile } = useAuth()
   const [toSign, setToSign] = useState(0)
-  useEffect(() => { if (profile?.uid) countMyPendingToSign(profile.uid).then(setToSign) }, [profile?.uid])
+  const uid = profile?.uid
+  // Refetch on load and again whenever a signature action fires, so the badge
+  // clears as soon as the last document is signed.
+  const refreshToSign = useCallback(() => {
+    if (uid) countMyPendingToSign(uid).then(setToSign)
+    else setToSign(0)
+  }, [uid])
+  useEffect(() => { refreshToSign() }, [refreshToSign])
+  useEffect(() => onPendingSignChanged(refreshToSign), [refreshToSign])
   return (
     <div className="flex min-h-screen bg-[#f4f6fb]">
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-[#16233f] pb-4 text-[#cdd6e6]">

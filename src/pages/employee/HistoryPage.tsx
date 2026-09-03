@@ -15,6 +15,7 @@ import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
 import StatusBadge from '../../components/StatusBadge'
+import { notifyPendingSignChanged } from '../../shared/pendingSignBus'
 import ActionIconButton from '../../components/ActionIconButton'
 
 export default function HistoryPage() {
@@ -54,7 +55,7 @@ export default function HistoryPage() {
       ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับเป็นร่าง`
       : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับเป็นร่าง`
     if (!(await uiConfirm(msg, { tone: 'danger', confirmText: 'ยกเลิกส่งเซ็น' }))) return
-    try { await cancelSigning(r.id); load() }
+    try { await cancelSigning(r.id); load(); notifyPendingSignChanged() }
     catch (e: any) { uiAlert('ยกเลิกไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
   }
   return (
