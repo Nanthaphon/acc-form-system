@@ -1,5 +1,7 @@
 import { uiAlert } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
+import { Trash2 } from 'lucide-react'
+import ActionIconButton from '../components/ActionIconButton'
 import { useAuth } from '../auth/AuthProvider'
 import { updateProfile } from '../data/users'
 import { listCompanies } from '../data/companies'
@@ -64,7 +66,7 @@ export default function ProfilePage() {
                 onChange={e => onSignaturePick(e.target.files?.[0])}
               />
               {form.signatureImage && (
-                <button type="button" onClick={removeSignature} className="text-xs text-red-600 hover:underline">ลบลายเซ็น</button>
+                <ActionIconButton label="ลบลายเซ็น" tone="red" icon={<Trash2 size={16} />} onClick={removeSignature} />
               )}
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { Eye, RotateCcw, X } from 'lucide-react'
+import ActionIconButton from './ActionIconButton'
 import type { Company, FormColumn, FormSettings, SubmissionVersion } from '../types/schema'
 import { listVersions } from '../data/versions'
 import { describeChanges } from '../shared/versionDiff'
@@ -39,9 +40,9 @@ export default function VersionHistory({ submissionId, columns, settings, compan
                 <span className="text-gray-300">·</span>
                 <span className="text-gray-500">{formatDateTime(v.editedAt)}</span>
                 {v.editedByName && <><span className="text-gray-300">·</span><span className="text-gray-500">โดย {v.editedByName}</span></>}
-                <span className="ml-auto flex gap-3">
-                  <button className="text-blue-600 hover:underline" onClick={() => setViewing(v)}>ดู</button>
-                  {canRestore && <button className="text-gray-700 hover:underline" onClick={() => onRestore(v)}>กู้คืน</button>}
+                <span className="ml-auto flex items-center gap-1.5">
+                  <ActionIconButton label="ดูเวอร์ชันนี้" icon={<Eye size={16} />} onClick={() => setViewing(v)} />
+                  {canRestore && <ActionIconButton label="กู้คืนเวอร์ชันนี้" icon={<RotateCcw size={16} />} onClick={() => onRestore(v)} />}
                 </span>
               </div>
               <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-gray-600">

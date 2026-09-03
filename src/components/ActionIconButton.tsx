@@ -1,6 +1,9 @@
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
+// Tone is accepted for call-site readability but intentionally NOT applied:
+// every action icon in the app renders in one neutral style so rows of actions
+// read as a single consistent set (see ActionIconButton.test.tsx).
 type Tone = 'blue' | 'green' | 'indigo' | 'amber' | 'red'
 
 interface BaseProps {
@@ -9,7 +12,7 @@ interface BaseProps {
   tone?: Tone
 }
 
-type Props = BaseProps & { to?: string; onClick?: () => void }
+type Props = BaseProps & { to?: string; onClick?: (e: MouseEvent<HTMLButtonElement>) => void }
 
 const buttonClass = 'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-transparent bg-white align-middle text-gray-900 shadow-sm ring-1 ring-gray-200/80 transition hover:bg-gray-50 hover:ring-gray-300'
 

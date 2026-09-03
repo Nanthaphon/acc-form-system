@@ -9,6 +9,7 @@ import { listGroups, createGroup, renameGroup, deleteGroup, setGroupActive } fro
 import { listForms } from '../../data/formSettings'
 import Switch from '../../components/Switch'
 import FolderCardIcon from '../../components/FolderCardIcon'
+import ActionIconButton from '../../components/ActionIconButton'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
@@ -116,22 +117,17 @@ export default function DashboardPage() {
               )}
               {isAdmin && (
                 <div className="absolute right-2 top-2 flex gap-1">
-                  <button
-                    title="เปลี่ยนชื่อกลุ่ม"
-                    aria-label="เปลี่ยนชื่อกลุ่ม"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+                  <ActionIconButton
+                    label="เปลี่ยนชื่อกลุ่ม"
+                    icon={<Pencil size={16} />}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRenameGroup(g) }}
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
-                    title="ลบกลุ่ม"
-                    aria-label="ลบกลุ่ม"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm text-[#d64545] hover:border-[#d64545]"
+                  />
+                  <ActionIconButton
+                    label="ลบกลุ่ม"
+                    tone="red"
+                    icon={<Trash2 size={16} />}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteGroup(g) }}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  />
                 </div>
               )}
             </div>

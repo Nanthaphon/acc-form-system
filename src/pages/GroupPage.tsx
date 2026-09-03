@@ -1,7 +1,8 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Folder, Pencil, Plus, SquarePen, Trash2 } from 'lucide-react'
+import { ArrowLeft, Folder, Pencil, Plus, Settings, Trash2 } from 'lucide-react'
+import ActionIconButton from '../components/ActionIconButton'
 import { useAuth } from '../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../types/schema'
 import { isActive } from '../types/schema'
@@ -82,14 +83,7 @@ export default function GroupPage() {
         <span className="text-2xl"><Folder size={24} /></span>
         <h1 className="text-xl font-medium text-[#16233f]">{group?.name ?? 'กลุ่มฟอร์ม'}</h1>
         {isAdmin && group && (
-          <button
-            title="เปลี่ยนชื่อกลุ่ม"
-            aria-label="เปลี่ยนชื่อกลุ่ม"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
-            onClick={onRenameGroup}
-          >
-            <Pencil size={16} />
-          </button>
+          <ActionIconButton label="เปลี่ยนชื่อกลุ่ม" icon={<Pencil size={16} />} onClick={onRenameGroup} />
         )}
         {isAdmin && (
           <button
@@ -121,30 +115,22 @@ export default function GroupPage() {
             )}
             {isAdmin && (
               <div className="absolute right-2 top-2 flex gap-1">
-                <button
-                  title="แก้ไขฟอร์ม"
-                  aria-label="แก้ไขฟอร์ม"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+                <ActionIconButton
+                  label="ตั้งค่าฟอร์ม"
+                  icon={<Settings size={16} />}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); nav(`/form/${form.formType}/edit`) }}
-                >
-                  <Pencil size={16} />
-                </button>
-                <button
-                  title="เปลี่ยนชื่อฟอร์ม"
-                  aria-label="เปลี่ยนชื่อฟอร์ม"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
+                />
+                <ActionIconButton
+                  label="เปลี่ยนชื่อฟอร์ม"
+                  icon={<Pencil size={16} />}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRenameForm(form) }}
-                >
-                  <SquarePen size={16} />
-                </button>
-                <button
-                  title="ลบฟอร์ม"
-                  aria-label="ลบฟอร์ม"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e5eaf3] bg-white text-sm text-[#d64545] hover:border-[#d64545]"
+                />
+                <ActionIconButton
+                  label="ลบฟอร์ม"
+                  tone="red"
+                  icon={<Trash2 size={16} />}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteForm(form) }}
-                >
-                  <Trash2 size={16} />
-                </button>
+                />
               </div>
             )}
           </div>

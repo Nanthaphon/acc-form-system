@@ -1,6 +1,8 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Pencil, Trash2 } from 'lucide-react'
+import ActionIconButton from '../../components/ActionIconButton'
 import { listEmployees, deleteEmployee } from '../../data/users'
 import { useAuth } from '../../auth/AuthProvider'
 import type { UserProfile } from '../../types/schema'
@@ -42,14 +44,13 @@ export default function EmployeeListPage() {
               <td className="border px-2 py-1">{r.department}</td>
               <td className="border px-2 py-1">{r.companyId}</td>
               <td className="border px-2 py-1">{r.role}</td>
-              <td className="border px-2 py-1 text-center">
-                <Link to={`/admin/employees/${r.uid}/edit`} className="text-blue-600 hover:underline">แก้ไข</Link>
-                {r.uid !== profile?.uid && (
-                  <>
-                    {' '}
-                    <button onClick={() => onDelete(r)} className="text-red-600 hover:underline">ลบ</button>
-                  </>
-                )}
+              <td className="border px-2 py-1">
+                <div className="flex items-center justify-center gap-1.5">
+                  <ActionIconButton label="แก้ไข" to={`/admin/employees/${r.uid}/edit`} icon={<Pencil size={16} />} />
+                  {r.uid !== profile?.uid && (
+                    <ActionIconButton label="ลบพนักงาน" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
+                  )}
+                </div>
               </td>
             </tr>
           ))}

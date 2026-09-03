@@ -2,6 +2,7 @@ import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogServ
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Pencil, Plus, Tags, Trash2 } from 'lucide-react'
+import ActionIconButton from '../../components/ActionIconButton'
 import type { AccessGroup } from '../../types/schema'
 import { listAccessGroups, createAccessGroup, renameAccessGroup, deleteAccessGroup, accessGroupUsage } from '../../data/accessGroups'
 
@@ -66,22 +67,8 @@ export default function AccessGroupsPage() {
               <li key={g.id} className="flex items-center gap-3 px-5 py-3.5">
                 <span className="text-sm font-medium text-gray-900">{g.name}</span>
                 <div className="ml-auto flex items-center gap-1.5">
-                  <button
-                    title="เปลี่ยนชื่อ"
-                    aria-label="เปลี่ยนชื่อ"
-                    onClick={() => onRename(g)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-900"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                  <button
-                    title="ลบกลุ่ม"
-                    aria-label="ลบกลุ่ม"
-                    onClick={() => onDelete(g)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <ActionIconButton label="เปลี่ยนชื่อ" icon={<Pencil size={16} />} onClick={() => onRename(g)} />
+                  <ActionIconButton label="ลบกลุ่ม" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(g)} />
                 </div>
               </li>
             ))}

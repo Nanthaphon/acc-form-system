@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react'
+import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
@@ -181,14 +182,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         </td>
                       ))}
                       <td className="border-b border-gray-100 p-2 text-center">
-                        <button
-                          className="text-gray-300 hover:text-red-500"
-                          title="ลบรายการ"
-                          aria-label="ลบรายการ"
+                        <ActionIconButton
+                          label="ลบรายการ"
+                          tone="red"
+                          icon={<Trash2 size={16} />}
                           onClick={() => onItemsChange(items.filter((_, x) => x !== i))}
-                        >
-                          <Trash2 size={15} className="mx-auto" />
-                        </button>
+                        />
                       </td>
                     </tr>
                   ))}

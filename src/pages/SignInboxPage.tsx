@@ -1,7 +1,8 @@
 import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Inbox, PenLine } from 'lucide-react'
+import { Eye, Inbox, PenLine } from 'lucide-react'
+import ActionIconButton from '../components/ActionIconButton'
 import { useAuth } from '../auth/AuthProvider'
 import type { Submission, FormSettings, DocSignature } from '../types/schema'
 import { listMyAssigned, signDocument, submissionAmount } from '../data/submissions'
@@ -67,16 +68,19 @@ export default function SignInboxPage() {
                   <td className="px-3 py-2 text-right">{submissionAmount(r).toLocaleString()}</td>
                   <td className="px-3 py-2 whitespace-nowrap text-gray-500">{formatDate(r.createdAt)}</td>
                   <td className="px-3 py-2">{myBlocks(r).filter(b => b.status === 'pending').map(b => b.blockLabel).join(', ')}</td>
-                  <td className="px-3 py-2 whitespace-nowrap text-right">
-                    <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}/preview`}>ดู</Link>
-                    {myBlocks(r).filter(b => b.status === 'pending').map(b => (
-                      <span key={b.blockId}>
-                        <span className="mx-1.5 text-gray-300">|</span>
-                        <button className="inline-flex items-center gap-1 font-medium text-green-700 hover:underline" onClick={() => onSign(r, b.blockId, b.blockLabel)}>
-                          <PenLine size={13} /> เซ็น {b.blockLabel}
-                        </button>
-                      </span>
-                    ))}
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <ActionIconButton label="ดูเอกสาร" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
+                      {myBlocks(r).filter(b => b.status === 'pending').map(b => (
+                        <ActionIconButton
+                          key={b.blockId}
+                          label={`เซ็น ${b.blockLabel}`}
+                          tone="green"
+                          icon={<PenLine size={16} />}
+                          onClick={() => onSign(r, b.blockId, b.blockLabel)}
+                        />
+                      ))}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -109,8 +113,10 @@ export default function SignInboxPage() {
                     <td className="px-3 py-2 whitespace-nowrap">{r.header.firstName} {r.header.lastName}</td>
                     <td className="px-3 py-2">{mine.map(b => b.blockLabel).join(', ')}</td>
                     <td className="px-3 py-2 whitespace-nowrap text-gray-500">{lastSignedAt ? formatDate(lastSignedAt) : '-'}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-right">
-                      <Link className="text-blue-600 hover:underline" to={`/submission/${r.id}/preview`}>ดู</Link>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="flex items-center justify-end">
+                        <ActionIconButton label="ดูเอกสาร" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
+                      </div>
                     </td>
                   </tr>
                 )

@@ -2,6 +2,7 @@ import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogServ
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Building2, Pencil, Plus, Trash2 } from 'lucide-react'
+import ActionIconButton from '../../components/ActionIconButton'
 import type { Department } from '../../types/schema'
 import { listDepartments, createDepartment, renameDepartment, deleteDepartment, departmentUsage } from '../../data/departments'
 
@@ -66,22 +67,8 @@ export default function DepartmentsPage() {
               <li key={d.id} className="flex items-center gap-3 px-5 py-3.5">
                 <span className="text-sm font-medium text-gray-900">{d.name}</span>
                 <div className="ml-auto flex items-center gap-1.5">
-                  <button
-                    title="เปลี่ยนชื่อ"
-                    aria-label="เปลี่ยนชื่อ"
-                    onClick={() => onRename(d)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-900"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                  <button
-                    title="ลบแผนก"
-                    aria-label="ลบแผนก"
-                    onClick={() => onDelete(d)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <ActionIconButton label="เปลี่ยนชื่อ" icon={<Pencil size={16} />} onClick={() => onRename(d)} />
+                  <ActionIconButton label="ลบแผนก" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(d)} />
                 </div>
               </li>
             ))}
