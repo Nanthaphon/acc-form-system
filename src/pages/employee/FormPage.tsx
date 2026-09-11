@@ -1,7 +1,6 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { pdf } from '@react-pdf/renderer'
 import { Download, Eye, Pencil, Printer, Receipt, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
@@ -12,7 +11,6 @@ import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { ExpenseClaimPdf } from '../../features/expense-claim/ExpenseClaimPdf'
 import { createSubmission, updateSubmission, getSubmission, incrementPrint } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
@@ -146,6 +144,11 @@ export default function FormPage() {
   }
 
   async function downloadPdf() {
+    // The PDF renderer is most of the app's code — load it only when a PDF is asked for.
+    const [{ pdf }, { ExpenseClaimPdf }] = await Promise.all([
+      import('@react-pdf/renderer'),
+      import('../../features/expense-claim/ExpenseClaimPdf'),
+    ])
     const blob = await pdf(<ExpenseClaimPdf company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sigs} />).toBlob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = `${docNumber}.pdf`; a.click()
@@ -197,7 +200,7 @@ export default function FormPage() {
             </select>
           </div>
         )}
-        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} />}
         {!showPreview && (
           <AttachmentsField
             saved={attachments}

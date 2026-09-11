@@ -5,6 +5,7 @@ import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatDate, formatIsoDate } from '../../shared/date'
+import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyTemplate'
 
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
 
@@ -16,6 +17,22 @@ const DEFAULT_ADDRESS =
 // sheet is a complete form on its own — same header, requester, grand total,
 // amount-in-words, signatures and notes.
 const ROWS_PER_PAGE = 14
+
+// A form paragraph with its {{blanks}} filled from the document: typed values
+// sit on a dotted line, empty blanks print as dots to be written by hand.
+function FilledText({ text, values, className }: { text: string; values?: Record<string, string>; className: string }) {
+  return (
+    <div className={className}>
+      {parseTemplate(text).map((p, i) => {
+        if (p.kind === 'text') return <span key={i}>{p.text}</span>
+        const v = formatTemplateValue(p.field, values?.[p.field.key])
+        return v
+          ? <span key={i} className="border-b border-dotted border-black px-1">{v}</span>
+          : <span key={i}>{blankFor(p.field)}</span>
+      })}
+    </div>
+  )
+}
 
 function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -156,7 +173,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
             {/* ข้อความหัวฟอร์ม (เหนือตาราง) ถ้ามี */}
             {settings.introText?.trim() && (
-              <div className="mt-3 whitespace-pre-line text-justify leading-relaxed">{settings.introText}</div>
+              <FilledText className="mt-3 whitespace-pre-line text-justify leading-relaxed" text={settings.introText} values={header.fields} />
             )}
 
             {/* ตาราง */}
@@ -230,7 +247,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
             {/* ข้อความรับรอง / คำประกาศ (ถ้ามี) */}
             {settings.bodyText?.trim() && (
-              <div className="mt-4 whitespace-pre-line text-justify leading-relaxed">{settings.bodyText}</div>
+              <FilledText className="mt-4 whitespace-pre-line text-justify leading-relaxed" text={settings.bodyText} values={header.fields} />
             )}
 
             {/* Signature blocks — configured per form, laid out in rows of 3 */}

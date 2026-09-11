@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Clock3, UserRound } from 'lucide-react'
-import type { Submission } from '../types/schema'
+import type { SubmissionSummary } from '../types/schema'
 import { subStatus, statusMeta, statusLabel } from '../data/submissions'
 
 interface TooltipPos {
@@ -16,7 +16,7 @@ function pendingCountText(count: number): string {
 
 // Status pill for a document. While waiting for signatures, hovering it lists
 // who still hasn't signed.
-export default function StatusBadge({ sub }: { sub: Submission }) {
+export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
   const st = subStatus(sub)
   const meta = statusMeta(st)
   const ref = useRef<HTMLSpanElement>(null)

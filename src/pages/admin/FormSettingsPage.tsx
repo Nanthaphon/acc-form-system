@@ -9,6 +9,7 @@ import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
+import TemplateTextarea from '../../components/TemplateTextarea'
 import { listAccessGroups } from '../../data/accessGroups'
 
 // Page-local extras on top of the shared `ui` tokens.
@@ -61,7 +62,7 @@ export default function FormSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
 
-  function loadCompanies() { listCompanies().then(setCompanies) }
+  function loadCompanies() { listCompanies(true).then(setCompanies) } // logos are edited here
   useEffect(() => {
     getFormSettings(formType).then(setSettings)
     loadCompanies()
@@ -539,22 +540,23 @@ export default function FormSettingsPage() {
       {/* ข้อความ / การแสดงผล */}
       <div className={ui.card}>
         <h2 className={`${ui.cardTitle} mb-1`}>ข้อความ / การแสดงผล</h2>
-        <p className={`${ui.hint} mb-3`}>ย่อหน้าข้อความและตัวเลือกการแสดงผลของเอกสาร · เว้นว่างไว้ถ้าไม่ใช้</p>
+        <p className={`${ui.hint} mb-3`}>
+          ย่อหน้าข้อความและตัวเลือกการแสดงผลของเอกสาร · เว้นว่างไว้ถ้าไม่ใช้ · ใส่ <code className="rounded bg-gray-100 px-1 text-gray-700">{'{{ชื่อช่อง}}'}</code> ตรงที่ต้องการให้ผู้กรอกใส่ข้อมูลในระบบ
+          (ถ้าไม่กรอก จะพิมพ์ออกเป็น ........ ให้เขียนด้วยมือ)
+        </p>
 
         <label className={ui.label}>ข้อความหัวฟอร์ม (เหนือตาราง)</label>
-        <textarea
-          className={`${ui.input} min-h-[72px] resize-y`}
+        <TemplateTextarea
           value={settings.introText ?? ''}
-          placeholder="เช่น บริษัท … ได้รับเงินจาก …………… ครบถ้วนตามจำนวนเงิน …………… บาท"
-          onChange={e => setSettings(s => ({ ...s, introText: e.target.value }))}
+          placeholder="เช่น บริษัท … ได้รับเงินจาก {{ได้รับเงินจาก}} ครบถ้วนตามจำนวนเงิน {{จำนวนเงิน:ตัวเลข}} บาท"
+          onChange={v => setSettings(s => ({ ...s, introText: v }))}
         />
 
         <label className={`${ui.label} mt-4`}>ข้อความรับรอง / คำประกาศ (ใต้ตาราง เหนือลายเซ็น)</label>
-        <textarea
-          className={`${ui.input} min-h-[72px] resize-y`}
+        <TemplateTextarea
           value={settings.bodyText ?? ''}
-          placeholder="เช่น ขอรับรองว่า รายจ่ายข้างต้นนี้ไม่อาจเรียกเก็บเป็นใบเสร็จรับเงินจากผู้รับได้ …"
-          onChange={e => setSettings(s => ({ ...s, bodyText: e.target.value }))}
+          placeholder="เช่น ขอรับรองว่า … ตั้งแต่วันที่ {{ตั้งแต่วันที่:วันที่}} ถึงวันที่ {{ถึงวันที่:วันที่}}"
+          onChange={v => setSettings(s => ({ ...s, bodyText: v }))}
         />
 
         <div className="mt-4 space-y-2">

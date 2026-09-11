@@ -255,6 +255,10 @@ export interface Submission {
   attachments?: Attachment[]         // files attached to this document (stored in the 'attachments' bucket)
 }
 
+// A document as the lists load it: no item rows or attachments, and its
+// signatures may come without their images (see listRows in data/submissions).
+export type SubmissionSummary = Omit<Submission, 'items' | 'attachments'>
+
 // A file attached to a document. `path` is the storage object key
 // (`<submissionId>/<uuid>.<ext>`); `name` keeps the original file name for display.
 export interface Attachment {

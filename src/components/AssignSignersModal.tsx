@@ -2,7 +2,7 @@ import { uiAlert } from './dialog/dialogService'
 import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 import { useState } from 'react'
 import { PenLine, X } from 'lucide-react'
-import type { Submission, FormSettings, DocSignature } from '../types/schema'
+import type { SubmissionSummary, FormSettings, DocSignature } from '../types/schema'
 import { formSignatureBlocks } from '../types/schema'
 import { assignSigners, signDocument } from '../data/submissions'
 import type { Signer } from '../data/submissions'
@@ -10,7 +10,7 @@ import SignerSelect from './SignerSelect'
 import { Badge, ui } from './ui'
 
 interface Props {
-  submission: Submission
+  submission: SubmissionSummary
   settings: FormSettings          // for signatureBlocks
   signers: Signer[]
   currentUid: string

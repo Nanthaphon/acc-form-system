@@ -6,6 +6,8 @@ import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol } from '../../types/
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import DateInput from '../../components/DateInput'
+import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
+import type { TemplateField } from '../../shared/bodyTemplate'
 
 interface Props {
   header: ExpenseHeader
@@ -15,6 +17,8 @@ interface Props {
   columns?: FormColumn[]
   categories?: string[]
   headerFields?: HeaderField[]
+  introText?: string | null   // form paragraphs — their {{blanks}} are filled in here
+  bodyText?: string | null
 }
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
@@ -25,13 +29,40 @@ const cardTitleClass = 'mb-4 text-[15px] font-semibold text-gray-900'
 const labelClass = 'mb-1.5 block text-xs font-medium text-gray-500'
 const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
 
+const blankClass = 'mx-1 inline-block rounded-md border border-gray-200 bg-white px-2 py-1 align-middle text-sm leading-normal text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+
+// One {{blank}} inside a paragraph, sized to sit in the running text.
+function BlankInput({ field, value, onChange }: { field: TemplateField; value: string; onChange: (v: string) => void }) {
+  if (field.type === 'date') {
+    return (
+      <span className="mx-1 inline-block w-40 align-middle leading-normal" title={field.label}>
+        <DateInput className={`${blankClass} mx-0 w-full`} value={value} onChange={onChange} />
+      </span>
+    )
+  }
+  const number = field.type === 'number'
+  return (
+    <input
+      aria-label={field.label}
+      title={field.label}
+      placeholder={field.label}
+      inputMode={number ? 'decimal' : undefined}
+      className={`${blankClass} ${number ? 'w-36 text-right tabular-nums' : 'w-56'}`}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+    />
+  )
+}
+
 function fmt(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
-export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields }: Props) {
+export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
+  // Paragraphs that have blanks to fill (plain paragraphs need no input).
+  const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
   const vcols = visibleColumns(cols)
   const hasColumns = vcols.length > 0
   const computed = items.map(r => computeRow(cols, r))
@@ -119,6 +150,23 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
           ))}
         </div>
       </div>
+
+      {/* Blanks in the form's paragraphs — typed here, printed in place of the dots */}
+      {fillTexts.length > 0 && (
+        <div className={cardClass}>
+          <h2 className="text-[15px] font-semibold text-gray-900">ข้อความในเอกสาร</h2>
+          <p className="mb-4 mt-1 text-xs text-gray-500">กรอกข้อมูลในช่องว่างของข้อความ · ช่องที่เว้นว่างไว้จะพิมพ์ออกเป็น ........ ให้เขียนด้วยมือได้</p>
+          <div className="space-y-3">
+            {fillTexts.map((t, i) => (
+              <div key={i} className="whitespace-pre-line rounded-lg bg-gray-50 px-4 py-3 text-sm leading-[2.75] text-gray-700">
+                {parseTemplate(t).map((p, j) => p.kind === 'text'
+                  ? <span key={j}>{p.text}</span>
+                  : <BlankInput key={j} field={p.field} value={header.fields?.[p.field.key] ?? ''} onChange={v => setHField(p.field.key, v)} />)}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Items — dynamic columns */}
       <div className={cardClass}>

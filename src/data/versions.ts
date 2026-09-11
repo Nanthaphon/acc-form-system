@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Submission, SubmissionVersion, ExpenseHeader, ExpenseRow, ExpenseTotals } from '../types/schema'
+import type { SubmissionSummary, SubmissionVersion, ExpenseHeader, ExpenseRow, ExpenseTotals } from '../types/schema'
 
 export interface Snapshot { header: ExpenseHeader; items: ExpenseRow[]; totals: ExpenseTotals }
 
@@ -36,7 +36,7 @@ export async function getVersionCounts(): Promise<Record<string, number>> {
 // A short "edited" label for a document, or null if it was never edited.
 // version 1 = the original, so edits = versionCount - 1. Documents created
 // before the versioning feature have no versions → fall back to updatedAt.
-export function editLabel(s: Submission, counts: Record<string, number>): string | null {
+export function editLabel(s: SubmissionSummary, counts: Record<string, number>): string | null {
   const n = counts[s.id] ?? 0
   if (n > 1) return `แก้ไข ${n - 1} ครั้ง`
   if (n === 0 && s.updatedAt > s.createdAt) return 'แก้ไขแล้ว'

@@ -6,7 +6,7 @@ import ActionIconButton from '../components/ActionIconButton'
 import { Badge, PageHeader, ui } from '../components/ui'
 import { Spinner } from '../components/Spinner'
 import { useAuth } from '../auth/AuthProvider'
-import type { Submission, FormSettings, DocSignature } from '../types/schema'
+import type { SubmissionSummary, FormSettings, DocSignature } from '../types/schema'
 import { listMyAssigned, signDocument, submissionAmount } from '../data/submissions'
 import { listForms } from '../data/formSettings'
 import { notifyPendingSignChanged } from '../shared/pendingSignBus'
@@ -17,7 +17,7 @@ const thRight = ui.th.replace('text-left', 'text-right')
 
 export default function SignInboxPage() {
   const { profile } = useAuth()
-  const [rows, setRows] = useState<Submission[]>([])
+  const [rows, setRows] = useState<SubmissionSummary[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -28,11 +28,11 @@ export default function SignInboxPage() {
     const f = forms.find(x => x.formType === ft)
     return f?.name || f?.title || ft
   }
-  const myBlocks = (s: Submission): DocSignature[] => (s.signatures ?? []).filter(x => x.assignedUid === profile?.uid)
+  const myBlocks = (s: SubmissionSummary): DocSignature[] => (s.signatures ?? []).filter(x => x.assignedUid === profile?.uid)
   const pendingRows = rows.filter(s => myBlocks(s).some(b => b.status === 'pending'))
   const doneRows = rows.filter(s => myBlocks(s).length > 0 && myBlocks(s).every(b => b.status === 'signed'))
 
-  async function onSign(s: Submission, blockId: string, blockLabel: string) {
+  async function onSign(s: SubmissionSummary, blockId: string, blockLabel: string) {
     if (!profile?.signatureImage) {
       uiAlert('คุณยังไม่ได้อัปโหลดลายเซ็น — ไปที่หน้า “ข้อมูลของฉัน” เพื่ออัปโหลดก่อน แล้วจึงเซ็นได้')
       return

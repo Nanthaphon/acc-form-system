@@ -8,7 +8,7 @@ import { getVersionCounts, editLabel } from '../../data/versions'
 import { listEmployees } from '../../data/users'
 import { listForms } from '../../data/formSettings'
 import { listGroups } from '../../data/formGroups'
-import type { Submission, UserProfile, FormSettings, FormGroup } from '../../types/schema'
+import type { SubmissionSummary, UserProfile, FormSettings, FormGroup } from '../../types/schema'
 import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
@@ -22,11 +22,11 @@ import { Badge, PageHeader, ui } from '../../components/ui'
 interface Column extends PickableColumn {
   thCls?: string
   tdCls: string
-  cell: (r: Submission) => ReactNode
+  cell: (r: SubmissionSummary) => ReactNode
 }
 
 export default function PrintHistoryPage() {
-  const [rows, setRows] = useState<Submission[]>([])
+  const [rows, setRows] = useState<SubmissionSummary[]>([])
   const [employees, setEmployees] = useState<UserProfile[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
   const [groups, setGroups] = useState<FormGroup[]>([])
@@ -43,7 +43,7 @@ export default function PrintHistoryPage() {
     getVersionCounts().then(setVcounts)
   }, [])
 
-  async function onDelete(r: Submission) {
+  async function onDelete(r: SubmissionSummary) {
     if (!(await uiConfirm(`ลบถาวร ยกเลิกไม่ได้`, { title: `ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteSubmission(r.id); loadRows() }
     catch { uiAlert('ลบเอกสารไม่สำเร็จ') }

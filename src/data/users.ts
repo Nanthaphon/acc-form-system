@@ -36,8 +36,11 @@ export async function getProfileByUid(uid: string): Promise<UserProfile | null> 
   const { data } = await supabase.from('profiles').select('*').eq('uid', uid).maybeSingle()
   return (data as UserProfile) ?? null
 }
+// Every profile column except signatureImage (a base64 image per person) —
+// lists only need names and details.
+const EMPLOYEE_LIST_COLS = 'uid,employeeId,firstName,lastName,position,department,departmentId,companyId,defaultJob,bankAccount,role,groupId,accessGroup,mustChangePassword,createdAt'
 export async function listEmployees(): Promise<UserProfile[]> {
-  const { data } = await supabase.from('profiles').select('*').order('employeeId')
+  const { data } = await supabase.from('profiles').select(EMPLOYEE_LIST_COLS).order('employeeId')
   return (data ?? []) as UserProfile[]
 }
 export async function setMustChangePassword(uid: string, value: boolean): Promise<void> {

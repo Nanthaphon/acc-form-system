@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Submission, SubmissionStatus, DocSignature } from '../types/schema'
+import type { Submission, SubmissionSummary, SubmissionStatus, DocSignature } from '../types/schema'
 import { formatDocNumber } from '../shared/docNumber'
 import { addVersion } from './versions'
 import { deleteAttachmentFiles } from './attachments'
@@ -50,7 +50,7 @@ export async function incrementPrint(id: string): Promise<void> {
 }
 // Grand total for display — tolerant of old submissions saved before the
 // dynamic-column model (which used { totalNet } instead of { grandTotal }).
-export function submissionAmount(s: Submission): number {
+export function submissionAmount(s: SubmissionSummary): number {
   const t = s.totals as unknown as { netTotal?: number; grandTotal?: number; totalNet?: number }
   return Number(t?.netTotal ?? t?.grandTotal ?? t?.totalNet) || 0
 }
@@ -87,24 +87,47 @@ export async function cancelSigning(subId: string): Promise<void> {
   const { error } = await supabase.rpc('cancel_signing', { sub_id: subId })
   if (error) throw error
 }
-// Documents where the current user is assigned and still has a pending block.
-export async function listMyPendingToSign(uid: string): Promise<Submission[]> {
-  const { data } = await supabase.from('submissions').select('*').order('createdAt', { ascending: false })
-  return ((data ?? []) as Submission[]).filter(s => (s.signatures ?? []).some(x => x.assignedUid === uid && x.status === 'pending'))
+// ----- Document lists -----
+// Columns the lists show. Item rows and attachments are only needed on the
+// document itself, so lists skip them.
+const LIST_COLS = 'id,formType,docNumber,header,totals,createdBy,createdByEmployeeId,createdAt,updatedAt,printCount,lastPrintedAt'
+// Every signed block carries a full copy of the signer's image, far too heavy to
+// download for a whole list. signatures_light() (supabase/2026-09-11-list-performance.sql)
+// returns the array without the images; until that SQL has been run, fall back
+// to the full column.
+let hasLightSigs = true
+
+function listQuery(cols: string) { return supabase.from('submissions').select(cols) }
+type ListQuery = ReturnType<typeof listQuery>
+
+async function listRows(refine: (q: ListQuery) => ListQuery): Promise<SubmissionSummary[]> {
+  if (hasLightSigs) {
+    const { data, error } = await refine(listQuery(`${LIST_COLS},signatures:signatures_light`))
+    if (!error) return (data ?? []) as unknown as SubmissionSummary[]
+    if (error.code === '42703') hasLightSigs = false // function not installed yet
+  }
+  const { data } = await refine(listQuery(`${LIST_COLS},signatures`))
+  return (data ?? []) as unknown as SubmissionSummary[]
 }
+// jsonb containment on signatures: the database does the matching.
+const signedBy = (entry: Partial<DocSignature>) => JSON.stringify([entry])
+
+// How many documents wait for the current user's signature (sidebar badge) —
+// counted in the database, no rows downloaded.
 export async function countMyPendingToSign(uid: string): Promise<number> {
-  return (await listMyPendingToSign(uid)).length
+  const { count } = await supabase.from('submissions').select('id', { count: 'exact', head: true })
+    .contains('signatures', signedBy({ assignedUid: uid, status: 'pending' }))
+  return count ?? 0
 }
 // Every document the current user is assigned to (pending or already signed) —
 // so signers keep a record of what they signed.
-export async function listMyAssigned(uid: string): Promise<Submission[]> {
-  const { data } = await supabase.from('submissions').select('*').order('createdAt', { ascending: false })
-  return ((data ?? []) as Submission[]).filter(s => (s.signatures ?? []).some(x => x.assignedUid === uid))
+export async function listMyAssigned(uid: string): Promise<SubmissionSummary[]> {
+  return listRows(q => q.contains('signatures', signedBy({ assignedUid: uid })).order('createdAt', { ascending: false }))
 }
 
 // True while a document carries no signature assignments at all — the state in
 // which its owner may still freely edit or delete it.
-export function isUnsigned(s: Submission): boolean {
+export function isUnsigned(s: SubmissionSummary): boolean {
   return (s.signatures ?? []).length === 0
 }
 
@@ -113,7 +136,7 @@ export function isUnsigned(s: Submission): boolean {
 //   none          -> เสร็จสิ้น
 //   some pending  -> รอลายเซ็น
 //   all signed    -> เซ็นครบ
-export function subStatus(s: Submission): SubmissionStatus {
+export function subStatus(s: SubmissionSummary): SubmissionStatus {
   const sigs = s.signatures ?? []
   if (sigs.length === 0) return 'done'
   return sigs.every(x => x.status === 'signed') ? 'signed' : 'pending'
@@ -126,12 +149,12 @@ const STATUS_META: Record<SubmissionStatus, { label: string; className: string }
 export function statusMeta(s: SubmissionStatus) { return STATUS_META[s] }
 
 // How many of the assigned signatures are done.
-export function signProgress(s: Submission): { signed: number; total: number } {
+export function signProgress(s: SubmissionSummary): { signed: number; total: number } {
   const sigs = s.signatures ?? []
   return { signed: sigs.filter(x => x.status === 'signed').length, total: sigs.length }
 }
 // Display label incl. progress count while waiting for signatures.
-export function statusLabel(s: Submission): string {
+export function statusLabel(s: SubmissionSummary): string {
   const st = subStatus(s)
   if (st === 'pending') { const p = signProgress(s); return `รอลายเซ็น (${p.signed}/${p.total})` }
   return statusMeta(st).label
@@ -141,12 +164,9 @@ export async function getSubmission(id: string): Promise<Submission | null> {
   const { data } = await supabase.from('submissions').select('*').eq('id', id).maybeSingle()
   return (data as Submission) ?? null
 }
-export async function listMySubmissions(uid: string): Promise<Submission[]> {
-  const { data } = await supabase.from('submissions').select('*')
-    .eq('createdBy', uid).order('createdAt', { ascending: false })
-  return (data ?? []) as Submission[]
+export async function listMySubmissions(uid: string): Promise<SubmissionSummary[]> {
+  return listRows(q => q.eq('createdBy', uid).order('createdAt', { ascending: false }))
 }
-export async function listAllSubmissions(): Promise<Submission[]> {
-  const { data } = await supabase.from('submissions').select('*').order('createdAt', { ascending: false })
-  return (data ?? []) as Submission[]
+export async function listAllSubmissions(): Promise<SubmissionSummary[]> {
+  return listRows(q => q.order('createdAt', { ascending: false }))
 }

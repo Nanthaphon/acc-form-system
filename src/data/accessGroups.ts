@@ -33,7 +33,7 @@ export async function accessGroupUsage(id: string): Promise<{ employees: number;
   // single field on forms not re-saved since; count each form once.
   const [emp, listed, legacy] = await Promise.all([
     supabase.from('profiles').select('uid', { count: 'exact', head: true }).eq('accessGroup', id),
-    supabase.from('form_settings').select('formType').contains('accessGroups', [id]),
+    supabase.from('form_settings').select('formType').contains('accessGroups', JSON.stringify([id])), // jsonb: an array would be sent as a Postgres {…} literal
     supabase.from('form_settings').select('formType').eq('accessGroup', id),
   ])
   const forms = new Set([...(listed.data ?? []), ...(legacy.data ?? [])].map(f => f.formType as string))

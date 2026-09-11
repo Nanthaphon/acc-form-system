@@ -1,4 +1,4 @@
-import type { Submission } from '../types/schema'
+import type { SubmissionSummary } from '../types/schema'
 import { subStatus } from '../data/submissions'
 
 export interface Filters {
@@ -38,7 +38,7 @@ export interface FilterLookups {
   formName?: (formType: string) => string
 }
 
-export function applyFilters(rows: Submission[], f: Filters, lookups: FilterLookups = {}): Submission[] {
+export function applyFilters<T extends SubmissionSummary>(rows: T[], f: Filters, lookups: FilterLookups = {}): T[] {
   const { formGroup, formName } = lookups
   const [dStart, dEnd] = dateBounds(f)
   const needle = f.q.trim().toLowerCase()

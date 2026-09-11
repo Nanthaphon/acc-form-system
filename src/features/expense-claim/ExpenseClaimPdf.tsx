@@ -6,6 +6,7 @@ import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schem
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatIsoDate, formatDate } from '../../shared/date'
+import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyTemplate'
 
 // เอกสารทางการใช้ฟอนต์ Sarabun (TH Sarabun New) — มาตรฐานเอกสารราชการไทย
 Font.register({ family: 'Sarabun', fonts: [
@@ -64,7 +65,18 @@ const s = StyleSheet.create({
   notes: { marginTop: 16, fontSize: 6.5 },
   bodyText: { marginTop: 12, textAlign: 'justify', lineHeight: 1.5 },
   introText: { marginTop: 8, textAlign: 'justify', lineHeight: 1.5 },
+  filled: { textDecoration: 'underline' },
 })
+
+// A form paragraph's content with its {{blanks}} filled: typed values are
+// underlined, empty blanks print as dots to be written by hand.
+function filledText(text: string, values?: Record<string, string>) {
+  return parseTemplate(text).map((p, i) => {
+    if (p.kind === 'text') return p.text
+    const v = formatTemplateValue(p.field, values?.[p.field.key])
+    return v ? <Text key={i} style={s.filled}> {v} </Text> : blankFor(p.field)
+  })
+}
 
 function money(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -158,7 +170,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
         ))}
 
         {/* ข้อความหัวฟอร์ม (เหนือตาราง) ถ้ามี */}
-        {!!settings.introText?.trim() && <Text style={s.introText}>{settings.introText}</Text>}
+        {!!settings.introText?.trim() && <Text style={s.introText}>{filledText(settings.introText, header.fields)}</Text>}
 
         {/* Main table — dynamic columns */}
         <View style={s.table}>
@@ -228,7 +240,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
         {hasNumericCols && settings.showAmountWords !== false && <Text style={s.amountBox}>เป็นจำนวนเงิน  {bahtWords}</Text>}
 
         {/* ข้อความรับรอง / คำประกาศ (ถ้ามี) */}
-        {!!settings.bodyText?.trim() && <Text style={s.bodyText}>{settings.bodyText}</Text>}
+        {!!settings.bodyText?.trim() && <Text style={s.bodyText}>{filledText(settings.bodyText, header.fields)}</Text>}
 
         {/* Signature blocks — configured per form, in rows of 3 */}
         {sigRows.map((row, ri) => (

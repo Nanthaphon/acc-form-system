@@ -8,7 +8,7 @@ import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
 import { listGroups } from '../../data/formGroups'
-import type { Submission, FormSettings, FormGroup } from '../../types/schema'
+import type { SubmissionSummary, FormSettings, FormGroup } from '../../types/schema'
 import { formSignatureBlocks, canRequestSignatures } from '../../types/schema'
 import { formatDate } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
@@ -26,18 +26,18 @@ import { useHiddenColumns } from '../../shared/useHiddenColumns'
 interface Column extends PickableColumn {
   thCls?: string
   tdCls: string
-  cell: (r: Submission) => ReactNode
+  cell: (r: SubmissionSummary) => ReactNode
 }
 
 export default function HistoryPage() {
   const { profile } = useAuth()
-  const [rows, setRows] = useState<Submission[]>([])
+  const [rows, setRows] = useState<SubmissionSummary[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
   const [signers, setSigners] = useState<Signer[]>([])
   const [groups, setGroups] = useState<FormGroup[]>([])
-  const [signModal, setSignModal] = useState<Submission | null>(null)
+  const [signModal, setSignModal] = useState<SubmissionSummary | null>(null)
   function load() { if (profile) listMySubmissions(profile.uid).then(setRows) }
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
   useEffect(() => { listForms().then(setForms); listSigners().then(setSigners); listGroups().then(setGroups) }, [])
@@ -50,7 +50,7 @@ export default function HistoryPage() {
   const filtered = applyFilters(rows, filters, { formGroup, formName })
   // A doc can be sent for signing if its form has someone besides the requester
   // to sign, and it isn't fully signed yet.
-  const canSend = (r: Submission) => canRequestSignatures(formOf(r.formType)) && subStatus(r) !== 'signed'
+  const canSend = (r: SubmissionSummary) => canRequestSignatures(formOf(r.formType)) && subStatus(r) !== 'signed'
 
   const { hidden, toggle, reset } = useHiddenColumns('cols:myHistory')
   const columns: Column[] = [
@@ -71,13 +71,13 @@ export default function HistoryPage() {
   ]
   const shown = columns.filter(c => c.locked || !hidden.has(c.key))
 
-  async function onDelete(r: Submission) {
+  async function onDelete(r: SubmissionSummary) {
     if (!(await uiConfirm(`ลบถาวร ยกเลิกไม่ได้`, { title: `ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteSubmission(r.id); load() }
     catch { uiAlert('ลบเอกสารไม่สำเร็จ') }
   }
 
-  async function onCancelSign(r: Submission) {
+  async function onCancelSign(r: SubmissionSummary) {
     const signed = (r.signatures ?? []).filter(x => x.status === 'signed').length
     const msg = signed > 0
       ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับไปสถานะ "เสร็จสิ้น"`
