@@ -1,5 +1,6 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Copy, Pencil, Printer, Trash2 } from 'lucide-react'
 import { listAllSubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import StatusBadge from '../../components/StatusBadge'
@@ -11,22 +12,18 @@ import type { Submission, UserProfile, FormSettings, FormGroup } from '../../typ
 import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
+import { useHiddenColumns } from '../../shared/useHiddenColumns'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ActionIconButton from '../../components/ActionIconButton'
+import ColumnPicker from '../../components/ColumnPicker'
+import type { PickableColumn } from '../../components/ColumnPicker'
 import { Badge, PageHeader, ui } from '../../components/ui'
 
-const HEADERS = [
-  { label: 'ชื่อฟอร์ม', cls: '' },
-  { label: 'เลขที่', cls: '' },
-  { label: 'พนักงาน', cls: '' },
-  { label: 'วันที่', cls: '' },
-  { label: 'ยอด', cls: 'text-right' },
-  { label: 'สถานะ', cls: '' },
-  { label: 'แก้ไข', cls: '' },
-  { label: 'พิมพ์ (ครั้ง)', cls: 'text-center' },
-  { label: 'พิมพ์ล่าสุด', cls: '' },
-  { label: '', cls: '' },
-]
+interface Column extends PickableColumn {
+  thCls?: string
+  tdCls: string
+  cell: (r: Submission) => ReactNode
+}
 
 export default function PrintHistoryPage() {
   const [rows, setRows] = useState<Submission[]>([])
@@ -35,6 +32,7 @@ export default function PrintHistoryPage() {
   const [groups, setGroups] = useState<FormGroup[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
+  const { hidden, toggle, reset } = useHiddenColumns('cols:printHistory')
 
   function loadRows() { listAllSubmissions().then(setRows) }
   useEffect(() => {
@@ -63,6 +61,29 @@ export default function PrintHistoryPage() {
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? groups[0]?.id
   const filtered = applyFilters(rows, filters, { formGroup, formName })
 
+  const columns: Column[] = [
+    {
+      key: 'form', label: 'ชื่อฟอร์ม', locked: true, tdCls: 'whitespace-nowrap font-medium text-gray-900',
+      // One line: long names are cut with … and shown in full on hover.
+      cell: r => <div className="max-w-[240px] truncate" title={formName(r.formType)}>{formName(r.formType)}</div>,
+    },
+    { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => r.docNumber },
+    {
+      key: 'emp', label: 'พนักงาน', tdCls: 'whitespace-nowrap',
+      cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-gray-400">({r.createdByEmployeeId})</span></>,
+    },
+    { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
+    { key: 'amount', label: 'ยอด', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => submissionAmount(r).toLocaleString() },
+    { key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap', cell: r => <StatusBadge sub={r} /> },
+    {
+      key: 'edits', label: 'แก้ไข', tdCls: 'whitespace-nowrap',
+      cell: r => editLabel(r, vcounts) ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge> : <span className="text-gray-300">—</span>,
+    },
+    { key: 'prints', label: 'พิมพ์ (ครั้ง)', thCls: 'text-center', tdCls: 'text-center tabular-nums', cell: r => r.printCount },
+    { key: 'lastPrinted', label: 'พิมพ์ล่าสุด', tdCls: 'whitespace-nowrap', cell: r => formatDateTime(r.lastPrintedAt) },
+  ]
+  const shown = columns.filter(c => c.locked || !hidden.has(c.key))
+
   return (
     <div>
       <PageHeader
@@ -73,31 +94,21 @@ export default function PrintHistoryPage() {
       <div className="mb-4">
         <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} employees={employees} resultCount={filtered.length} />
       </div>
+      <div className="mb-3 flex justify-end">
+        <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />
+      </div>
       <div className={ui.tableWrap}>
         <table className={ui.table}>
           <thead className={ui.thead}>
-            <tr>{HEADERS.map(h => <th key={h.label} className={`${ui.th} ${h.cls}`}>{h.label}</th>)}</tr>
+            <tr>
+              {shown.map(c => <th key={c.key} className={`${ui.th} ${c.thCls ?? ''}`}>{c.label}</th>)}
+              <th className={ui.th} aria-label="การจัดการ" />
+            </tr>
           </thead>
           <tbody className={ui.tbody}>
             {filtered.map(r => (
               <tr key={r.id} className={ui.tr}>
-                <td className={`${ui.td} font-medium text-gray-900`}>{formName(r.formType)}</td>
-                <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}>{r.docNumber}</td>
-                <td className={`${ui.td} whitespace-nowrap`}>
-                  {empName(r.createdByEmployeeId)} <span className="text-gray-400">({r.createdByEmployeeId})</span>
-                </td>
-                <td className={`${ui.td} whitespace-nowrap`}>{formatDate(r.createdAt)}</td>
-                <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{submissionAmount(r).toLocaleString()}</td>
-                <td className={`${ui.td} whitespace-nowrap`}>
-                  <StatusBadge sub={r} />
-                </td>
-                <td className={`${ui.td} whitespace-nowrap`}>
-                  {editLabel(r, vcounts)
-                    ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge>
-                    : <span className="text-gray-300">—</span>}
-                </td>
-                <td className={`${ui.td} text-center tabular-nums`}>{r.printCount}</td>
-                <td className={`${ui.td} whitespace-nowrap`}>{formatDateTime(r.lastPrintedAt)}</td>
+                {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
                 <td className="whitespace-nowrap px-4 py-2">
                   <div className="flex items-center justify-end gap-1.5">
                     <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
@@ -110,7 +121,7 @@ export default function PrintHistoryPage() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={HEADERS.length} className={ui.emptyCell}>
+                <td colSpan={shown.length + 1} className={ui.emptyCell}>
                   {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
                 </td>
               </tr>
