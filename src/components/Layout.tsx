@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { logout } from '../data/auth'
 import { countMyPendingToSign } from '../data/submissions'
 import { onPendingSignChanged } from '../shared/pendingSignBus'
+import { roleLabel } from '../shared/roles'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm transition-colors ${
@@ -77,6 +78,7 @@ export default function Layout() {
           </nav>
           <Link to="/profile" className="mt-3 block px-3.5 text-xs text-[#7a869a] hover:text-[#cdd6e6]">
             {profile?.firstName} {profile?.lastName}
+            {profile && <span className="mt-0.5 block text-[11px] text-[#5f6b80]">{roleLabel(profile)}</span>}
           </Link>
         </div>
       </aside>

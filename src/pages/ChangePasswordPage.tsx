@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { KeyRound, Save } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { changeMyPassword } from '../data/auth'
-import { setMustChangePassword } from '../data/users'
+import { markOwnPasswordChanged } from '../data/users'
 import { uiAlert } from '../components/dialog/dialogService'
 import { Spinner } from '../components/Spinner'
 
@@ -26,7 +26,7 @@ export default function ChangePasswordPage() {
     setSaving(true)
     try {
       await changeMyPassword(pw)
-      await setMustChangePassword(profile!.uid, false)
+      await markOwnPasswordChanged(profile!.uid)
       await refresh()
       uiAlert('เปลี่ยนรหัสผ่านเรียบร้อย ครั้งหน้าให้ใช้รหัสผ่านใหม่ในการเข้าสู่ระบบ', { tone: 'success' })
       nav('/')

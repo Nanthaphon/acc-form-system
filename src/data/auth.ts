@@ -1,8 +1,12 @@
 import { supabase } from '../lib/supabase'
 
 const DOMAIN = 'globe.local'
+// The login email is built from the employee ID. Characters an email address
+// can't hold (e.g. the "@" in "Acc@GB") are written as +HEX; plain IDs (letters,
+// digits, . _ -) come out unchanged, so existing logins keep working.
 export function employeeIdToEmail(employeeId: string): string {
-  return `${employeeId.trim()}@${DOMAIN}`
+  const local = employeeId.trim().replace(/[^A-Za-z0-9._-]/gu, c => '+' + c.codePointAt(0)!.toString(16))
+  return `${local}@${DOMAIN}`
 }
 export async function loginWithEmployeeId(employeeId: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({

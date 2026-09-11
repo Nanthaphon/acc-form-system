@@ -7,6 +7,8 @@ describe('dbErrorMessage', () => {
       .toMatch(/ฐานข้อมูลยังไม่ได้อัปเดต.*accessGroups.*รันไฟล์ SQL/)
     expect(dbErrorMessage({ code: '42703', message: 'column form_settings.createdAt does not exist' })).toContain('createdAt')
     expect(dbErrorMessage({ code: '42703', message: 'column "updatedAt" of relation "form_settings" does not exist' })).toContain('updatedAt')
+    expect(dbErrorMessage({ code: 'PGRST202', message: 'Could not find the function public.admin_set_password(must_change, new_password, target) in the schema cache' }))
+      .toMatch(/ไม่พบฟังก์ชัน admin_set_password/)
   })
 
   it('passes other errors through, with a fallback', () => {

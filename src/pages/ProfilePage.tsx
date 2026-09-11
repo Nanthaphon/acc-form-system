@@ -6,6 +6,7 @@ import { Spinner } from '../components/Spinner'
 import { useAuth } from '../auth/AuthProvider'
 import { updateProfile } from '../data/users'
 import { listCompanies } from '../data/companies'
+import { roleLabel } from '../shared/roles'
 import type { Company } from '../types/schema'
 
 const labelCls = 'mb-1.5 block text-xs font-medium text-gray-500'
@@ -82,7 +83,7 @@ export default function ProfilePage() {
           </p>
         </div>
         {form.role === 'admin' && (
-          <span className="ml-auto shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">แอดมิน</span>
+          <span className="ml-auto shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{roleLabel(form)}</span>
         )}
       </div>
 

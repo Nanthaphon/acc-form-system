@@ -9,5 +9,10 @@ export function dbErrorMessage(e: unknown): string {
     const col = /'([^']+)' column/.exec(msg)?.[1] ?? /column "?(?:\w+\.)?(\w+)"?/.exec(msg)?.[1]
     return `ฐานข้อมูลยังไม่ได้อัปเดตให้ตรงกับระบบเวอร์ชันนี้${col ? ` (ไม่พบคอลัมน์ ${col})` : ''} — ผู้ดูแลระบบต้องรันไฟล์ SQL ล่าสุดใน Supabase ก่อน`
   }
+  if (err.code === 'PGRST202') {
+    // "Could not find the function public.x(...) in the schema cache"
+    const fn = /function (?:\w+\.)?(\w+)/.exec(msg)?.[1]
+    return `ฐานข้อมูลยังไม่ได้อัปเดตให้ตรงกับระบบเวอร์ชันนี้${fn ? ` (ไม่พบฟังก์ชัน ${fn})` : ''} — ผู้ดูแลระบบต้องรันไฟล์ SQL ล่าสุดใน Supabase ก่อน`
+  }
   return msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'
 }

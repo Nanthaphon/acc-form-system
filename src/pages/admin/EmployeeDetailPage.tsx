@@ -2,6 +2,7 @@ import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FileText, Pencil, Printer, Trash2, UserRound } from 'lucide-react'
+import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
@@ -13,8 +14,11 @@ import type { UserProfile, SubmissionSummary, FormSettings, Company, AccessGroup
 import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
+import { isSuperAdmin, roleLabel } from '../../shared/roles'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ActionIconButton from '../../components/ActionIconButton'
+import LoginInfo from '../../components/LoginInfo'
+import SetPasswordModal from '../../components/SetPasswordModal'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
 
@@ -41,6 +45,7 @@ function Info({ label, value }: { label: string; value: string }) {
 export default function EmployeeDetailPage() {
   const { uid } = useParams()
   const nav = useNavigate()
+  const { profile: me } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [subs, setSubs] = useState<SubmissionSummary[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
@@ -49,11 +54,13 @@ export default function EmployeeDetailPage() {
   const [folders, setFolders] = useState<FormGroup[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
+  const [settingPassword, setSettingPassword] = useState(false)
 
+  function loadProfile() { if (uid) getProfileByUid(uid).then(setProfile) }
   function loadSubs() { if (uid) listMySubmissions(uid).then(setSubs) }
   useEffect(() => {
     if (!uid) return
-    getProfileByUid(uid).then(setProfile)
+    loadProfile()
     loadSubs()
     getVersionCounts().then(setVcounts)
     listForms().then(setForms)
@@ -81,31 +88,36 @@ export default function EmployeeDetailPage() {
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? folders[0]?.id
   const filtered = applyFilters(subs, filters, { formGroup, formName })
+  const viewerIsSuper = isSuperAdmin(me)
+  // Only the Super Admin may edit the Super Admin's account; they set passwords for others.
+  const canEdit = !isSuperAdmin(profile) || viewerIsSuper
+  const canSetPassword = viewerIsSuper && profile.uid !== me?.uid
 
   return (
     <div>
       <PageHeader
         icon={<UserRound size={20} />}
         title="ข้อมูลพนักงาน"
-        subtitle={`${profile.firstName} ${profile.lastName} · รหัส ${profile.employeeId}`}
+        subtitle={`${profile.firstName} ${profile.lastName} · ${roleLabel(profile)}`}
         onBack={() => nav('/admin/employees')}
-        actions={
+        actions={canEdit && (
           <Link to={`/admin/employees/${profile.uid}/edit`} className={ui.btnPrimary}>
             <Pencil size={16} /> แก้ไขข้อมูล
           </Link>
-        }
+        )}
       />
 
       <div className="space-y-6">
+        <LoginInfo profile={profile} onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined} />
+
         <div className={ui.card}>
           <div className="grid grid-cols-2 gap-5 text-sm md:grid-cols-3">
-            <Info label="รหัสพนักงาน" value={profile.employeeId} />
             <Info label="ชื่อ-นามสกุล" value={`${profile.firstName} ${profile.lastName}`} />
             <Info label="ตำแหน่ง" value={profile.position} />
             <Info label="แผนก" value={profile.department} />
             <Info label="บริษัท" value={companyName(profile.companyId)} />
             <Info label="กลุ่ม (Access group)" value={accessGroupName(profile.accessGroup)} />
-            <Info label="สิทธิ์" value={profile.role} />
+            <Info label="สิทธิ์" value={roleLabel(profile)} />
           </div>
         </div>
 
@@ -156,6 +168,8 @@ export default function EmployeeDetailPage() {
           </div>
         </div>
       </div>
+
+      {settingPassword && <SetPasswordModal profile={profile} onClose={() => setSettingPassword(false)} onDone={loadProfile} />}
     </div>
   )
 }

@@ -19,7 +19,7 @@ const COLUMNS: Array<[string, boolean, string]> = [
   ['department', false, 'แผนก'],
   ['defaultJob', false, 'Job เริ่มต้น'],
   ['bankAccount', false, 'เลขบัญชี'],
-  ['role', false, 'employee หรือ admin (เว้นว่าง = employee)'],
+  ['role', false, 'employee = พนักงาน, admin = Account Admin (เว้นว่าง = employee)'],
   ['accessGroup', false, 'รหัสกลุ่มการเข้าถึง'],
 ]
 const PREVIEW_ROWS = 8
@@ -169,7 +169,7 @@ export default function ImportCsvPage() {
                         <td className="px-3 py-2 text-gray-700">
                           {companyName(r.companyId) ?? <span className="text-amber-600" title="ไม่พบรหัสบริษัทนี้ในระบบ">{r.companyId} ⚠</span>}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-gray-700">{r.role === 'admin' ? 'แอดมิน' : 'พนักงาน'}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-gray-700">{r.role === 'admin' ? 'Account Admin' : 'พนักงาน'}</td>
                       </tr>
                     ))}
                   </tbody>
