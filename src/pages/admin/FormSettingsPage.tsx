@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X }
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
+import MultiSelect from '../../components/MultiSelect'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
@@ -88,10 +89,7 @@ export default function FormSettingsPage() {
 
   // ----- access groups (a form may be shown to several) -----
   const selectedGroups = formAccessGroups(settings)
-  function toggleAccessGroup(id: string) {
-    const next = selectedGroups.includes(id) ? selectedGroups.filter(g => g !== id) : [...selectedGroups, id]
-    setSettings(s => ({ ...s, accessGroups: next, accessGroup: null }))
-  }
+  const setAccessGroups = (next: string[]) => setSettings(s => ({ ...s, accessGroups: next, accessGroup: null }))
 
   // ----- signature blocks -----
   const sigBlocks =(): SignatureBlock[] => formSignatureBlocks(settings)
@@ -282,29 +280,24 @@ export default function FormSettingsPage() {
       {!showPreview && (
       <div className="space-y-4">
 
-      {/* กลุ่มที่มองเห็นฟอร์ม (Access group) — เลือกได้หลายกลุ่ม */}
+      {/* กลุ่มที่มองเห็นฟอร์ม (Access group) — เลือกได้หลายกลุ่ม ค้นหาได้ */}
       <div className={cardClass}>
         <h2 className={`${cardTitleClass} mb-1`}>กลุ่มที่มองเห็นฟอร์มนี้</h2>
-        <p className="mb-3 text-xs text-[#7a869a]">เลือกได้หลายกลุ่ม · ไม่เลือกเลย = ทุกคนเห็น</p>
+        <p className="mb-3 text-xs text-gray-500">เลือกได้หลายกลุ่ม · ไม่เลือกเลย = ทุกคนเห็น</p>
         {groups.length === 0 ? (
           <p className="text-sm text-gray-400">ยังไม่มีกลุ่ม — สร้างได้ที่เมนู “จัดการกลุ่ม”</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {groups.map(g => {
-              const on = selectedGroups.includes(g.id)
-              return (
-                <label
-                  key={g.id}
-                  className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${on ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'}`}
-                >
-                  <input type="checkbox" checked={on} onChange={() => toggleAccessGroup(g.id)} />
-                  {g.name}
-                </label>
-              )
-            })}
+          <div className="sm:max-w-lg">
+            <MultiSelect
+              options={groups.map(g => ({ value: g.id, label: g.name }))}
+              value={selectedGroups}
+              onChange={setAccessGroups}
+              placeholder="ทุกคนเห็น (ไม่จำกัดกลุ่ม)"
+              searchPlaceholder="ค้นหากลุ่ม…"
+              emptyText="ไม่พบกลุ่มที่ค้นหา"
+            />
           </div>
         )}
-        <p className="mt-2 text-xs text-gray-500">{selectedGroups.length ? `มองเห็นได้ ${selectedGroups.length} กลุ่ม` : 'มองเห็นได้ทุกคน'}</p>
       </div>
 
       {/* ข้อความหัวฟอร์ม */}
