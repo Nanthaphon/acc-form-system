@@ -15,8 +15,9 @@ const byName = (a: FormSettings, b: FormSettings) =>
   formDisplayName(a).localeCompare(formDisplayName(b), 'th', { numeric: true, sensitivity: 'base' })
 
 // Filter forms by a name search, then sort by the chosen key and direction.
-// Forms created before the date columns existed carry 0 and sort as oldest;
-// ties (same date) always fall back to name A→Z so the order stays stable.
+// Ties (same date — e.g. every form that predates the date columns) fall back
+// to name. Descending is the exact reverse of ascending, tie-break included, so
+// the direction button always visibly flips the list even when dates are equal.
 export function filterAndSortForms(forms: FormSettings[], query: string, key: FormSortKey, dir: SortDir): FormSettings[] {
   const needle = query.trim().toLowerCase()
   const matched = needle
@@ -25,6 +26,6 @@ export function filterAndSortForms(forms: FormSettings[], query: string, key: Fo
   const sign = dir === 'asc' ? 1 : -1
   return [...matched].sort((a, b) => {
     const primary = key === 'name' ? byName(a, b) : (a[key] ?? 0) - (b[key] ?? 0)
-    return primary !== 0 ? primary * sign : byName(a, b)
+    return (primary !== 0 ? primary : byName(a, b)) * sign
   })
 }

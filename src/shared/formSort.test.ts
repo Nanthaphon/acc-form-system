@@ -25,9 +25,12 @@ describe('filterAndSortForms', () => {
     expect(names(filterAndSortForms(forms, '', 'updatedAt', 'desc'))).toEqual(['ใบเบิกเงินสดย่อย', 'แบบฟอร์มการอบรม', 'ใบขอเบิกเงินทดรองจ่าย'])
   })
 
-  it('breaks date ties by name so the order is stable', () => {
+  it('breaks date ties by name, and descending flips even tied dates', () => {
+    // Every form that predates the date columns shares one date — the direction
+    // toggle must still visibly reverse the list.
     const tied = [form('ข', 5, 5), form('ก', 5, 5)]
-    expect(names(filterAndSortForms(tied, '', 'createdAt', 'desc'))).toEqual(['ก', 'ข'])
+    expect(names(filterAndSortForms(tied, '', 'createdAt', 'asc'))).toEqual(['ก', 'ข'])
+    expect(names(filterAndSortForms(tied, '', 'createdAt', 'desc'))).toEqual(['ข', 'ก'])
   })
 
   it('filters by name or form code, case-insensitively', () => {
