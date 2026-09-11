@@ -11,7 +11,9 @@
   #print-area { position: absolute; left: 0; top: 0; width: 100%; }
   /* Put the white space back inside the page instead. A margin that follows a
      forced page break is kept, so every sheet gets it, not only the first. */
-  #print-area .doc-page { margin: 10mm !important; }
+  /* Each sheet also fills its A4 page so the frame runs down to the bottom:
+     297mm − 2 × 10mm margin, less 1mm so rounding never spills a blank page. */
+  #print-area .doc-page { margin: 10mm !important; min-height: 276mm; }
   .no-print { display: none !important; }
   /* Each sheet starts on a fresh printed page (page 2 and onward). */
   .doc-page + .doc-page { break-before: page; }
