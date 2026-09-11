@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../components/dialog/dialogService'
+import { dbErrorMessage } from '../shared/dbError'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowDownWideNarrow, ArrowUpNarrowWide, FileText, Folder, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
@@ -77,7 +78,7 @@ export default function GroupPage() {
     try {
       const newId = await createForm(name, groupId)
       nav(`/form/${newId}/edit`)
-    } catch { uiAlert('สร้างฟอร์มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+    } catch (e) { uiAlert(dbErrorMessage(e), { title: 'สร้างฟอร์มไม่สำเร็จ' }) }
   }
 
   async function onRenameForm(form: FormSettings) {

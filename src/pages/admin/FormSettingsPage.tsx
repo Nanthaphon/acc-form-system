@@ -1,4 +1,5 @@
 import { uiAlert } from '../../components/dialog/dialogService'
+import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
@@ -227,8 +228,8 @@ export default function FormSettingsPage() {
         signatureBlocks: settings.signatureBlocks?.map(({ id, label }) => ({ id, label })),
       })
       uiAlert('บันทึกฟอร์มแล้ว', { tone: 'success' })
-    } catch {
-      uiAlert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+    } catch (e) {
+      uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })
     } finally {
       setSaving(false)
     }

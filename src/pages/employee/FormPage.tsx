@@ -1,4 +1,5 @@
 import { uiAlert } from '../../components/dialog/dialogService'
+import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Download, Eye, Pencil, Printer, Receipt, Save } from 'lucide-react'
@@ -116,8 +117,8 @@ export default function FormPage() {
         setSavedId(created.id); setDocNumber(created.docNumber)
       }
       setVersionRefresh(n => n + 1)
-    } catch {
-      uiAlert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+    } catch (e) {
+      uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })
       return
     }
 
