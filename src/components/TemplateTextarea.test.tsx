@@ -5,11 +5,11 @@ import TemplateTextarea from './TemplateTextarea'
 vi.mock('./dialog/dialogService', () => ({ uiPrompt: vi.fn().mockResolvedValue('ผู้จ่าย') }))
 
 describe('TemplateTextarea', () => {
-  it('lists the blanks found in the text', () => {
-    render(<TemplateTextarea value="จาก {{ผู้จ่าย}} ถึง {{วันจบ:วันที่}}" onChange={() => {}} />)
-    expect(screen.getByText('ผู้จ่าย')).toBeInTheDocument()
-    expect(screen.getByText('วันจบ')).toBeInTheDocument()
+  it('offers the convert button only when there are dotted blanks', () => {
+    const { rerender } = render(<TemplateTextarea value="จาก {{ผู้จ่าย}}" onChange={() => {}} />)
     expect(screen.queryByText(/แปลง/)).not.toBeInTheDocument()
+    rerender(<TemplateTextarea value="จาก ........" onChange={() => {}} />)
+    expect(screen.getByRole('button', { name: /แปลง/ })).toBeInTheDocument()
   })
 
   it('converts old dotted blanks into fields in one click', () => {

@@ -1,6 +1,7 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
@@ -15,12 +16,10 @@ import { listAccessGroups } from '../../data/accessGroups'
 
 // Page-local extras on top of the shared `ui` tokens.
 // Neutral square icon button (same look as ActionIconButton) — a plain <button> so it can be disabled.
-const iconBtn = 'inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm ring-1 ring-gray-200/80 transition hover:bg-gray-50 disabled:opacity-40'
-// Compact dashed "add" button for nested panels (calc operands, dropdown options).
+const iconBtn = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm ring-1 ring-gray-200/80 transition hover:bg-gray-50 disabled:opacity-40'
+// Compact dashed "add" button for nested panels (calc operands, dropdown options, chips).
 const btnDashedSm = 'inline-flex items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600'
-// Outlined text button for removing a row.
-const btnRemove = 'shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-red-600 hover:border-red-200 hover:bg-red-50'
-// Inline text link ("insert column here").
+// Inline text link ("insert column here", "add field").
 const linkBtn = 'inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline'
 // Nested panel inside a card (one column's settings, one company's logo).
 const subCard = 'rounded-xl border border-gray-200 bg-white p-4'
@@ -52,6 +51,28 @@ function sampleRow(cols: FormColumn[]): ExpenseRow {
     else if (c.type === 'select') r[c.key] = c.options?.find(o => o.trim()) ?? 'ตัวอย่าง'
   }
   return r
+}
+
+// A settings card: title on the left, optional extra (a count, an add link) on the right.
+function Section({ title, extra, children }: { title: string; extra?: ReactNode; children: ReactNode }) {
+  return (
+    <div className={ui.card}>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h2 className={ui.cardTitle}>{title}</h2>
+        {extra}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <label className={ui.label}>{label}</label>
+      {children}
+    </div>
+  )
 }
 
 export default function FormSettingsPage() {
@@ -219,7 +240,7 @@ export default function FormSettingsPage() {
   async function save() {
     setSaving(true)
     try {
-      await updateFormSettings({
+      const skipped = await updateFormSettings({
         ...settings, formType,
         // Always write the multi-group list and clear the legacy single field,
         // otherwise un-ticking every group would fall back to the old value.
@@ -227,7 +248,13 @@ export default function FormSettingsPage() {
         // Drop the retired per-block `online` flag from saved configs.
         signatureBlocks: settings.signatureBlocks?.map(({ id, label }) => ({ id, label })),
       })
-      uiAlert('บันทึกฟอร์มแล้ว', { tone: 'success' })
+      // Until the database is updated it can hold only one group per form.
+      const firstGroupOnly = skipped.includes('accessGroups') && selectedGroups.length > 1
+      uiAlert(
+        firstGroupOnly ? 'ตอนนี้ฐานข้อมูลเก็บกลุ่มได้กลุ่มเดียว จึงบันทึกเฉพาะกลุ่มแรก — เมื่ออัปเดตฐานข้อมูลแล้วจะเลือกได้หลายกลุ่ม' : 'บันทึกฟอร์มแล้ว',
+        { tone: 'success', title: firstGroupOnly ? 'บันทึกแล้ว' : undefined },
+      )
+      if (firstGroupOnly) setAccessGroups(selectedGroups.slice(0, 1))
     } catch (e) {
       uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })
     } finally {
@@ -262,19 +289,22 @@ export default function FormSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        icon={<Pencil size={20} />}
-        title={`แก้ไขฟอร์ม — ${settings.name || settings.title}`}
-        onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
-        actions={<>
-          <button className={ui.btnSecondary} onClick={() => setShowPreview(p => !p)}>
-            {showPreview ? <><Pencil size={16} /> กลับไปแก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
-          </button>
-          <button className={ui.btnPrimary} onClick={save} disabled={saving}>
-            <Save size={16} /> บันทึกฟอร์ม
-          </button>
-        </>}
-      />
+      {/* Stays on screen while scrolling a long form, so saving is always one click away. */}
+      <div className="sticky top-0 z-20 -mt-2 bg-[#f4f6fb] pt-2">
+        <PageHeader
+          icon={<Pencil size={20} />}
+          title={`แก้ไขฟอร์ม — ${settings.name || settings.title}`}
+          onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
+          actions={<>
+            <button className={ui.btnSecondary} onClick={() => setShowPreview(p => !p)}>
+              {showPreview ? <><Pencil size={16} /> กลับไปแก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
+            </button>
+            <button className={ui.btnPrimary} onClick={save} disabled={saving}>
+              <Save size={16} /> บันทึกฟอร์ม
+            </button>
+          </>}
+        />
+      </div>
 
       {showPreview && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
@@ -285,71 +315,64 @@ export default function FormSettingsPage() {
       {!showPreview && (
       <div className="space-y-4">
 
-      {/* กลุ่มที่มองเห็นฟอร์ม (Access group) — เลือกได้หลายกลุ่ม ค้นหาได้ */}
-      <div className={ui.card}>
-        <h2 className={`${ui.cardTitle} mb-1`}>กลุ่มที่มองเห็นฟอร์มนี้</h2>
-        <p className={`${ui.hint} mb-3`}>เลือกได้หลายกลุ่ม · ไม่เลือกเลย = ทุกคนเห็น</p>
-        {groups.length === 0 ? (
-          <p className="text-sm text-gray-400">ยังไม่มีกลุ่ม — สร้างได้ที่เมนู “จัดการกลุ่ม”</p>
-        ) : (
-          <div className="sm:max-w-lg">
-            <MultiSelect
-              options={groups.map(g => ({ value: g.id, label: g.name }))}
-              value={selectedGroups}
-              onChange={setAccessGroups}
-              placeholder="ทุกคนเห็น (ไม่จำกัดกลุ่ม)"
-              searchPlaceholder="ค้นหากลุ่ม…"
-              emptyText="ไม่พบกลุ่มที่ค้นหา"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* ข้อความหัวฟอร์ม */}
-      <div className={ui.card}>
-        <h2 className={`${ui.cardTitle} mb-4`}>ข้อความหัวฟอร์ม</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className={ui.label}>ชื่อฟอร์ม (หัวกล่องขวาบน)</label>
+      {/* ข้อมูลทั่วไป: หัวเอกสาร + กลุ่มที่เห็นฟอร์ม + ช่องเพิ่มเติมใต้ชื่อผู้เบิก */}
+      <Section title="ข้อมูลทั่วไป">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="ชื่อบนเอกสาร">
             <input className={ui.input} value={settings.title} onChange={e => setField('title', e.target.value)} />
-          </div>
-          <div>
-            <label className={ui.label}>รหัสฟอร์ม</label>
+          </Field>
+          <Field label="รหัสฟอร์ม">
             <input className={ui.input} value={settings.formCode} onChange={e => setField('formCode', e.target.value)} />
-          </div>
-          <div>
-            <label className={ui.label}>เรื่อง</label>
+          </Field>
+          <Field label="เรื่อง">
             <input className={ui.input} value={settings.subject} onChange={e => setField('subject', e.target.value)} />
-          </div>
-          <div>
-            <label className={ui.label}>เรียน</label>
+          </Field>
+          <Field label="เรียน">
             <input className={ui.input} value={settings.attention} onChange={e => setField('attention', e.target.value)} />
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label="กลุ่มที่เห็นฟอร์มนี้">
+              {groups.length === 0 ? (
+                <p className="py-2.5 text-sm text-gray-400">ทุกคน · ยังไม่มีกลุ่ม</p>
+              ) : (
+                <MultiSelect
+                  options={groups.map(g => ({ value: g.id, label: g.name }))}
+                  value={selectedGroups}
+                  onChange={setAccessGroups}
+                  placeholder="ทุกคน"
+                  searchPlaceholder="ค้นหากลุ่ม…"
+                  emptyText="ไม่พบกลุ่มที่ค้นหา"
+                />
+              )}
+            </Field>
           </div>
         </div>
-      </div>
 
-      {/* ช่องหัวฟอร์ม (เพิ่มเติม) */}
-      <div className={ui.card}>
-        <h2 className={ui.cardTitle}>ช่องหัวฟอร์ม (เพิ่มเติม)</h2>
-        <p className={`${ui.hint} mb-3`}>ช่องข้อมูลใต้ชื่อผู้เบิก นอกเหนือจาก ชื่อ/นามสกุล/ตำแหน่ง/Job เช่น “วันที่ต้องการใช้เงิน”, “วัตถุประสงค์”</p>
-        <div className="space-y-2">
-          {headerFields().map((f, i) => (
-            <div key={f.id} className="flex flex-wrap items-center gap-2">
-              <input className={`${ui.input} min-w-[160px] flex-1`} value={f.label} placeholder="ชื่อช่อง" onChange={e => setHFieldLabel(i, e.target.value)} />
-              <select className={ui.inputSm} value={f.type} onChange={e => setHFieldType(i, e.target.value as HeaderField['type'])}>
-                <option value="text">ข้อความ</option>
-                <option value="date">วันที่</option>
-              </select>
-              <div className="flex items-center gap-1.5">
-                <button className={iconBtn} onClick={() => moveHeaderField(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
-                <button className={iconBtn} onClick={() => moveHeaderField(i, 1)} disabled={i === headerFields().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
-                <button className={iconBtn} onClick={() => removeHeaderField(i)} title="ลบช่อง"><Trash2 size={16} /></button>
-              </div>
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-gray-500">ช่องเพิ่มเติมใต้ชื่อผู้เบิก</span>
+            <button className={linkBtn} onClick={addHeaderField}><Plus size={14} /> เพิ่มช่อง</button>
+          </div>
+          {headerFields().length === 0 ? (
+            <p className="text-sm text-gray-400">ไม่มี</p>
+          ) : (
+            <div className="space-y-2">
+              {headerFields().map((f, i) => (
+                <div key={f.id} className="flex flex-wrap items-center gap-2">
+                  <input className={`${ui.inputSm} min-w-[160px] flex-1`} value={f.label} placeholder="ชื่อช่อง" onChange={e => setHFieldLabel(i, e.target.value)} />
+                  <select className={ui.inputSm} value={f.type} onChange={e => setHFieldType(i, e.target.value as HeaderField['type'])}>
+                    <option value="text">ข้อความ</option>
+                    <option value="date">วันที่</option>
+                  </select>
+                  <button className={iconBtn} onClick={() => moveHeaderField(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
+                  <button className={iconBtn} onClick={() => moveHeaderField(i, 1)} disabled={i === headerFields().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
+                  <button className={iconBtn} onClick={() => removeHeaderField(i)} title="ลบช่อง"><Trash2 size={16} /></button>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
-        <button className={`${ui.btnDashed} mt-3`} onClick={addHeaderField}><Plus size={14} /> เพิ่มช่องหัวฟอร์ม</button>
-      </div>
+      </Section>
 
       {/* คอลัมน์ตาราง (Column builder) */}
       <div className={ui.card}>
@@ -524,120 +547,108 @@ export default function FormSettingsPage() {
         </button>
       </div>
 
-      {/* หมวดค่าใช้จ่าย */}
-      <div className={ui.card}>
-        <h2 className={`${ui.cardTitle} mb-4`}>หมวดค่าใช้จ่าย (ช่องติ๊ก)</h2>
-        <div className="space-y-2.5">
-          {settings.categories.map((c, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input className={ui.input} value={c} onChange={e => setCategory(i, e.target.value)} />
-              <button onClick={() => removeCategory(i)} className={btnRemove}>ลบ</button>
-            </div>
-          ))}
+      {/* ข้อความในเอกสาร */}
+      <Section title="ข้อความในเอกสาร">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Field label="เหนือตาราง">
+            <TemplateTextarea
+              value={settings.introText ?? ''}
+              placeholder="เว้นว่างถ้าไม่ใช้"
+              onChange={v => setSettings(s => ({ ...s, introText: v }))}
+            />
+          </Field>
+          <Field label="ใต้ตาราง (เหนือลายเซ็น)">
+            <TemplateTextarea
+              value={settings.bodyText ?? ''}
+              placeholder="เว้นว่างถ้าไม่ใช้"
+              onChange={v => setSettings(s => ({ ...s, bodyText: v }))}
+            />
+          </Field>
         </div>
-        <button className={`${ui.btnDashed} mt-3`} onClick={addCategory}><Plus size={14} /> เพิ่มหมวด</button>
-      </div>
-
-      {/* ข้อความ / การแสดงผล */}
-      <div className={ui.card}>
-        <h2 className={`${ui.cardTitle} mb-1`}>ข้อความ / การแสดงผล</h2>
-        <p className={`${ui.hint} mb-3`}>
-          ย่อหน้าข้อความและตัวเลือกการแสดงผลของเอกสาร · เว้นว่างไว้ถ้าไม่ใช้ · ใส่ <code className="rounded bg-gray-100 px-1 text-gray-700">{'{{ชื่อช่อง}}'}</code> ตรงที่ต้องการให้ผู้กรอกใส่ข้อมูลในระบบ
-          (ถ้าไม่กรอก จะพิมพ์ออกเป็น ........ ให้เขียนด้วยมือ)
-        </p>
-
-        <label className={ui.label}>ข้อความหัวฟอร์ม (เหนือตาราง)</label>
-        <TemplateTextarea
-          value={settings.introText ?? ''}
-          placeholder="เช่น บริษัท … ได้รับเงินจาก {{ได้รับเงินจาก}} ครบถ้วนตามจำนวนเงิน {{จำนวนเงิน:ตัวเลข}} บาท"
-          onChange={v => setSettings(s => ({ ...s, introText: v }))}
-        />
-
-        <label className={`${ui.label} mt-4`}>ข้อความรับรอง / คำประกาศ (ใต้ตาราง เหนือลายเซ็น)</label>
-        <TemplateTextarea
-          value={settings.bodyText ?? ''}
-          placeholder="เช่น ขอรับรองว่า … ตั้งแต่วันที่ {{ตั้งแต่วันที่:วันที่}} ถึงวันที่ {{ถึงวันที่:วันที่}}"
-          onChange={v => setSettings(s => ({ ...s, bodyText: v }))}
-        />
-
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={settings.showRequester !== false} onChange={e => setSettings(s => ({ ...s, showRequester: e.target.checked }))} />
-            แสดงบรรทัด ชื่อ / นามสกุล / ตำแหน่ง / Job
+            แสดงชื่อ-ตำแหน่งผู้เบิก
           </label>
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={settings.showAmountWords !== false} onChange={e => setSettings(s => ({ ...s, showAmountWords: e.target.checked }))} />
-            แสดงกล่อง “เป็นจำนวนเงิน … บาทถ้วน”
+            แสดงจำนวนเงินเป็นตัวอักษร
           </label>
         </div>
-      </div>
+      </Section>
 
-      {/* หมายเหตุท้ายฟอร์ม */}
-      <div className={ui.card}>
-        <h2 className={`${ui.cardTitle} mb-4`}>หมายเหตุท้ายฟอร์ม</h2>
-        <div className="space-y-2.5">
-          {settings.notes.map((n, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <textarea className={`${ui.input} min-h-[52px] resize-y`} value={n} onChange={e => setNote(i, e.target.value)} />
-              <button onClick={() => removeNote(i)} className={btnRemove}>ลบ</button>
-            </div>
-          ))}
-        </div>
-        <button className={`${ui.btnDashed} mt-3`} onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>
-      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* หมวดค่าใช้จ่าย — ช่องติ๊กบนเอกสาร */}
+        <Section title="หมวดค่าใช้จ่าย">
+          <div className="flex flex-wrap items-center gap-2">
+            {settings.categories.map((c, i) => (
+              <span key={i} className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 pl-2.5 focus-within:border-blue-500 focus-within:bg-white">
+                <input
+                  className="bg-transparent py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                  size={Math.max(6, c.length + 1)}
+                  value={c}
+                  placeholder="ชื่อหมวด"
+                  onChange={e => setCategory(i, e.target.value)}
+                />
+                <button type="button" onClick={() => removeCategory(i)} aria-label={`ลบหมวด ${c}`} className="px-1.5 py-1.5 text-gray-400 hover:text-red-600">
+                  <X size={14} />
+                </button>
+              </span>
+            ))}
+            <button className={btnDashedSm} onClick={addCategory}><Plus size={14} /> เพิ่ม</button>
+          </div>
+        </Section>
 
-      {/* ช่องลายเซ็น */}
-      <div className={ui.card}>
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <h2 className={ui.cardTitle}>ช่องลายเซ็น</h2>
-          <Badge>{sigBlocks().length} / {MAX_SIGNATURE_BLOCKS}</Badge>
-        </div>
-        <p className={`${ui.hint} mb-3`}>ช่องลายเซ็นบนเอกสาร (สูงสุด {MAX_SIGNATURE_BLOCKS} ช่อง รวมผู้เบิก) · ช่องแรกคือผู้เบิก เซ็นอัตโนมัติ · ช่องอื่นเลือกคนเซ็นได้ตอนกด “ส่งให้เซ็น” ช่องที่ไม่เลือกจะเว้นเส้นให้เซ็นสด</p>
-        <div className="space-y-2">
-          {sigBlocks().map((b, i) => (
-            <div key={b.id} className="flex flex-wrap items-center gap-2">
-              <input className={`${ui.input} min-w-[160px] flex-1`} value={b.label} placeholder="ชื่อตำแหน่ง" onChange={e => setSigLabel(i, e.target.value)} />
-              {i === 0 && <Badge tone="blue">ผู้เบิก · เซ็นอัตโนมัติ</Badge>}
-              <div className="flex items-center gap-1.5">
+        {/* ช่องลายเซ็น */}
+        <Section title="ช่องลายเซ็น" extra={<Badge>{sigBlocks().length} / {MAX_SIGNATURE_BLOCKS}</Badge>}>
+          <div className="space-y-2">
+            {sigBlocks().map((b, i) => (
+              <div key={b.id} className="flex items-center gap-2">
+                <input className={`${ui.inputSm} min-w-0 flex-1`} value={b.label} placeholder="ชื่อตำแหน่ง" onChange={e => setSigLabel(i, e.target.value)} />
+                {i === 0 && <Badge tone="blue">ผู้เบิก · เซ็นอัตโนมัติ</Badge>}
                 <button className={iconBtn} onClick={() => moveSigBlock(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
                 <button className={iconBtn} onClick={() => moveSigBlock(i, 1)} disabled={i === sigBlocks().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
                 <button className={iconBtn} onClick={() => removeSigBlock(i)} title="ลบช่อง"><Trash2 size={16} /></button>
               </div>
-            </div>
-          ))}
-        </div>
-        <button
-          className={`${ui.btnDashed} mt-3`}
-          onClick={addSigBlock}
-          disabled={sigBlocks().length >= MAX_SIGNATURE_BLOCKS}
-        >
-          <Plus size={14} /> เพิ่มช่องลายเซ็น
-        </button>
+            ))}
+          </div>
+          <button className={`${btnDashedSm} mt-3`} onClick={addSigBlock} disabled={sigBlocks().length >= MAX_SIGNATURE_BLOCKS}>
+            <Plus size={14} /> เพิ่มช่องลายเซ็น
+          </button>
+        </Section>
       </div>
 
-      <button
-        className={ui.btnPrimary}
-        onClick={save}
-        disabled={saving}
-      >
-        <Save size={16} /> บันทึกฟอร์ม
-      </button>
+      {/* หมายเหตุท้ายเอกสาร */}
+      <Section title="หมายเหตุท้ายเอกสาร" extra={<button className={linkBtn} onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>}>
+        {settings.notes.length === 0 ? (
+          <p className="text-sm text-gray-400">ไม่มี</p>
+        ) : (
+          <div className="space-y-2">
+            {settings.notes.map((n, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <textarea className={`${ui.input} min-h-[44px] resize-y py-2`} value={n} onChange={e => setNote(i, e.target.value)} />
+                <button className={`${iconBtn} mt-1.5`} onClick={() => removeNote(i)} title="ลบหมายเหตุ"><Trash2 size={16} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
 
-      {/* โลโก้บริษัท */}
-      <div className={ui.card}>
-        <h2 className={`${ui.cardTitle} mb-4`}>โลโก้บริษัท</h2>
-        <div className="space-y-4">
+      {/* โลโก้บริษัท — ใช้กับทุกฟอร์ม จึงพับเก็บไว้ */}
+      <details className={`${ui.card} group`}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+          <span className={ui.cardTitle}>โลโก้บริษัท <span className="text-xs font-normal text-gray-400">· ใช้กับทุกฟอร์ม</span></span>
+          <ChevronDown size={18} className="text-gray-400 transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="mt-4 space-y-3">
           {companies.map(company => (
             <div key={company.id} className={`${subCard} flex flex-wrap items-center gap-4`}>
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
                 {company.logo
                   ? <img src={company.logo} alt={company.name} className="h-full w-full object-contain" />
-                  : <span className="px-1 text-center text-[10px] leading-tight text-gray-400">ยังไม่มีโลโก้</span>}
+                  : <span className="px-1 text-center text-[10px] leading-tight text-gray-400">ไม่มีโลโก้</span>}
               </div>
-              <div className="min-w-[140px] flex-1">
-                <div className="text-sm font-semibold text-gray-900">{company.name}</div>
-                <div className="text-xs text-gray-500">{company.id}</div>
-              </div>
+              <div className="min-w-[140px] flex-1 text-sm font-semibold text-gray-900">{company.name}</div>
               <div className="flex items-center gap-2">
                 <input
                   type="file"
@@ -646,13 +657,13 @@ export default function FormSettingsPage() {
                   onChange={e => onLogoPick(company, e.target.files?.[0])}
                 />
                 {company.logo && (
-                  <button onClick={() => removeLogo(company)} className={btnRemove}>ลบโลโก้</button>
+                  <button className={iconBtn} onClick={() => removeLogo(company)} title="ลบโลโก้"><Trash2 size={16} /></button>
                 )}
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </details>
       </div>
       )}
     </div>

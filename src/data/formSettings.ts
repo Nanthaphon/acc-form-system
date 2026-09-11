@@ -10,6 +10,28 @@ function withColumnsFallback(fs: FormSettings): FormSettings {
   return { ...fs, columns: Array.isArray(fs.columns) ? fs.columns : [] }
 }
 
+type WriteResult = PromiseLike<{ error: { code?: string; message: string } | null }>
+
+// A pending migration can leave the database without a column the app already
+// writes. Rather than fail the whole save, retry without each column the API
+// reports missing (PGRST204) and return the names of the skipped columns.
+export async function writeSkippingMissing(
+  write: (row: Record<string, unknown>) => WriteResult,
+  row: Record<string, unknown>,
+): Promise<string[]> {
+  const skipped: string[] = []
+  let r = { ...row }
+  for (;;) {
+    const { error } = await write(r)
+    if (!error) return skipped
+    const col = error.code === 'PGRST204' ? /'([^']+)' column/.exec(error.message)?.[1] : undefined
+    if (!col || !(col in r)) throw error
+    skipped.push(col)
+    const { [col]: _dropped, ...rest } = r
+    r = rest
+  }
+}
+
 export async function getFormSettings(formType: string): Promise<FormSettings> {
   const { data } = await supabase.from('form_settings').select('*').eq('formType', formType).maybeSingle()
   if (!data) return { ...EXPENSE_CLAIM_DEFAULTS, formType }
@@ -35,15 +57,14 @@ export async function createForm(name: string, groupId: string): Promise<string>
     categories: [], notes: [], columns: [],
     createdAt: now, updatedAt: now,
   }
-  const { error } = await supabase.from('form_settings').upsert(row)
-  if (error) throw error
+  await writeSkippingMissing(r => supabase.from('form_settings').upsert(r), { ...row })
   return newId
 }
 
 export async function renameForm(formType: string, name: string): Promise<void> {
   // Keep the document title (หัวเอกสาร) in sync with the form name.
-  const { error } = await supabase.from('form_settings').update({ name, title: name, updatedAt: Date.now() }).eq('formType', formType)
-  if (error) throw error
+  await writeSkippingMissing(r => supabase.from('form_settings').update(r).eq('formType', formType),
+    { name, title: name, updatedAt: Date.now() })
 }
 
 export async function deleteForm(formType: string): Promise<void> {
@@ -51,9 +72,17 @@ export async function deleteForm(formType: string): Promise<void> {
   if (error) throw error
 }
 
-export async function updateFormSettings(fs: FormSettings): Promise<void> {
-  const { error } = await supabase.from('form_settings').upsert({ ...fs, updatedAt: Date.now() })
-  if (error) throw error
+// Saves a form's settings. Returns the columns the database doesn't have yet
+// (skipped) so the caller can tell the admin what wasn't stored.
+export async function updateFormSettings(fs: FormSettings): Promise<string[]> {
+  const skipped = await writeSkippingMissing(r => supabase.from('form_settings').upsert(r), { ...fs, updatedAt: Date.now() })
+  // Without the multi-group column, keep the first chosen group in the old single field.
+  if (skipped.includes('accessGroups')) {
+    const { error } = await supabase.from('form_settings')
+      .update({ accessGroup: fs.accessGroups?.[0] ?? null }).eq('formType', fs.formType)
+    if (error) throw error
+  }
+  return skipped
 }
 
 // Turn a form on/off. When off, employees don't see it (maintenance mode).

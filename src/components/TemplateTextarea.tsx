@@ -1,9 +1,8 @@
 import { useRef } from 'react'
-import { CalendarDays, Hash, TextCursorInput, WandSparkles } from 'lucide-react'
+import { CalendarDays, CircleHelp, Hash, TextCursorInput, WandSparkles } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { ui } from './ui'
 import { uiPrompt } from './dialog/dialogService'
-import { countDottedBlanks, dotsToTokens, makeToken, templateFields } from '../shared/bodyTemplate'
+import { countDottedBlanks, dotsToTokens, makeToken } from '../shared/bodyTemplate'
 import type { TemplateFieldType } from '../shared/bodyTemplate'
 
 interface Props {
@@ -13,20 +12,18 @@ interface Props {
 }
 
 const INSERTS: { type: TemplateFieldType; label: string; icon: LucideIcon }[] = [
-  { type: 'text', label: 'ช่องข้อความ', icon: TextCursorInput },
-  { type: 'date', label: 'ช่องวันที่', icon: CalendarDays },
-  { type: 'number', label: 'ช่องตัวเลข', icon: Hash },
+  { type: 'text', label: 'ข้อความ', icon: TextCursorInput },
+  { type: 'date', label: 'วันที่', icon: CalendarDays },
+  { type: 'number', label: 'ตัวเลข', icon: Hash },
 ]
-const TYPE_NAME: Record<TemplateFieldType, string> = { text: 'ข้อความ', date: 'วันที่', number: 'ตัวเลข' }
-const chipBtn = 'inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600'
+const toolBtn = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 hover:text-blue-600'
+const HELP = 'พิมพ์ {{ชื่อช่อง}} ในข้อความเพื่อเว้นช่องให้ผู้กรอกใส่ข้อมูลในระบบ · ถ้าไม่กรอก จะพิมพ์ออกเป็น ........ ให้เขียนด้วยมือ'
 
-// Paragraph editor for a form's intro/body text with fill-in blanks: buttons
-// insert {{ชื่อช่อง}} tokens at the cursor, and old dotted blanks can be
-// converted in one click. Lists the blanks it found so the admin sees what the
-// person filling the form will be asked for.
+// Paragraph editor for a form's intro/body text with fill-in blanks: a slim
+// toolbar inserts {{ชื่อช่อง}} tokens at the cursor, and old dotted blanks can
+// be converted in one click.
 export default function TemplateTextarea({ value, onChange, placeholder }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null)
-  const fields = templateFields(value)
   const dotted = countDottedBlanks(value)
 
   async function insert(type: TemplateFieldType, label: string) {
@@ -34,7 +31,7 @@ export default function TemplateTextarea({ value, onChange, placeholder }: Props
     const start = ref.current?.selectionStart ?? value.length
     const end = ref.current?.selectionEnd ?? value.length
     const name = await uiPrompt('ตั้งชื่อช่อง — ผู้กรอกฟอร์มจะเห็นชื่อนี้ในช่องกรอก', {
-      title: `แทรก${label}`,
+      title: `แทรกช่อง${label}`,
       placeholder: type === 'date' ? 'เช่น ตั้งแต่วันที่' : type === 'number' ? 'เช่น จำนวนเงิน' : 'เช่น ได้รับเงินจาก',
       confirmText: 'แทรก',
     })
@@ -50,40 +47,28 @@ export default function TemplateTextarea({ value, onChange, placeholder }: Props
   }
 
   return (
-    <div>
+    <div className="rounded-lg border border-gray-200 bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100">
       <textarea
         ref={ref}
-        className={`${ui.input} min-h-[72px] resize-y`}
+        className="block min-h-[64px] w-full resize-y rounded-t-lg border-0 bg-transparent px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
         value={value}
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
       />
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-0.5 border-t border-gray-100 px-2 py-1">
+        <span className="mr-1 text-xs text-gray-400">แทรกช่องกรอก</span>
         {INSERTS.map(({ type, label, icon: Icon }) => (
-          <button key={type} type="button" className={chipBtn} onClick={() => insert(type, label)}>
-            <Icon size={14} /> {label}
+          <button key={type} type="button" aria-label={`แทรกช่อง${label}`} className={toolBtn} onClick={() => insert(type, label)}>
+            <Icon size={13} /> {label}
           </button>
         ))}
+        <span className="ml-1 cursor-help text-gray-300 hover:text-gray-500" title={HELP}><CircleHelp size={14} /></span>
         {dotted > 0 && (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
-            onClick={() => onChange(dotsToTokens(value))}
-          >
-            <WandSparkles size={14} /> แปลง ........ เป็นช่องกรอก ({dotted})
+          <button type="button" className={`${toolBtn} ml-auto font-medium text-blue-600`} onClick={() => onChange(dotsToTokens(value))}>
+            <WandSparkles size={13} /> แปลง ........ เป็นช่องกรอก ({dotted})
           </button>
         )}
       </div>
-      {fields.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-gray-500">ช่องกรอกในข้อความนี้:</span>
-          {fields.map(f => (
-            <span key={f.key} className="rounded-full bg-blue-50 px-2.5 py-0.5 font-medium text-blue-700">
-              {f.label}{f.type !== 'text' && <span className="font-normal text-blue-500"> · {TYPE_NAME[f.type]}</span>}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
