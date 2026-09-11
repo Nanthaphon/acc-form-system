@@ -27,4 +27,9 @@ describe('parseEmployeeCsv', () => {
     const { errors } = parseEmployeeCsv(bad)
     expect(errors.length).toBeGreaterThan(0)
   })
+  it('ไม่สนใจ BOM ที่ Excel ใส่หน้าไฟล์ CSV UTF-8', () => {
+    const { rows, errors } = parseEmployeeCsv(String.fromCharCode(0xfeff) + CSV)
+    expect(errors).toHaveLength(0)
+    expect(rows[0].employeeId).toBe('244530')
+  })
 })

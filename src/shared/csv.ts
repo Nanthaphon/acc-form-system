@@ -10,7 +10,10 @@ export interface CsvEmployeeRow {
 const REQUIRED = ['employeeId', 'firstName', 'lastName', 'companyId'] as const
 
 export function parseEmployeeCsv(text: string): { rows: CsvEmployeeRow[]; errors: string[] } {
-  const parsed = Papa.parse<Record<string, string>>(text.trim(), { header: true, skipEmptyLines: true })
+  // Excel's "CSV UTF-8" adds a byte-order mark; left in, it glues onto the first
+  // header ("\uFEFFemployeeId") and every row reports employeeId as missing.
+  const clean = text.replace(/^\uFEFF/, '').trim()
+  const parsed = Papa.parse<Record<string, string>>(clean, { header: true, skipEmptyLines: true })
   const rows: CsvEmployeeRow[] = []
   const errors: string[] = []
   parsed.data.forEach((raw, idx) => {

@@ -8,7 +8,9 @@
 @media print {
   body * { visibility: hidden; }
   #print-area, #print-area * { visibility: visible; }
-  #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  /* Full page width with no centring margin: the screen layout's max-width /
+     mx-auto would otherwise leave the sheet ~7mm left of centre on A4. */
+  #print-area { position: absolute; left: 0; top: 0; width: 100%; max-width: none !important; margin: 0 !important; }
   /* Put the white space back inside the page instead. A margin that follows a
      forced page break is kept, so every sheet gets it, not only the first. */
   /* Each sheet also fills its A4 page so the frame runs down to the bottom:
