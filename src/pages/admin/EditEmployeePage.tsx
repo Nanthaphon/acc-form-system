@@ -1,7 +1,7 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { IdCard, Lock, Save } from 'lucide-react'
+import { AtSign, IdCard, Lock, Save } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid, updateProfile } from '../../data/users'
 import { listCompanies } from '../../data/companies'
@@ -9,18 +9,20 @@ import { listAccessGroups } from '../../data/accessGroups'
 import { listDepartments } from '../../data/departments'
 import { dbErrorMessage } from '../../shared/dbError'
 import { isSuperAdmin, ROLE_OPTIONS } from '../../shared/roles'
+import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { PageHeader, ui } from '../../components/ui'
 import type { Company, UserProfile, AccessGroup, Department } from '../../types/schema'
 
 export default function EditEmployeePage() {
   const { uid } = useParams<{ uid: string }>()
   const nav = useNavigate()
-  const { profile: me } = useAuth()
+  const { profile: me, refresh } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
   const [depts, setDepts] = useState<Department[]>([])
   const [f, setF] = useState<UserProfile | null>(null)
   const [saving, setSaving] = useState(false)
+  const [changingUsername, setChangingUsername] = useState(false)
 
   useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups); listDepartments().then(setDepts) }, [])
   useEffect(() => {
@@ -32,9 +34,16 @@ export default function EditEmployeePage() {
   // Store the department id plus its name (for display).
   const setDept = (id: string) => setF(prev => prev ? { ...prev, departmentId: id, department: depts.find(d => d.id === id)?.name ?? '' } : prev)
 
+  const viewerIsSuper = isSuperAdmin(me)
   const targetIsSuper = isSuperAdmin(f)
   // The Super Admin's account can be changed only by the Super Admin (the database enforces it too).
-  const readOnly = targetIsSuper && !isSuperAdmin(me)
+  const readOnly = targetIsSuper && !viewerIsSuper
+
+  // The rename is saved on its own; keep any unsaved edits in the form and just take the new username.
+  function afterUsernameChange(newUsername: string) {
+    setF(prev => prev ? { ...prev, employeeId: newUsername } : prev)
+    if (uid === me?.uid) refresh()
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -88,8 +97,15 @@ export default function EditEmployeePage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className={ui.label}>รหัสพนักงาน (ชื่อผู้ใช้)</label>
-                <input className={`${ui.input} font-mono`} value={f.employeeId} disabled />
-                <p className="mt-1 text-[11px] text-gray-400">แก้ไขไม่ได้</p>
+                <div className="flex gap-2">
+                  <input className={`${ui.input} font-mono`} value={f.employeeId} disabled />
+                  {viewerIsSuper && (
+                    <button type="button" className={`${ui.btnSecondary} shrink-0`} onClick={() => setChangingUsername(true)}>
+                      <AtSign size={16} /> เปลี่ยน
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-[11px] text-gray-400">{viewerIsSuper ? 'ใช้เข้าสู่ระบบ · เปลี่ยนแล้วมีผลทันที' : 'เปลี่ยนได้เฉพาะ Super Admin'}</p>
               </div>
               <div>
                 <label className={ui.label}>ชื่อ</label>
@@ -146,7 +162,6 @@ export default function EditEmployeePage() {
               </div>
             </div>
           </div>
-
         </fieldset>
 
         {/* Outside the fieldset so "cancel" still works when the form is read-only. */}
@@ -157,6 +172,8 @@ export default function EditEmployeePage() {
           <button type="button" onClick={() => nav('/admin/employees')} className={ui.btnSecondary}>ยกเลิก</button>
         </div>
       </form>
+
+      {changingUsername && <ChangeUsernameModal profile={f} onClose={() => setChangingUsername(false)} onDone={afterUsernameChange} />}
     </div>
   )
 }

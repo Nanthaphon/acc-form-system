@@ -93,6 +93,56 @@ end $$;
 revoke all on function admin_set_password(uuid, text, boolean) from public, anon;
 grant execute on function admin_set_password(uuid, text, boolean) to authenticated;
 
+-- The login email for a username — must match employeeIdToEmail() in
+-- src/data/auth.ts: letters, digits and . _ - stay; anything else becomes +HEX.
+create or replace function login_email(username text) returns text language plpgsql immutable as $$
+declare result text := ''; ch text;
+begin
+  foreach ch in array regexp_split_to_array(btrim(username), '') loop
+    if ch ~ '^[A-Za-z0-9._-]$' then result := result || ch;
+    else result := result || '+' || to_hex(ascii(ch));
+    end if;
+  end loop;
+  return lower(result || '@globe.local');
+end $$;
+
+-- The Super Admin renames someone's username (= employee ID): their login
+-- email, profile and documents move together. A still-default password
+-- follows the username (password = username).
+create or replace function admin_change_username(target uuid, new_username text)
+returns void language plpgsql security definer set search_path = public, extensions as $$
+declare old_id text; was_default boolean; new_email text;
+begin
+  if not is_super_admin() then
+    raise exception 'only the super admin can change usernames';
+  end if;
+  new_username := btrim(coalesce(new_username, ''));
+  if length(new_username) < 6 then
+    raise exception 'username must be at least 6 characters';
+  end if;
+  select "employeeId", coalesce("passwordIsDefault", false) into old_id, was_default from profiles where uid = target;
+  if not found then raise exception 'employee not found'; end if;
+  if new_username = old_id then return; end if;
+
+  new_email := login_email(new_username);
+  if exists (select 1 from profiles where lower("employeeId") = lower(new_username) and uid <> target)
+     or exists (select 1 from auth.users where lower(email) = new_email and id <> target) then
+    raise exception 'username already in use';
+  end if;
+
+  update auth.users set email = new_email, updated_at = now() where id = target;
+  update auth.identities
+     set identity_data = identity_data || jsonb_build_object('email', new_email), updated_at = now()
+   where user_id = target and provider = 'email';
+  if was_default then
+    update auth.users set encrypted_password = crypt(new_username, gen_salt('bf')) where id = target;
+  end if;
+  update profiles set "employeeId" = new_username where uid = target;
+  update submissions set "createdByEmployeeId" = new_username where "createdBy" = target;
+end $$;
+revoke all on function admin_change_username(uuid, text) from public, anon;
+grant execute on function admin_change_username(uuid, text) to authenticated;
+
 -- admin001 is the Super Admin.
 update profiles set "isSuperAdmin" = true, role = 'admin' where "employeeId" = 'admin001';
 

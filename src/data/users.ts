@@ -60,6 +60,12 @@ export async function adminSetPassword(uid: string, password: string, mustChange
   const { error } = await supabase.rpc('admin_set_password', { target: uid, new_password: password, must_change: mustChange })
   if (error) throw error
 }
+// Super Admin only (checked in the database): rename someone's username —
+// login, profile and documents together; a default password follows it.
+export async function adminChangeUsername(uid: string, newUsername: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_change_username', { target: uid, new_username: newUsername })
+  if (error) throw error
+}
 export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<void> {
   const { error } = await supabase.from('profiles').update(patch).eq('uid', uid)
   if (error) throw error

@@ -19,6 +19,7 @@ import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ActionIconButton from '../../components/ActionIconButton'
 import LoginInfo from '../../components/LoginInfo'
 import SetPasswordModal from '../../components/SetPasswordModal'
+import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
 
@@ -45,7 +46,7 @@ function Info({ label, value }: { label: string; value: string }) {
 export default function EmployeeDetailPage() {
   const { uid } = useParams()
   const nav = useNavigate()
-  const { profile: me } = useAuth()
+  const { profile: me, refresh } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [subs, setSubs] = useState<SubmissionSummary[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
@@ -55,6 +56,7 @@ export default function EmployeeDetailPage() {
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
   const [settingPassword, setSettingPassword] = useState(false)
+  const [changingUsername, setChangingUsername] = useState(false)
 
   function loadProfile() { if (uid) getProfileByUid(uid).then(setProfile) }
   function loadSubs() { if (uid) listMySubmissions(uid).then(setSubs) }
@@ -74,6 +76,11 @@ export default function EmployeeDetailPage() {
     try { await deleteSubmission(r.id); loadSubs() }
     catch { uiAlert('ลบเอกสารไม่สำเร็จ') }
   }
+  function afterUsernameChange() {
+    loadProfile()
+    loadSubs()
+    if (uid === me?.uid) refresh() // renamed themselves: the sidebar and session profile follow
+  }
 
   const formName = (ft: string) => {
     const f = forms.find(x => x.formType === ft)
@@ -89,7 +96,7 @@ export default function EmployeeDetailPage() {
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? folders[0]?.id
   const filtered = applyFilters(subs, filters, { formGroup, formName })
   const viewerIsSuper = isSuperAdmin(me)
-  // Only the Super Admin may edit the Super Admin's account; they set passwords for others.
+  // Only the Super Admin may edit the Super Admin's account, rename usernames and set others' passwords.
   const canEdit = !isSuperAdmin(profile) || viewerIsSuper
   const canSetPassword = viewerIsSuper && profile.uid !== me?.uid
 
@@ -108,7 +115,11 @@ export default function EmployeeDetailPage() {
       />
 
       <div className="space-y-6">
-        <LoginInfo profile={profile} onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined} />
+        <LoginInfo
+          profile={profile}
+          onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined}
+          onChangeUsername={viewerIsSuper ? () => setChangingUsername(true) : undefined}
+        />
 
         <div className={ui.card}>
           <div className="grid grid-cols-2 gap-5 text-sm md:grid-cols-3">
@@ -170,6 +181,7 @@ export default function EmployeeDetailPage() {
       </div>
 
       {settingPassword && <SetPasswordModal profile={profile} onClose={() => setSettingPassword(false)} onDone={loadProfile} />}
+      {changingUsername && <ChangeUsernameModal profile={profile} onClose={() => setChangingUsername(false)} onDone={afterUsernameChange} />}
     </div>
   )
 }

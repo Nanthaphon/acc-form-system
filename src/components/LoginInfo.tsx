@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { KeyRound } from 'lucide-react'
+import { AtSign, KeyRound } from 'lucide-react'
 import type { UserProfile } from '../types/schema'
 import { PASSWORD_STATE, passwordState } from '../shared/roles'
 import CopyButton from './CopyButton'
@@ -31,18 +31,27 @@ export function Credential({ label, value, hidden, badge, note }: {
 }
 
 // An employee's username and where their password stands — what an admin
-// hands over, or checks when someone can't log in. `onSetPassword` is passed
+// hands over, or checks when someone can't log in. The two actions are passed
 // only for the Super Admin.
-export default function LoginInfo({ profile, onSetPassword }: { profile: UserProfile; onSetPassword?: () => void }) {
+export default function LoginInfo({ profile, onSetPassword, onChangeUsername }: {
+  profile: UserProfile
+  onSetPassword?: () => void
+  onChangeUsername?: () => void
+}) {
   const st = passwordState(profile)
   const meta = PASSWORD_STATE[st]
   return (
     <div className={ui.card}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className={`${ui.cardTitle} flex items-center gap-2`}><KeyRound size={16} className="text-gray-400" /> ข้อมูลเข้าสู่ระบบ</h2>
-        {onSetPassword && (
-          <button className={ui.btnSecondary} onClick={onSetPassword}><KeyRound size={16} /> ตั้งรหัสผ่านใหม่</button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {onChangeUsername && (
+            <button className={ui.btnSecondary} onClick={onChangeUsername}><AtSign size={16} /> แก้ชื่อผู้ใช้</button>
+          )}
+          {onSetPassword && (
+            <button className={ui.btnSecondary} onClick={onSetPassword}><KeyRound size={16} /> ตั้งรหัสผ่านใหม่</button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Credential label="ชื่อผู้ใช้" value={profile.employeeId} />
