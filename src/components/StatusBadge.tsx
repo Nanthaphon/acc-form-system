@@ -14,6 +14,8 @@ function pendingCountText(count: number): string {
   return `เหลือ ${count} คน`
 }
 
+// Status pill for a document. While waiting for signatures, hovering it lists
+// who still hasn't signed.
 export default function StatusBadge({ sub }: { sub: Submission }) {
   const st = subStatus(sub)
   const meta = statusMeta(st)

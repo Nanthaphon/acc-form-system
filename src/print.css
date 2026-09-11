@@ -1,7 +1,17 @@
+/* A zero page margin leaves the browser no room to print its own header and
+   footer (page title, URL, date, page numbers) around the document. */
+@page {
+  size: A4;
+  margin: 0;
+}
+
 @media print {
   body * { visibility: hidden; }
   #print-area, #print-area * { visibility: visible; }
   #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  /* Put the white space back inside the page instead. A margin that follows a
+     forced page break is kept, so every sheet gets it, not only the first. */
+  #print-area .doc-page { margin: 10mm !important; }
   .no-print { display: none !important; }
   /* Each sheet starts on a fresh printed page (page 2 and onward). */
   .doc-page + .doc-page { break-before: page; }

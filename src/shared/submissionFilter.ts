@@ -31,11 +31,15 @@ export function dateBounds(f: Filters): [number, number] {
   }
 }
 
-export function applyFilters(
-  rows: Submission[], f: Filters, _empName: (eid: string) => string,
-  formGroup?: (formType: string) => string | undefined,   // resolve a form's folder
-  formName?: (formType: string) => string,
-): Submission[] {
+// Lookups the caller supplies so this stays a pure function of its inputs:
+// the pages already hold the loaded forms, this module never fetches.
+export interface FilterLookups {
+  formGroup?: (formType: string) => string | undefined   // a form's folder
+  formName?: (formType: string) => string
+}
+
+export function applyFilters(rows: Submission[], f: Filters, lookups: FilterLookups = {}): Submission[] {
+  const { formGroup, formName } = lookups
   const [dStart, dEnd] = dateBounds(f)
   const needle = f.q.trim().toLowerCase()
   return rows.filter(r => {

@@ -31,12 +31,10 @@ function sub(overrides: Partial<Submission>): Submission {
 describe('applyFilters', () => {
   it('searches document number and form name, not employee name', () => {
     const rows = [sub({})]
-    const empName = () => 'พนักงาน พีซี'
-    const formGroup = () => 'expense-folder'
-    const formName = () => 'ใบเบิกค่าใช้จ่าย'
+    const lookups = { formGroup: () => 'expense-folder', formName: () => 'ใบเบิกค่าใช้จ่าย' }
 
-    expect(applyFilters(rows, { ...emptyFilters, q: 'GAC-202609' }, empName, formGroup, formName)).toHaveLength(1)
-    expect(applyFilters(rows, { ...emptyFilters, q: 'ใบเบิกค่าใช้จ่าย' }, empName, formGroup, formName)).toHaveLength(1)
-    expect(applyFilters(rows, { ...emptyFilters, q: 'พนักงาน พีซี' }, empName, formGroup, formName)).toHaveLength(0)
+    expect(applyFilters(rows, { ...emptyFilters, q: 'GAC-202609' }, lookups)).toHaveLength(1)
+    expect(applyFilters(rows, { ...emptyFilters, q: 'ใบเบิกค่าใช้จ่าย' }, lookups)).toHaveLength(1)
+    expect(applyFilters(rows, { ...emptyFilters, q: 'พนักงาน พีซี' }, lookups)).toHaveLength(0)
   })
 })

@@ -84,14 +84,31 @@ export interface FormSettings {
   categories: string[]; notes: string[]
   columns: FormColumn[]
   groupId?: string; name?: string
-  accessGroup?: string
+  accessGroup?: string | null          // legacy single access group — superseded by accessGroups (read via formAccessGroups)
+  accessGroups?: string[]              // access groups that may see this form; empty = everyone
   active?: boolean
-  signatureBlocks?: SignatureBlock[]   // configurable signature blocks (falls back to DEFAULT_SIGNATURE_BLOCKS)
+  createdAt?: number                   // ms — for sorting the form list
+  updatedAt?: number                   // ms — bumped on every save / rename
+  signatureBlocks?: SignatureBlock[]   // configurable signature blocks (read via formSignatureBlocks)
   headerFields?: HeaderField[]         // extra header fields shown above the table
   introText?: string                   // free paragraph shown above the table (below the header)
   bodyText?: string                    // free declaration/certification paragraph shown below the table, above signatures
   showRequester?: boolean              // show the ชื่อ/นามสกุล/ตำแหน่ง/Job line (default true)
   showAmountWords?: boolean            // show the "เป็นจำนวนเงิน ... บาทถ้วน" box (default true)
+}
+
+// Access groups allowed to see a form. Forms saved before multi-group support
+// only carry the legacy single `accessGroup`; treat it as a one-item list.
+export function formAccessGroups(f: Pick<FormSettings, 'accessGroup' | 'accessGroups'>): string[] {
+  if (f.accessGroups?.length) return f.accessGroups
+  return f.accessGroup ? [f.accessGroup] : []
+}
+// Admins see every form; everyone else sees forms open to all (no groups
+// selected) or forms that list their own access group.
+export function canSeeForm(f: Pick<FormSettings, 'accessGroup' | 'accessGroups'>, viewerGroup: string | undefined, isAdmin: boolean): boolean {
+  if (isAdmin) return true
+  const allowed = formAccessGroups(f)
+  return allowed.length === 0 || (!!viewerGroup && allowed.includes(viewerGroup))
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
@@ -172,26 +189,42 @@ export interface ExpenseHeader {
   fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
 
-export type SubmissionStatus = 'draft' | 'pending' | 'signed'
+// Derived from a document's signature assignments PLUS its form's config —
+// Sending for online signatures is optional, so a saved document with no
+// assignments is already finished ('done'); once sent it is 'pending' until
+// every assigned block is signed.
+export type SubmissionStatus = 'done' | 'pending' | 'signed'
 
-// A signature block configured on a form (up to 6, first is normally ผู้เบิก).
-// `online` = this block needs an online signature (a signer is assigned when
-// filling); otherwise it prints as a blank line for a wet signature.
+// A signature block configured on a form (up to 6). Whether a block is signed
+// online is decided per document when it is sent — any block left without a
+// signer prints as a blank line for a wet signature.
 export interface SignatureBlock {
   id: string
   label: string
-  online: boolean
+  online?: boolean   // legacy per-block flag — ignored; kept so old saved configs still type-check
 }
 // The first signature block is always the requester (ผู้เบิก) — signed by the
 // person filling the form (auto, no signer dropdown).
 export const MAX_SIGNATURE_BLOCKS = 6
 export const DEFAULT_SIGNATURE_BLOCKS: SignatureBlock[] = [
-  { id: 'requester', label: 'ผู้เบิก', online: false },
-  { id: 'head', label: 'หัวหน้าแผนก', online: false },
-  { id: 'approver', label: 'ผู้อนุมัติ', online: false },
-  { id: 'receiver', label: 'ผู้รับเงิน', online: false },
-  { id: 'checker', label: 'ผู้ตรวจสอบ/ฝ่ายบัญชี', online: false },
+  { id: 'requester', label: 'ผู้เบิก' },
+  { id: 'head', label: 'หัวหน้าแผนก' },
+  { id: 'approver', label: 'ผู้อนุมัติ' },
+  { id: 'receiver', label: 'ผู้รับเงิน' },
+  { id: 'checker', label: 'ผู้ตรวจสอบ/ฝ่ายบัญชี' },
 ]
+
+// The signature blocks a form actually uses. A form that has never been
+// configured stores an empty array (the DB column default), so fall back to the
+// built-in set. Single source of truth — do not re-inline this fallback.
+export function formSignatureBlocks(f?: Pick<FormSettings, 'signatureBlocks'> | null): SignatureBlock[] {
+  return f?.signatureBlocks?.length ? f.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
+}
+// Can a document on this form be sent to someone for signing? Only when there
+// is at least one block besides the requester's own (the first block).
+export function canRequestSignatures(f?: Pick<FormSettings, 'signatureBlocks'> | null): boolean {
+  return formSignatureBlocks(f).length > 1
+}
 
 // One online signature slot on a document: the block it fills, who was assigned,
 // and (once they sign) a snapshot of their signature image.
@@ -219,6 +252,17 @@ export interface Submission {
   printCount: number
   lastPrintedAt: number | null
   signatures?: DocSignature[]        // online signature assignments for this document
+  attachments?: Attachment[]         // files attached to this document (stored in the 'attachments' bucket)
+}
+
+// A file attached to a document. `path` is the storage object key
+// (`<submissionId>/<uuid>.<ext>`); `name` keeps the original file name for display.
+export interface Attachment {
+  path: string
+  name: string
+  size: number        // bytes
+  type: string        // MIME type
+  uploadedAt: number  // ms
 }
 
 // One saved snapshot of a document. version 1 = created; +1 on each real edit.

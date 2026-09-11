@@ -1,7 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { isTextCol, DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
+import { isTextCol, formSignatureBlocks } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
@@ -84,7 +84,7 @@ export function ExpenseClaimPdf({ company, header, items, settings = EXPENSE_CLA
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const emptyRowCount = Math.max(0, MIN_ROWS - items.length)
-  const sigBlocks = settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
+  const sigBlocks = formSignatureBlocks(settings)
   const sigRows: SigBlock[][] = []
   for (let i = 0; i < sigBlocks.length; i += 3) sigRows.push(sigBlocks.slice(i, i + 3))
 

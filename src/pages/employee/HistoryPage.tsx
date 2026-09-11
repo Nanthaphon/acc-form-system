@@ -2,13 +2,13 @@ import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Copy, Pencil, Printer, RotateCcw, Send, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, listSigners, cancelSigning } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
 import { listGroups } from '../../data/formGroups'
 import type { Submission, FormSettings, FormGroup } from '../../types/schema'
-import { DEFAULT_SIGNATURE_BLOCKS } from '../../types/schema'
+import { formSignatureBlocks, canRequestSignatures } from '../../types/schema'
 import { formatDate } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
@@ -36,12 +36,10 @@ export default function HistoryPage() {
   const formOf = (ft: string) => forms.find(f => f.formType === ft)
   const formName = (ft: string) => { const f = formOf(ft); return f?.name || f?.title || '—' }
   const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
-  const filtered = applyFilters(rows, filters, myName, formGroup, formName)
-  // A doc can be sent for signing if its form has online blocks and it isn't fully signed.
-  const canSend = (r: Submission) => {
-    const blocks = formOf(r.formType)?.signatureBlocks ?? DEFAULT_SIGNATURE_BLOCKS
-    return blocks.some(b => b.online) && subStatus(r) !== 'signed'
-  }
+  const filtered = applyFilters(rows, filters, { formGroup, formName })
+  // A doc can be sent for signing if its form has someone besides the requester
+  // to sign, and it isn't fully signed yet.
+  const canSend = (r: Submission) => canRequestSignatures(formOf(r.formType)) && subStatus(r) !== 'signed'
 
   async function onDelete(r: Submission) {
     if (!(await uiConfirm(`ลบถาวร ยกเลิกไม่ได้`, { title: `ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
@@ -52,8 +50,8 @@ export default function HistoryPage() {
   async function onCancelSign(r: Submission) {
     const signed = (r.signatures ?? []).filter(x => x.status === 'signed').length
     const msg = signed > 0
-      ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับเป็นร่าง`
-      : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับเป็นร่าง`
+      ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับไปสถานะ "เสร็จสิ้น"`
+      : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับไปสถานะ "เสร็จสิ้น"`
     if (!(await uiConfirm(msg, { tone: 'danger', confirmText: 'ยกเลิกส่งเซ็น' }))) return
     try { await cancelSigning(r.id); load(); notifyPendingSignChanged() }
     catch (e: any) { uiAlert('ยกเลิกไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
@@ -93,7 +91,7 @@ export default function HistoryPage() {
                 {subStatus(r) === 'pending' && (
                   <ActionIconButton label="ยกเลิกส่งเซ็น" onClick={() => onCancelSign(r)} tone="amber" icon={<RotateCcw size={16} />} />
                 )}
-                {subStatus(r) === 'draft' && (
+                {isUnsigned(r) && (
                   <ActionIconButton label="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
                 )}
                 </div>
@@ -106,7 +104,7 @@ export default function HistoryPage() {
       {signModal && profile && (
         <AssignSignersModal
           submission={signModal}
-          settings={formOf(signModal.formType) ?? ({ signatureBlocks: DEFAULT_SIGNATURE_BLOCKS } as FormSettings)}
+          settings={formOf(signModal.formType) ?? ({ signatureBlocks: formSignatureBlocks(null) } as FormSettings)}
           signers={signers}
           currentUid={profile.uid}
           currentName={myName()}

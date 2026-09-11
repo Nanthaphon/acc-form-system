@@ -28,10 +28,12 @@ export async function createForm(name: string, groupId: string): Promise<string>
   const newId = crypto.randomUUID()
   // New form starts BLANK — no columns/categories/notes. Admin builds it up.
   // Document title (หัวเอกสาร) starts equal to the form name.
+  const now = Date.now()
   const row: FormSettings = {
     formType: newId, name, title: name, groupId,
     subject: '', attention: '', formCode: '',
     categories: [], notes: [], columns: [],
+    createdAt: now, updatedAt: now,
   }
   const { error } = await supabase.from('form_settings').upsert(row)
   if (error) throw error
@@ -40,7 +42,7 @@ export async function createForm(name: string, groupId: string): Promise<string>
 
 export async function renameForm(formType: string, name: string): Promise<void> {
   // Keep the document title (หัวเอกสาร) in sync with the form name.
-  const { error } = await supabase.from('form_settings').update({ name, title: name }).eq('formType', formType)
+  const { error } = await supabase.from('form_settings').update({ name, title: name, updatedAt: Date.now() }).eq('formType', formType)
   if (error) throw error
 }
 
@@ -50,7 +52,7 @@ export async function deleteForm(formType: string): Promise<void> {
 }
 
 export async function updateFormSettings(fs: FormSettings): Promise<void> {
-  const { error } = await supabase.from('form_settings').upsert(fs)
+  const { error } = await supabase.from('form_settings').upsert({ ...fs, updatedAt: Date.now() })
   if (error) throw error
 }
 

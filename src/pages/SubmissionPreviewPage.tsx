@@ -7,6 +7,7 @@ import { getSubmission, incrementPrint } from '../data/submissions'
 import { getFormSettings } from '../data/formSettings'
 import { getCompany } from '../data/companies'
 import type { Submission, FormSettings, Company } from '../types/schema'
+import AttachmentsField from '../components/AttachmentsField'
 
 export default function SubmissionPreviewPage() {
   const { id } = useParams()
@@ -45,6 +46,10 @@ export default function SubmissionPreviewPage() {
           ? <button onClick={onPrint} className="ml-auto inline-flex items-center gap-1.5 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-blue-700"><Printer size={16} /> สั่งพิมพ์</button>
           : <span className="ml-auto inline-flex items-center gap-1.5 rounded bg-gray-100 px-3 py-2 text-sm text-gray-500"><Eye size={16} /> ดูอย่างเดียว</span>}
       </div>
+      {/* Approvers see the receipts here — the fill page is owner-only. */}
+      {(sub.attachments?.length ?? 0) > 0 && (
+        <div className="no-print mb-4"><AttachmentsField saved={sub.attachments ?? []} readOnly /></div>
+      )}
       <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} signatures={sub.signatures} />
     </div>
   )

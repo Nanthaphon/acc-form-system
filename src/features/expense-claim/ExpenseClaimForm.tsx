@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
@@ -17,6 +18,7 @@ interface Props {
 }
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
+const STANDARD_WHT = 3 // % — the default หัก ณ ที่จ่าย rate
 
 const cardClass = 'rounded-xl border border-gray-200 bg-white p-6'
 const cardTitleClass = 'mb-4 text-[15px] font-semibold text-gray-900'
@@ -36,6 +38,14 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const columnTotals = computeColumnTotals(cols, items)
   const total = grandTotal(cols, items)
   const tax = taxSummary(total, header.vat, header.whtRate)
+
+  // หัก ณ ที่จ่าย: 3% is the standard rate; "อื่นๆ" lets the user type any rate.
+  // `whtOther` holds the typed text while that option is picked — it may be
+  // empty or half-typed, which the numeric header.whtRate can't represent.
+  const [whtOther, setWhtOther] = useState<string | null>(null)
+  const whtIsOther = whtOther !== null || (!!header.whtRate && header.whtRate !== STANDARD_WHT)
+  const whtOn = !!header.whtRate || whtOther !== null
+  const setWht = (rate: number) => onHeaderChange({ ...header, whtRate: rate })
   const categoryOptions = categories ?? CATEGORIES
 
   function setCell(rowIdx: number, key: string, value: string | number) {
@@ -222,17 +232,50 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               <input type="checkbox" checked={!!header.vat} onChange={e => onHeaderChange({ ...header, vat: e.target.checked })} />
               ภาษีมูลค่าเพิ่ม (VAT) 7%
             </label>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <label className="flex cursor-pointer items-center gap-2">
-                <input type="checkbox" checked={!!header.whtRate} onChange={e => onHeaderChange({ ...header, whtRate: e.target.checked ? 3 : 0 })} />
+                <input
+                  type="checkbox"
+                  checked={whtOn}
+                  onChange={e => { setWhtOther(null); setWht(e.target.checked ? STANDARD_WHT : 0) }}
+                />
                 หัก ณ ที่จ่าย
               </label>
-              {!!header.whtRate && [3, 5].map(r => (
-                <label key={r} className="flex cursor-pointer items-center gap-1">
-                  <input type="radio" name="whtRate" checked={header.whtRate === r} onChange={() => onHeaderChange({ ...header, whtRate: r })} />
-                  {r}%
-                </label>
-              ))}
+              {whtOn && (
+                <>
+                  <label className="flex cursor-pointer items-center gap-1">
+                    <input type="radio" name="whtRate" checked={!whtIsOther} onChange={() => { setWhtOther(null); setWht(STANDARD_WHT) }} />
+                    {STANDARD_WHT}%
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-1">
+                    <input type="radio" name="whtRate" checked={whtIsOther} onChange={() => { setWhtOther(''); setWht(0) }} />
+                    อื่นๆ
+                  </label>
+                  {whtIsOther && (
+                    <span className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        autoFocus={whtOther === ''}
+                        placeholder="เช่น 1"
+                        aria-label="อัตราหัก ณ ที่จ่าย (%)"
+                        className="w-20 rounded-md border border-gray-200 bg-white px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        value={whtOther ?? String(header.whtRate ?? '')}
+                        onChange={e => {
+                          const v = e.target.value
+                          setWhtOther(v)
+                          const n = Number(v)
+                          setWht(v.trim() !== '' && Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0)
+                        }}
+                      />
+                      %
+                    </span>
+                  )}
+                </>
+              )}
             </div>
           </div>
 

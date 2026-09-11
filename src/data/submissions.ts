@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase'
 import type { Submission, SubmissionStatus, DocSignature } from '../types/schema'
 import { formatDocNumber } from '../shared/docNumber'
 import { addVersion } from './versions'
+import { deleteAttachmentFiles } from './attachments'
 
 export interface Editor { uid: string; name: string }
 
@@ -55,6 +56,11 @@ export function submissionAmount(s: Submission): number {
 }
 
 export async function deleteSubmission(id: string): Promise<void> {
+  // Remove attached files first: the storage policies authorise by looking up
+  // the parent row, so once the row is gone its files could no longer be deleted.
+  const { data } = await supabase.from('submissions').select('attachments').eq('id', id).maybeSingle()
+  const paths = ((data?.attachments ?? []) as { path: string }[]).map(a => a.path)
+  if (paths.length) await deleteAttachmentFiles(paths)
   const { error } = await supabase.from('submissions').delete().eq('id', id)
   if (error) throw error
 }
@@ -96,15 +102,24 @@ export async function listMyAssigned(uid: string): Promise<Submission[]> {
   return ((data ?? []) as Submission[]).filter(s => (s.signatures ?? []).some(x => x.assignedUid === uid))
 }
 
-// Document status derived from its online-signature assignments:
-// no assignments = ร่าง, all signed = เซ็นครบ, otherwise = รอเซ็น.
+// True while a document carries no signature assignments at all — the state in
+// which its owner may still freely edit or delete it.
+export function isUnsigned(s: Submission): boolean {
+  return (s.signatures ?? []).length === 0
+}
+
+// Document status from its signature assignments alone. Sending for signatures
+// is optional, so a document nobody was asked to sign is simply finished.
+//   none          -> เสร็จสิ้น
+//   some pending  -> รอลายเซ็น
+//   all signed    -> เซ็นครบ
 export function subStatus(s: Submission): SubmissionStatus {
   const sigs = s.signatures ?? []
-  if (sigs.length === 0) return 'draft'
+  if (sigs.length === 0) return 'done'
   return sigs.every(x => x.status === 'signed') ? 'signed' : 'pending'
 }
 const STATUS_META: Record<SubmissionStatus, { label: string; className: string }> = {
-  draft: { label: 'ร่าง', className: 'bg-gray-100 text-gray-600' },
+  done: { label: 'เสร็จสิ้น', className: 'bg-blue-50 text-blue-700' },
   pending: { label: 'รอลายเซ็น', className: 'bg-amber-100 text-amber-700' },
   signed: { label: 'เซ็นครบ', className: 'bg-green-100 text-green-700' },
 }

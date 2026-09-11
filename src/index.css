@@ -71,3 +71,15 @@ input, textarea, select, [contenteditable="true"], #print-area, #print-area * {
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* Number fields take typed values only: no spinner arrows (the mouse wheel is
+   neutralised in main.tsx), so an amount can't be nudged by accident. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

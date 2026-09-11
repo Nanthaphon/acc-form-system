@@ -64,7 +64,7 @@ export default function EmployeeDetailPage() {
   if (!profile) return <div className="p-4 text-gray-500">กำลังโหลด...</div>
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? folders[0]?.id
-  const filtered = applyFilters(subs, filters, () => `${profile.firstName} ${profile.lastName}`, formGroup, formName)
+  const filtered = applyFilters(subs, filters, { formGroup, formName })
 
   return (
     <div className="space-y-6">

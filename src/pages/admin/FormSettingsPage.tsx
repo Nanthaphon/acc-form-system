@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, calcOperands, DEFAULT_SIGNATURE_BLOCKS, MAX_SIGNATURE_BLOCKS } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
@@ -86,16 +86,22 @@ export default function FormSettingsPage() {
     ;[a[idx], a[j]] = [a[j], a[idx]]; setHeaderFields(a)
   }
 
+  // ----- access groups (a form may be shown to several) -----
+  const selectedGroups = formAccessGroups(settings)
+  function toggleAccessGroup(id: string) {
+    const next = selectedGroups.includes(id) ? selectedGroups.filter(g => g !== id) : [...selectedGroups, id]
+    setSettings(s => ({ ...s, accessGroups: next, accessGroup: null }))
+  }
+
   // ----- signature blocks -----
-  const sigBlocks = (): SignatureBlock[] => settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
+  const sigBlocks =(): SignatureBlock[] => formSignatureBlocks(settings)
   function setSigBlocks(blocks: SignatureBlock[]) { setSettings(s => ({ ...s, signatureBlocks: blocks })) }
   function addSigBlock() {
     const b = sigBlocks()
     if (b.length >= MAX_SIGNATURE_BLOCKS) { uiAlert(`ช่องลายเซ็นได้ไม่เกิน ${MAX_SIGNATURE_BLOCKS} ช่อง`); return }
-    setSigBlocks([...b, { id: crypto.randomUUID(), label: 'ตำแหน่งใหม่', online: false }])
+    setSigBlocks([...b, { id: crypto.randomUUID(), label: 'ตำแหน่งใหม่' }])
   }
   function setSigLabel(idx: number, label: string) { setSigBlocks(sigBlocks().map((b, i) => i === idx ? { ...b, label } : b)) }
-  function toggleSigOnline(idx: number) { setSigBlocks(sigBlocks().map((b, i) => i === idx ? { ...b, online: !b.online } : b)) }
   function removeSigBlock(idx: number) { setSigBlocks(sigBlocks().filter((_, i) => i !== idx)) }
   function moveSigBlock(idx: number, dir: -1 | 1) {
     const b = [...sigBlocks()]; const j = idx + dir
@@ -205,7 +211,14 @@ export default function FormSettingsPage() {
   async function save() {
     setSaving(true)
     try {
-      await updateFormSettings({ ...settings, formType })
+      await updateFormSettings({
+        ...settings, formType,
+        // Always write the multi-group list and clear the legacy single field,
+        // otherwise un-ticking every group would fall back to the old value.
+        accessGroups: selectedGroups, accessGroup: null,
+        // Drop the retired per-block `online` flag from saved configs.
+        signatureBlocks: settings.signatureBlocks?.map(({ id, label }) => ({ id, label })),
+      })
       uiAlert('บันทึกฟอร์มแล้ว', { tone: 'success' })
     } catch {
       uiAlert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
@@ -269,13 +282,29 @@ export default function FormSettingsPage() {
       {!showPreview && (
       <div className="space-y-4">
 
-      {/* กลุ่มการมองเห็น (Access group) */}
+      {/* กลุ่มที่มองเห็นฟอร์ม (Access group) — เลือกได้หลายกลุ่ม */}
       <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-3`}>กลุ่มการมองเห็น (Access group)</h2>
-        <select className={`${inputClass} sm:max-w-xs`} value={settings.accessGroup ?? ''} onChange={e => setField('accessGroup', e.target.value || undefined)}>
-          <option value="">— ทุกคนเห็น —</option>
-          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-        </select>
+        <h2 className={`${cardTitleClass} mb-1`}>กลุ่มที่มองเห็นฟอร์มนี้</h2>
+        <p className="mb-3 text-xs text-[#7a869a]">เลือกได้หลายกลุ่ม · ไม่เลือกเลย = ทุกคนเห็น</p>
+        {groups.length === 0 ? (
+          <p className="text-sm text-gray-400">ยังไม่มีกลุ่ม — สร้างได้ที่เมนู “จัดการกลุ่ม”</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {groups.map(g => {
+              const on = selectedGroups.includes(g.id)
+              return (
+                <label
+                  key={g.id}
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm ${on ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'}`}
+                >
+                  <input type="checkbox" checked={on} onChange={() => toggleAccessGroup(g.id)} />
+                  {g.name}
+                </label>
+              )
+            })}
+          </div>
+        )}
+        <p className="mt-2 text-xs text-gray-500">{selectedGroups.length ? `มองเห็นได้ ${selectedGroups.length} กลุ่ม` : 'มองเห็นได้ทุกคน'}</p>
       </div>
 
       {/* ข้อความหัวฟอร์ม */}
@@ -564,15 +593,12 @@ export default function FormSettingsPage() {
           <h2 className={cardTitleClass}>ช่องลายเซ็น</h2>
           <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">{sigBlocks().length} / {MAX_SIGNATURE_BLOCKS}</span>
         </div>
-        <p className="mb-3 text-xs text-[#7a869a]">ช่องลายเซ็นบนเอกสาร (สูงสุด {MAX_SIGNATURE_BLOCKS} ช่อง รวมผู้เบิก) · ติ๊ก “เซ็นออนไลน์” สำหรับช่องที่ให้เลือกคนเซ็นในระบบ ช่องที่ไม่ติ๊กจะเว้นเส้นให้เซ็นสด</p>
+        <p className="mb-3 text-xs text-[#7a869a]">ช่องลายเซ็นบนเอกสาร (สูงสุด {MAX_SIGNATURE_BLOCKS} ช่อง รวมผู้เบิก) · ช่องแรกคือผู้เบิก เซ็นอัตโนมัติ · ช่องอื่นเลือกคนเซ็นได้ตอนกด “ส่งให้เซ็น” ช่องที่ไม่เลือกจะเว้นเส้นให้เซ็นสด</p>
         <div className="space-y-2">
           {sigBlocks().map((b, i) => (
             <div key={b.id} className="flex flex-wrap items-center gap-2">
               <input className={`${inputClass} min-w-[160px] flex-1`} value={b.label} placeholder="ชื่อตำแหน่ง" onChange={e => setSigLabel(i, e.target.value)} />
-              <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-sm text-[#16233f]">
-                <input type="checkbox" checked={b.online} onChange={() => toggleSigOnline(i)} /> เซ็นออนไลน์
-              </label>
-              {i === 0 && <span className="shrink-0 text-xs text-gray-400">(ช่องผู้เบิก — เซ็นเองอัตโนมัติ)</span>}
+              {i === 0 && <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">ผู้เบิก · เซ็นอัตโนมัติ</span>}
               <div className="flex items-center gap-1.5">
                 <button className={iconBtn} onClick={() => moveSigBlock(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
                 <button className={iconBtn} onClick={() => moveSigBlock(i, 1)} disabled={i === sigBlocks().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>

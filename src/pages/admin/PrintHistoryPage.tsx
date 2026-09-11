@@ -47,7 +47,7 @@ export default function PrintHistoryPage() {
   }
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? groups[0]?.id
-  const filtered = applyFilters(rows, filters, empName, formGroup, formName)
+  const filtered = applyFilters(rows, filters, { formGroup, formName })
 
   return (
     <div>

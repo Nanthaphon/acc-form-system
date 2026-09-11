@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../../types/schema'
-import { isActive } from '../../types/schema'
+import { isActive, canSeeForm } from '../../types/schema'
 import { listGroups, createGroup, renameGroup, deleteGroup, setGroupActive } from '../../data/formGroups'
 import { listForms } from '../../data/formSettings'
 import Switch from '../../components/Switch'
@@ -56,13 +56,8 @@ export default function DashboardPage() {
     return forms.filter(f => (f.groupId ?? firstGroupId) === g.id)
   }
 
-  // Visibility is by ACCESS GROUP (not folder): admins see everything; a
-  // non-admin sees a form only if it has no access group (everyone) or its
-  // access group matches theirs.
-  function canSee(f: FormSettings): boolean {
-    if (isAdmin) return true
-    return !f.accessGroup || f.accessGroup === profile?.accessGroup
-  }
+  // Visibility is by ACCESS GROUP (not folder) — see canSeeForm.
+  const canSee = (f: FormSettings) => canSeeForm(f, profile?.accessGroup, isAdmin)
   // Forms visible to the current viewer within a folder (non-admins also need
   // the form to be active).
   function visibleFormsForGroup(g: FormGroup): FormSettings[] {

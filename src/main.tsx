@@ -55,6 +55,13 @@ const router = createBrowserRouter([
   },
 ])
 
+// Scrolling while a number field is focused would silently change its value
+// (e.g. an amount). Drop focus on wheel so the page scrolls instead.
+document.addEventListener('wheel', () => {
+  const el = document.activeElement
+  if (el instanceof HTMLInputElement && el.type === 'number') el.blur()
+}, { passive: true })
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider><RouterProvider router={router} /><DialogHost /></AuthProvider>

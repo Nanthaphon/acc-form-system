@@ -3,7 +3,7 @@ import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 import { useState } from 'react'
 import { PenLine, X } from 'lucide-react'
 import type { Submission, FormSettings, DocSignature } from '../types/schema'
-import { DEFAULT_SIGNATURE_BLOCKS } from '../types/schema'
+import { formSignatureBlocks } from '../types/schema'
 import { assignSigners, signDocument } from '../data/submissions'
 import type { Signer } from '../data/submissions'
 import SignerSelect from './SignerSelect'
@@ -19,13 +19,13 @@ interface Props {
   onDone: () => void              // reload the list after sending
 }
 
-// Pick signers for a document's online signature blocks, then send for signing.
-// The first block is the requester (self); it auto-signs if they have a saved signature.
+// Pick who signs each of the form's signature blocks, then send for signing.
+// The first block is the requester (self) — it auto-signs if they have a saved
+// signature. Any block left without a signer stays blank for a wet signature.
 export default function AssignSignersModal({ submission, settings, signers, currentUid, currentName, currentSignature, onClose, onDone }: Props) {
-  const allBlocks = settings.signatureBlocks?.length ? settings.signatureBlocks : DEFAULT_SIGNATURE_BLOCKS
+  const allBlocks = formSignatureBlocks(settings)
   const requesterBlockId = allBlocks[0]?.id
   const isSelf = (id: string) => id === requesterBlockId
-  const onlineBlocks = allBlocks.filter(b => b.online)
   const sigs = submission.signatures ?? []
   const sigFor = (id: string) => sigs.find(x => x.blockId === id)
   const [assign, setAssign] = useState<Record<string, string>>(Object.fromEntries(sigs.map(x => [x.blockId, x.assignedUid])))
@@ -33,7 +33,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
   const signerName = (uid: string) => signers.find(s => s.uid === uid)?.name ?? ''
 
   async function send() {
-    const pending = onlineBlocks.filter(b => sigFor(b.id)?.status !== 'signed')
+    const pending = allBlocks.filter(b => sigFor(b.id)?.status !== 'signed')
     // Not required to fill every block — unselected blocks are left blank for a
     // wet signature (print & sign on paper). Only assign blocks that have a signer.
     const assignments: DocSignature[] = pending
@@ -63,13 +63,13 @@ export default function AssignSignersModal({ submission, settings, signers, curr
           <h2 className="text-base font-semibold text-gray-900">ส่งให้เซ็น — {submission.docNumber}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
-        {onlineBlocks.length === 0 ? (
-          <div className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">ฟอร์มนี้ไม่มีช่องเซ็นออนไลน์</div>
+        {allBlocks.length <= 1 ? (
+          <div className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">ฟอร์มนี้ไม่มีช่องให้ผู้อื่นเซ็น</div>
         ) : (
           <>
             <p className="mb-3 text-xs text-gray-500">เลือกคนที่จะให้เซ็นแต่ละช่อง (ช่องผู้เบิก = ตัวคุณเอง) · ช่องที่ไม่เลือกจะเว้นว่างไว้เซ็นบนกระดาษ</p>
             <div className="space-y-2">
-              {onlineBlocks.map(b => {
+              {allBlocks.map(b => {
                 const sig = sigFor(b.id)
                 return (
                   <div key={b.id} className="flex flex-wrap items-center gap-2">
