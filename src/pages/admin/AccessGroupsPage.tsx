@@ -1,12 +1,14 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, Pencil, Plus, Tags, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Pencil, Plus, Tags, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
+import { PageHeader, ui } from '../../components/ui'
 import type { AccessGroup } from '../../types/schema'
 import { listAccessGroups, createAccessGroup, renameAccessGroup, deleteAccessGroup, accessGroupUsage } from '../../data/accessGroups'
 
 export default function AccessGroupsPage() {
+  const nav = useNavigate()
   const [groups, setGroups] = useState<AccessGroup[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -39,41 +41,51 @@ export default function AccessGroupsPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-4">
-      <div className="flex items-center gap-3">
-        <Link to="/" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900"><ArrowLeft size={16} /> กลับ</Link>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><Tags size={20} /></div>
-        <h1 className="text-xl font-semibold text-gray-900">จัดการกลุ่ม</h1>
-        <button
-          onClick={onAdd}
-          className="ml-auto inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          <Plus size={16} /> เพิ่มกลุ่ม
-        </button>
-      </div>
+    <div className="max-w-2xl">
+      <PageHeader
+        onBack={() => nav('/')}
+        icon={<Tags size={20} />}
+        title="จัดการกลุ่ม"
+        subtitle={loading ? 'กำลังโหลด...' : `ทั้งหมด ${groups.length} กลุ่ม`}
+        actions={
+          <button onClick={onAdd} className={ui.btnPrimary}>
+            <Plus size={16} /> เพิ่มกลุ่ม
+          </button>
+        }
+      />
 
-      <p className="text-sm text-gray-500">
+      <p className="mb-4 text-sm text-gray-500">
         กลุ่มใช้กำหนดว่าฟอร์มไหนให้พนักงานกลุ่มใดเห็น · เพิ่มกลุ่มที่นี่แล้วจะเลือกได้ในข้อมูลพนักงานและหน้าแก้ไขฟอร์ม
       </p>
 
-      <div className="rounded-xl border border-gray-200 bg-white">
-        {loading ? (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">กำลังโหลด...</div>
-        ) : groups.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-gray-400">ยังไม่มีกลุ่ม — กด “เพิ่มกลุ่ม” เพื่อสร้าง</div>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {groups.map(g => (
-              <li key={g.id} className="flex items-center gap-3 px-5 py-3.5">
-                <span className="text-sm font-medium text-gray-900">{g.name}</span>
-                <div className="ml-auto flex items-center gap-1.5">
-                  <ActionIconButton label="เปลี่ยนชื่อ" icon={<Pencil size={16} />} onClick={() => onRename(g)} />
-                  <ActionIconButton label="ลบกลุ่ม" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(g)} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className={ui.tableWrap}>
+        <table className={ui.table}>
+          <thead className={ui.thead}>
+            <tr>
+              <th className={ui.th}>ชื่อกลุ่ม</th>
+              <th className={ui.th}></th>
+            </tr>
+          </thead>
+          <tbody className={ui.tbody}>
+            {loading ? (
+              <tr><td colSpan={2} className={ui.emptyCell}>กำลังโหลด...</td></tr>
+            ) : groups.length === 0 ? (
+              <tr><td colSpan={2} className={ui.emptyCell}>ยังไม่มีกลุ่ม — กด “เพิ่มกลุ่ม” เพื่อสร้าง</td></tr>
+            ) : (
+              groups.map(g => (
+                <tr key={g.id} className={ui.tr}>
+                  <td className={`${ui.td} font-medium text-gray-900`}>{g.name}</td>
+                  <td className={ui.td}>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <ActionIconButton label="เปลี่ยนชื่อ" icon={<Pencil size={16} />} onClick={() => onRename(g)} />
+                      <ActionIconButton label="ลบกลุ่ม" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(g)} />
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )

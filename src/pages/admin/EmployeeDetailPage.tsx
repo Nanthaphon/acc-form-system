@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Printer, Trash2 } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { FileText, Pencil, Printer, Trash2, UserRound } from 'lucide-react'
 import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
@@ -15,18 +15,32 @@ import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ActionIconButton from '../../components/ActionIconButton'
+import { Spinner } from '../../components/Spinner'
+import { Badge, PageHeader, ui } from '../../components/ui'
+
+const HEADERS = [
+  { label: 'เลขที่', cls: '' },
+  { label: 'ฟอร์ม', cls: '' },
+  { label: 'วันที่', cls: '' },
+  { label: 'ยอด', cls: 'text-right' },
+  { label: 'พิมพ์ (ครั้ง)', cls: 'text-center' },
+  { label: 'พิมพ์ล่าสุด', cls: '' },
+  { label: 'แก้ไข', cls: '' },
+  { label: '', cls: '' },
+]
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="font-medium text-[#1f2a3d]">{value || '-'}</div>
+      <div className="mb-0.5 text-xs font-medium text-gray-500">{label}</div>
+      <div className="font-medium text-gray-900">{value || '-'}</div>
     </div>
   )
 }
 
 export default function EmployeeDetailPage() {
   const { uid } = useParams()
+  const nav = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [subs, setSubs] = useState<Submission[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
@@ -61,71 +75,85 @@ export default function EmployeeDetailPage() {
   const companyName = (id: string) => companies.find(c => c.id === id)?.name || id
   const accessGroupName = (id?: string) => id ? (groups.find(a => a.id === id)?.name || id) : ''
 
-  if (!profile) return <div className="p-4 text-gray-500">กำลังโหลด...</div>
+  if (!profile) return (
+    <div className="flex items-center gap-2 p-4 text-sm text-gray-500"><Spinner size={16} /> กำลังโหลด...</div>
+  )
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? folders[0]?.id
   const filtered = applyFilters(subs, filters, { formGroup, formName })
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to="/admin/employees" className="inline-flex items-center gap-1.5 rounded border px-3 py-1.5 text-sm hover:border-blue-500 hover:text-blue-600"><ArrowLeft size={16} /> กลับ</Link>
-        <h1 className="text-xl font-medium">ข้อมูลพนักงาน</h1>
-        <Link to={`/admin/employees/${profile.uid}/edit`} className="ml-auto rounded bg-blue-600 px-3 py-1.5 text-sm text-white">แก้ไขข้อมูล</Link>
-      </div>
+    <div>
+      <PageHeader
+        icon={<UserRound size={20} />}
+        title="ข้อมูลพนักงาน"
+        subtitle={`${profile.firstName} ${profile.lastName} · รหัส ${profile.employeeId}`}
+        onBack={() => nav('/admin/employees')}
+        actions={
+          <Link to={`/admin/employees/${profile.uid}/edit`} className={ui.btnPrimary}>
+            <Pencil size={16} /> แก้ไขข้อมูล
+          </Link>
+        }
+      />
 
-      <div className="rounded-2xl border border-[#e5eaf3] bg-white p-6">
-        <div className="grid grid-cols-2 gap-5 text-sm md:grid-cols-3">
-          <Info label="รหัสพนักงาน" value={profile.employeeId} />
-          <Info label="ชื่อ-นามสกุล" value={`${profile.firstName} ${profile.lastName}`} />
-          <Info label="ตำแหน่ง" value={profile.position} />
-          <Info label="แผนก" value={profile.department} />
-          <Info label="บริษัท" value={companyName(profile.companyId)} />
-          <Info label="กลุ่ม (Access group)" value={accessGroupName(profile.accessGroup)} />
-          <Info label="สิทธิ์" value={profile.role} />
+      <div className="space-y-6">
+        <div className={ui.card}>
+          <div className="grid grid-cols-2 gap-5 text-sm md:grid-cols-3">
+            <Info label="รหัสพนักงาน" value={profile.employeeId} />
+            <Info label="ชื่อ-นามสกุล" value={`${profile.firstName} ${profile.lastName}`} />
+            <Info label="ตำแหน่ง" value={profile.position} />
+            <Info label="แผนก" value={profile.department} />
+            <Info label="บริษัท" value={companyName(profile.companyId)} />
+            <Info label="กลุ่ม (Access group)" value={accessGroupName(profile.accessGroup)} />
+            <Info label="สิทธิ์" value={profile.role} />
+          </div>
         </div>
-      </div>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-[#16233f]">เอกสารที่พิมพ์ ({subs.length})</h2>
-        <div className="mb-3">
-          <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} resultCount={filtered.length} />
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border text-sm">
-            <thead className="bg-gray-50">
-              <tr>{['เลขที่', 'ฟอร์ม', 'วันที่', 'ยอด', 'พิมพ์ (ครั้ง)', 'พิมพ์ล่าสุด', 'แก้ไข', ''].map(h => (
-                <th key={h} className="border px-2 py-1 whitespace-nowrap">{h}</th>
-              ))}</tr>
-            </thead>
-            <tbody>
-              {filtered.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="border px-2 py-1 whitespace-nowrap">{r.docNumber}</td>
-                  <td className="border px-2 py-1">{formName(r.formType)}</td>
-                  <td className="border px-2 py-1 whitespace-nowrap">{formatDate(r.createdAt)}</td>
-                  <td className="border px-2 py-1 text-right">{submissionAmount(r).toLocaleString()}</td>
-                  <td className="border px-2 py-1 text-center">{r.printCount}</td>
-                  <td className="border px-2 py-1 whitespace-nowrap">{formatDateTime(r.lastPrintedAt)}</td>
-                  <td className="border px-2 py-1 whitespace-nowrap text-center">
-                    {editLabel(r, vcounts)
-                      ? <span className="inline-block rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">✎ {editLabel(r, vcounts)}</span>
-                      : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="border px-2 py-1 whitespace-nowrap text-center">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
-                      <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
-                      <ActionIconButton label="ลบ" onClick={() => onDeleteSub(r)} tone="red" icon={<Trash2 size={16} />} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={8} className="border px-2 py-6 text-center text-gray-400">ยังไม่มีเอกสาร</td></tr>
-              )}
-            </tbody>
-          </table>
+        <div>
+          <h2 className={`${ui.cardTitle} mb-3 flex items-center gap-2`}>
+            <FileText size={16} className="text-gray-400" /> เอกสารที่พิมพ์ ({subs.length})
+          </h2>
+          <div className="mb-4">
+            <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} resultCount={filtered.length} />
+          </div>
+          <div className={ui.tableWrap}>
+            <table className={ui.table}>
+              <thead className={ui.thead}>
+                <tr>{HEADERS.map(h => <th key={h.label} className={`${ui.th} ${h.cls}`}>{h.label}</th>)}</tr>
+              </thead>
+              <tbody className={ui.tbody}>
+                {filtered.map(r => (
+                  <tr key={r.id} className={ui.tr}>
+                    <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}>{r.docNumber}</td>
+                    <td className={`${ui.td} font-medium text-gray-900`}>{formName(r.formType)}</td>
+                    <td className={`${ui.td} whitespace-nowrap`}>{formatDate(r.createdAt)}</td>
+                    <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{submissionAmount(r).toLocaleString()}</td>
+                    <td className={`${ui.td} text-center tabular-nums`}>{r.printCount}</td>
+                    <td className={`${ui.td} whitespace-nowrap`}>{formatDateTime(r.lastPrintedAt)}</td>
+                    <td className={`${ui.td} whitespace-nowrap`}>
+                      {editLabel(r, vcounts)
+                        ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge>
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
+                        <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
+                        <ActionIconButton label="ลบ" onClick={() => onDeleteSub(r)} tone="red" icon={<Trash2 size={16} />} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={HEADERS.length} className={ui.emptyCell}>
+                      {subs.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

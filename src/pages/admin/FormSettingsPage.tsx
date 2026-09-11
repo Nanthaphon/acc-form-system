@@ -1,20 +1,28 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import MultiSelect from '../../components/MultiSelect'
+import { ui, PageHeader, Badge } from '../../components/ui'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 
-const cardClass = 'rounded-xl border border-gray-200 bg-white p-6'
-const cardTitleClass = 'text-[15px] font-semibold text-gray-900'
-const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
-const smallSelect = 'rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
-const iconBtn = 'rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900 disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:text-inherit'
+// Page-local extras on top of the shared `ui` tokens.
+// Neutral square icon button (same look as ActionIconButton) — a plain <button> so it can be disabled.
+const iconBtn = 'inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm ring-1 ring-gray-200/80 transition hover:bg-gray-50 disabled:opacity-40'
+// Compact dashed "add" button for nested panels (calc operands, dropdown options).
+const btnDashedSm = 'inline-flex items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600'
+// Outlined text button for removing a row.
+const btnRemove = 'shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-red-600 hover:border-red-200 hover:bg-red-50'
+// Inline text link ("insert column here").
+const linkBtn = 'inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline'
+// Nested panel inside a card (one column's settings, one company's logo).
+const subCard = 'rounded-xl border border-gray-200 bg-white p-4'
+const subPanel = 'rounded-lg bg-gray-50 p-3'
 
 const OP_LABELS: Record<CalcDef['op'], string> = {
   multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', divide: '÷ หาร', percent: '% ร้อยละ',
@@ -252,24 +260,19 @@ export default function FormSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="mb-2 flex items-center gap-3">
-        <button onClick={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900"><ArrowLeft size={16} /> กลับ</button>
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><Pencil size={20} /></div>
-        <h1 className="text-xl font-semibold text-gray-900">แก้ไขฟอร์ม — {settings.name || settings.title}</h1>
-        <button
-          className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
-          onClick={() => setShowPreview(p => !p)}
-        >
-          {showPreview ? <><Pencil size={16} /> กลับไปแก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
-        </button>
-        <button
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-          onClick={save}
-          disabled={saving}
-        >
-          <Save size={16} /> บันทึกฟอร์ม
-        </button>
-      </div>
+      <PageHeader
+        icon={<Pencil size={20} />}
+        title={`แก้ไขฟอร์ม — ${settings.name || settings.title}`}
+        onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
+        actions={<>
+          <button className={ui.btnSecondary} onClick={() => setShowPreview(p => !p)}>
+            {showPreview ? <><Pencil size={16} /> กลับไปแก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
+          </button>
+          <button className={ui.btnPrimary} onClick={save} disabled={saving}>
+            <Save size={16} /> บันทึกฟอร์ม
+          </button>
+        </>}
+      />
 
       {showPreview && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
@@ -281,9 +284,9 @@ export default function FormSettingsPage() {
       <div className="space-y-4">
 
       {/* กลุ่มที่มองเห็นฟอร์ม (Access group) — เลือกได้หลายกลุ่ม ค้นหาได้ */}
-      <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-1`}>กลุ่มที่มองเห็นฟอร์มนี้</h2>
-        <p className="mb-3 text-xs text-gray-500">เลือกได้หลายกลุ่ม · ไม่เลือกเลย = ทุกคนเห็น</p>
+      <div className={ui.card}>
+        <h2 className={`${ui.cardTitle} mb-1`}>กลุ่มที่มองเห็นฟอร์มนี้</h2>
+        <p className={`${ui.hint} mb-3`}>เลือกได้หลายกลุ่ม · ไม่เลือกเลย = ทุกคนเห็น</p>
         {groups.length === 0 ? (
           <p className="text-sm text-gray-400">ยังไม่มีกลุ่ม — สร้างได้ที่เมนู “จัดการกลุ่ม”</p>
         ) : (
@@ -301,71 +304,71 @@ export default function FormSettingsPage() {
       </div>
 
       {/* ข้อความหัวฟอร์ม */}
-      <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-4`}>ข้อความหัวฟอร์ม</h2>
+      <div className={ui.card}>
+        <h2 className={`${ui.cardTitle} mb-4`}>ข้อความหัวฟอร์ม</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-xs text-[#7a869a]">ชื่อฟอร์ม (หัวกล่องขวาบน)</label>
-            <input className={inputClass} value={settings.title} onChange={e => setField('title', e.target.value)} />
+            <label className={ui.label}>ชื่อฟอร์ม (หัวกล่องขวาบน)</label>
+            <input className={ui.input} value={settings.title} onChange={e => setField('title', e.target.value)} />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs text-[#7a869a]">รหัสฟอร์ม</label>
-            <input className={inputClass} value={settings.formCode} onChange={e => setField('formCode', e.target.value)} />
+            <label className={ui.label}>รหัสฟอร์ม</label>
+            <input className={ui.input} value={settings.formCode} onChange={e => setField('formCode', e.target.value)} />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs text-[#7a869a]">เรื่อง</label>
-            <input className={inputClass} value={settings.subject} onChange={e => setField('subject', e.target.value)} />
+            <label className={ui.label}>เรื่อง</label>
+            <input className={ui.input} value={settings.subject} onChange={e => setField('subject', e.target.value)} />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs text-[#7a869a]">เรียน</label>
-            <input className={inputClass} value={settings.attention} onChange={e => setField('attention', e.target.value)} />
+            <label className={ui.label}>เรียน</label>
+            <input className={ui.input} value={settings.attention} onChange={e => setField('attention', e.target.value)} />
           </div>
         </div>
       </div>
 
       {/* ช่องหัวฟอร์ม (เพิ่มเติม) */}
-      <div className={cardClass}>
-        <h2 className={cardTitleClass}>ช่องหัวฟอร์ม (เพิ่มเติม)</h2>
-        <p className="mb-3 text-xs text-[#7a869a]">ช่องข้อมูลใต้ชื่อผู้เบิก นอกเหนือจาก ชื่อ/นามสกุล/ตำแหน่ง/Job เช่น “วันที่ต้องการใช้เงิน”, “วัตถุประสงค์”</p>
+      <div className={ui.card}>
+        <h2 className={ui.cardTitle}>ช่องหัวฟอร์ม (เพิ่มเติม)</h2>
+        <p className={`${ui.hint} mb-3`}>ช่องข้อมูลใต้ชื่อผู้เบิก นอกเหนือจาก ชื่อ/นามสกุล/ตำแหน่ง/Job เช่น “วันที่ต้องการใช้เงิน”, “วัตถุประสงค์”</p>
         <div className="space-y-2">
           {headerFields().map((f, i) => (
             <div key={f.id} className="flex flex-wrap items-center gap-2">
-              <input className={`${inputClass} min-w-[160px] flex-1`} value={f.label} placeholder="ชื่อช่อง" onChange={e => setHFieldLabel(i, e.target.value)} />
-              <select className={smallSelect} value={f.type} onChange={e => setHFieldType(i, e.target.value as HeaderField['type'])}>
+              <input className={`${ui.input} min-w-[160px] flex-1`} value={f.label} placeholder="ชื่อช่อง" onChange={e => setHFieldLabel(i, e.target.value)} />
+              <select className={ui.inputSm} value={f.type} onChange={e => setHFieldType(i, e.target.value as HeaderField['type'])}>
                 <option value="text">ข้อความ</option>
                 <option value="date">วันที่</option>
               </select>
               <div className="flex items-center gap-1.5">
                 <button className={iconBtn} onClick={() => moveHeaderField(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
                 <button className={iconBtn} onClick={() => moveHeaderField(i, 1)} disabled={i === headerFields().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
-                <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeHeaderField(i)} title="ลบช่อง"><Trash2 size={16} /></button>
+                <button className={iconBtn} onClick={() => removeHeaderField(i)} title="ลบช่อง"><Trash2 size={16} /></button>
               </div>
             </div>
           ))}
         </div>
-        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addHeaderField}><Plus size={14} /> เพิ่มช่องหัวฟอร์ม</button>
+        <button className={`${ui.btnDashed} mt-3`} onClick={addHeaderField}><Plus size={14} /> เพิ่มช่องหัวฟอร์ม</button>
       </div>
 
       {/* คอลัมน์ตาราง (Column builder) */}
-      <div className={cardClass}>
+      <div className={ui.card}>
         <div className="mb-1 flex items-center justify-between gap-2">
-          <h2 className={cardTitleClass}>คอลัมน์ตาราง</h2>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${visibleCount >= MAX_VISIBLE ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+          <h2 className={ui.cardTitle}>คอลัมน์ตาราง</h2>
+          <Badge tone={visibleCount >= MAX_VISIBLE ? 'red' : 'gray'}>
             แสดงอยู่ {visibleCount} / {MAX_VISIBLE}
-          </span>
+          </Badge>
         </div>
         <div className="mb-4" />
 
         {/* Representative header preview */}
-        <div className="mb-4 overflow-x-auto rounded-[10px] border border-[#eef2f8]">
+        <div className="mb-4 overflow-x-auto rounded-lg border border-gray-200">
           <table className="w-full text-left text-[11px]">
             <thead>
-              <tr className="bg-[#f7f9fd]">
-                <th className="px-2 py-1.5 text-[#7a869a]">#</th>
+              <tr className={ui.thead}>
+                <th className="px-2 py-1.5 font-medium text-gray-500">#</th>
                 {columns.map(c => (
-                  <th key={c.key} className="px-2 py-1.5 font-semibold text-[#16233f]">
-                    {c.label || <span className="text-[#c3ccdb]">(ไม่มีชื่อ)</span>}
-                    {c.type === 'calc' && <span className="ml-1 font-normal text-[#7a869a]">ƒ</span>}
+                  <th key={c.key} className="whitespace-nowrap px-2 py-1.5 font-semibold text-gray-900">
+                    {c.label || <span className="font-normal text-gray-400">(ไม่มีชื่อ)</span>}
+                    {c.type === 'calc' && <span className="ml-1 font-normal text-gray-500">ƒ</span>}
                   </th>
                 ))}
               </tr>
@@ -374,23 +377,23 @@ export default function FormSettingsPage() {
         </div>
 
         <div className="space-y-3">
-          <button onClick={() => insertColumnAt(0)} className="inline-flex items-center gap-1 text-xs font-medium text-[#2b5bd7] hover:underline"><Plus size={14} /> แทรกคอลัมน์ที่ตำแหน่งแรก</button>
+          <button onClick={() => insertColumnAt(0)} className={linkBtn}><Plus size={14} /> แทรกคอลัมน์ที่ตำแหน่งแรก</button>
           {columns.map((col, i) => {
             const others = columns.filter((c, x) => x !== i && (c.type === 'number' || c.type === 'calc'))
             const isPercent = col.calc?.op === 'percent'
             const operands = col.calc ? calcOperands(col.calc) : []
             return (
               <div key={i}>
-                <div className="rounded-[12px] border border-[#eef2f8] p-3">
+                <div className={subCard}>
                   <div className="flex flex-wrap items-end gap-2">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-[9px] bg-[#eaf0ff] text-sm font-semibold text-[#2b5bd7]">{i + 1}</div>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg bg-blue-50 text-sm font-semibold text-blue-600">{i + 1}</div>
                     <div className="min-w-[180px] flex-1">
-                      <label className="mb-1 block text-[11px] text-[#7a869a]">ชื่อคอลัมน์</label>
-                      <input className={inputClass} value={col.label} onChange={e => patchColumn(i, { label: e.target.value })} />
+                      <label className={ui.label}>ชื่อคอลัมน์</label>
+                      <input className={ui.input} value={col.label} onChange={e => patchColumn(i, { label: e.target.value })} />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-[#7a869a]">ชนิด</label>
-                      <select className={smallSelect} value={col.type} onChange={e => changeType(i, e.target.value as ColumnType)}>
+                      <label className={ui.label}>ชนิด</label>
+                      <select className={ui.inputSm} value={col.type} onChange={e => changeType(i, e.target.value as ColumnType)}>
                         <option value="text">Text (ข้อความ)</option>
                         <option value="number">Number (ตัวเลข)</option>
                         <option value="date">วันที่ (Date)</option>
@@ -399,31 +402,31 @@ export default function FormSettingsPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] text-[#7a869a]">กว้าง (px)</label>
+                      <label className={ui.label}>กว้าง (px)</label>
                       <input
                         type="number"
                         placeholder="อัตโนมัติ"
                         value={col.width ?? ''}
                         onChange={e => patchColumn(i, { width: e.target.value ? Number(e.target.value) : undefined })}
-                        className={smallSelect + ' w-24'}
+                        className={ui.inputSm + ' w-24'}
                       />
                     </div>
-                    <label className="ml-auto flex cursor-pointer select-none items-center gap-1.5 pb-2 text-[12px] text-[#16233f]">
+                    <label className="ml-auto flex cursor-pointer select-none items-center gap-1.5 pb-2 text-sm text-gray-700">
                       <input type="checkbox" checked={!col.hidden} onChange={() => toggleVisible(i)} />
                       แสดง
                     </label>
                     <div className="flex items-center gap-1.5 pb-1">
                       <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
                       <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
-                      <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeColumn(i)} title="ลบคอลัมน์"><Trash2 size={16} /></button>
+                      <button className={iconBtn} onClick={() => removeColumn(i)} title="ลบคอลัมน์"><Trash2 size={16} /></button>
                     </div>
                   </div>
 
                   {col.type === 'calc' && (
-                    <div className="mt-3 flex flex-wrap items-end gap-2 rounded-[10px] bg-[#f7f9fd] p-3">
+                    <div className={`${subPanel} mt-3 flex flex-wrap items-end gap-2`}>
                       <div>
-                        <label className="mb-1 block text-[11px] text-[#7a869a]">สูตร</label>
-                        <select className={smallSelect} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
+                        <label className={ui.label}>สูตร</label>
+                        <select className={ui.inputSm} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
                           {(['multiply', 'subtract', 'add', 'divide'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
                           {/* ร้อยละ ถูกยกเลิก — คงไว้เฉพาะคอลัมน์เดิมที่ใช้อยู่ ให้ยังแก้ไขได้ */}
                           {col.calc?.op === 'percent' && <option value="percent">{OP_LABELS.percent}</option>}
@@ -432,32 +435,32 @@ export default function FormSettingsPage() {
                       {isPercent ? (
                         <>
                           <div>
-                            <label className="mb-1 block text-[11px] text-[#7a869a]">ค่า A</label>
-                            <select className={smallSelect} value={operands[0] ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
+                            <label className={ui.label}>ค่า A</label>
+                            <select className={ui.inputSm} value={operands[0] ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
                               <option value="">— เลือก —</option>
                               {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
                             </select>
                           </div>
                           <div>
-                            <label className="mb-1 block text-[11px] text-[#7a869a]">ร้อยละ (%)</label>
-                            <input type="number" className={`${smallSelect} w-24 text-right`} value={col.calc?.percent ?? 0} onChange={e => patchCalc(i, { percent: Number(e.target.value) })} />
+                            <label className={ui.label}>ร้อยละ (%)</label>
+                            <input type="number" className={`${ui.inputSm} w-24 text-right`} value={col.calc?.percent ?? 0} onChange={e => patchCalc(i, { percent: Number(e.target.value) })} />
                           </div>
                         </>
                       ) : (
                         <div className="flex flex-wrap items-end gap-1.5">
                           {operands.map((opKey, opIdx) => (
                             <div key={opIdx} className="flex items-end gap-1.5">
-                              {opIdx > 0 && <span className="pb-2.5 text-sm text-[#7a869a]">{OP_SYMBOL[col.calc?.op ?? 'multiply']}</span>}
+                              {opIdx > 0 && <span className="pb-2 text-sm text-gray-500">{OP_SYMBOL[col.calc?.op ?? 'multiply']}</span>}
                               <div>
-                                <label className="mb-1 block text-[11px] text-[#7a869a]">ค่า {opIdx + 1}</label>
+                                <label className={ui.label}>ค่า {opIdx + 1}</label>
                                 <div className="flex items-center gap-1">
-                                  <select className={smallSelect} value={opKey} onChange={e => setOperand(i, opIdx, e.target.value)}>
+                                  <select className={ui.inputSm} value={opKey} onChange={e => setOperand(i, opIdx, e.target.value)}>
                                     <option value="">— เลือก —</option>
                                     {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
                                   </select>
                                   <button
                                     type="button"
-                                    className={`${iconBtn} px-1.5 py-1`}
+                                    className={iconBtn}
                                     onClick={() => removeOperand(i, opIdx)}
                                     disabled={operands.length <= 2}
                                     title="ลบค่านี้"
@@ -468,7 +471,7 @@ export default function FormSettingsPage() {
                           ))}
                           <button
                             type="button"
-                            className="mb-[3px] inline-flex items-center gap-1 rounded-[8px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-2.5 py-1.5 text-xs font-medium text-[#2b5bd7]"
+                            className={`${btnDashedSm} mb-0.5`}
                             onClick={() => addOperand(i)}
                           >
                             <Plus size={14} /> เพิ่มค่า
@@ -479,25 +482,25 @@ export default function FormSettingsPage() {
                   )}
 
                   {col.type === 'select' && (
-                    <div className="mt-3 rounded-[10px] bg-[#f7f9fd] p-3">
-                      <label className="mb-1.5 block text-[11px] text-[#7a869a]">ตัวเลือกใน Dropdown (พนักงานเลือกตอนกรอก)</label>
+                    <div className={`${subPanel} mt-3`}>
+                      <label className={ui.label}>ตัวเลือกใน Dropdown (พนักงานเลือกตอนกรอก)</label>
                       <div className="space-y-2">
                         {(col.options ?? []).map((opt, optIdx) => (
                           <div key={optIdx} className="flex items-center gap-2">
-                            <span className="w-5 shrink-0 text-right text-xs text-[#7a869a]">{optIdx + 1}.</span>
+                            <span className="w-5 shrink-0 text-right text-xs text-gray-500">{optIdx + 1}.</span>
                             <input
-                              className={`${smallSelect} flex-1`}
+                              className={`${ui.inputSm} flex-1`}
                               value={opt}
                               placeholder={`ตัวเลือกที่ ${optIdx + 1}`}
                               onChange={e => setOption(i, optIdx, e.target.value)}
                             />
-                            <button type="button" className={`${iconBtn} px-1.5 py-1`} onClick={() => removeOption(i, optIdx)} title="ลบตัวเลือก"><X size={14} /></button>
+                            <button type="button" className={iconBtn} onClick={() => removeOption(i, optIdx)} title="ลบตัวเลือก"><X size={14} /></button>
                           </div>
                         ))}
                       </div>
                       <button
                         type="button"
-                        className="mt-2 inline-flex items-center gap-1 rounded-[8px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-2.5 py-1.5 text-xs font-medium text-[#2b5bd7]"
+                        className={`${btnDashedSm} mt-2`}
                         onClick={() => addOption(i)}
                       >
                         <Plus size={14} /> เพิ่มตัวเลือก
@@ -505,14 +508,14 @@ export default function FormSettingsPage() {
                     </div>
                   )}
                 </div>
-                <button onClick={() => insertColumnAt(i + 1)} className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-[#2b5bd7] hover:underline"><Plus size={14} /> แทรกคอลัมน์ถัดจากนี้</button>
+                <button onClick={() => insertColumnAt(i + 1)} className={`${linkBtn} mt-1.5`}><Plus size={14} /> แทรกคอลัมน์ถัดจากนี้</button>
               </div>
             )
           })}
         </div>
 
         <button
-          className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]"
+          className={`${ui.btnDashed} mt-3`}
           onClick={() => insertColumnAt(columns.length)}
         >
           <Plus size={16} /> เพิ่มคอลัมน์
@@ -520,46 +523,46 @@ export default function FormSettingsPage() {
       </div>
 
       {/* หมวดค่าใช้จ่าย */}
-      <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-4`}>หมวดค่าใช้จ่าย (ช่องติ๊ก)</h2>
+      <div className={ui.card}>
+        <h2 className={`${ui.cardTitle} mb-4`}>หมวดค่าใช้จ่าย (ช่องติ๊ก)</h2>
         <div className="space-y-2.5">
           {settings.categories.map((c, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input className={inputClass} value={c} onChange={e => setCategory(i, e.target.value)} />
-              <button onClick={() => removeCategory(i)} className="shrink-0 rounded-[10px] border border-[#e5eaf3] px-3 py-2.5 text-sm text-[#d64545] hover:border-[#d64545]">ลบ</button>
+              <input className={ui.input} value={c} onChange={e => setCategory(i, e.target.value)} />
+              <button onClick={() => removeCategory(i)} className={btnRemove}>ลบ</button>
             </div>
           ))}
         </div>
-        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addCategory}><Plus size={14} /> เพิ่มหมวด</button>
+        <button className={`${ui.btnDashed} mt-3`} onClick={addCategory}><Plus size={14} /> เพิ่มหมวด</button>
       </div>
 
       {/* ข้อความ / การแสดงผล */}
-      <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-1`}>ข้อความ / การแสดงผล</h2>
-        <p className="mb-3 text-xs text-[#7a869a]">ย่อหน้าข้อความและตัวเลือกการแสดงผลของเอกสาร · เว้นว่างไว้ถ้าไม่ใช้</p>
+      <div className={ui.card}>
+        <h2 className={`${ui.cardTitle} mb-1`}>ข้อความ / การแสดงผล</h2>
+        <p className={`${ui.hint} mb-3`}>ย่อหน้าข้อความและตัวเลือกการแสดงผลของเอกสาร · เว้นว่างไว้ถ้าไม่ใช้</p>
 
-        <label className="mb-1 block text-sm font-medium text-[#16233f]">ข้อความหัวฟอร์ม (เหนือตาราง)</label>
+        <label className={ui.label}>ข้อความหัวฟอร์ม (เหนือตาราง)</label>
         <textarea
-          className={`${inputClass} min-h-[72px] resize-y`}
+          className={`${ui.input} min-h-[72px] resize-y`}
           value={settings.introText ?? ''}
           placeholder="เช่น บริษัท … ได้รับเงินจาก …………… ครบถ้วนตามจำนวนเงิน …………… บาท"
           onChange={e => setSettings(s => ({ ...s, introText: e.target.value }))}
         />
 
-        <label className="mb-1 mt-4 block text-sm font-medium text-[#16233f]">ข้อความรับรอง / คำประกาศ (ใต้ตาราง เหนือลายเซ็น)</label>
+        <label className={`${ui.label} mt-4`}>ข้อความรับรอง / คำประกาศ (ใต้ตาราง เหนือลายเซ็น)</label>
         <textarea
-          className={`${inputClass} min-h-[72px] resize-y`}
+          className={`${ui.input} min-h-[72px] resize-y`}
           value={settings.bodyText ?? ''}
           placeholder="เช่น ขอรับรองว่า รายจ่ายข้างต้นนี้ไม่อาจเรียกเก็บเป็นใบเสร็จรับเงินจากผู้รับได้ …"
           onChange={e => setSettings(s => ({ ...s, bodyText: e.target.value }))}
         />
 
         <div className="mt-4 space-y-2">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-[#16233f]">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={settings.showRequester !== false} onChange={e => setSettings(s => ({ ...s, showRequester: e.target.checked }))} />
             แสดงบรรทัด ชื่อ / นามสกุล / ตำแหน่ง / Job
           </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-[#16233f]">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={settings.showAmountWords !== false} onChange={e => setSettings(s => ({ ...s, showAmountWords: e.target.checked }))} />
             แสดงกล่อง “เป็นจำนวนเงิน … บาทถ้วน”
           </label>
@@ -567,41 +570,41 @@ export default function FormSettingsPage() {
       </div>
 
       {/* หมายเหตุท้ายฟอร์ม */}
-      <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-4`}>หมายเหตุท้ายฟอร์ม</h2>
+      <div className={ui.card}>
+        <h2 className={`${ui.cardTitle} mb-4`}>หมายเหตุท้ายฟอร์ม</h2>
         <div className="space-y-2.5">
           {settings.notes.map((n, i) => (
             <div key={i} className="flex items-start gap-2">
-              <textarea className={`${inputClass} min-h-[52px] resize-y`} value={n} onChange={e => setNote(i, e.target.value)} />
-              <button onClick={() => removeNote(i)} className="shrink-0 rounded-[10px] border border-[#e5eaf3] px-3 py-2.5 text-sm text-[#d64545] hover:border-[#d64545]">ลบ</button>
+              <textarea className={`${ui.input} min-h-[52px] resize-y`} value={n} onChange={e => setNote(i, e.target.value)} />
+              <button onClick={() => removeNote(i)} className={btnRemove}>ลบ</button>
             </div>
           ))}
         </div>
-        <button className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7]" onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>
+        <button className={`${ui.btnDashed} mt-3`} onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>
       </div>
 
       {/* ช่องลายเซ็น */}
-      <div className={cardClass}>
+      <div className={ui.card}>
         <div className="mb-1 flex items-center justify-between gap-2">
-          <h2 className={cardTitleClass}>ช่องลายเซ็น</h2>
-          <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">{sigBlocks().length} / {MAX_SIGNATURE_BLOCKS}</span>
+          <h2 className={ui.cardTitle}>ช่องลายเซ็น</h2>
+          <Badge>{sigBlocks().length} / {MAX_SIGNATURE_BLOCKS}</Badge>
         </div>
-        <p className="mb-3 text-xs text-[#7a869a]">ช่องลายเซ็นบนเอกสาร (สูงสุด {MAX_SIGNATURE_BLOCKS} ช่อง รวมผู้เบิก) · ช่องแรกคือผู้เบิก เซ็นอัตโนมัติ · ช่องอื่นเลือกคนเซ็นได้ตอนกด “ส่งให้เซ็น” ช่องที่ไม่เลือกจะเว้นเส้นให้เซ็นสด</p>
+        <p className={`${ui.hint} mb-3`}>ช่องลายเซ็นบนเอกสาร (สูงสุด {MAX_SIGNATURE_BLOCKS} ช่อง รวมผู้เบิก) · ช่องแรกคือผู้เบิก เซ็นอัตโนมัติ · ช่องอื่นเลือกคนเซ็นได้ตอนกด “ส่งให้เซ็น” ช่องที่ไม่เลือกจะเว้นเส้นให้เซ็นสด</p>
         <div className="space-y-2">
           {sigBlocks().map((b, i) => (
             <div key={b.id} className="flex flex-wrap items-center gap-2">
-              <input className={`${inputClass} min-w-[160px] flex-1`} value={b.label} placeholder="ชื่อตำแหน่ง" onChange={e => setSigLabel(i, e.target.value)} />
-              {i === 0 && <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">ผู้เบิก · เซ็นอัตโนมัติ</span>}
+              <input className={`${ui.input} min-w-[160px] flex-1`} value={b.label} placeholder="ชื่อตำแหน่ง" onChange={e => setSigLabel(i, e.target.value)} />
+              {i === 0 && <Badge tone="blue">ผู้เบิก · เซ็นอัตโนมัติ</Badge>}
               <div className="flex items-center gap-1.5">
                 <button className={iconBtn} onClick={() => moveSigBlock(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
                 <button className={iconBtn} onClick={() => moveSigBlock(i, 1)} disabled={i === sigBlocks().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
-                <button className={`${iconBtn} text-[#d64545] hover:border-[#d64545]`} onClick={() => removeSigBlock(i)} title="ลบช่อง"><Trash2 size={16} /></button>
+                <button className={iconBtn} onClick={() => removeSigBlock(i)} title="ลบช่อง"><Trash2 size={16} /></button>
               </div>
             </div>
           ))}
         </div>
         <button
-          className="mt-3 inline-flex items-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-4 py-2.5 text-sm font-medium text-[#2b5bd7] disabled:opacity-40"
+          className={`${ui.btnDashed} mt-3`}
           onClick={addSigBlock}
           disabled={sigBlocks().length >= MAX_SIGNATURE_BLOCKS}
         >
@@ -610,7 +613,7 @@ export default function FormSettingsPage() {
       </div>
 
       <button
-        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+        className={ui.btnPrimary}
         onClick={save}
         disabled={saving}
       >
@@ -618,29 +621,29 @@ export default function FormSettingsPage() {
       </button>
 
       {/* โลโก้บริษัท */}
-      <div className={cardClass}>
-        <h2 className={`${cardTitleClass} mb-4`}>โลโก้บริษัท</h2>
+      <div className={ui.card}>
+        <h2 className={`${ui.cardTitle} mb-4`}>โลโก้บริษัท</h2>
         <div className="space-y-4">
           {companies.map(company => (
-            <div key={company.id} className="flex flex-wrap items-center gap-4 rounded-[12px] border border-[#eef2f8] p-3">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-[#e5eaf3] bg-[#fbfcfe]">
+            <div key={company.id} className={`${subCard} flex flex-wrap items-center gap-4`}>
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
                 {company.logo
                   ? <img src={company.logo} alt={company.name} className="h-full w-full object-contain" />
-                  : <span className="px-1 text-center text-[10px] leading-tight text-[#7a869a]">ยังไม่มีโลโก้</span>}
+                  : <span className="px-1 text-center text-[10px] leading-tight text-gray-400">ยังไม่มีโลโก้</span>}
               </div>
               <div className="min-w-[140px] flex-1">
-                <div className="text-sm font-semibold text-[#16233f]">{company.name}</div>
-                <div className="text-xs text-[#7a869a]">{company.id}</div>
+                <div className="text-sm font-semibold text-gray-900">{company.name}</div>
+                <div className="text-xs text-gray-500">{company.id}</div>
               </div>
               <div className="flex items-center gap-2">
                 <input
                   type="file"
                   accept="image/*"
-                  className="text-xs text-[#7a869a] file:mr-2 file:rounded-[8px] file:border-0 file:bg-[#eaf0ff] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#1e46b0]"
+                  className="text-xs text-gray-500 file:mr-2 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
                   onChange={e => onLogoPick(company, e.target.files?.[0])}
                 />
                 {company.logo && (
-                  <button onClick={() => removeLogo(company)} className="rounded-[10px] border border-[#e5eaf3] px-3 py-2 text-sm text-[#d64545] hover:border-[#d64545]">ลบโลโก้</button>
+                  <button onClick={() => removeLogo(company)} className={btnRemove}>ลบโลโก้</button>
                 )}
               </div>
             </div>

@@ -1,8 +1,9 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowDownWideNarrow, ArrowLeft, ArrowUpNarrowWide, Folder, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, FileText, Folder, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
 import ActionIconButton from '../components/ActionIconButton'
+import { PageHeader, ui } from '../components/ui'
 import { useAuth } from '../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../types/schema'
 import { isActive, canSeeForm } from '../types/schema'
@@ -103,27 +104,20 @@ export default function GroupPage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-3">
-        <button
-          onClick={() => nav('/')}
-          className="inline-flex items-center gap-1 rounded-[10px] border border-[#e5eaf3] bg-white px-3 py-1.5 text-sm font-medium text-[#16233f] hover:border-[#2b5bd7] hover:text-[#2b5bd7]"
-        >
-          <ArrowLeft size={16} /> กลับ
-        </button>
-        <span className="text-2xl"><Folder size={24} /></span>
-        <h1 className="text-xl font-medium text-[#16233f]">{group?.name ?? 'กลุ่มฟอร์ม'}</h1>
-        {isAdmin && group && (
-          <ActionIconButton label="เปลี่ยนชื่อกลุ่ม" icon={<Pencil size={16} />} onClick={onRenameGroup} />
+      <PageHeader
+        onBack={() => nav('/')}
+        icon={<Folder size={20} />}
+        title={group?.name ?? 'กลุ่มฟอร์ม'}
+        subtitle={`${groupForms.length} ฟอร์ม`}
+        actions={isAdmin && (
+          <>
+            {group && <ActionIconButton label="เปลี่ยนชื่อกลุ่ม" icon={<Pencil size={16} />} onClick={onRenameGroup} />}
+            <button onClick={onCreateForm} className={ui.btnPrimary}>
+              <Plus size={16} /> สร้างฟอร์ม
+            </button>
+          </>
         )}
-        {isAdmin && (
-          <button
-            onClick={onCreateForm}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-3.5 py-2 text-sm font-medium text-[#2b5bd7] hover:border-[#2b5bd7]"
-          >
-            <Plus size={16} /> สร้างฟอร์ม
-          </button>
-        )}
-      </div>
+      />
 
       {/* Search + sort */}
       {groupForms.length > 0 && (
@@ -134,7 +128,7 @@ export default function GroupPage() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="ค้นหาชื่อฟอร์ม / รหัสฟอร์ม"
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className={`${ui.input} pl-9`}
             />
           </div>
           <label className="ml-auto flex items-center gap-2 text-sm text-gray-500">
@@ -142,7 +136,7 @@ export default function GroupPage() {
             <select
               value={sort.key}
               onChange={e => setSort(s => ({ ...s, key: e.target.value as FormSortKey }))}
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className={ui.input}
             >
               {(Object.keys(FORM_SORT_LABELS) as FormSortKey[]).map(k => <option key={k} value={k}>{FORM_SORT_LABELS[k]}</option>)}
             </select>
@@ -152,7 +146,7 @@ export default function GroupPage() {
             onClick={() => setSort(s => ({ ...s, dir: nextDir }))}
             title={sort.dir === 'asc' ? 'เรียงจากน้อยไปมาก (Ascending) — คลิกเพื่อสลับ' : 'เรียงจากมากไปน้อย (Descending) — คลิกเพื่อสลับ'}
             aria-label={sort.dir === 'asc' ? 'เรียงจากน้อยไปมาก' : 'เรียงจากมากไปน้อย'}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
+            className={ui.btnSecondary}
           >
             {sort.dir === 'asc' ? <ArrowUpNarrowWide size={16} /> : <ArrowDownWideNarrow size={16} />}
             {dirLabel(sort.key, sort.dir)}
@@ -170,9 +164,10 @@ export default function GroupPage() {
               tabIndex={0}
               onClick={() => nav(`/form/${form.formType}`)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/form/${form.formType}`) } }}
-              className={`relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 hover:shadow ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
+              className={`relative cursor-pointer rounded-xl border border-gray-200 bg-white p-5 transition hover:border-gray-300 hover:shadow-md ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
             >
-              <div className="pr-24 font-medium text-[#16233f]">{formDisplayName(form)}</div>
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><FileText size={20} /></div>
+              <div className="font-medium text-gray-900">{formDisplayName(form)}</div>
               <div className="text-sm text-gray-500">{form.formCode}</div>
               {!!stamp && (
                 <div className="mt-1 text-xs text-gray-400">{showCreated ? 'สร้างเมื่อ' : 'แก้ไขล่าสุด'} {formatDate(stamp)}</div>
@@ -207,12 +202,12 @@ export default function GroupPage() {
           )
         })}
         {groupForms.length === 0 && (
-          <div className="col-span-full rounded-lg border border-dashed border-[#e5eaf3] p-6 text-sm text-[#7a869a]">
+          <div className="col-span-full rounded-xl border border-dashed border-gray-300 bg-white px-4 py-10 text-center text-sm text-gray-400">
             ยังไม่มีฟอร์มในกลุ่มนี้
           </div>
         )}
         {groupForms.length > 0 && shownForms.length === 0 && (
-          <div className="col-span-full rounded-lg border border-dashed border-[#e5eaf3] p-6 text-sm text-[#7a869a]">
+          <div className="col-span-full rounded-xl border border-dashed border-gray-300 bg-white px-4 py-10 text-center text-sm text-gray-400">
             ไม่พบฟอร์มที่ตรงกับ “{query}”
           </div>
         )}

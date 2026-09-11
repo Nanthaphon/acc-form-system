@@ -5,9 +5,9 @@ import { subscribe, getCurrent, resolveCurrent } from './dialogService'
 import type { DialogTone } from './dialogService'
 
 const TONE: Record<DialogTone, { icon: typeof Info; iconWrap: string; confirmBtn: string }> = {
-  default: { icon: Info,           iconWrap: 'bg-blue-50 text-blue-600',   confirmBtn: 'bg-[#2b5bd7] hover:bg-[#2450c4]' },
-  danger:  { icon: AlertTriangle,  iconWrap: 'bg-red-50 text-red-600',     confirmBtn: 'bg-[#d64545] hover:bg-[#c23a3a]' },
-  success: { icon: CheckCircle2,   iconWrap: 'bg-green-50 text-green-600', confirmBtn: 'bg-[#1f9d57] hover:bg-[#188a4c]' },
+  default: { icon: Info,           iconWrap: 'bg-blue-50 text-blue-600',   confirmBtn: 'bg-blue-600 hover:bg-blue-700' },
+  danger:  { icon: AlertTriangle,  iconWrap: 'bg-red-50 text-red-600',     confirmBtn: 'bg-red-600 hover:bg-red-700' },
+  success: { icon: CheckCircle2,   iconWrap: 'bg-green-50 text-green-600', confirmBtn: 'bg-green-600 hover:bg-green-700' },
 }
 
 // Single modal host — mounted once at the app root. Renders the active dialog
@@ -67,7 +67,7 @@ export default function DialogHost() {
             <button
               type="button"
               onClick={() => resolveCurrent(false)}
-              className="rounded-[10px] border border-[#e5eaf3] bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
             >
               {current.cancelText ?? 'ยกเลิก'}
             </button>
@@ -75,7 +75,7 @@ export default function DialogHost() {
           <button
             type="submit"
             autoFocus={!isPrompt}
-            className={`rounded-[10px] px-4 py-2 text-sm font-semibold text-white ${tone.confirmBtn}`}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${tone.confirmBtn}`}
           >
             {current.confirmText ?? (isConfirm || isPrompt ? 'ยืนยัน' : 'ตกลง')}
           </button>

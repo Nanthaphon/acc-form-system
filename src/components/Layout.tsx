@@ -7,9 +7,9 @@ import { countMyPendingToSign } from '../data/submissions'
 import { onPendingSignChanged } from '../shared/pendingSignBus'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-sm transition-colors ${
+  `flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm transition-colors ${
     isActive
-      ? 'bg-[#2b5bd7] text-white shadow-[0_4px_14px_rgba(43,91,215,0.35)]'
+      ? 'bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.35)]'
       : 'text-[#aeb9cf] hover:bg-white/[.06] hover:text-white'
   }`
 
@@ -70,7 +70,7 @@ export default function Layout() {
             </NavLink>
             <button
               onClick={() => logout()}
-              className="flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 text-left text-sm text-[#aeb9cf] transition-colors hover:bg-white/[.06] hover:text-white"
+              className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-sm text-[#aeb9cf] transition-colors hover:bg-white/[.06] hover:text-white"
             >
               <LogOut size={18} className="opacity-85" /> ออกจากระบบ
             </button>

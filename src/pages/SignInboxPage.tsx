@@ -3,12 +3,17 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Inbox, PenLine } from 'lucide-react'
 import ActionIconButton from '../components/ActionIconButton'
+import { Badge, PageHeader, ui } from '../components/ui'
+import { Spinner } from '../components/Spinner'
 import { useAuth } from '../auth/AuthProvider'
 import type { Submission, FormSettings, DocSignature } from '../types/schema'
 import { listMyAssigned, signDocument, submissionAmount } from '../data/submissions'
 import { listForms } from '../data/formSettings'
 import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 import { formatDate } from '../shared/date'
+
+// Amount header lines up with its right-aligned cells.
+const thRight = ui.th.replace('text-left', 'text-right')
 
 export default function SignInboxPage() {
   const { profile } = useAuth()
@@ -38,38 +43,42 @@ export default function SignInboxPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* รอฉันเซ็น */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><Inbox size={20} /></div>
-          <h1 className="text-xl font-semibold text-gray-900">รอฉันเซ็น</h1>
-          {!loading && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">{pendingRows.length}</span>}
-        </div>
+      <div>
+        <PageHeader
+          icon={<Inbox size={20} />}
+          title={
+            <span className="inline-flex items-center gap-2">
+              รอฉันเซ็น
+              {!loading && <Badge tone="amber">{pendingRows.length}</Badge>}
+            </span>
+          }
+        />
 
         {!profile?.signatureImage && (
-          <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
             คุณยังไม่ได้อัปโหลดลายเซ็น — <Link to="/profile" className="font-medium underline">ไปอัปโหลดที่หน้าข้อมูลของฉัน</Link> ก่อนจึงจะเซ็นได้
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
+            <thead className={ui.thead}>
               <tr>{['เลขที่', 'ฟอร์ม', 'ผู้ขอ', 'ยอด', 'วันที่', 'ช่องที่ต้องเซ็น', ''].map(h => (
-                <th key={h} className="px-3 py-2 text-left font-medium whitespace-nowrap">{h}</th>
+                <th key={h} className={h === 'ยอด' ? thRight : ui.th}>{h}</th>
               ))}</tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className={ui.tbody}>
               {pendingRows.map(r => (
-                <tr key={r.id} className="align-top hover:bg-gray-50">
-                  <td className="px-3 py-2 whitespace-nowrap">{r.docNumber}</td>
-                  <td className="px-3 py-2">{formName(r.formType)}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">{r.header.firstName} {r.header.lastName}</td>
-                  <td className="px-3 py-2 text-right">{submissionAmount(r).toLocaleString()}</td>
-                  <td className="px-3 py-2 whitespace-nowrap text-gray-500">{formatDate(r.createdAt)}</td>
-                  <td className="px-3 py-2">{myBlocks(r).filter(b => b.status === 'pending').map(b => b.blockLabel).join(', ')}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                <tr key={r.id} className={`${ui.tr} align-top`}>
+                  <td className={`${ui.td} whitespace-nowrap font-medium text-gray-900`}>{r.docNumber}</td>
+                  <td className={ui.td}>{formName(r.formType)}</td>
+                  <td className={`${ui.td} whitespace-nowrap`}>{r.header.firstName} {r.header.lastName}</td>
+                  <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{submissionAmount(r).toLocaleString()}</td>
+                  <td className={`${ui.td} whitespace-nowrap text-gray-500`}>{formatDate(r.createdAt)}</td>
+                  <td className={ui.td}>{myBlocks(r).filter(b => b.status === 'pending').map(b => b.blockLabel).join(', ')}</td>
+                  <td className={`${ui.td} whitespace-nowrap`}>
                     <div className="flex items-center justify-end gap-1.5">
                       <ActionIconButton label="ดูเอกสาร" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
                       {myBlocks(r).filter(b => b.status === 'pending').map(b => (
@@ -85,8 +94,11 @@ export default function SignInboxPage() {
                   </td>
                 </tr>
               ))}
+              {loading && (
+                <tr><td colSpan={7} className={ui.emptyCell}><Spinner size={20} className="mx-auto" /></td></tr>
+              )}
               {!loading && pendingRows.length === 0 && (
-                <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400">ไม่มีเอกสารรอเซ็น</td></tr>
+                <tr><td colSpan={7} className={ui.emptyCell}>ไม่มีเอกสารรอเซ็น</td></tr>
               )}
             </tbody>
           </table>
@@ -95,26 +107,26 @@ export default function SignInboxPage() {
 
       {/* ประวัติที่ฉันเซ็น */}
       <div className="space-y-3">
-        <h2 className="text-[15px] font-semibold text-gray-900">ประวัติที่ฉันเซ็น ({doneRows.length})</h2>
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
+        <h2 className={ui.cardTitle}>ประวัติที่ฉันเซ็น ({doneRows.length})</h2>
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
+            <thead className={ui.thead}>
               <tr>{['เลขที่', 'ฟอร์ม', 'ผู้ขอ', 'ช่องที่เซ็น', 'วันที่เซ็น', ''].map(h => (
-                <th key={h} className="px-3 py-2 text-left font-medium whitespace-nowrap">{h}</th>
+                <th key={h} className={ui.th}>{h}</th>
               ))}</tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className={ui.tbody}>
               {doneRows.map(r => {
                 const mine = myBlocks(r)
                 const lastSignedAt = Math.max(...mine.map(b => b.signedAt ?? 0))
                 return (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 whitespace-nowrap">{r.docNumber}</td>
-                    <td className="px-3 py-2">{formName(r.formType)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{r.header.firstName} {r.header.lastName}</td>
-                    <td className="px-3 py-2">{mine.map(b => b.blockLabel).join(', ')}</td>
-                    <td className="px-3 py-2 whitespace-nowrap text-gray-500">{lastSignedAt ? formatDate(lastSignedAt) : '-'}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                  <tr key={r.id} className={ui.tr}>
+                    <td className={`${ui.td} whitespace-nowrap font-medium text-gray-900`}>{r.docNumber}</td>
+                    <td className={ui.td}>{formName(r.formType)}</td>
+                    <td className={`${ui.td} whitespace-nowrap`}>{r.header.firstName} {r.header.lastName}</td>
+                    <td className={ui.td}>{mine.map(b => b.blockLabel).join(', ')}</td>
+                    <td className={`${ui.td} whitespace-nowrap text-gray-500`}>{lastSignedAt ? formatDate(lastSignedAt) : '-'}</td>
+                    <td className={`${ui.td} whitespace-nowrap`}>
                       <div className="flex items-center justify-end">
                         <ActionIconButton label="ดูเอกสาร" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
                       </div>
@@ -122,8 +134,11 @@ export default function SignInboxPage() {
                   </tr>
                 )
               })}
+              {loading && (
+                <tr><td colSpan={6} className={ui.emptyCell}><Spinner size={20} className="mx-auto" /></td></tr>
+              )}
               {!loading && doneRows.length === 0 && (
-                <tr><td colSpan={6} className="px-3 py-8 text-center text-gray-400">ยังไม่มีเอกสารที่คุณเซ็น</td></tr>
+                <tr><td colSpan={6} className={ui.emptyCell}>ยังไม่มีเอกสารที่คุณเซ็น</td></tr>
               )}
             </tbody>
           </table>

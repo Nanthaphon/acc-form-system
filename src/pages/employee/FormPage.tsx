@@ -2,7 +2,8 @@ import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
-import { ArrowLeft, Download, Printer, Receipt, Save } from 'lucide-react'
+import { Download, Eye, Pencil, Printer, Receipt, Save } from 'lucide-react'
+import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
@@ -162,7 +163,7 @@ export default function FormPage() {
       <div className="mx-auto max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center">
         <div className="text-lg font-semibold text-gray-900">ฟอร์มนี้ปิดปรับปรุงชั่วคราว</div>
         <div className="mt-2 text-sm text-gray-500">กรุณากลับมาใหม่ภายหลัง</div>
-        <button onClick={() => nav('/')} className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">กลับหน้าหลัก</button>
+        <button onClick={() => nav('/')} className={`${ui.btnPrimary} mt-4`}>กลับหน้าหลัก</button>
       </div>
     )
   }
@@ -170,27 +171,22 @@ export default function FormPage() {
   return (
     <div>
       <div className="no-print space-y-4">
-        <div className="mb-2 flex items-center gap-3">
-          <button
-            onClick={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900"
-          >
-            <ArrowLeft size={16} /> กลับ
-          </button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><Receipt size={20} /></div>
-          <h1 className="text-xl font-semibold text-gray-900">{settings.name || settings.title}</h1>
-          <button
-            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
-            onClick={() => setShowPreview(!showPreview)}
-          >
-            {showPreview ? 'แก้ไข' : 'ดูตัวอย่าง'}
-          </button>
-        </div>
+        <PageHeader
+          onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
+          icon={<Receipt size={20} />}
+          title={settings.name || settings.title}
+          subtitle={`เลขที่ ${docNumber}`}
+          actions={
+            <button className={ui.btnSecondary} onClick={() => setShowPreview(!showPreview)}>
+              {showPreview ? <><Pencil size={16} /> แก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
+            </button>
+          }
+        />
         {!showPreview && (
-          <div className="rounded-xl border border-gray-200 bg-white p-6">
-            <label className="mb-1.5 block text-xs font-medium text-gray-500">บริษัท</label>
+          <div className={ui.card}>
+            <label className={ui.label}>บริษัท</label>
             <select
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className={ui.input}
               value={header.companyId}
               onChange={e => setHeader({ ...header, companyId: e.target.value })}
             >
@@ -215,28 +211,28 @@ export default function FormPage() {
       <div className={showPreview ? '' : 'hidden print:block'}>
         <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sigs} />
       </div>
-      <div className="no-print mt-4 flex flex-wrap gap-2.5">
+      <div className="no-print mt-4 flex flex-wrap items-center gap-2.5">
         <button
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          className={ui.btnPrimary}
           onClick={save}
           disabled={saving}
         >
           {saving ? <><Spinner size={16} /> กำลังบันทึก...</> : <><Save size={16} /> บันทึก</>}
         </button>
         <button
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
+          className={ui.btnSecondary}
           onClick={downloadPdf}
         >
           <Download size={16} /> ดาวน์โหลด PDF
         </button>
         <button
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
+          className={ui.btnSecondary}
           onClick={print}
         >
           <Printer size={16} /> สั่งพิมพ์
         </button>
         <button
-          className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-800"
+          className={ui.btnGhost}
           onClick={() => nav('/history')}
         >
           ไปหน้าประวัติ

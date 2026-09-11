@@ -1,7 +1,8 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react'
+import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../../types/schema'
 import { isActive, canSeeForm } from '../../types/schema'
@@ -73,21 +74,20 @@ export default function DashboardPage() {
   return (
     <div>
       {profile?.mustChangePassword && (
-        <div className="mb-4 rounded bg-yellow-50 p-3 text-sm">
-          คุณยังใช้รหัสผ่านเริ่มต้น — <Link to="/change-password" className="text-blue-600 underline">เปลี่ยนรหัสผ่าน</Link>
+        <div className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          คุณยังใช้รหัสผ่านเริ่มต้น — <Link to="/change-password" className="font-medium underline">เปลี่ยนรหัสผ่าน</Link>
         </div>
       )}
-      <div className="mb-4 flex items-center gap-3">
-        <h1 className="text-xl font-medium">เลือกกลุ่มฟอร์ม</h1>
-        {isAdmin && (
-          <button
-            onClick={onCreateGroup}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-dashed border-[#b9c4da] bg-white px-3.5 py-2 text-sm font-medium text-[#2b5bd7] hover:border-[#2b5bd7]"
-          >
+      <PageHeader
+        icon={<FolderOpen size={20} />}
+        title="เลือกกลุ่มฟอร์ม"
+        subtitle={`${visibleGroups.length} กลุ่ม`}
+        actions={isAdmin && (
+          <button onClick={onCreateGroup} className={ui.btnPrimary}>
             <Plus size={16} /> สร้างกลุ่ม
           </button>
         )}
-      </div>
+      />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {visibleGroups.map(g => {
@@ -99,10 +99,10 @@ export default function DashboardPage() {
               tabIndex={0}
               onClick={() => nav(`/group/${g.id}`)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${g.id}`) } }}
-              className={`relative cursor-pointer rounded-lg border border-[#e5eaf3] bg-white p-6 text-center hover:shadow ${isAdmin && !isActive(g) ? 'opacity-60' : ''}`}
+              className={`relative cursor-pointer rounded-xl border border-gray-200 bg-white p-6 text-center transition hover:border-gray-300 hover:shadow-md ${isAdmin && !isActive(g) ? 'opacity-60' : ''}`}
             >
               <FolderCardIcon count={count} />
-              <div className="mt-3 truncate font-medium text-[#16233f]">{g.name}</div>
+              <div className="mt-3 truncate font-medium text-gray-900">{g.name}</div>
               <div className="text-sm text-gray-500">{count} ฟอร์ม</div>
               {isAdmin && (
                 <div className="mt-3 flex items-center justify-center gap-2">
