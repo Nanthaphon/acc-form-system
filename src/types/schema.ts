@@ -95,6 +95,21 @@ export interface FormSettings {
   bodyText?: string                    // free declaration/certification paragraph shown below the table, above signatures
   showRequester?: boolean              // show the ชื่อ/นามสกุล/ตำแหน่ง/Job line (default true)
   showAmountWords?: boolean            // show the "เป็นจำนวนเงิน ... บาทถ้วน" box (default true)
+  requesterTitle?: string              // heading above the requester fields on the fill-in screen (read via sectionTitles)
+  itemsTitle?: string                  // heading above the items table on the fill-in screen (read via sectionTitles)
+}
+
+// Headings of the two editable sections on the FILL-IN screen (they are not
+// printed on the document). A form that never set them — or that cleared them
+// to blank — falls back to the built-in wording. Single source of truth: do not
+// re-inline these defaults.
+export const DEFAULT_REQUESTER_TITLE = 'ข้อมูลผู้เบิก'
+export const DEFAULT_ITEMS_TITLE = 'รายการเบิก'
+export function sectionTitles(f?: Pick<FormSettings, 'requesterTitle' | 'itemsTitle'> | null): { requester: string; items: string } {
+  return {
+    requester: f?.requesterTitle?.trim() || DEFAULT_REQUESTER_TITLE,
+    items: f?.itemsTitle?.trim() || DEFAULT_ITEMS_TITLE,
+  }
 }
 
 // Access groups allowed to see a form. Forms saved before multi-group support

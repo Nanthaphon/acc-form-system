@@ -69,3 +69,25 @@ export function taxSummary(subtotal: number, vat?: boolean, whtRate?: number): T
   const netTotal = round2(subtotal + vatAmount - whtAmount)
   return { subtotal, vatAmount, whtAmount, netTotal }
 }
+
+// Fill-in table sizing. The table is `table-fixed`, where a cell's min-width is
+// ignored — only an explicit width counts — so the floor has to be applied to
+// the width itself, and the table needs its own min-width to overflow (and
+// scroll) rather than squeeze every column to a few pixels on a narrow screen.
+// Print is unaffected: the preview/PDF size columns proportionally from
+// col.width, so the admin's own setting still decides the printed layout.
+export const DATE_COL_MIN_PX = 118  // fits "dd/mm/yyyy" plus the calendar button
+const COL_MIN_PX = 80       // any other column, when the form sets no width
+const SEQ_COL_PX = 32      // the "#" column (w-8)
+const ACTION_COL_PX = 36   // the delete-row column (w-9)
+
+// The width a column is rendered at, or undefined to let it flex. A date column
+// never goes below DATE_COL_MIN_PX — narrower and its value is unreadable.
+export function colWidth(col: FormColumn): number | undefined {
+  if (col.type === 'date') return Math.max(col.width ?? 0, DATE_COL_MIN_PX)
+  return col.width
+}
+// Width below which the table scrolls instead of shrinking its columns.
+export function tableMinWidth(cols: FormColumn[]): number {
+  return SEQ_COL_PX + ACTION_COL_PX + cols.reduce((sum, c) => sum + (colWidth(c) ?? COL_MIN_PX), 0)
+}

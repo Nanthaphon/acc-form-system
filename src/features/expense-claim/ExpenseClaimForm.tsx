@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
-import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
+import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles } from '../../types/schema'
+import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns, colWidth, tableMinWidth } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import DateInput from '../../components/DateInput'
 import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
 import type { TemplateField } from '../../shared/bodyTemplate'
+import { BLANK_LIMITS, blankWidth } from './blankSizing'
 
 interface Props {
   header: ExpenseHeader
@@ -19,6 +20,8 @@ interface Props {
   headerFields?: HeaderField[]
   introText?: string | null   // form paragraphs — their {{blanks}} are filled in here
   bodyText?: string | null
+  requesterTitle?: string     // section headings, editable per form (see sectionTitles)
+  itemsTitle?: string
 }
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
@@ -29,28 +32,45 @@ const cardTitleClass = 'mb-4 text-[15px] font-semibold text-gray-900'
 const labelClass = 'mb-1.5 block text-xs font-medium text-gray-500'
 const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
 
-const blankClass = 'mx-1 inline-block rounded-md border border-gray-200 bg-white px-2 py-1 align-middle text-sm leading-normal text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+const blankClass = 'inline-block rounded-md border border-gray-200 bg-white px-2 py-1 align-middle text-sm leading-normal text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+// Off-screen copy of the blank's text, in the same font, used to measure it.
+// Thai has no usable average character width, so `size` / `ch` units would be
+// well off — only a real measurement is right.
+const mirrorClass = 'pointer-events-none invisible absolute left-0 top-0 whitespace-pre px-2 text-sm leading-normal'
 
-// One {{blank}} inside a paragraph, sized to sit in the running text.
+// One {{blank}} inside a paragraph, sized to sit in the running text and to
+// grow with what is typed into it (see blankSizing).
 function BlankInput({ field, value, onChange }: { field: TemplateField; value: string; onChange: (v: string) => void }) {
+  const limits = BLANK_LIMITS[field.type]
+  const mirror = useRef<HTMLSpanElement>(null)
+  const [width, setWidth] = useState(limits.min)
+  // offsetWidth is 0 where there is no layout (jsdom, before paint); blankWidth
+  // falls back to the minimum, so the blank is never rendered at zero width.
+  useLayoutEffect(() => { setWidth(blankWidth(mirror.current?.offsetWidth ?? 0, limits)) }, [value, field.label, limits])
+
   if (field.type === 'date') {
     return (
       <span className="mx-1 inline-block w-40 align-middle leading-normal" title={field.label}>
-        <DateInput className={`${blankClass} mx-0 w-full`} value={value} onChange={onChange} />
+        <DateInput className={`${blankClass} w-full`} value={value} onChange={onChange} />
       </span>
     )
   }
   const number = field.type === 'number'
   return (
-    <input
-      aria-label={field.label}
-      title={field.label}
-      placeholder={field.label}
-      inputMode={number ? 'decimal' : undefined}
-      className={`${blankClass} ${number ? 'w-36 text-right tabular-nums' : 'w-56'}`}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-    />
+    <span className="relative mx-1 inline-block max-w-full align-middle leading-normal">
+      {/* Measures the value, or the placeholder while the blank is empty. */}
+      <span ref={mirror} aria-hidden className={mirrorClass}>{value || field.label}</span>
+      <input
+        aria-label={field.label}
+        title={field.label}
+        placeholder={field.label}
+        inputMode={number ? 'decimal' : undefined}
+        style={{ width: `${width}px` }}
+        className={`${blankClass} max-w-full ${number ? 'text-right tabular-nums' : ''}`}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      />
+    </span>
   )
 }
 
@@ -58,8 +78,9 @@ function fmt(n: number): string {
   return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
-export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText }: Props) {
+export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
+  const titles = sectionTitles({ requesterTitle, itemsTitle })
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
   // Paragraphs that have blanks to fill (plain paragraphs need no input).
   const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
@@ -122,7 +143,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
 
       {/* Requester */}
       <div className={cardClass}>
-        <h2 className={cardTitleClass}>ข้อมูลผู้เบิก</h2>
+        <h2 className={cardTitleClass}>{titles.requester}</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className={labelClass}>ชื่อ</label>
@@ -170,7 +191,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
 
       {/* Items — dynamic columns */}
       <div className={cardClass}>
-        <h2 className={cardTitleClass}>รายการเบิก</h2>
+        <h2 className={cardTitleClass}>{titles.items}</h2>
         {!hasColumns ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
             ฟอร์มนี้ยังไม่ได้ตั้งค่าคอลัมน์<br />
@@ -179,14 +200,14 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
+              <table className="w-full table-fixed border-separate border-spacing-0 text-xs" style={{ minWidth: `${tableMinWidth(vcols)}px` }}>
                 <thead>
                   <tr>
                     <th className="w-8 border-b border-gray-200 bg-gray-50 px-1.5 py-2.5 text-center text-xs font-medium text-gray-500">#</th>
                     {vcols.map(col => (
                       <th
                         key={col.key}
-                        style={{ width: col.width ? `${col.width}px` : undefined }}
+                        style={{ width: colWidth(col) ? `${colWidth(col)}px` : undefined }}
                         className={`whitespace-normal break-words border-b border-gray-200 bg-gray-50 px-1.5 py-2.5 text-[11px] font-medium text-gray-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}

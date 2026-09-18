@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
@@ -344,6 +344,29 @@ export default function FormSettingsPage() {
                   emptyText="ไม่พบกลุ่มที่ค้นหา"
                 />
               )}
+            </Field>
+          </div>
+        </div>
+
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <span className="text-xs font-medium text-gray-500">หัวข้อในหน้ากรอกข้อมูล</span>
+          <p className="mb-2 mt-0.5 text-xs text-gray-400">ชื่อหัวข้อที่พนักงานเห็นตอนกรอกฟอร์ม · เว้นว่างไว้เพื่อใช้ชื่อเดิม (ไม่แสดงบนเอกสารที่พิมพ์)</p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="หัวข้อส่วนข้อมูลผู้เบิก">
+              <input
+                className={ui.input}
+                placeholder={DEFAULT_REQUESTER_TITLE}
+                value={settings.requesterTitle ?? ''}
+                onChange={e => setField('requesterTitle', e.target.value)}
+              />
+            </Field>
+            <Field label="หัวข้อส่วนรายการ">
+              <input
+                className={ui.input}
+                placeholder={DEFAULT_ITEMS_TITLE}
+                value={settings.itemsTitle ?? ''}
+                onChange={e => setField('itemsTitle', e.target.value)}
+              />
             </Field>
           </div>
         </div>
