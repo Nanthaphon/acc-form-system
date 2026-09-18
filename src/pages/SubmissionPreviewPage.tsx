@@ -49,7 +49,7 @@ export default function SubmissionPreviewPage() {
           title={`ดูตัวอย่าง — ${sub.docNumber}`}
           onBack={() => nav(-1)}
           actions={canPrint
-            ? <button type="button" onClick={onPrint} className={ui.btnPrimary}><Printer size={16} /> สั่งพิมพ์</button>
+            ? <button type="button" onClick={onPrint} className={ui.btnPrimary}><Printer size={16} /> พิมพ์ / บันทึก PDF</button>
             : <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-500"><Eye size={16} /> ดูอย่างเดียว</span>}
         />
       </div>

@@ -2,7 +2,7 @@ import { uiAlert } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Download, Eye, Pencil, Printer, Receipt, Save } from 'lucide-react'
+import { Eye, Pencil, Printer, Receipt, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment } from '../../types/schema'
@@ -144,16 +144,10 @@ export default function FormPage() {
     uiAlert(`ดึงเนื้อหาเวอร์ชัน ${v.version} กลับมาแล้ว — ตรวจสอบแล้วกด "บันทึก" เพื่อสร้างเป็นเวอร์ชันใหม่`)
   }
 
-  async function downloadPdf() {
-    // The PDF renderer is most of the app's code — load it only when a PDF is asked for.
-    const [{ pdf }, { ExpenseClaimPdf }] = await Promise.all([
-      import('@react-pdf/renderer'),
-      import('../../features/expense-claim/ExpenseClaimPdf'),
-    ])
-    const blob = await pdf(<ExpenseClaimPdf company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sigs} />).toBlob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `${docNumber}.pdf`; a.click()
-  }
+  // Paper and PDF come from the same place: the browser prints what
+  // ExpenseClaimPreview lays out, and its "Save as PDF" destination writes
+  // that very page to a file. There used to be a second renderer just for
+  // the PDF, and it drifted from the printed page every time either changed.
   async function print() {
     if (savedId) await incrementPrint(savedId)
     window.print()
@@ -225,15 +219,9 @@ export default function FormPage() {
         </button>
         <button
           className={ui.btnSecondary}
-          onClick={downloadPdf}
-        >
-          <Download size={16} /> ดาวน์โหลด PDF
-        </button>
-        <button
-          className={ui.btnSecondary}
           onClick={print}
         >
-          <Printer size={16} /> สั่งพิมพ์
+          <Printer size={16} /> พิมพ์ / บันทึก PDF
         </button>
         <button
           className={ui.btnGhost}
@@ -241,6 +229,9 @@ export default function FormPage() {
         >
           ไปหน้าประวัติ
         </button>
+        <span className="w-full text-xs text-gray-400 sm:w-auto">
+          ต้องการไฟล์ PDF: กดปุ่มนี้แล้วเลือกปลายทางเป็น “Save as PDF”
+        </span>
       </div>
       {savedId && (
         <div className="no-print mt-4">
