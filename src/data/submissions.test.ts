@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Submission, DocSignature } from '../types/schema'
 import { canRequestSignatures, DEFAULT_SIGNATURE_BLOCKS } from '../types/schema'
-import { subStatus, statusLabel, statusMeta, isUnsigned } from './submissions'
+import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign } from './submissions'
 
 function sub(signatures?: DocSignature[]): Submission {
   return {
@@ -52,5 +52,46 @@ describe('canRequestSignatures', () => {
     // form_settings.signatureBlocks defaults to [] in the DB.
     expect(canRequestSignatures({ signatureBlocks: [] })).toBe(DEFAULT_SIGNATURE_BLOCKS.length > 1)
     expect(canRequestSignatures(null)).toBe(true)
+  })
+})
+
+describe('assignmentsForSelfSign', () => {
+  const me = { uid: 'uid-1', name: 'ผู้ดูแล ระบบ' }
+  const block = { id: 'requester', label: 'ผู้จัดทำเอกสาร' }
+  const other = (blockId: string, status: 'pending' | 'signed'): DocSignature =>
+    ({ blockId, blockLabel: blockId, assignedUid: 'uid-9', assignedName: 'คนอื่น', status })
+
+  it('assigns the block to me, pending, so sign_document can stamp it', () => {
+    expect(assignmentsForSelfSign([], block, me)).toEqual([
+      { blockId: 'requester', blockLabel: 'ผู้จัดทำเอกสาร', assignedUid: 'uid-1', assignedName: 'ผู้ดูแล ระบบ', status: 'pending' },
+    ])
+    expect(assignmentsForSelfSign(undefined, block, me)).toHaveLength(1)
+  })
+
+  it('carries other people\u2019s pending assignments along — assign_signers replaces the whole pending set', () => {
+    const out = assignmentsForSelfSign([other('checker', 'pending')], block, me)
+    expect(out.map(x => x.blockId)).toEqual(['checker', 'requester'])
+    expect(out.find(x => x.blockId === 'checker')?.assignedUid).toBe('uid-9')
+  })
+
+  it('does not resend blocks that are already signed (the database keeps those)', () => {
+    const out = assignmentsForSelfSign([other('checker', 'signed')], block, me)
+    expect(out.map(x => x.blockId)).toEqual(['requester'])
+  })
+
+  it('takes over the block when it was pending on me, without duplicating it', () => {
+    const mineAlready: DocSignature =
+      { blockId: 'requester', blockLabel: 'ผู้จัดทำเอกสาร', assignedUid: 'uid-1', assignedName: 'ผู้ดูแล ระบบ', status: 'pending' }
+    const out = assignmentsForSelfSign([mineAlready], block, me)
+    expect(out).toHaveLength(1)
+    expect(out[0].assignedUid).toBe('uid-1')
+  })
+
+  it('never lets the same block appear twice', () => {
+    const out = assignmentsForSelfSign(
+      [other('requester', 'pending'), other('checker', 'pending')], block, me)
+    const ids = out.map(x => x.blockId)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(out.find(x => x.blockId === 'requester')?.assignedUid).toBe('uid-1')
   })
 })

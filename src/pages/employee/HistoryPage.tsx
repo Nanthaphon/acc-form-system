@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Copy, History, Pencil, Printer, RotateCcw, Send, Trash2 } from 'lucide-react'
+import { Copy, History, Pencil, PenLine, Printer, RotateCcw, Send, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
@@ -15,6 +15,7 @@ import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
+import SignNowModal from '../../components/SignNowModal'
 import StatusBadge from '../../components/StatusBadge'
 import { notifyPendingSignChanged } from '../../shared/pendingSignBus'
 import ActionIconButton from '../../components/ActionIconButton'
@@ -38,6 +39,7 @@ export default function HistoryPage() {
   const [signers, setSigners] = useState<Signer[]>([])
   const [groups, setGroups] = useState<FormGroup[]>([])
   const [signModal, setSignModal] = useState<SubmissionSummary | null>(null)
+  const [signNow, setSignNow] = useState<SubmissionSummary | null>(null)
   function load() { if (profile) listMySubmissions(profile.uid).then(setRows) }
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
   useEffect(() => { listForms().then(setForms); listSigners().then(setSigners); listGroups().then(setGroups) }, [])
@@ -51,6 +53,13 @@ export default function HistoryPage() {
   // A doc can be sent for signing if its form has someone besides the requester
   // to sign, and it isn't fully signed yet.
   const canSend = (r: SubmissionSummary) => canRequestSignatures(formOf(r.formType)) && subStatus(r) !== 'signed'
+  // Admins sign their own document on the spot, without sending it to anyone
+  // first. Shown while any signature line is still open — including on a form
+  // with a single line, which canSend() deliberately leaves out.
+  const isAdmin = profile?.role === 'admin'
+  const canSignNow = (r: SubmissionSummary) =>
+    isAdmin && formSignatureBlocks(formOf(r.formType)).some(b =>
+      (r.signatures ?? []).find(x => x.blockId === b.id)?.status !== 'signed')
 
   const { hidden, toggle, reset } = useHiddenColumns('cols:myHistory')
   const columns: Column[] = [
@@ -116,6 +125,9 @@ export default function HistoryPage() {
                     <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
                     <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
                     <ActionIconButton label="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
+                    {canSignNow(r) && (
+                      <ActionIconButton label="เซ็นเอกสารนี้" onClick={() => setSignNow(r)} tone="green" icon={<PenLine size={16} />} />
+                    )}
                     {canSend(r) && (
                       <ActionIconButton label="ส่งให้เซ็น" onClick={() => setSignModal(r)} tone="blue" icon={<Send size={16} />} />
                     )}
@@ -139,6 +151,17 @@ export default function HistoryPage() {
           </tbody>
         </table>
       </div>
+
+      {signNow && profile && (
+        <SignNowModal
+          submission={signNow}
+          settings={formOf(signNow.formType) ?? ({ signatureBlocks: formSignatureBlocks(null) } as FormSettings)}
+          me={{ uid: profile.uid, name: myName() }}
+          mySignature={profile.signatureImage}
+          onClose={() => setSignNow(null)}
+          onDone={load}
+        />
+      )}
 
       {signModal && profile && (
         <AssignSignersModal

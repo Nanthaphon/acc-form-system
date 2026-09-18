@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import type { Submission, SubmissionSummary, SubmissionStatus, DocSignature } from '../types/schema'
+import type { Submission, SubmissionSummary, SubmissionStatus, DocSignature, SignatureBlock } from '../types/schema'
 import { formatDocNumber } from '../shared/docNumber'
 import { addVersion } from './versions'
 import { deleteAttachmentFiles } from './attachments'
@@ -81,6 +81,26 @@ export async function assignSigners(subId: string, assignments: DocSignature[]):
 export async function signDocument(subId: string, blockId: string): Promise<void> {
   const { error } = await supabase.rpc('sign_document', { sub_id: subId, block_id: blockId })
   if (error) throw error
+}
+// The assignment list to send when someone stamps their own signature onto one
+// block. assign_signers REPLACES the whole pending set, so every other pending
+// assignment has to be sent along or it would be dropped; blocks that are
+// already signed are kept by the database itself and must not be resent.
+export function assignmentsForSelfSign(
+  existing: DocSignature[] | undefined, block: SignatureBlock, me: Signer,
+): DocSignature[] {
+  const keep = (existing ?? []).filter(x => x.status === 'pending' && x.blockId !== block.id)
+  return [...keep, {
+    blockId: block.id, blockLabel: block.label,
+    assignedUid: me.uid, assignedName: me.name, status: 'pending',
+  }]
+}
+// Put my signature straight onto one block of my own document: assign the block
+// to myself, then sign it. Skips the send-for-signing step, which is what the
+// admin "sign now" action needs — no extra database function involved.
+export async function signBlockAsSelf(sub: SubmissionSummary, block: SignatureBlock, me: Signer): Promise<void> {
+  await assignSigners(sub.id, assignmentsForSelfSign(sub.signatures, block, me))
+  await signDocument(sub.id, block.id)
 }
 // Owner recalls a document from signing — clears all assignments (back to draft).
 export async function cancelSigning(subId: string): Promise<void> {
