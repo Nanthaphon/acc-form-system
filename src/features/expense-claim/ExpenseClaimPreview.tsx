@@ -4,6 +4,7 @@ import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schem
 import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
 import { bahtText } from '../../shared/bahttext'
+import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
 import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyTemplate'
 
@@ -32,10 +33,6 @@ function FilledText({ text, values, className }: { text: string; values?: Record
       })}
     </div>
   )
-}
-
-function money(n: number): string {
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 // One signature cell — fixed-height signing area so all lines and labels line up.

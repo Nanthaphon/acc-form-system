@@ -25,7 +25,7 @@ describe('describeChanges', () => {
     const b = snap(header(), [{ detail: 'x', qty: 150, amt: 150 }], 150)
     const r = describeChanges(a, b, cols)
     expect(r).toContain('รายการที่ 1: จำนวน 100 → 150')
-    expect(r).toContain('ยอดสุทธิ 100 → 150')
+    expect(r).toContain('ยอดสุทธิ 100.00 → 150.00') // amounts always carry satang (formatMoney)
     expect(r.some(s => s.includes('จำนวนเงิน'))).toBe(false) // calc column not reported
   })
 

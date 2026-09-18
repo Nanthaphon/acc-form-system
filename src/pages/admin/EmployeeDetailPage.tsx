@@ -22,6 +22,7 @@ import SetPasswordModal from '../../components/SetPasswordModal'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
+import { formatMoney } from '../../shared/money'
 
 const HEADERS = [
   { label: 'เลขที่', cls: '' },
@@ -150,7 +151,7 @@ export default function EmployeeDetailPage() {
                     <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}>{r.docNumber}</td>
                     <td className={`${ui.td} font-medium text-gray-900`}>{formName(r.formType)}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>{formatDate(r.createdAt)}</td>
-                    <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{submissionAmount(r).toLocaleString()}</td>
+                    <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>
                     <td className={`${ui.td} text-center tabular-nums`}>{r.printCount}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>{formatDateTime(r.lastPrintedAt)}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>

@@ -1,4 +1,5 @@
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, FormColumn } from '../types/schema'
+import { formatMoney } from './money'
 import { formatIsoDate } from './date'
 
 interface Snap { header: ExpenseHeader; items: ExpenseRow[]; totals: ExpenseTotals }
@@ -44,7 +45,7 @@ export function describeChanges(prev: Snap, curr: Snap, columns: FormColumn[]): 
   // Net total (captures both item edits and VAT/WHT changes)
   const pnet = prev.totals?.netTotal ?? prev.totals?.grandTotal ?? 0
   const cnet = curr.totals?.netTotal ?? curr.totals?.grandTotal ?? 0
-  if (pnet !== cnet) out.push(`ยอดสุทธิ ${pnet.toLocaleString()} → ${cnet.toLocaleString()}`)
+  if (pnet !== cnet) out.push(`ยอดสุทธิ ${formatMoney(pnet)} → ${formatMoney(cnet)}`)
 
   return out
 }

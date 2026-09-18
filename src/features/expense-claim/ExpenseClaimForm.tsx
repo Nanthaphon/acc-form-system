@@ -5,6 +5,7 @@ import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../t
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns, colWidth, tableMinWidth } from './calc'
 import { bahtText } from '../../shared/bahttext'
+import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
 import type { TemplateField } from '../../shared/bodyTemplate'
@@ -75,7 +76,7 @@ function BlankInput({ field, value, onChange }: { field: TemplateField; value: s
 }
 
 function fmt(n: number): string {
-  return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  return formatMoney(n)
 }
 
 export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle }: Props) {
