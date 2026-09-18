@@ -63,7 +63,10 @@ export function formatTemplateValue(field: TemplateField, raw: string | undefine
   if (field.type === 'date') return formatIsoDate(v)
   if (field.type === 'number') {
     const n = Number(v.replace(/,/g, ''))
-    return Number.isFinite(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 2 }) : v
+    // Always two decimals, like every other amount on the document (money() in
+    // ExpenseClaimPreview / ExpenseClaimPdf): a blank filled in as 1000.50 has
+    // to print as 1,000.50, not 1,000.5.
+    return Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : v
   }
   return v
 }

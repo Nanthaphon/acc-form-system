@@ -41,10 +41,18 @@ describe('formatTemplateValue / blankFor', () => {
 
   it('formats dates dd/mm/yyyy and numbers with separators', () => {
     expect(formatTemplateValue(date, '2026-09-11')).toBe('11/09/2026')
-    expect(formatTemplateValue(num, '1500')).toBe('1,500')
+    expect(formatTemplateValue(num, '1500')).toBe('1,500.00')
     expect(formatTemplateValue(num, '1,234.567')).toBe('1,234.57')
     expect(formatTemplateValue(num, 'abc')).toBe('abc')
     expect(formatTemplateValue(text, '  สมชาย ')).toBe('สมชาย')
+  })
+
+  it('keeps the decimals typed into a number blank (1000.50 is not 1,000.5)', () => {
+    expect(formatTemplateValue(num, '1000.50')).toBe('1,000.50')
+    expect(formatTemplateValue(num, '1000.5')).toBe('1,000.50')
+    expect(formatTemplateValue(num, '100.10')).toBe('100.10')
+    expect(formatTemplateValue(num, '0.5')).toBe('0.50')
+    expect(formatTemplateValue(num, '-20.4')).toBe('-20.40')
   })
 
   it('returns empty for nothing entered, which prints as dots', () => {
