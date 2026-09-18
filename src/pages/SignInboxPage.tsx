@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Inbox, PenLine } from 'lucide-react'
+import { Eye, Inbox, Signature } from 'lucide-react'
 import ActionIconButton from '../components/ActionIconButton'
 import { Badge, PageHeader, ui } from '../components/ui'
 import { Spinner } from '../components/Spinner'
@@ -11,6 +11,7 @@ import { listMyAssigned, signDocument, submissionAmount } from '../data/submissi
 import { listForms } from '../data/formSettings'
 import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 import { formatDate } from '../shared/date'
+import { formatMoney } from '../shared/money'
 
 // Amount header lines up with its right-aligned cells.
 const thRight = ui.th.replace('text-left', 'text-right')
@@ -65,7 +66,7 @@ export default function SignInboxPage() {
         <div className={ui.tableWrap}>
           <table className={ui.table}>
             <thead className={ui.thead}>
-              <tr>{['เลขที่', 'ฟอร์ม', 'ผู้ขอ', 'ยอด', 'วันที่', 'ช่องที่ต้องเซ็น', ''].map(h => (
+              <tr>{['เลขที่', 'ฟอร์ม', 'ผู้ขอ', 'ยอด', 'วันที่', 'ช่องที่ต้องเซ็น', 'จัดการ'].map(h => (
                 <th key={h} className={h === 'ยอด' ? thRight : ui.th}>{h}</th>
               ))}</tr>
             </thead>
@@ -75,18 +76,20 @@ export default function SignInboxPage() {
                   <td className={`${ui.td} whitespace-nowrap font-medium text-gray-900`}>{r.docNumber}</td>
                   <td className={ui.td}>{formName(r.formType)}</td>
                   <td className={`${ui.td} whitespace-nowrap`}>{r.header.firstName} {r.header.lastName}</td>
-                  <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{submissionAmount(r).toLocaleString()}</td>
+                  <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>
                   <td className={`${ui.td} whitespace-nowrap text-gray-500`}>{formatDate(r.createdAt)}</td>
                   <td className={ui.td}>{myBlocks(r).filter(b => b.status === 'pending').map(b => b.blockLabel).join(', ')}</td>
                   <td className={`${ui.td} whitespace-nowrap`}>
                     <div className="flex items-center justify-end gap-1.5">
-                      <ActionIconButton label="ดูเอกสาร" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
+                      <ActionIconButton showLabel label="ดูเอกสาร" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
                       {myBlocks(r).filter(b => b.status === 'pending').map(b => (
                         <ActionIconButton
                           key={b.blockId}
-                          label={`เซ็น ${b.blockLabel}`}
+                          showLabel
+                          label={`เซ็นช่อง ${b.blockLabel}`}
+                          short={`เซ็น ${b.blockLabel}`}
                           tone="green"
-                          icon={<PenLine size={16} />}
+                          icon={<Signature size={16} />}
                           onClick={() => onSign(r, b.blockId, b.blockLabel)}
                         />
                       ))}

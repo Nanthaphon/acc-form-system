@@ -30,3 +30,40 @@ describe('ActionIconButton', () => {
     expect(link.className).not.toContain('text-emerald')
   })
 })
+
+describe('ActionIconButton — labelled', () => {
+  it('writes the wording beside the icon, using the short form when given', () => {
+    render(
+      <MemoryRouter>
+        <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to="/s/1" icon={<Pencil size={16} />} />
+      </MemoryRouter>,
+    )
+    // Visible text is the short form; the full wording stays the accessible name.
+    const link = screen.getByRole('link', { name: 'แก้ไขเอกสาร' })
+    expect(link).toHaveTextContent('แก้ไข')
+    expect(link).toHaveAttribute('title', 'แก้ไขเอกสาร')
+    expect(link).not.toHaveClass('w-8')   // no longer a square icon-only button
+  })
+
+  it('falls back to the full label when no short form is given', () => {
+    render(
+      <MemoryRouter>
+        <ActionIconButton showLabel label="ดูเอกสาร" to="/s/1" icon={<Pencil size={16} />} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: 'ดูเอกสาร' })).toHaveTextContent('ดูเอกสาร')
+  })
+
+  it('warns in red on a destructive action, and stays neutral otherwise', () => {
+    render(
+      <MemoryRouter>
+        <ActionIconButton showLabel label="ลบเอกสาร" tone="red" onClick={() => {}} icon={<Pencil size={16} />} />
+        <ActionIconButton showLabel label="พิมพ์" tone="green" onClick={() => {}} icon={<Pencil size={16} />} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('button', { name: 'ลบเอกสาร' })).toHaveClass('text-red-600')
+    const neutral = screen.getByRole('button', { name: 'พิมพ์' })
+    expect(neutral).toHaveClass('text-gray-700')
+    expect(neutral.className).not.toContain('text-emerald')
+  })
+})

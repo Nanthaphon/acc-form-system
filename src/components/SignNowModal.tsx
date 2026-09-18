@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PenLine, X } from 'lucide-react'
+import { Eraser, PenLine, Signature, X } from 'lucide-react'
 import type { SubmissionSummary, FormSettings } from '../types/schema'
 import { formSignatureBlocks } from '../types/schema'
-import { signBlockAsSelf } from '../data/submissions'
+import { signBlockAsSelf, unsignDocument, canRemoveSignature } from '../data/submissions'
 import type { Signer } from '../data/submissions'
 import { uiAlert, uiConfirm } from './dialog/dialogService'
+import { dbErrorMessage } from '../shared/dbError'
 import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 import { Badge, ui } from './ui'
 import { Spinner } from './Spinner'
@@ -26,6 +27,7 @@ interface Props {
 export default function SignNowModal({ submission, settings, me, mySignature, onClose, onDone }: Props) {
   const blocks = formSignatureBlocks(settings)
   const sigs = submission.signatures ?? []
+  const ownerUid = submission.createdBy
   const sigFor = (id: string) => sigs.find(x => x.blockId === id)
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -41,6 +43,24 @@ export default function SignNowModal({ submission, settings, me, mySignature, on
       onDone(); onClose()
     } catch (e: any) {
       uiAlert('เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด'))
+    } finally { setBusyId(null) }
+  }
+
+  // Signed the wrong line: take that one signature off again. Everyone else's
+  // signatures stay — cancelling the whole document is a separate action.
+  async function unsign(blockId: string, blockLabel: string, signedBy: string) {
+    if (busyId) return
+    const whose = signedBy && signedBy !== me.name ? `ลายเซ็นของ ${signedBy} ` : 'ลายเซ็นของคุณ '
+    if (!(await uiConfirm(`${whose}จะถูกลบออกจากช่องนี้ · ช่องอื่นไม่กระทบ · เซ็นใหม่หรือส่งให้คนอื่นเซ็นได้`, {
+      title: `ลบลายเซ็นช่อง "${blockLabel}" ?`, tone: 'danger', confirmText: 'ลบลายเซ็น',
+    }))) return
+    setBusyId(blockId)
+    try {
+      await unsignDocument(submission.id, blockId)
+      notifyPendingSignChanged()
+      onDone(); onClose()
+    } catch (e) {
+      uiAlert(dbErrorMessage(e), { title: 'ลบลายเซ็นไม่สำเร็จ' })
     } finally { setBusyId(null) }
   }
 
@@ -68,7 +88,18 @@ export default function SignNowModal({ submission, settings, me, mySignature, on
                   <div key={b.id} className="flex min-h-[52px] flex-wrap items-center gap-2 px-3 py-2">
                     <span className="w-32 shrink-0 text-sm font-medium text-gray-700">{b.label}</span>
                     {sig?.status === 'signed' ? (
-                      <Badge tone="green">✔ เซ็นแล้วโดย {sig.assignedName}</Badge>
+                      <>
+                        <Badge tone="green">✔ เซ็นแล้วโดย {sig.assignedName}</Badge>
+                        {canRemoveSignature(sig, me.uid, ownerUid) && (
+                          <button
+                            onClick={() => unsign(b.id, b.label, sig.assignedName)}
+                            disabled={busyId !== null}
+                            className={`${ui.btnSecondary} ml-auto text-red-600 ring-red-200 hover:bg-red-50 disabled:opacity-60`}
+                          >
+                            {busyId === b.id ? <><Spinner size={16} /> กำลังลบ...</> : <><Eraser size={16} /> ลบลายเซ็น</>}
+                          </button>
+                        )}
+                      </>
                     ) : sig?.status === 'pending' && !mine ? (
                       // Someone else was already asked to sign this line — leave it to them.
                       <Badge tone="amber">รอ {sig.assignedName} เซ็น</Badge>
@@ -78,7 +109,7 @@ export default function SignNowModal({ submission, settings, me, mySignature, on
                         disabled={busyId !== null}
                         className={`${ui.btnSecondary} ml-auto disabled:opacity-60`}
                       >
-                        {busyId === b.id ? <><Spinner size={16} /> กำลังเซ็น...</> : <><PenLine size={16} /> เซ็นตรงนี้</>}
+                        {busyId === b.id ? <><Spinner size={16} /> กำลังเซ็น...</> : <><Signature size={16} /> เซ็นตรงนี้</>}
                       </button>
                     )}
                   </div>

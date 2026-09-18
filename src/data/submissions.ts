@@ -102,6 +102,19 @@ export async function signBlockAsSelf(sub: SubmissionSummary, block: SignatureBl
   await assignSigners(sub.id, assignmentsForSelfSign(sub.signatures, block, me))
   await signDocument(sub.id, block.id)
 }
+// May this signature be taken back? The person whose signature it is can, and
+// so can the document's owner — matching the check inside unsign_document().
+// Only a signature that has actually been put on the document can be removed.
+export function canRemoveSignature(sig: DocSignature, myUid: string, ownerUid: string): boolean {
+  return sig.status === 'signed' && (sig.assignedUid === myUid || ownerUid === myUid)
+}
+// Take one signature back off a document — the line goes blank again and can be
+// signed again or sent to someone else. Everyone else's signatures stay put
+// (unlike cancelSigning, which clears the whole document).
+export async function unsignDocument(subId: string, blockId: string): Promise<void> {
+  const { error } = await supabase.rpc('unsign_document', { sub_id: subId, block_id: blockId })
+  if (error) throw error
+}
 // Owner recalls a document from signing — clears all assignments (back to draft).
 export async function cancelSigning(subId: string): Promise<void> {
   const { error } = await supabase.rpc('cancel_signing', { sub_id: subId })

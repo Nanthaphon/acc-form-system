@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Submission, DocSignature } from '../types/schema'
 import { canRequestSignatures, DEFAULT_SIGNATURE_BLOCKS } from '../types/schema'
-import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign } from './submissions'
+import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature } from './submissions'
 
 function sub(signatures?: DocSignature[]): Submission {
   return {
@@ -93,5 +93,24 @@ describe('assignmentsForSelfSign', () => {
     const ids = out.map(x => x.blockId)
     expect(new Set(ids).size).toBe(ids.length)
     expect(out.find(x => x.blockId === 'requester')?.assignedUid).toBe('uid-1')
+  })
+})
+
+describe('canRemoveSignature', () => {
+  const ME = 'uid-1', OWNER = 'uid-1', OTHER = 'uid-9'
+  const s = (status: 'pending' | 'signed', assignedUid: string): DocSignature =>
+    ({ blockId: 'b', blockLabel: 'b', assignedUid, assignedName: 'x', status })
+
+  it('lets me take back a signature I put on', () => {
+    expect(canRemoveSignature(s('signed', ME), ME, OTHER)).toBe(true)
+  })
+  it('lets the document owner clear a signature someone else left', () => {
+    expect(canRemoveSignature(s('signed', OTHER), OWNER, OWNER)).toBe(true)
+  })
+  it('refuses when the line was never signed — there is nothing to take back', () => {
+    expect(canRemoveSignature(s('pending', ME), ME, ME)).toBe(false)
+  })
+  it('refuses someone else\u2019s signature on a document that is not mine', () => {
+    expect(canRemoveSignature(s('signed', OTHER), 'uid-2', OWNER)).toBe(false)
   })
 })

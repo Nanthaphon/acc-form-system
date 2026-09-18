@@ -18,6 +18,7 @@ import ActionIconButton from '../../components/ActionIconButton'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { Badge, PageHeader, ui } from '../../components/ui'
+import { formatMoney } from '../../shared/money'
 
 interface Column extends PickableColumn {
   thCls?: string
@@ -73,7 +74,7 @@ export default function PrintHistoryPage() {
       cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-gray-400">({r.createdByEmployeeId})</span></>,
     },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
-    { key: 'amount', label: 'ยอด', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => submissionAmount(r).toLocaleString() },
+    { key: 'amount', label: 'ยอด', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => formatMoney(submissionAmount(r)) },
     { key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap', cell: r => <StatusBadge sub={r} /> },
     {
       key: 'edits', label: 'แก้ไข', tdCls: 'whitespace-nowrap',
@@ -111,10 +112,10 @@ export default function PrintHistoryPage() {
                 {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
                 <td className="whitespace-nowrap px-4 py-2">
                   <div className="flex items-center justify-end gap-1.5">
-                    <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
-                    <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
-                    <ActionIconButton label="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
-                    <ActionIconButton label="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
+                    <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
+                    <ActionIconButton showLabel label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
+                    <ActionIconButton showLabel label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
+                    <ActionIconButton showLabel label="ลบเอกสาร" short="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
                   </div>
                 </td>
               </tr>

@@ -4,7 +4,11 @@ import { MemoryRouter } from 'react-router-dom'
 import SignNowModal from './SignNowModal'
 import type { FormSettings, SubmissionSummary, DocSignature } from '../types/schema'
 
-vi.mock('../data/submissions', () => ({ signBlockAsSelf: vi.fn() }))
+vi.mock(import('../data/submissions'), async importOriginal => ({
+  ...(await importOriginal()),
+  signBlockAsSelf: vi.fn(),
+  unsignDocument: vi.fn(),
+}))
 
 const me = { uid: 'uid-1', name: 'ผู้ดูแล ระบบ' }
 const settings = {
@@ -37,10 +41,26 @@ describe('SignNowModal', () => {
     expect(screen.queryByPlaceholderText(/ค้นหาผู้เซ็น/)).not.toBeInTheDocument()
   })
 
-  it('shows who signed a line instead of a button', () => {
+  it('shows who signed a line instead of a sign button', () => {
     show(sub([{ blockId: 'maker', blockLabel: 'ผู้จัดทำเอกสาร', assignedUid: 'uid-1', assignedName: 'ผู้ดูแล ระบบ', status: 'signed' }]))
     expect(screen.getByText(/เซ็นแล้วโดย ผู้ดูแล ระบบ/)).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /เซ็นตรงนี้/ })).toHaveLength(1)
+  })
+
+  it('offers to take back a signature I put on the wrong line', () => {
+    show(sub([{ blockId: 'maker', blockLabel: 'ผู้จัดทำเอกสาร', assignedUid: 'uid-1', assignedName: 'ผู้ดูแล ระบบ', status: 'signed' }]))
+    expect(screen.getByRole('button', { name: /ลบลายเซ็น/ })).toBeInTheDocument()
+  })
+
+  it('lets the owner clear a signature someone else left', () => {
+    // sub() is created by uid-1, who is also `me` — the owner.
+    show(sub([{ blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'uid-9', assignedName: 'สมชาย ใจดี', status: 'signed' }]))
+    expect(screen.getByRole('button', { name: /ลบลายเซ็น/ })).toBeInTheDocument()
+  })
+
+  it('offers nothing to remove while a line is still unsigned', () => {
+    show(sub())
+    expect(screen.queryByRole('button', { name: /ลบลายเซ็น/ })).not.toBeInTheDocument()
   })
 
   it('leaves a line that someone else was asked to sign alone', () => {

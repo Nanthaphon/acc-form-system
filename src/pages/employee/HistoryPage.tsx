@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Copy, History, Pencil, PenLine, Printer, RotateCcw, Send, Trash2 } from 'lucide-react'
+import { Copy, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
@@ -11,6 +11,7 @@ import { listGroups } from '../../data/formGroups'
 import type { SubmissionSummary, FormSettings, FormGroup } from '../../types/schema'
 import { formSignatureBlocks, canRequestSignatures } from '../../types/schema'
 import { formatDate } from '../../shared/date'
+import { formatMoney } from '../../shared/money'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
@@ -54,12 +55,12 @@ export default function HistoryPage() {
   // to sign, and it isn't fully signed yet.
   const canSend = (r: SubmissionSummary) => canRequestSignatures(formOf(r.formType)) && subStatus(r) !== 'signed'
   // Admins sign their own document on the spot, without sending it to anyone
-  // first. Shown while any signature line is still open — including on a form
-  // with a single line, which canSend() deliberately leaves out.
+  // first — and take a signature back off again when they signed the wrong
+  // line. Always offered, including on a form with a single signature line
+  // (which canSend() deliberately leaves out) and on a fully signed document
+  // (which is exactly when a mistake needs undoing).
   const isAdmin = profile?.role === 'admin'
-  const canSignNow = (r: SubmissionSummary) =>
-    isAdmin && formSignatureBlocks(formOf(r.formType)).some(b =>
-      (r.signatures ?? []).find(x => x.blockId === b.id)?.status !== 'signed')
+  const canSignNow = () => isAdmin
 
   const { hidden, toggle, reset } = useHiddenColumns('cols:myHistory')
   const columns: Column[] = [
@@ -70,7 +71,7 @@ export default function HistoryPage() {
     },
     { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => r.docNumber },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
-    { key: 'amount', label: 'ยอดสุทธิ', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => submissionAmount(r).toLocaleString() },
+    { key: 'amount', label: 'ยอดสุทธิ', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => formatMoney(submissionAmount(r)) },
     { key: 'prints', label: 'พิมพ์แล้ว (ครั้ง)', thCls: 'text-center', tdCls: 'text-center tabular-nums', cell: r => r.printCount },
     { key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap', cell: r => <StatusBadge sub={r} /> },
     {
@@ -113,7 +114,7 @@ export default function HistoryPage() {
           <thead className={ui.thead}>
             <tr>
               {shown.map(c => <th key={c.key} className={`${ui.th} ${c.thCls ?? ''}`}>{c.label}</th>)}
-              <th className={ui.th} aria-label="การจัดการ" />
+              <th className={`${ui.th} text-right`}>จัดการ</th>
             </tr>
           </thead>
           <tbody className={ui.tbody}>
@@ -122,20 +123,20 @@ export default function HistoryPage() {
                 {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
                 <td className="whitespace-nowrap px-4 py-2">
                   <div className="flex items-center justify-end gap-1.5">
-                    <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
-                    <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
-                    <ActionIconButton label="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
-                    {canSignNow(r) && (
-                      <ActionIconButton label="เซ็นเอกสารนี้" onClick={() => setSignNow(r)} tone="green" icon={<PenLine size={16} />} />
+                    <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
+                    <ActionIconButton showLabel label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
+                    <ActionIconButton showLabel label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
+                    {canSignNow() && (
+                      <ActionIconButton showLabel label="เซ็นเอกสารนี้ด้วยตัวเอง หรือลบลายเซ็นที่เซ็นผิด" short="เซ็น" onClick={() => setSignNow(r)} tone="green" icon={<Signature size={16} />} />
                     )}
                     {canSend(r) && (
-                      <ActionIconButton label="ส่งให้เซ็น" onClick={() => setSignModal(r)} tone="blue" icon={<Send size={16} />} />
+                      <ActionIconButton showLabel label="ส่งให้คนอื่นเซ็น" short="ส่งให้เซ็น" onClick={() => setSignModal(r)} tone="blue" icon={<Send size={16} />} />
                     )}
                     {subStatus(r) === 'pending' && (
-                      <ActionIconButton label="ยกเลิกส่งเซ็น" onClick={() => onCancelSign(r)} tone="amber" icon={<RotateCcw size={16} />} />
+                      <ActionIconButton showLabel label="ยกเลิกการส่งให้เซ็น" short="ยกเลิก" onClick={() => onCancelSign(r)} tone="amber" icon={<RotateCcw size={16} />} />
                     )}
                     {isUnsigned(r) && (
-                      <ActionIconButton label="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
+                      <ActionIconButton showLabel label="ลบเอกสาร" short="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
                     )}
                   </div>
                 </td>
