@@ -17,6 +17,10 @@
     "jsx": "react-jsx",
 
     /* Linting */
+    // The Harbor UI kit ships as .js/.jsx. allowJs lets them sit beside the
+    // TypeScript without checkJs, so they compile but are not type-checked.
+    "allowJs": true,
+
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
