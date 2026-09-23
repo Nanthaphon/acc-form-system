@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Pencil, Plus, Tags, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
+import CopyButton from '../../components/CopyButton'
 import { PageHeader, ui } from '../../components/ui'
 import type { AccessGroup } from '../../types/schema'
 import { listAccessGroups, createAccessGroup, renameAccessGroup, deleteAccessGroup, accessGroupUsage } from '../../data/accessGroups'
@@ -63,18 +64,25 @@ export default function AccessGroupsPage() {
           <thead className={ui.thead}>
             <tr>
               <th className={ui.th}>ชื่อกลุ่ม</th>
-              <th className={ui.th}></th>
+              <th className={ui.th}>รหัสกลุ่ม <span className="font-normal text-gray-400">· ใช้ในไฟล์นำเข้าพนักงาน</span></th>
+              <th className={ui.th} aria-label="จัดการ" />
             </tr>
           </thead>
           <tbody className={ui.tbody}>
             {loading ? (
-              <tr><td colSpan={2} className={ui.emptyCell}>กำลังโหลด...</td></tr>
+              <tr><td colSpan={3} className={ui.emptyCell}>กำลังโหลด...</td></tr>
             ) : groups.length === 0 ? (
-              <tr><td colSpan={2} className={ui.emptyCell}>ยังไม่มีกลุ่ม — กด “เพิ่มกลุ่ม” เพื่อสร้าง</td></tr>
+              <tr><td colSpan={3} className={ui.emptyCell}>ยังไม่มีกลุ่ม — กด “เพิ่มกลุ่ม” เพื่อสร้าง</td></tr>
             ) : (
               groups.map(g => (
                 <tr key={g.id} className={ui.tr}>
                   <td className={`${ui.td} font-medium text-gray-900`}>{g.name}</td>
+                  <td className={ui.td}>
+                    <span className="inline-flex max-w-full items-center gap-1">
+                      <span className="truncate font-mono text-[12px] text-gray-500" title={g.id}>{g.id}</span>
+                      <CopyButton value={g.id} label="คัดลอกรหัสกลุ่ม" />
+                    </span>
+                  </td>
                   <td className={ui.td}>
                     <div className="flex items-center justify-end gap-1.5">
                       <ActionIconButton label="เปลี่ยนชื่อ" icon={<Pencil size={16} />} onClick={() => onRename(g)} />

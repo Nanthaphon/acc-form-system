@@ -8,6 +8,7 @@ import { listCompanies } from '../../data/companies'
 import type { Company } from '../../types/schema'
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { Spinner } from '../../components/Spinner'
+import { ui } from '../../components/ui'
 
 // CSV columns, in template order: [name, required, what goes in it]
 const COLUMNS: Array<[string, boolean, string]> = [
@@ -104,14 +105,26 @@ export default function ImportCsvPage() {
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[15px] font-semibold text-gray-900">1. เลือกไฟล์</h2>
+          <a
+            href="/employees-template.xlsx"
+            download
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <Download size={16} /> ดาวน์โหลดไฟล์ Excel (แนะนำ)
+          </a>
           <button
             type="button"
             onClick={downloadTemplate}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900"
           >
-            <Download size={16} /> ดาวน์โหลดไฟล์ตัวอย่าง
+            <Download size={16} /> ไฟล์ CSV เปล่า
           </button>
         </div>
+
+        <p className={`${ui.hint} mb-4`}>
+          ไฟล์ Excel มีคำอธิบายทุกคอลัมน์และมีรายการให้เลือก (สิทธิ์ · บริษัท · กลุ่ม) —
+          กรอกเสร็จแล้วต้อง <span className="font-medium text-gray-700">บันทึกเป็น CSV UTF-8</span> ก่อนอัปโหลด เพราะระบบอ่านเฉพาะไฟล์ .csv
+        </p>
 
         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-8 text-center hover:border-blue-400 hover:bg-blue-50/40">
           <FileSpreadsheet size={28} className="text-gray-400" />
