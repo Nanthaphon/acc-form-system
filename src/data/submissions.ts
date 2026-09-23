@@ -56,13 +56,18 @@ export function submissionAmount(s: SubmissionSummary): number {
 }
 
 export async function deleteSubmission(id: string): Promise<void> {
-  // Remove attached files first: the storage policies authorise by looking up
-  // the parent row, so once the row is gone its files could no longer be deleted.
+  // Attached files have to go first: the storage policies authorise by looking
+  // up the parent row, so once the row is gone its files can no longer be
+  // removed. That order used to be dangerous — a blocked delete answers 204
+  // with no error, so the files were destroyed while the document survived —
+  // which is why the delete is now checked by what it returns, not by the
+  // absence of an error.
   const { data } = await supabase.from('submissions').select('attachments').eq('id', id).maybeSingle()
   const paths = ((data?.attachments ?? []) as { path: string }[]).map(a => a.path)
   if (paths.length) await deleteAttachmentFiles(paths)
-  const { error } = await supabase.from('submissions').delete().eq('id', id)
+  const { data: gone, error } = await supabase.from('submissions').delete().eq('id', id).select('id')
   if (error) throw error
+  if (!gone?.length) throw new Error('ลบเอกสารไม่ได้ — อาจไม่มีสิทธิ์ลบ หรือเอกสารถูกลบไปแล้ว')
 }
 
 // ----- Online signatures -----
@@ -156,6 +161,13 @@ export async function countMyPendingToSign(uid: string): Promise<number> {
 // so signers keep a record of what they signed.
 export async function listMyAssigned(uid: string): Promise<SubmissionSummary[]> {
   return listRows(q => q.contains('signatures', signedBy({ assignedUid: uid })).order('createdAt', { ascending: false }))
+}
+
+// True once anybody has actually signed. From that moment the document is a
+// record: its content is locked in the database (protect_signed_content), and
+// correcting it means taking the signature off first.
+export function isSigned(s: SubmissionSummary): boolean {
+  return (s.signatures ?? []).some(x => x.status === 'signed')
 }
 
 // True while a document carries no signature assignments at all — the state in

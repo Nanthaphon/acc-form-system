@@ -1,9 +1,9 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Copy, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
+import { Copy, Eye, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, listSigners, cancelSigning } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -123,7 +123,9 @@ export default function HistoryPage() {
                 {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
                 <td className="whitespace-nowrap px-4 py-2">
                   <div className="flex items-center justify-end gap-1.5">
-                    <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
+                    {isSigned(r)
+                      ? <ActionIconButton showLabel label="ดูเอกสาร · มีลายเซ็นแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
+                      : <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />}
                     <ActionIconButton showLabel label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
                     <ActionIconButton showLabel label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
                     {canSignNow() && (

@@ -12,7 +12,7 @@ import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { createSubmission, updateSubmission, getSubmission, incrementPrint } from '../../data/submissions'
+import { createSubmission, updateSubmission, getSubmission, incrementPrint, isSigned } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
 import { uploadAttachments, deleteAttachmentFiles, saveAttachmentList } from '../../data/attachments'
@@ -46,13 +46,14 @@ export default function FormPage() {
 
   function buildTotals(): ExpenseTotals {
     const subtotal = grandTotal(settings.columns, items)
-    const tax = taxSummary(subtotal, header.vat, header.whtRate)
+    const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate)
     return {
       columnTotals: computeColumnTotals(settings.columns, items),
       grandTotal: subtotal,
       amountInThaiText: bahtText(tax.netTotal),
       vatAmount: tax.vatAmount,
       whtAmount: tax.whtAmount,
+      retentionAmount: tax.retentionAmount,
       netTotal: tax.netTotal,
     }
   }
@@ -153,6 +154,9 @@ export default function FormPage() {
     window.print()
   }
 
+  // Signed documents are locked in the database (protect_signed_content), so
+  // the page says so up front instead of only failing at save time.
+  const locked = isSigned({ signatures: sigs } as never)
   const isAdmin = profile?.role === 'admin'
 
   // A closed form (maintenance) is not accessible to employees via direct URL.
@@ -169,6 +173,11 @@ export default function FormPage() {
   return (
     <div>
       <div className="no-print space-y-4">
+        {locked && (
+          <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            เอกสารนี้มีลายเซ็นแล้ว จึงแก้ไขเนื้อหาไม่ได้ — ถ้าต้องแก้ ให้ลบลายเซ็นออกก่อนที่หน้าประวัติ
+          </div>
+        )}
         <PageHeader
           onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
           icon={<Receipt size={20} />}
@@ -213,7 +222,8 @@ export default function FormPage() {
         <button
           className={ui.btnPrimary}
           onClick={save}
-          disabled={saving}
+          disabled={saving || locked}
+          title={locked ? 'เอกสารมีลายเซ็นแล้ว แก้ไขไม่ได้' : undefined}
         >
           {saving ? <><Spinner size={16} /> กำลังบันทึก...</> : <><Save size={16} /> บันทึก</>}
         </button>

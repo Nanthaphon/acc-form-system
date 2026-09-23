@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Submission, DocSignature } from '../types/schema'
 import { canRequestSignatures, DEFAULT_SIGNATURE_BLOCKS } from '../types/schema'
-import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature } from './submissions'
+import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature, isSigned } from './submissions'
 
 function sub(signatures?: DocSignature[]): Submission {
   return {
@@ -112,5 +112,17 @@ describe('canRemoveSignature', () => {
   })
   it('refuses someone else\u2019s signature on a document that is not mine', () => {
     expect(canRemoveSignature(s('signed', OTHER), 'uid-2', OWNER)).toBe(false)
+  })
+})
+
+describe('isSigned', () => {
+  it('is false until someone actually signs — being asked to is not enough', () => {
+    expect(isSigned(sub())).toBe(false)
+    expect(isSigned(sub([]))).toBe(false)
+    expect(isSigned(sub([sig('pending')]))).toBe(false)
+  })
+  it('is true from the first signature on, even with others still waiting', () => {
+    expect(isSigned(sub([sig('signed')]))).toBe(true)
+    expect(isSigned(sub([sig('pending'), sig('signed')]))).toBe(true)
   })
 })
