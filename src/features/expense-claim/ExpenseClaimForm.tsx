@@ -27,6 +27,7 @@ interface Props {
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
 const STANDARD_WHT = 3 // % — the default หัก ณ ที่จ่าย rate
+const STANDARD_RETENTION = 5 // % — the usual ค่าประกันงาน held back
 
 const cardClass = 'rounded-xl border border-gray-200 bg-white p-6'
 const cardTitleClass = 'mb-4 text-[15px] font-semibold text-gray-900'
@@ -90,7 +91,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const total = grandTotal(cols, items)
-  const tax = taxSummary(total, header.vat, header.whtRate)
+  const tax = taxSummary(total, header.vat, header.whtRate, header.retentionRate)
 
   // หัก ณ ที่จ่าย: 3% is the standard rate; "อื่นๆ" lets the user type any rate.
   // `whtOther` holds the typed text while that option is picked — it may be
@@ -201,7 +202,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full table-fixed border-separate border-spacing-0 text-xs" style={{ minWidth: `${tableMinWidth(vcols)}px` }}>
+              <table className="w-full table-fixed border-separate border-spacing-0 text-xs leading-[1.9]" style={{ minWidth: `${tableMinWidth(vcols)}px` }}>
                 <thead>
                   <tr>
                     <th className="w-8 border-b border-gray-200 bg-gray-50 px-1.5 py-2.5 text-center text-xs font-medium text-gray-500">#</th>
@@ -209,7 +210,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       <th
                         key={col.key}
                         style={{ width: colWidth(col) ? `${colWidth(col)}px` : undefined }}
-                        className={`whitespace-normal break-words border-b border-gray-200 bg-gray-50 px-1.5 py-2.5 text-[11px] font-medium text-gray-600 ${
+                        className={`whitespace-pre-line break-words border-b border-gray-200 bg-gray-50 px-1.5 py-2.5 text-[11px] font-medium text-gray-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
                       >
@@ -302,6 +303,33 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               <input type="checkbox" checked={!!header.vat} onChange={e => onHeaderChange({ ...header, vat: e.target.checked })} />
               ภาษีมูลค่าเพิ่ม (VAT) 7%
             </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={!!header.retentionRate}
+                onChange={e => onHeaderChange({ ...header, retentionRate: e.target.checked ? STANDARD_RETENTION : 0 })}
+              />
+              ค่าประกันงาน
+            </label>
+            {!!header.retentionRate && (
+              <span className="flex items-center gap-1">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  aria-label="อัตราค่าประกันงาน (%)"
+                  className="w-20 rounded-md border border-gray-200 bg-white px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  value={header.retentionRate}
+                  onChange={e => {
+                    const n = Number(e.target.value)
+                    onHeaderChange({ ...header, retentionRate: Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0 })
+                  }}
+                />
+                %
+              </span>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -353,6 +381,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
             <div className="flex justify-between text-gray-600"><span>ยอดรวม (ก่อนภาษี)</span><span>{fmt(tax.subtotal)}</span></div>
             {header.vat && <div className="flex justify-between text-gray-600"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>+{fmt(tax.vatAmount)}</span></div>}
             {!!header.whtRate && <div className="flex justify-between text-red-600"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>−{fmt(tax.whtAmount)}</span></div>}
+            {!!header.retentionRate && <div className="flex justify-between text-red-600"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>−{fmt(tax.retentionAmount)}</span></div>}
             <div className="flex justify-between border-t border-gray-200 pt-2 text-base font-semibold text-gray-900">
               <span>ยอดสุทธิ</span><span>{fmt(tax.netTotal)} บาท</span>
             </div>

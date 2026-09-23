@@ -1,5 +1,5 @@
 import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
@@ -45,7 +45,7 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
         {signed && sig?.signatureImage ? <img src={sig.signatureImage} alt="ลายเซ็น" className="max-h-10 object-contain pb-0.5" /> : <>&nbsp;</>}
       </div>
       <div className="mt-1">{label}</div>
-      <div className="mt-2 leading-tight">
+      <div className="mt-2 leading-snug">
         {signed
           ? <>({sig?.assignedName})<br />{sig?.signedAt ? `วันที่ ${formatDate(sig.signedAt)}` : ''}</>
           : 'วันที่ ................'}
@@ -59,7 +59,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
-  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate)
+  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate)
   const hasTax = !!header.vat || !!header.whtRate
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
@@ -68,7 +68,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   // Column widths as proportional percentages (not px) so the table always fits
   // the page frame exactly, no matter how many columns or how wide their hints.
   // Columns without a width hint fall back to a default weight.
-  const SEQ_WEIGHT = 30
+  const SEQ_WEIGHT = seqColumnWidth(settings)
   const widthWeights = vcols.map(c => c.width ?? 70)
   const weightTotal = SEQ_WEIGHT + widthWeights.reduce((a, b) => a + b, 0)
   const pct = (w: number) => `${((w / weightTotal) * 100).toFixed(3)}%`
@@ -170,7 +170,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
             {/* ข้อความหัวฟอร์ม (เหนือตาราง) ถ้ามี */}
             {settings.introText?.trim() && (
-              <FilledText className="mt-3 whitespace-pre-line text-justify leading-relaxed" text={settings.introText} values={header.fields} />
+              <FilledText className="mt-3 whitespace-pre-line text-justify leading-loose" text={settings.introText} values={header.fields} />
             )}
 
             {/* ตาราง */}
@@ -182,7 +182,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                     <th
                       key={col.key}
                       style={{ width: pct(widthWeights[ci]) }}
-                      className="break-words border border-black px-1 py-1"
+                      className="whitespace-pre-line break-words border border-black px-1 py-1 leading-[2]"
                     >
                       {col.label}
                     </th>
@@ -194,7 +194,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                   <tr key={i}>
                     <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
                     {vcols.map(col => (
-                      <td key={col.key} className={`break-words border border-black px-1 py-0.5 ${isTextCol(col.type) ? '' : 'text-right'}`}>
+                      <td key={col.key} className={`break-words border border-black px-1 py-0.5 leading-[2] ${isTextCol(col.type) ? '' : 'text-right'}`}>
                         {col.type === 'date'
                           ? formatIsoDate(computed[i][col.key] as string)
                           : isTextCol(col.type)
@@ -231,6 +231,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                 <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
                 {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>{money(tax.vatAmount)}</span></div>}
                 {!!header.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>-{money(tax.whtAmount)}</span></div>}
+                {!!header.retentionRate && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>-{money(tax.retentionAmount)}</span></div>}
                 <div className="flex justify-between border-t border-black font-bold"><span>ยอดสุทธิ</span><span>{money(tax.netTotal)}</span></div>
               </div>
             )}
@@ -244,7 +245,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
             {/* ข้อความรับรอง / คำประกาศ (ถ้ามี) */}
             {settings.bodyText?.trim() && (
-              <FilledText className="mt-4 whitespace-pre-line text-justify leading-relaxed" text={settings.bodyText} values={header.fields} />
+              <FilledText className="mt-4 whitespace-pre-line text-justify leading-loose" text={settings.bodyText} values={header.fields} />
             )}
 
             {/* Signature blocks — configured per form, laid out in rows of 3 */}

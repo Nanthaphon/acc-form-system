@@ -95,6 +95,7 @@ export interface FormSettings {
   bodyText?: string                    // free declaration/certification paragraph shown below the table, above signatures
   showRequester?: boolean              // show the ชื่อ/นามสกุล/ตำแหน่ง/Job line (default true)
   showAmountWords?: boolean            // show the "เป็นจำนวนเงิน ... บาทถ้วน" box (default true)
+  seqWidth?: number                    // width of the leading ลำดับ column (see SEQ_COLUMN_WIDTH)
   requesterTitle?: string              // heading above the requester fields on the fill-in screen (read via sectionTitles)
   itemsTitle?: string                  // heading above the items table on the fill-in screen (read via sectionTitles)
 }
@@ -124,6 +125,16 @@ export function canSeeForm(f: Pick<FormSettings, 'accessGroup' | 'accessGroups'>
   if (isAdmin) return true
   const allowed = formAccessGroups(f)
   return allowed.length === 0 || (!!viewerGroup && allowed.includes(viewerGroup))
+}
+
+// The leading ลำดับ column is built in rather than configured as a column, so
+// its width is a form setting of its own. The default is narrow enough for the
+// row numbers but too narrow for the word "ลำดับ" itself, which is why it can
+// be set per form.
+export const SEQ_COLUMN_WIDTH = 30
+export function seqColumnWidth(f?: Pick<FormSettings, 'seqWidth'> | null): number {
+  const w = f?.seqWidth
+  return typeof w === 'number' && w > 0 ? w : SEQ_COLUMN_WIDTH
 }
 
 export const EXPENSE_CLAIM_DEFAULT_COLUMNS: FormColumn[] = [
@@ -190,7 +201,8 @@ export interface ExpenseTotals {
   amountInThaiText: string     // baht text of the net total
   vatAmount?: number           // 7% of subtotal when VAT is ticked
   whtAmount?: number           // withholding tax deducted (3% or 5% of subtotal)
-  netTotal?: number            // subtotal + VAT − withholding
+  retentionAmount?: number     // ค่าประกันงาน held back, a % of subtotal
+  netTotal?: number            // subtotal + VAT − withholding − retention
 }
 
 export interface ExpenseHeader {
@@ -203,6 +215,7 @@ export interface ExpenseHeader {
   job: string
   vat?: boolean                // add 7% VAT
   whtRate?: number             // withholding tax rate: 0 | 3 | 5
+  retentionRate?: number       // ค่าประกันงาน held back (%), deducted like withholding
   fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
 

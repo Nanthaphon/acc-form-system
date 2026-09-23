@@ -60,14 +60,17 @@ export function bahtTextForRows(columns: FormColumn[], rows: ExpenseRow[]): stri
   return bahtText(grandTotal(columns, rows))
 }
 
-// VAT (7%) and withholding tax are computed on the items subtotal (pre-VAT),
-// the standard Thai basis. Net = subtotal + VAT − withholding.
-export interface TaxResult { subtotal: number; vatAmount: number; whtAmount: number; netTotal: number }
-export function taxSummary(subtotal: number, vat?: boolean, whtRate?: number): TaxResult {
+// VAT (7%), withholding tax and ค่าประกันงาน are all computed on the items
+// subtotal (pre-VAT), the standard Thai basis.
+// Net = subtotal + VAT − withholding − retention.
+export interface TaxResult { subtotal: number; vatAmount: number; whtAmount: number; retentionAmount: number; netTotal: number }
+export function taxSummary(subtotal: number, vat?: boolean, whtRate?: number, retentionRate?: number): TaxResult {
   const vatAmount = vat ? round2(subtotal * 0.07) : 0
   const whtAmount = whtRate ? round2(subtotal * whtRate / 100) : 0
-  const netTotal = round2(subtotal + vatAmount - whtAmount)
-  return { subtotal, vatAmount, whtAmount, netTotal }
+  // ค่าประกันงาน (retention) is held back on the pre-VAT amount, like withholding.
+  const retentionAmount = retentionRate ? round2(subtotal * retentionRate / 100) : 0
+  const netTotal = round2(subtotal + vatAmount - whtAmount - retentionAmount)
+  return { subtotal, vatAmount, whtAmount, retentionAmount, netTotal }
 }
 
 // Fill-in table sizing. The table is `table-fixed`, where a cell's min-width is
