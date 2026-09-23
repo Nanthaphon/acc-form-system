@@ -9,15 +9,14 @@ import { createEmployee } from '../../data/users'
 import type { NewEmployee } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
-import { listDepartments } from '../../data/departments'
 import { ROLE_OPTIONS } from '../../shared/roles'
-import type { Company, AccessGroup, Department, Role } from '../../types/schema'
+import type { Company, AccessGroup, Role } from '../../types/schema'
 
 const MIN_ID = 6 // the employee ID is also the first password, which needs 6+ characters
 
 const EMPTY = {
   employeeId: '', firstName: '', lastName: '', position: '',
-  department: '', departmentId: '', companyId: '', defaultJob: '', bankAccount: '',
+  department: '', companyId: '', defaultJob: '', bankAccount: '',
   role: 'employee' as Role, accessGroup: '',
 }
 
@@ -25,16 +24,14 @@ export default function AddEmployeePage() {
   const nav = useNavigate()
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
-  const [depts, setDepts] = useState<Department[]>([])
   const [f, setF] = useState(EMPTY)
   const [mustChange, setMustChange] = useState(true)
   const [saving, setSaving] = useState(false)
   const [created, setCreated] = useState<{ employeeId: string; name: string; mustChange: boolean } | null>(null)
-  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups); listDepartments().then(setDepts) }, [])
+  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups) }, [])
 
   const set = (k: keyof typeof EMPTY, v: string) => setF(prev => ({ ...prev, [k]: v }))
   // Store the department id plus its name (for display).
-  const setDept = (id: string) => setF(prev => ({ ...prev, departmentId: id, department: depts.find(d => d.id === id)?.name ?? '' }))
   const username = f.employeeId.trim()
 
   async function submit(e: React.FormEvent) {
@@ -149,10 +146,7 @@ export default function AddEmployeePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={ui.label}>แผนก</label>
-              <select className={ui.input} value={f.departmentId} onChange={e => setDept(e.target.value)}>
-                <option value="">— เลือกแผนก —</option>
-                {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
+              <input className={ui.input} placeholder="เช่น Payroll" value={f.department} onChange={e => set('department', e.target.value)} />
             </div>
             <div>
               <label className={ui.label}>บริษัท</label>

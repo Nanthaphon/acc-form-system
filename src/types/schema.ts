@@ -63,16 +63,6 @@ export const ACCESS_GROUPS = [
   { id: 'pcms', name: 'PcMs' },
 ]
 
-// Departments are the org unit used to route approvals: an employee belongs to
-// one department; an approver covers one or more departments. Managed by admins
-// in the `departments` table (part of the online-approval feature).
-export interface Department {
-  id: string
-  name: string
-  sortOrder: number
-  createdAt: number
-}
-
 // A form/folder is visible to employees only when active. Admins always see it
 // (with a toggle) so they can close a form for maintenance and reopen it.
 export function isActive(x: { active?: boolean }): boolean {
@@ -188,7 +178,6 @@ export interface UserProfile {
   mustChangePassword: boolean
   groupId?: string
   accessGroup?: string
-  departmentId?: string
   createdAt: number
   signatureImage?: string          // saved signature (data URL), reused when signing documents
   isSuperAdmin?: boolean           // the one admin who may set anyone's password (see shared/roles)

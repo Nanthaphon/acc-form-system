@@ -7,7 +7,6 @@ export interface NewEmployee {
   employeeId: string; firstName: string; lastName: string
   position: string; department: string; companyId: string
   defaultJob: string; bankAccount: string; role: Role; accessGroup?: string
-  departmentId?: string
   mustChangePassword?: boolean   // ask for a new password on first login (default true)
 }
 
@@ -26,7 +25,7 @@ export async function createEmployee(e: NewEmployee): Promise<string> {
     uid, employeeId: e.employeeId, firstName: e.firstName, lastName: e.lastName,
     position: e.position, department: e.department, companyId: e.companyId,
     defaultJob: e.defaultJob, bankAccount: e.bankAccount, role: e.role,
-    accessGroup: e.accessGroup, departmentId: e.departmentId,
+    accessGroup: e.accessGroup,
     mustChangePassword: e.mustChangePassword ?? true, createdAt: Date.now(),
   }
   const { error: e2 } = await supabase.from('profiles').insert(profile)
@@ -40,7 +39,7 @@ export async function getProfileByUid(uid: string): Promise<UserProfile | null> 
 }
 // Every profile column except signatureImage (a base64 image per person) —
 // lists only need names and details.
-const EMPLOYEE_LIST_COLS = 'uid,employeeId,firstName,lastName,position,department,departmentId,companyId,defaultJob,bankAccount,role,groupId,accessGroup,mustChangePassword,createdAt'
+const EMPLOYEE_LIST_COLS = 'uid,employeeId,firstName,lastName,position,department,companyId,defaultJob,bankAccount,role,groupId,accessGroup,mustChangePassword,createdAt'
 const EMPLOYEE_LOGIN_COLS = 'isSuperAdmin,passwordIsDefault'
 export async function listEmployees(): Promise<UserProfile[]> {
   const q = (cols: string) => supabase.from('profiles').select(cols).order('employeeId')

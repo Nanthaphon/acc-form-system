@@ -6,12 +6,11 @@ import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid, updateProfile } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
-import { listDepartments } from '../../data/departments'
 import { dbErrorMessage } from '../../shared/dbError'
 import { isSuperAdmin, ROLE_OPTIONS } from '../../shared/roles'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { PageHeader, ui } from '../../components/ui'
-import type { Company, UserProfile, AccessGroup, Department } from '../../types/schema'
+import type { Company, UserProfile, AccessGroup } from '../../types/schema'
 
 export default function EditEmployeePage() {
   const { uid } = useParams<{ uid: string }>()
@@ -19,12 +18,11 @@ export default function EditEmployeePage() {
   const { profile: me, refresh } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
-  const [depts, setDepts] = useState<Department[]>([])
   const [f, setF] = useState<UserProfile | null>(null)
   const [saving, setSaving] = useState(false)
   const [changingUsername, setChangingUsername] = useState(false)
 
-  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups); listDepartments().then(setDepts) }, [])
+  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups) }, [])
   useEffect(() => {
     if (!uid) return
     getProfileByUid(uid).then(p => setF(p))
@@ -32,7 +30,6 @@ export default function EditEmployeePage() {
 
   const set = (k: keyof UserProfile, v: string) => setF(prev => prev ? { ...prev, [k]: v } : prev)
   // Store the department id plus its name (for display).
-  const setDept = (id: string) => setF(prev => prev ? { ...prev, departmentId: id, department: depts.find(d => d.id === id)?.name ?? '' } : prev)
 
   const viewerIsSuper = isSuperAdmin(me)
   const targetIsSuper = isSuperAdmin(f)
@@ -52,7 +49,7 @@ export default function EditEmployeePage() {
     try {
       await updateProfile(uid, {
         firstName: f.firstName, lastName: f.lastName, position: f.position,
-        department: f.department, departmentId: f.departmentId, companyId: f.companyId, defaultJob: f.defaultJob,
+        department: f.department, companyId: f.companyId, defaultJob: f.defaultJob,
         bankAccount: f.bankAccount, accessGroup: f.accessGroup,
         ...(targetIsSuper ? {} : { role: f.role }),
       })
@@ -128,10 +125,7 @@ export default function EditEmployeePage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={ui.label}>แผนก</label>
-                <select className={ui.input} value={f.departmentId ?? ''} onChange={e => setDept(e.target.value)}>
-                  <option value="">— เลือกแผนก —</option>
-                  {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
+                <input className={ui.input} placeholder="เช่น Payroll" value={f.department} onChange={e => set('department', e.target.value)} />
               </div>
               <div>
                 <label className={ui.label}>บริษัท</label>
