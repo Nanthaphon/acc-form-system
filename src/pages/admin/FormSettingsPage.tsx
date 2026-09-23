@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
@@ -19,8 +19,6 @@ import { listAccessGroups } from '../../data/accessGroups'
 const iconBtn = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm ring-1 ring-gray-200/80 transition hover:bg-gray-50 disabled:opacity-40'
 // Compact dashed "add" button for nested panels (calc operands, dropdown options, chips).
 const btnDashedSm = 'inline-flex items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600'
-// Inline text link ("insert column here", "add field").
-const linkBtn = 'inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline'
 // Nested panel inside a card (one column's settings, one company's logo).
 const subCard = 'rounded-xl border border-gray-200 bg-white p-4'
 const subPanel = 'rounded-lg bg-gray-50 p-3'
@@ -53,16 +51,22 @@ function sampleRow(cols: FormColumn[]): ExpenseRow {
   return r
 }
 
-// A settings card: title on the left, optional extra (a count, an add link) on the right.
-function Section({ title, extra, children }: { title: string; extra?: ReactNode; children: ReactNode }) {
+// A settings card that folds away. The summary line says what is inside, so the
+// page reads as a short list of what this form has and only the part being
+// edited needs to be open. Interactive controls belong in the body, never in
+// the summary — a click there would toggle the card.
+function Section({ title, summary, defaultOpen, children }: {
+  title: string; summary?: string; defaultOpen?: boolean; children: ReactNode
+}) {
   return (
-    <div className={ui.card}>
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className={ui.cardTitle}>{title}</h2>
-        {extra}
-      </div>
-      {children}
-    </div>
+    <details className={`${ui.card} group`} open={defaultOpen}>
+      <summary className="flex cursor-pointer list-none items-center gap-3">
+        <ChevronDown size={18} className="shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
+        <h2 className={`${ui.cardTitle} shrink-0`}>{title}</h2>
+        {summary && <span className="min-w-0 flex-1 truncate text-right text-xs text-gray-400">{summary}</span>}
+      </summary>
+      <div className="mt-4">{children}</div>
+    </details>
   )
 }
 
@@ -287,8 +291,16 @@ export default function FormSettingsPage() {
   }
   const previewItems: ExpenseRow[] = [sampleRow(columns), sampleRow(columns)]
 
+  // One-line descriptions on the folded cards, so the page says what this form
+  // already has without opening anything.
+  const groupsSummary = selectedGroups.length === 0
+    ? 'ทุกคน'
+    : selectedGroups.map(id => groups.find(g => g.id === id)?.name ?? id).join(', ')
+  const textSummary = [settings.introText?.trim() && 'เหนือตาราง', settings.bodyText?.trim() && 'ใต้ตาราง']
+    .filter(Boolean).join(' · ') || 'ไม่มีข้อความ'
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Stays on screen while scrolling a long form, so saving is always one click away. */}
       <div className="sticky top-0 z-20 -mt-2 bg-[#f4f6fb] pt-2">
         <PageHeader
@@ -313,10 +325,9 @@ export default function FormSettingsPage() {
       )}
 
       {!showPreview && (
-      <div className="space-y-4">
+      <div className="space-y-3">
 
-      {/* ข้อมูลทั่วไป: หัวเอกสาร + กลุ่มที่เห็นฟอร์ม + ช่องเพิ่มเติมใต้ชื่อผู้เบิก */}
-      <Section title="ข้อมูลทั่วไป">
+      <Section title="ข้อมูลทั่วไป" summary={`${settings.formCode || 'ไม่มีรหัสฟอร์ม'} · เห็นได้: ${groupsSummary}`} defaultOpen>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="ชื่อบนเอกสาร">
             <input className={ui.input} value={settings.title} onChange={e => setField('title', e.target.value)} />
@@ -347,39 +358,33 @@ export default function FormSettingsPage() {
             </Field>
           </div>
         </div>
+      </Section>
 
-        <div className="mt-5 border-t border-gray-100 pt-4">
-          <span className="text-xs font-medium text-gray-500">หัวข้อในหน้ากรอกข้อมูล</span>
-          <p className="mb-2 mt-0.5 text-xs text-gray-400">ชื่อหัวข้อที่พนักงานเห็นตอนกรอกฟอร์ม · เว้นว่างไว้เพื่อใช้ชื่อเดิม (ไม่แสดงบนเอกสารที่พิมพ์)</p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="หัวข้อส่วนข้อมูลผู้เบิก">
-              <input
-                className={ui.input}
-                placeholder={DEFAULT_REQUESTER_TITLE}
-                value={settings.requesterTitle ?? ''}
-                onChange={e => setField('requesterTitle', e.target.value)}
-              />
-            </Field>
-            <Field label="หัวข้อส่วนรายการ">
-              <input
-                className={ui.input}
-                placeholder={DEFAULT_ITEMS_TITLE}
-                value={settings.itemsTitle ?? ''}
-                onChange={e => setField('itemsTitle', e.target.value)}
-              />
-            </Field>
-          </div>
+      <Section title="หน้ากรอกของพนักงาน" summary={`${settings.requesterTitle || DEFAULT_REQUESTER_TITLE} · ${settings.itemsTitle || DEFAULT_ITEMS_TITLE} · ช่องเพิ่มเติม ${headerFields().length}`}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="ชื่อหัวข้อส่วนบน">
+            <input
+              className={ui.input}
+              placeholder={DEFAULT_REQUESTER_TITLE}
+              value={settings.requesterTitle ?? ''}
+              onChange={e => setField('requesterTitle', e.target.value)}
+            />
+          </Field>
+          <Field label="ชื่อหัวข้อส่วนตาราง">
+            <input
+              className={ui.input}
+              placeholder={DEFAULT_ITEMS_TITLE}
+              value={settings.itemsTitle ?? ''}
+              onChange={e => setField('itemsTitle', e.target.value)}
+            />
+          </Field>
         </div>
+        <p className={`${ui.hint} mt-2`}>เห็นเฉพาะตอนกรอก ไม่ขึ้นบนเอกสารที่พิมพ์</p>
 
         <div className="mt-5 border-t border-gray-100 pt-4">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-gray-500">ช่องเพิ่มเติมใต้ชื่อผู้เบิก</span>
-            <button className={linkBtn} onClick={addHeaderField}><Plus size={14} /> เพิ่มช่อง</button>
-          </div>
-          {headerFields().length === 0 ? (
-            <p className="text-sm text-gray-400">ไม่มี</p>
-          ) : (
-            <div className="space-y-2">
+          <span className="text-xs font-medium text-gray-500">ช่องกรอกเพิ่มเติม (ใต้ชื่อผู้เบิก)</span>
+          {headerFields().length > 0 && (
+            <div className="mt-2 space-y-2">
               {headerFields().map((f, i) => (
                 <div key={f.id} className="flex flex-wrap items-center gap-2">
                   <input className={`${ui.inputSm} min-w-[160px] flex-1`} value={f.label} placeholder="ชื่อช่อง" onChange={e => setHFieldLabel(i, e.target.value)} />
@@ -394,27 +399,19 @@ export default function FormSettingsPage() {
               ))}
             </div>
           )}
+          <button className={`${btnDashedSm} mt-2`} onClick={addHeaderField}><Plus size={14} /> เพิ่มช่อง</button>
         </div>
       </Section>
 
-      {/* คอลัมน์ตาราง (Column builder) */}
-      <div className={ui.card}>
-        <div className="mb-1 flex items-center justify-between gap-2">
-          <h2 className={ui.cardTitle}>คอลัมน์ตาราง</h2>
-          <Badge tone={visibleCount >= MAX_VISIBLE ? 'red' : 'gray'}>
-            แสดงอยู่ {visibleCount} / {MAX_VISIBLE}
-          </Badge>
-        </div>
-        <div className="mb-4" />
-
-        {/* Representative header preview */}
-        <div className="mb-4 overflow-x-auto rounded-lg border border-gray-200">
+      <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE}`} defaultOpen>
+        {/* What the table will look like — the quickest way to check the result. */}
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="w-full text-left text-[11px]">
             <thead>
               <tr className={ui.thead}>
-                <th className="px-2 py-1.5 font-medium text-gray-500">#</th>
-                {columns.map(c => (
-                  <th key={c.key} className="whitespace-nowrap px-2 py-1.5 font-semibold text-gray-900">
+                <th className="px-2 py-1.5 font-medium text-gray-500" style={{ width: `${seqColumnWidth(settings)}px` }}>ลำดับ</th>
+                {columns.filter(c => !c.hidden).map(c => (
+                  <th key={c.key} className="whitespace-pre-line px-2 py-1.5 font-semibold text-gray-900">
                     {c.label || <span className="font-normal text-gray-400">(ไม่มีชื่อ)</span>}
                     {c.type === 'calc' && <span className="ml-1 font-normal text-gray-500">ƒ</span>}
                   </th>
@@ -424,154 +421,152 @@ export default function FormSettingsPage() {
           </table>
         </div>
 
-        <div className="space-y-3">
-          <button onClick={() => insertColumnAt(0)} className={linkBtn}><Plus size={14} /> แทรกคอลัมน์ที่ตำแหน่งแรก</button>
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 p-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-200 text-xs font-semibold text-gray-600">#</span>
+          <span className="text-sm text-gray-700">คอลัมน์ลำดับ</span>
+          <label className="flex items-center gap-1 text-xs text-gray-500" title="กว้างเกินไปจะกินที่คอลัมน์อื่น แคบเกินไปคำว่า “ลำดับ” จะตกบรรทัด">
+            กว้าง
+            <input
+              type="number"
+              min={1}
+              placeholder={String(SEQ_COLUMN_WIDTH)}
+              value={settings.seqWidth ?? ''}
+              onChange={e => setField('seqWidth', e.target.value ? Number(e.target.value) : undefined)}
+              className={`${ui.inputSm} w-[88px]`}
+            />
+          </label>
+          <span className={`${ui.hint} ml-auto`}>เป็นคอลัมน์ในตัว ลบไม่ได้</span>
+        </div>
+
+        <div className="mt-2 space-y-2">
           {columns.map((col, i) => {
             const others = columns.filter((c, x) => x !== i && (c.type === 'number' || c.type === 'calc'))
             const isPercent = col.calc?.op === 'percent'
             const operands = col.calc ? calcOperands(col.calc) : []
             return (
-              <div key={i}>
-                <div className={subCard}>
-                  <div className="flex flex-wrap items-end gap-2">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg bg-blue-50 text-sm font-semibold text-blue-600">{i + 1}</div>
-                    <div className="min-w-[180px] flex-1">
-                      <label className={ui.label}>ชื่อคอลัมน์</label>
-                      <input className={ui.input} value={col.label} onChange={e => patchColumn(i, { label: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className={ui.label}>ชนิด</label>
-                      <select className={ui.inputSm} value={col.type} onChange={e => changeType(i, e.target.value as ColumnType)}>
-                        <option value="text">Text (ข้อความ)</option>
-                        <option value="number">Number (ตัวเลข)</option>
-                        <option value="date">วันที่ (Date)</option>
-                        <option value="select">Dropdown (ตัวเลือก)</option>
-                        <option value="calc">คำนวณ</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={ui.label}>กว้าง (px)</label>
-                      <input
-                        type="number"
-                        placeholder="อัตโนมัติ"
-                        value={col.width ?? ''}
-                        onChange={e => patchColumn(i, { width: e.target.value ? Number(e.target.value) : undefined })}
-                        className={ui.inputSm + ' w-24'}
-                      />
-                    </div>
-                    <label className="ml-auto flex cursor-pointer select-none items-center gap-1.5 pb-2 text-sm text-gray-700">
-                      <input type="checkbox" checked={!col.hidden} onChange={() => toggleVisible(i)} />
-                      แสดง
-                    </label>
-                    <div className="flex items-center gap-1.5 pb-1">
-                      <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
-                      <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
-                      <button className={iconBtn} onClick={() => removeColumn(i)} title="ลบคอลัมน์"><Trash2 size={16} /></button>
-                    </div>
+              <div key={i} className={`rounded-lg border border-gray-200 p-2 ${col.hidden ? 'bg-gray-50' : 'bg-white'}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-xs font-semibold text-blue-600">{i + 1}</span>
+                  <textarea
+                    rows={1}
+                    className={`${ui.inputSm} min-w-[150px] flex-1 resize-y`}
+                    placeholder="ชื่อคอลัมน์"
+                    title="กด Enter เพื่อขึ้นบรรทัดใหม่ในหัวตาราง"
+                    value={col.label}
+                    onChange={e => patchColumn(i, { label: e.target.value })}
+                  />
+                  <select className={ui.inputSm} title="ชนิดข้อมูล" value={col.type} onChange={e => changeType(i, e.target.value as ColumnType)}>
+                    <option value="text">ข้อความ</option>
+                    <option value="number">ตัวเลข</option>
+                    <option value="date">วันที่</option>
+                    <option value="select">ตัวเลือก</option>
+                    <option value="calc">คำนวณ</option>
+                  </select>
+                  <label className="flex items-center gap-1 text-xs text-gray-500" title="ความกว้างบนเอกสาร · เว้นว่าง = อัตโนมัติ">
+                    กว้าง
+                    <input
+                      type="number"
+                      placeholder="อัตโนมัติ"
+                      value={col.width ?? ''}
+                      onChange={e => patchColumn(i, { width: e.target.value ? Number(e.target.value) : undefined })}
+                      className={`${ui.inputSm} w-[88px]`}
+                    />
+                  </label>
+                  <label className="flex cursor-pointer select-none items-center gap-1.5 text-sm text-gray-700" title="เอาออกจากเอกสารโดยไม่ต้องลบคอลัมน์">
+                    <input type="checkbox" checked={!col.hidden} onChange={() => toggleVisible(i)} />
+                    แสดง
+                  </label>
+                  <div className="ml-auto flex items-center gap-1">
+                    <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
+                    <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
+                    <button className={iconBtn} onClick={() => insertColumnAt(i + 1)} title="แทรกคอลัมน์ถัดจากนี้"><Plus size={16} /></button>
+                    <button className={iconBtn} onClick={() => removeColumn(i)} title="ลบคอลัมน์"><Trash2 size={16} /></button>
                   </div>
+                </div>
 
-                  {col.type === 'calc' && (
-                    <div className={`${subPanel} mt-3 flex flex-wrap items-end gap-2`}>
-                      <div>
-                        <label className={ui.label}>สูตร</label>
-                        <select className={ui.inputSm} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
-                          {(['multiply', 'subtract', 'add', 'divide'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
-                          {/* ร้อยละ ถูกยกเลิก — คงไว้เฉพาะคอลัมน์เดิมที่ใช้อยู่ ให้ยังแก้ไขได้ */}
-                          {col.calc?.op === 'percent' && <option value="percent">{OP_LABELS.percent}</option>}
+                {col.type === 'calc' && (
+                  <div className={`${subPanel} mt-2 flex flex-wrap items-center gap-2`}>
+                    <span className="text-xs text-gray-500">คำนวณจาก</span>
+                    <select className={ui.inputSm} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
+                      {(['multiply', 'subtract', 'add', 'divide'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
+                      {/* ร้อยละ ถูกยกเลิก — คงไว้เฉพาะคอลัมน์เดิมที่ใช้อยู่ ให้ยังแก้ไขได้ */}
+                      {col.calc?.op === 'percent' && <option value="percent">{OP_LABELS.percent}</option>}
+                    </select>
+                    {isPercent ? (
+                      <>
+                        <select className={ui.inputSm} value={operands[0] ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
+                          <option value="">— เลือกคอลัมน์ —</option>
+                          {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
                         </select>
-                      </div>
-                      {isPercent ? (
-                        <>
-                          <div>
-                            <label className={ui.label}>ค่า A</label>
-                            <select className={ui.inputSm} value={operands[0] ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
-                              <option value="">— เลือก —</option>
+                        <input type="number" className={`${ui.inputSm} w-20 text-right`} value={col.calc?.percent ?? 0} onChange={e => patchCalc(i, { percent: Number(e.target.value) })} />
+                        <span className="text-xs text-gray-500">%</span>
+                      </>
+                    ) : (
+                      <>
+                        {operands.map((opKey, opIdx) => (
+                          <div key={opIdx} className="flex items-center gap-1.5">
+                            {opIdx > 0 && <span className="text-sm text-gray-500">{OP_SYMBOL[col.calc?.op ?? 'multiply']}</span>}
+                            <select className={ui.inputSm} value={opKey} onChange={e => setOperand(i, opIdx, e.target.value)}>
+                              <option value="">— เลือกคอลัมน์ —</option>
                               {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
                             </select>
-                          </div>
-                          <div>
-                            <label className={ui.label}>ร้อยละ (%)</label>
-                            <input type="number" className={`${ui.inputSm} w-24 text-right`} value={col.calc?.percent ?? 0} onChange={e => patchCalc(i, { percent: Number(e.target.value) })} />
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-wrap items-end gap-1.5">
-                          {operands.map((opKey, opIdx) => (
-                            <div key={opIdx} className="flex items-end gap-1.5">
-                              {opIdx > 0 && <span className="pb-2 text-sm text-gray-500">{OP_SYMBOL[col.calc?.op ?? 'multiply']}</span>}
-                              <div>
-                                <label className={ui.label}>ค่า {opIdx + 1}</label>
-                                <div className="flex items-center gap-1">
-                                  <select className={ui.inputSm} value={opKey} onChange={e => setOperand(i, opIdx, e.target.value)}>
-                                    <option value="">— เลือก —</option>
-                                    {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
-                                  </select>
-                                  <button
-                                    type="button"
-                                    className={iconBtn}
-                                    onClick={() => removeOperand(i, opIdx)}
-                                    disabled={operands.length <= 2}
-                                    title="ลบค่านี้"
-                                  ><X size={14} /></button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          <button
-                            type="button"
-                            className={`${btnDashedSm} mb-0.5`}
-                            onClick={() => addOperand(i)}
-                          >
-                            <Plus size={14} /> เพิ่มค่า
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {col.type === 'select' && (
-                    <div className={`${subPanel} mt-3`}>
-                      <label className={ui.label}>ตัวเลือกใน Dropdown (พนักงานเลือกตอนกรอก)</label>
-                      <div className="space-y-2">
-                        {(col.options ?? []).map((opt, optIdx) => (
-                          <div key={optIdx} className="flex items-center gap-2">
-                            <span className="w-5 shrink-0 text-right text-xs text-gray-500">{optIdx + 1}.</span>
-                            <input
-                              className={`${ui.inputSm} flex-1`}
-                              value={opt}
-                              placeholder={`ตัวเลือกที่ ${optIdx + 1}`}
-                              onChange={e => setOption(i, optIdx, e.target.value)}
-                            />
-                            <button type="button" className={iconBtn} onClick={() => removeOption(i, optIdx)} title="ลบตัวเลือก"><X size={14} /></button>
+                            <button
+                              type="button"
+                              className={iconBtn}
+                              onClick={() => removeOperand(i, opIdx)}
+                              disabled={operands.length <= 2}
+                              title="ลบค่านี้"
+                            ><X size={14} /></button>
                           </div>
                         ))}
-                      </div>
-                      <button
-                        type="button"
-                        className={`${btnDashedSm} mt-2`}
-                        onClick={() => addOption(i)}
-                      >
-                        <Plus size={14} /> เพิ่มตัวเลือก
-                      </button>
+                        <button type="button" className={btnDashedSm} onClick={() => addOperand(i)}>
+                          <Plus size={14} /> เพิ่มค่า
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {col.type === 'select' && (
+                  <div className={`${subPanel} mt-2`}>
+                    <span className="text-xs text-gray-500">ตัวเลือกที่พนักงานเลือกได้</span>
+                    <div className="mt-2 space-y-2">
+                      {(col.options ?? []).map((opt, optIdx) => (
+                        <div key={optIdx} className="flex items-center gap-2">
+                          <span className="w-5 shrink-0 text-right text-xs text-gray-500">{optIdx + 1}.</span>
+                          <input
+                            className={`${ui.inputSm} flex-1`}
+                            value={opt}
+                            placeholder={`ตัวเลือกที่ ${optIdx + 1}`}
+                            onChange={e => setOption(i, optIdx, e.target.value)}
+                          />
+                          <button type="button" className={iconBtn} onClick={() => removeOption(i, optIdx)} title="ลบตัวเลือก"><X size={14} /></button>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </div>
-                <button onClick={() => insertColumnAt(i + 1)} className={`${linkBtn} mt-1.5`}><Plus size={14} /> แทรกคอลัมน์ถัดจากนี้</button>
+                    <button type="button" className={`${btnDashedSm} mt-2`} onClick={() => addOption(i)}>
+                      <Plus size={14} /> เพิ่มตัวเลือก
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
 
-        <button
-          className={`${ui.btnDashed} mt-3`}
-          onClick={() => insertColumnAt(columns.length)}
-        >
-          <Plus size={16} /> เพิ่มคอลัมน์
-        </button>
-      </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button className={ui.btnDashed} onClick={() => insertColumnAt(columns.length)}>
+            <Plus size={16} /> เพิ่มคอลัมน์
+          </button>
+          {columns.length > 0 && (
+            <button className={btnDashedSm} onClick={() => insertColumnAt(0)}>
+              <Plus size={14} /> แทรกไว้บนสุด
+            </button>
+          )}
+        </div>
+      </Section>
 
-      {/* ข้อความในเอกสาร */}
-      <Section title="ข้อความในเอกสาร">
+      <Section title="ข้อความในเอกสาร" summary={textSummary}>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Field label="เหนือตาราง">
             <TemplateTextarea
@@ -600,52 +595,45 @@ export default function FormSettingsPage() {
         </div>
       </Section>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* หมวดค่าใช้จ่าย — ช่องติ๊กบนเอกสาร */}
-        <Section title="หมวดค่าใช้จ่าย">
-          <div className="flex flex-wrap items-center gap-2">
-            {settings.categories.map((c, i) => (
-              <span key={i} className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 pl-2.5 focus-within:border-blue-500 focus-within:bg-white">
-                <input
-                  className="bg-transparent py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                  size={Math.max(6, c.length + 1)}
-                  value={c}
-                  placeholder="ชื่อหมวด"
-                  onChange={e => setCategory(i, e.target.value)}
-                />
-                <button type="button" onClick={() => removeCategory(i)} aria-label={`ลบหมวด ${c}`} className="px-1.5 py-1.5 text-gray-400 hover:text-red-600">
-                  <X size={14} />
-                </button>
-              </span>
-            ))}
-            <button className={btnDashedSm} onClick={addCategory}><Plus size={14} /> เพิ่ม</button>
-          </div>
-        </Section>
+      <Section title="ช่องลายเซ็น" summary={`${sigBlocks().length} ช่อง · ${sigBlocks().map(b => b.label).join(', ')}`}>
+        <div className="space-y-2">
+          {sigBlocks().map((b, i) => (
+            <div key={b.id} className="flex items-center gap-2">
+              <input className={`${ui.inputSm} min-w-0 flex-1`} value={b.label} placeholder="ชื่อตำแหน่ง" onChange={e => setSigLabel(i, e.target.value)} />
+              {i === 0 && <Badge tone="blue">ผู้เบิก · เซ็นอัตโนมัติ</Badge>}
+              <button className={iconBtn} onClick={() => moveSigBlock(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
+              <button className={iconBtn} onClick={() => moveSigBlock(i, 1)} disabled={i === sigBlocks().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
+              <button className={iconBtn} onClick={() => removeSigBlock(i)} title="ลบช่อง"><Trash2 size={16} /></button>
+            </div>
+          ))}
+        </div>
+        <button className={`${btnDashedSm} mt-3`} onClick={addSigBlock} disabled={sigBlocks().length >= MAX_SIGNATURE_BLOCKS}>
+          <Plus size={14} /> เพิ่มช่องลายเซ็น (สูงสุด {MAX_SIGNATURE_BLOCKS})
+        </button>
+      </Section>
 
-        {/* ช่องลายเซ็น */}
-        <Section title="ช่องลายเซ็น" extra={<Badge>{sigBlocks().length} / {MAX_SIGNATURE_BLOCKS}</Badge>}>
-          <div className="space-y-2">
-            {sigBlocks().map((b, i) => (
-              <div key={b.id} className="flex items-center gap-2">
-                <input className={`${ui.inputSm} min-w-0 flex-1`} value={b.label} placeholder="ชื่อตำแหน่ง" onChange={e => setSigLabel(i, e.target.value)} />
-                {i === 0 && <Badge tone="blue">ผู้เบิก · เซ็นอัตโนมัติ</Badge>}
-                <button className={iconBtn} onClick={() => moveSigBlock(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
-                <button className={iconBtn} onClick={() => moveSigBlock(i, 1)} disabled={i === sigBlocks().length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
-                <button className={iconBtn} onClick={() => removeSigBlock(i)} title="ลบช่อง"><Trash2 size={16} /></button>
-              </div>
-            ))}
-          </div>
-          <button className={`${btnDashedSm} mt-3`} onClick={addSigBlock} disabled={sigBlocks().length >= MAX_SIGNATURE_BLOCKS}>
-            <Plus size={14} /> เพิ่มช่องลายเซ็น
-          </button>
-        </Section>
-      </div>
+      <Section title="หมวดค่าใช้จ่าย" summary={settings.categories.filter(Boolean).length ? settings.categories.filter(Boolean).join(', ') : 'ไม่มี'}>
+        <div className="flex flex-wrap items-center gap-2">
+          {settings.categories.map((c, i) => (
+            <span key={i} className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 pl-2.5 focus-within:border-blue-500 focus-within:bg-white">
+              <input
+                className="bg-transparent py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                size={Math.max(6, c.length + 1)}
+                value={c}
+                placeholder="ชื่อหมวด"
+                onChange={e => setCategory(i, e.target.value)}
+              />
+              <button type="button" onClick={() => removeCategory(i)} aria-label={`ลบหมวด ${c}`} className="px-1.5 py-1.5 text-gray-400 hover:text-red-600">
+                <X size={14} />
+              </button>
+            </span>
+          ))}
+          <button className={btnDashedSm} onClick={addCategory}><Plus size={14} /> เพิ่ม</button>
+        </div>
+      </Section>
 
-      {/* หมายเหตุท้ายเอกสาร */}
-      <Section title="หมายเหตุท้ายเอกสาร" extra={<button className={linkBtn} onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>}>
-        {settings.notes.length === 0 ? (
-          <p className="text-sm text-gray-400">ไม่มี</p>
-        ) : (
+      <Section title="หมายเหตุท้ายเอกสาร" summary={settings.notes.length ? `${settings.notes.length} ข้อ` : 'ไม่มี'}>
+        {settings.notes.length > 0 && (
           <div className="space-y-2">
             {settings.notes.map((n, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -655,15 +643,11 @@ export default function FormSettingsPage() {
             ))}
           </div>
         )}
+        <button className={`${btnDashedSm} mt-2`} onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>
       </Section>
 
-      {/* โลโก้บริษัท — ใช้กับทุกฟอร์ม จึงพับเก็บไว้ */}
-      <details className={`${ui.card} group`}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
-          <span className={ui.cardTitle}>โลโก้บริษัท <span className="text-xs font-normal text-gray-400">· ใช้กับทุกฟอร์ม</span></span>
-          <ChevronDown size={18} className="text-gray-400 transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="mt-4 space-y-3">
+      <Section title="โลโก้บริษัท" summary="ใช้กับทุกฟอร์ม">
+        <div className="space-y-3">
           {companies.map(company => (
             <div key={company.id} className={`${subCard} flex flex-wrap items-center gap-4`}>
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
@@ -686,9 +670,10 @@ export default function FormSettingsPage() {
             </div>
           ))}
         </div>
-      </details>
+      </Section>
       </div>
       )}
     </div>
   )
 }
+
