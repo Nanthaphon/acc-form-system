@@ -7,7 +7,6 @@ import DateInput from './DateInput'
 import { ui } from './ui'
 
 const STATUSES: SubmissionStatus[] = ['done', 'pending', 'signed']
-const cls = ui.inputSm
 
 interface Props {
   value: Filters
@@ -16,9 +15,13 @@ interface Props {
   groups?: FormGroup[]        // when provided, show a folder filter
   employees?: UserProfile[]   // when provided, show an employee filter
   resultCount: number
+  // The styling a page wants for the fields and the reset button. Defaults to
+  // the app theme; a page trying another one passes that theme instead.
+  tokens?: { inputSm: string; btnGhost: string }
 }
 
-export default function SubmissionFilterBar({ value, onChange, forms, groups, employees, resultCount }: Props) {
+export default function SubmissionFilterBar({ value, onChange, forms, groups, employees, resultCount, tokens = ui }: Props) {
+  const cls = tokens.inputSm
   const set = (patch: Partial<Filters>) => onChange({ ...value, ...patch })
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -68,7 +71,7 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, em
           <DateInput className={`${cls} w-36`} value={value.toD} onChange={v => set({ toD: v })} />
         </div>
       )}
-      <button type="button" onClick={() => onChange(emptyFilters)} className={ui.btnGhost}>
+      <button type="button" onClick={() => onChange(emptyFilters)} className={tokens.btnGhost}>
         <RotateCcw size={15} /> ล้างตัวกรอง
       </button>
       <span className="ml-auto whitespace-nowrap text-sm text-gray-500">

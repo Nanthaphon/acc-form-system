@@ -20,7 +20,10 @@ import SignNowModal from '../../components/SignNowModal'
 import StatusBadge from '../../components/StatusBadge'
 import { notifyPendingSignChanged } from '../../shared/pendingSignBus'
 import ActionIconButton from '../../components/ActionIconButton'
-import { Badge, PageHeader, ui } from '../../components/ui'
+// TRIAL — this page, and only this page, is styled with the Harbor kit.
+// To put it back the way every other page looks, change 'uiHarbor' to 'ui'
+// on the next line and drop the tokens={ui} below.
+import { Badge, PageHeader, ui } from '../../components/uiHarbor'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
@@ -104,7 +107,7 @@ export default function HistoryPage() {
         subtitle={`ทั้งหมด ${rows.length} รายการ`}
       />
       <div className="mb-4">
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} resultCount={filtered.length} />
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} resultCount={filtered.length} tokens={ui} />
       </div>
       <div className="mb-3 flex justify-end">
         <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />
