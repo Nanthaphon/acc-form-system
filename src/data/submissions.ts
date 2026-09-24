@@ -188,8 +188,8 @@ export function subStatus(s: SubmissionSummary): SubmissionStatus {
 }
 const STATUS_META: Record<SubmissionStatus, { label: string; className: string }> = {
   done: { label: 'เสร็จสิ้น', className: 'bg-clay-50 text-clay-700' },
-  pending: { label: 'รอลายเซ็น', className: 'bg-ochre-100 text-ochre-700' },
-  signed: { label: 'เซ็นครบ', className: 'bg-olive-100 text-olive-700' },
+  pending: { label: 'รอลายเซ็น', className: 'bg-ochre-50 text-ochre-700' },
+  signed: { label: 'เซ็นครบ', className: 'bg-olive-50 text-olive-700' },
 }
 export function statusMeta(s: SubmissionStatus) { return STATUS_META[s] }
 

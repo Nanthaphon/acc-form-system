@@ -26,7 +26,7 @@ export const ui = {
   // tables
   tableWrap: 'overflow-x-auto rounded-2xl border border-stone-200/60 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04),0_20px_50px_-28px_rgba(22,32,36,0.20)]',
   table: 'w-full text-sm',
-  thead: 'border-b border-stone-200/60 text-stone-400',
+  thead: 'border-b border-stone-200/60 text-stone-500',
   th: 'whitespace-nowrap px-4 py-3 text-left text-xs font-medium',
   tbody: 'divide-y divide-stone-100',
   tr: 'transition-colors hover:bg-stone-50/60',

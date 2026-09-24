@@ -73,9 +73,9 @@ export default function Layout() {
               <LogOut size={18} className="opacity-85" /> ออกจากระบบ
             </button>
           </nav>
-          <Link to="/profile" className="mt-3 block px-3.5 text-xs text-clay-300 hover:text-clay-100">
+          <Link to="/profile" className="mt-3 block px-3.5 text-xs text-clay-200 hover:text-clay-50">
             {profile?.firstName} {profile?.lastName}
-            {profile && <span className="mt-0.5 block text-[11px] text-clay-400">{roleLabel(profile)}</span>}
+            {profile && <span className="mt-0.5 block text-[11px] text-clay-300">{roleLabel(profile)}</span>}
           </Link>
         </div>
       </aside>
