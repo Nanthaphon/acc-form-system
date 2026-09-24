@@ -24,8 +24,8 @@ function PasswordCell({ p }: { p: UserProfile }) {
   return (
     <div className="flex items-center gap-1.5" title={meta.hint}>
       {st === 'default'
-        ? <><span className="font-mono text-[13px] text-gray-900">{p.employeeId}</span><CopyButton value={p.employeeId} label="คัดลอกรหัสผ่าน" /></>
-        : <span className="font-mono tracking-widest text-gray-300">••••••</span>}
+        ? <><span className="font-mono text-[13px] text-stone-900">{p.employeeId}</span><CopyButton value={p.employeeId} label="คัดลอกรหัสผ่าน" /></>
+        : <span className="font-mono tracking-widest text-stone-300">••••••</span>}
       <Badge tone={meta.tone}>{meta.label}</Badge>
     </div>
   )
@@ -78,7 +78,7 @@ export default function EmployeeListPage() {
       {/* Search + what the password badges mean */}
       <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-3">
         <div className="relative w-full max-w-sm">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
@@ -86,7 +86,7 @@ export default function EmployeeListPage() {
             className={`${ui.input} pl-9`}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500">
           {STATES.map(s => (
             <span key={s} className="inline-flex items-center gap-1.5">
               <Badge tone={PASSWORD_STATE[s].tone}>{PASSWORD_STATE[s].label}</Badge> {PASSWORD_STATE[s].short}
@@ -104,20 +104,20 @@ export default function EmployeeListPage() {
             {filtered.map(r => (
               <tr key={r.uid} className={ui.tr}>
                 <td className={`${ui.td} whitespace-nowrap`}>
-                  <Link to={`/admin/employees/${r.uid}`} className="font-medium text-gray-900 hover:text-blue-600">
+                  <Link to={`/admin/employees/${r.uid}`} className="font-medium text-stone-900 hover:text-clay-600">
                     {r.firstName} {r.lastName}
                   </Link>
                 </td>
                 <td className={`${ui.td} whitespace-nowrap`}>
                   <div className="flex items-center gap-1">
-                    <span className="font-mono text-[13px] font-medium text-gray-900">{r.employeeId}</span>
+                    <span className="font-mono text-[13px] font-medium text-stone-900">{r.employeeId}</span>
                     <CopyButton value={r.employeeId} label="คัดลอกชื่อผู้ใช้" />
                   </div>
                 </td>
                 <td className={`${ui.td} whitespace-nowrap`}><PasswordCell p={r} /></td>
                 <td className={ui.td}>
-                  <div className="text-gray-700">{r.position || <span className="text-gray-300">—</span>}</div>
-                  {r.department && <div className="text-xs text-gray-400">{r.department}</div>}
+                  <div className="text-stone-700">{r.position || <span className="text-stone-300">—</span>}</div>
+                  {r.department && <div className="text-xs text-stone-400">{r.department}</div>}
                 </td>
                 <td className={`${ui.td} max-w-[200px] truncate`} title={companyName(r.companyId)}>{companyName(r.companyId)}</td>
                 <td className={`${ui.td} whitespace-nowrap`}><Badge tone={roleTone(r)}>{roleLabel(r)}</Badge></td>

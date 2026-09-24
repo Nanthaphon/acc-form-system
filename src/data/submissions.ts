@@ -187,9 +187,9 @@ export function subStatus(s: SubmissionSummary): SubmissionStatus {
   return sigs.every(x => x.status === 'signed') ? 'signed' : 'pending'
 }
 const STATUS_META: Record<SubmissionStatus, { label: string; className: string }> = {
-  done: { label: 'เสร็จสิ้น', className: 'bg-blue-50 text-blue-700' },
-  pending: { label: 'รอลายเซ็น', className: 'bg-amber-100 text-amber-700' },
-  signed: { label: 'เซ็นครบ', className: 'bg-green-100 text-green-700' },
+  done: { label: 'เสร็จสิ้น', className: 'bg-clay-50 text-clay-700' },
+  pending: { label: 'รอลายเซ็น', className: 'bg-ochre-100 text-ochre-700' },
+  signed: { label: 'เซ็นครบ', className: 'bg-olive-100 text-olive-700' },
 }
 export function statusMeta(s: SubmissionStatus) { return STATUS_META[s] }
 

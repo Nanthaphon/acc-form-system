@@ -10,8 +10,8 @@ import { roleLabel } from '../shared/roles'
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm transition-colors ${
     isActive
-      ? 'bg-blue-600 text-white shadow-[0_4px_14px_rgba(37,99,235,0.35)]'
-      : 'text-[#aeb9cf] hover:bg-white/[.06] hover:text-white'
+      ? 'bg-clay-600 text-white shadow-[0_4px_14px_rgba(43,103,119,0.35)]'
+      : 'text-clay-200 hover:bg-white/[.06] hover:text-white'
   }`
 
 export default function Layout() {
@@ -27,10 +27,10 @@ export default function Layout() {
   useEffect(() => { refreshToSign() }, [refreshToSign])
   useEffect(() => onPendingSignChanged(refreshToSign), [refreshToSign])
   return (
-    <div className="flex min-h-screen bg-[#f4f6fb]">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-[#16233f] pb-4 text-[#cdd6e6]">
+    <div className="flex min-h-screen bg-sand-50">
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-clay-900 pb-4 text-clay-100">
         <div className="flex items-center gap-2.5 px-5 py-5 text-base font-semibold text-white">
-          <span className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-gradient-to-br from-[#3b6fe0] to-[#5b8bff] text-lg">
+          <span className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-gradient-to-br from-clay-500 to-clay-400 text-lg">
             <ClipboardList size={20} />
           </span>
           ระบบเบิกค่าใช้จ่าย
@@ -44,7 +44,7 @@ export default function Layout() {
           </NavLink>
           <NavLink to="/sign" className={navLinkClass}>
             <Inbox size={18} className="opacity-85" /> รอฉันเซ็น
-            {toSign > 0 && <span className="ml-auto rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-[#16233f]">{toSign}</span>}
+            {toSign > 0 && <span className="ml-auto rounded-full bg-ochre-500 px-2 py-0.5 text-[11px] font-bold text-clay-900">{toSign}</span>}
           </NavLink>
           {profile?.role === 'admin' && <>
             <NavLink to="/admin/employees" className={navLinkClass}>
@@ -68,14 +68,14 @@ export default function Layout() {
             </NavLink>
             <button
               onClick={() => logout()}
-              className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-sm text-[#aeb9cf] transition-colors hover:bg-white/[.06] hover:text-white"
+              className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-left text-sm text-clay-200 transition-colors hover:bg-white/[.06] hover:text-white"
             >
               <LogOut size={18} className="opacity-85" /> ออกจากระบบ
             </button>
           </nav>
-          <Link to="/profile" className="mt-3 block px-3.5 text-xs text-[#7a869a] hover:text-[#cdd6e6]">
+          <Link to="/profile" className="mt-3 block px-3.5 text-xs text-clay-300 hover:text-clay-100">
             {profile?.firstName} {profile?.lastName}
-            {profile && <span className="mt-0.5 block text-[11px] text-[#5f6b80]">{roleLabel(profile)}</span>}
+            {profile && <span className="mt-0.5 block text-[11px] text-clay-400">{roleLabel(profile)}</span>}
           </Link>
         </div>
       </aside>

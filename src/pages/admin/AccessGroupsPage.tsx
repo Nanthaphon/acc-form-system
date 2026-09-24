@@ -55,7 +55,7 @@ export default function AccessGroupsPage() {
         }
       />
 
-      <p className="mb-4 text-sm text-gray-500">
+      <p className="mb-4 text-sm text-stone-500">
         กลุ่มใช้กำหนดว่าฟอร์มไหนให้พนักงานกลุ่มใดเห็น · เพิ่มกลุ่มที่นี่แล้วจะเลือกได้ในข้อมูลพนักงานและหน้าแก้ไขฟอร์ม
       </p>
 
@@ -64,7 +64,7 @@ export default function AccessGroupsPage() {
           <thead className={ui.thead}>
             <tr>
               <th className={ui.th}>ชื่อกลุ่ม</th>
-              <th className={ui.th}>รหัสกลุ่ม <span className="font-normal text-gray-400">· ใช้ในไฟล์นำเข้าพนักงาน</span></th>
+              <th className={ui.th}>รหัสกลุ่ม <span className="font-normal text-stone-400">· ใช้ในไฟล์นำเข้าพนักงาน</span></th>
               <th className={ui.th} aria-label="จัดการ" />
             </tr>
           </thead>
@@ -76,10 +76,10 @@ export default function AccessGroupsPage() {
             ) : (
               groups.map(g => (
                 <tr key={g.id} className={ui.tr}>
-                  <td className={`${ui.td} font-medium text-gray-900`}>{g.name}</td>
+                  <td className={`${ui.td} font-medium text-stone-900`}>{g.name}</td>
                   <td className={ui.td}>
                     <span className="inline-flex max-w-full items-center gap-1">
-                      <span className="truncate font-mono text-[12px] text-gray-500" title={g.id}>{g.id}</span>
+                      <span className="truncate font-mono text-[12px] text-stone-500" title={g.id}>{g.id}</span>
                       <CopyButton value={g.id} label="คัดลอกรหัสกลุ่ม" />
                     </span>
                   </td>

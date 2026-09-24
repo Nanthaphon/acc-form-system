@@ -64,21 +64,21 @@ export default function PrintHistoryPage() {
 
   const columns: Column[] = [
     {
-      key: 'form', label: 'ชื่อฟอร์ม', locked: true, tdCls: 'whitespace-nowrap font-medium text-gray-900',
+      key: 'form', label: 'ชื่อฟอร์ม', locked: true, tdCls: 'whitespace-nowrap font-medium text-stone-900',
       // One line: long names are cut with … and shown in full on hover.
       cell: r => <div className="max-w-[240px] truncate" title={formName(r.formType)}>{formName(r.formType)}</div>,
     },
     { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => r.docNumber },
     {
       key: 'emp', label: 'พนักงาน', tdCls: 'whitespace-nowrap',
-      cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-gray-400">({r.createdByEmployeeId})</span></>,
+      cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-stone-400">({r.createdByEmployeeId})</span></>,
     },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
     { key: 'amount', label: 'ยอด', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => formatMoney(submissionAmount(r)) },
     { key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap', cell: r => <StatusBadge sub={r} /> },
     {
       key: 'edits', label: 'แก้ไข', tdCls: 'whitespace-nowrap',
-      cell: r => editLabel(r, vcounts) ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge> : <span className="text-gray-300">—</span>,
+      cell: r => editLabel(r, vcounts) ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge> : <span className="text-stone-300">—</span>,
     },
     { key: 'prints', label: 'พิมพ์ (ครั้ง)', thCls: 'text-center', tdCls: 'text-center tabular-nums', cell: r => r.printCount },
     { key: 'lastPrinted', label: 'พิมพ์ล่าสุด', tdCls: 'whitespace-nowrap', cell: r => formatDateTime(r.lastPrintedAt) },

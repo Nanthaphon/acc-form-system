@@ -33,13 +33,13 @@ export default function SignerSelect({ value, onChange, signers, className }: Pr
         onChange={e => { setQ(e.target.value); setOpen(true) }}
       />
       {open && (
-        <div className="absolute z-20 mt-1 max-h-56 w-full min-w-[220px] overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-          {matches.length === 0 && <div className="px-3 py-2 text-sm text-gray-400">ไม่พบผู้เซ็น</div>}
+        <div className="absolute z-20 mt-1 max-h-56 w-full min-w-[220px] overflow-auto rounded-lg border border-stone-200 bg-white shadow-lg">
+          {matches.length === 0 && <div className="px-3 py-2 text-sm text-stone-400">ไม่พบผู้เซ็น</div>}
           {matches.map(s => (
             <button
               key={s.uid}
               type="button"
-              className={`block w-full px-3 py-2 text-left text-sm hover:bg-blue-50 ${s.uid === value ? 'bg-blue-50 font-medium text-blue-700' : ''}`}
+              className={`block w-full px-3 py-2 text-left text-sm hover:bg-clay-50 ${s.uid === value ? 'bg-clay-50 font-medium text-clay-700' : ''}`}
               onClick={() => { onChange(s.uid); setOpen(false); setQ('') }}
             >
               {s.name}

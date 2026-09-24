@@ -20,10 +20,7 @@ import SignNowModal from '../../components/SignNowModal'
 import StatusBadge from '../../components/StatusBadge'
 import { notifyPendingSignChanged } from '../../shared/pendingSignBus'
 import ActionIconButton from '../../components/ActionIconButton'
-// TRIAL — this page, and only this page, is styled with the Harbor kit.
-// To put it back the way every other page looks, change 'uiHarbor' to 'ui'
-// on the next line and drop the tokens={ui} below.
-import { Badge, PageHeader, ui } from '../../components/uiHarbor'
+import { Badge, PageHeader, ui } from '../../components/ui'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
@@ -68,7 +65,7 @@ export default function HistoryPage() {
   const { hidden, toggle, reset } = useHiddenColumns('cols:myHistory')
   const columns: Column[] = [
     {
-      key: 'form', label: 'ชื่อฟอร์ม', locked: true, tdCls: 'whitespace-nowrap font-medium text-gray-900',
+      key: 'form', label: 'ชื่อฟอร์ม', locked: true, tdCls: 'whitespace-nowrap font-medium text-stone-900',
       // One line: long names are cut with … and shown in full on hover.
       cell: r => <div className="max-w-[240px] truncate" title={formName(r.formType)}>{formName(r.formType)}</div>,
     },
@@ -79,7 +76,7 @@ export default function HistoryPage() {
     { key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap', cell: r => <StatusBadge sub={r} /> },
     {
       key: 'edits', label: 'แก้ไข', tdCls: 'whitespace-nowrap',
-      cell: r => editLabel(r, vcounts) ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge> : <span className="text-gray-300">—</span>,
+      cell: r => editLabel(r, vcounts) ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge> : <span className="text-stone-300">—</span>,
     },
   ]
   const shown = columns.filter(c => c.locked || !hidden.has(c.key))
@@ -107,7 +104,7 @@ export default function HistoryPage() {
         subtitle={`ทั้งหมด ${rows.length} รายการ`}
       />
       <div className="mb-4">
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} resultCount={filtered.length} tokens={ui} />
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} resultCount={filtered.length} />
       </div>
       <div className="mb-3 flex justify-end">
         <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />

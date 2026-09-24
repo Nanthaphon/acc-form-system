@@ -73,7 +73,7 @@ export default function AddEmployeePage() {
       {header}
       <div className={ui.card}>
         <div className="mb-5 flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-50 text-green-600"><CheckCircle2 size={22} /></span>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-olive-50 text-olive-600"><CheckCircle2 size={22} /></span>
           <div>
             <h2 className={ui.cardTitle}>เพิ่ม {created.name} แล้ว</h2>
             <p className={ui.hint}>ส่งข้อมูลเข้าสู่ระบบนี้ให้พนักงาน</p>
@@ -83,7 +83,7 @@ export default function AddEmployeePage() {
           <Credential label="ชื่อผู้ใช้" value={created.employeeId} />
           <Credential label="รหัสผ่าน" value={created.employeeId} />
         </div>
-        <p className="mt-3 text-xs text-gray-500">
+        <p className="mt-3 text-xs text-stone-500">
           {created.mustChange ? 'ระบบจะให้เปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งแรก' : 'ไม่บังคับเปลี่ยนรหัสผ่าน · เปลี่ยนเองได้ที่เมนู “เปลี่ยนรหัสผ่าน”'}
         </p>
         <div className="mt-5 flex flex-wrap gap-2.5">
@@ -100,22 +100,22 @@ export default function AddEmployeePage() {
       <form onSubmit={submit} className="space-y-6">
         {/* ข้อมูลเข้าสู่ระบบ */}
         <div className={ui.card}>
-          <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><KeyRound size={16} className="text-gray-400" /> ข้อมูลเข้าสู่ระบบ</h2>
+          <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><KeyRound size={16} className="text-stone-400" /> ข้อมูลเข้าสู่ระบบ</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={ui.label}>รหัสพนักงาน (ชื่อผู้ใช้)</label>
               <input className={`${ui.input} font-mono`} placeholder="เช่น 1010122" autoFocus value={f.employeeId} onChange={e => set('employeeId', e.target.value)} />
-              <p className="mt-1 text-[11px] text-gray-400">อย่างน้อย {MIN_ID} ตัวอักษร · แก้ไขภายหลังไม่ได้</p>
+              <p className="mt-1 text-[11px] text-stone-400">อย่างน้อย {MIN_ID} ตัวอักษร · แก้ไขภายหลังไม่ได้</p>
             </div>
             <div>
               <label className={ui.label}>รหัสผ่านเริ่มต้น</label>
-              <div className={`${ui.input} bg-gray-50 font-mono`}>
-                {username || <span className="font-sans text-gray-400">เหมือนรหัสพนักงาน</span>}
+              <div className={`${ui.input} bg-stone-50 font-mono`}>
+                {username || <span className="font-sans text-stone-400">เหมือนรหัสพนักงาน</span>}
               </div>
-              <p className="mt-1 text-[11px] text-gray-400">ตั้งให้อัตโนมัติ = รหัสพนักงาน</p>
+              <p className="mt-1 text-[11px] text-stone-400">ตั้งให้อัตโนมัติ = รหัสพนักงาน</p>
             </div>
           </div>
-          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
             <input type="checkbox" checked={mustChange} onChange={e => setMustChange(e.target.checked)} />
             ให้เปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งแรก
           </label>

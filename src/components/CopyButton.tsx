@@ -17,7 +17,7 @@ export default function CopyButton({ value, label = 'คัดลอก' }: { va
       onClick={copy}
       title={done ? 'คัดลอกแล้ว' : label}
       aria-label={label}
-      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition ${done ? 'text-green-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'}`}
+      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition ${done ? 'text-olive-600' : 'text-stone-400 hover:bg-stone-100 hover:text-stone-700'}`}
     >
       {done ? <Check size={14} /> : <Copy size={14} />}
     </button>

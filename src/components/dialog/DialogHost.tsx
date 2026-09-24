@@ -5,9 +5,9 @@ import { subscribe, getCurrent, resolveCurrent } from './dialogService'
 import type { DialogTone } from './dialogService'
 
 const TONE: Record<DialogTone, { icon: typeof Info; iconWrap: string; confirmBtn: string }> = {
-  default: { icon: Info,           iconWrap: 'bg-blue-50 text-blue-600',   confirmBtn: 'bg-blue-600 hover:bg-blue-700' },
-  danger:  { icon: AlertTriangle,  iconWrap: 'bg-red-50 text-red-600',     confirmBtn: 'bg-red-600 hover:bg-red-700' },
-  success: { icon: CheckCircle2,   iconWrap: 'bg-green-50 text-green-600', confirmBtn: 'bg-green-600 hover:bg-green-700' },
+  default: { icon: Info,           iconWrap: 'bg-clay-50 text-clay-600',   confirmBtn: 'bg-clay-600 hover:bg-clay-700' },
+  danger:  { icon: AlertTriangle,  iconWrap: 'bg-rose-50 text-brick-600',     confirmBtn: 'bg-brick-600 hover:bg-brick-700' },
+  success: { icon: CheckCircle2,   iconWrap: 'bg-olive-50 text-olive-600', confirmBtn: 'bg-olive-600 hover:bg-olive-700' },
 }
 
 // Single modal host — mounted once at the app root. Renders the active dialog
@@ -49,15 +49,15 @@ export default function DialogHost() {
             <Icon size={20} />
           </div>
           <div className="min-w-0 flex-1 pt-0.5">
-            {current.title && <h3 className="mb-1 text-[15px] font-semibold text-gray-900">{current.title}</h3>}
-            <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">{current.message}</p>
+            {current.title && <h3 className="mb-1 text-[15px] font-semibold text-stone-900">{current.title}</h3>}
+            <p className="whitespace-pre-line text-sm leading-relaxed text-stone-600">{current.message}</p>
             {isPrompt && (
               <input
                 autoFocus
                 value={value}
                 placeholder={current.placeholder}
                 onChange={e => setValue(e.target.value)}
-                className="mt-3 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                className="mt-3 w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
               />
             )}
           </div>
@@ -67,7 +67,7 @@ export default function DialogHost() {
             <button
               type="button"
               onClick={() => resolveCurrent(false)}
-              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              className="rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50"
             >
               {current.cancelText ?? 'ยกเลิก'}
             </button>

@@ -36,12 +36,12 @@ export default function ColumnPicker({ columns, hidden, onToggle, onReset }: Pro
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-haspopup="menu" className={ui.btnSecondary}>
         <Columns3 size={16} /> คอลัมน์
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{shownCount}/{columns.length}</span>
+        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">{shownCount}/{columns.length}</span>
       </button>
 
       {open && (
-        <div role="menu" className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
-          <div className="border-b border-gray-100 px-3 py-2 text-xs font-medium text-gray-500">เลือกคอลัมน์ที่จะแสดง</div>
+        <div role="menu" className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-lg">
+          <div className="border-b border-stone-100 px-3 py-2 text-xs font-medium text-stone-500">เลือกคอลัมน์ที่จะแสดง</div>
           <ul className="max-h-72 overflow-auto py-1">
             {columns.map(c => {
               const on = isShown(c)
@@ -53,22 +53,22 @@ export default function ColumnPicker({ columns, hidden, onToggle, onReset }: Pro
                     aria-checked={on}
                     disabled={c.locked}
                     onClick={() => onToggle(c.key)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-default disabled:hover:bg-transparent"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-stone-700 hover:bg-stone-50 disabled:cursor-default disabled:hover:bg-transparent"
                   >
                     <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                      c.locked ? 'border-gray-300 bg-gray-300 text-white' : on ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white'
+                      c.locked ? 'border-stone-300 bg-stone-300 text-white' : on ? 'border-clay-600 bg-clay-600 text-white' : 'border-stone-300 bg-white'
                     }`}>
                       {on && <Check size={12} strokeWidth={3} />}
                     </span>
-                    <span className={`flex-1 truncate ${c.locked ? 'text-gray-400' : ''}`}>{c.label}</span>
-                    {c.locked && <span className="text-[11px] text-gray-400">แสดงเสมอ</span>}
+                    <span className={`flex-1 truncate ${c.locked ? 'text-stone-400' : ''}`}>{c.label}</span>
+                    {c.locked && <span className="text-[11px] text-stone-400">แสดงเสมอ</span>}
                   </button>
                 </li>
               )
             })}
           </ul>
-          <div className="border-t border-gray-100 px-3 py-2 text-right">
-            <button type="button" onClick={onReset} className="text-xs font-medium text-blue-600 hover:underline">แสดงทั้งหมด</button>
+          <div className="border-t border-stone-100 px-3 py-2 text-right">
+            <button type="button" onClick={onReset} className="text-xs font-medium text-clay-600 hover:underline">แสดงทั้งหมด</button>
           </div>
         </div>
       )}

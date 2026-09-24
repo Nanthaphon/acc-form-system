@@ -43,39 +43,39 @@ export default function AttachmentsField({ saved, pending = [], readOnly, onAdd,
   if (readOnly && count === 0) return null
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6">
+    <div className="rounded-xl border border-stone-200 bg-white p-6">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Paperclip size={16} className="text-gray-400" />
-          <h2 className="text-[15px] font-semibold text-gray-900">ไฟล์แนบ</h2>
+          <Paperclip size={16} className="text-stone-400" />
+          <h2 className="text-[15px] font-semibold text-stone-900">ไฟล์แนบ</h2>
         </div>
-        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
+        <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600">
           {count}/{MAX_ATTACHMENTS} ไฟล์ · {formatBytes(total)} / {formatBytes(MAX_ATTACHMENTS_TOTAL_BYTES)}
         </span>
       </div>
       {!readOnly && (
-        <p className="mb-4 text-xs text-gray-500">
+        <p className="mb-4 text-xs text-stone-500">
           แนบได้สูงสุด {MAX_ATTACHMENTS} ไฟล์ · ไฟล์ละไม่เกิน {formatBytes(MAX_ATTACHMENT_BYTES)} · รวมไม่เกิน {formatBytes(MAX_ATTACHMENTS_TOTAL_BYTES)} · ไฟล์จะอัปโหลดเมื่อกด “บันทึก”
         </p>
       )}
 
       {count > 0 && (
-        <ul className={`divide-y divide-gray-100 rounded-lg border border-gray-100 ${readOnly ? 'mt-3' : 'mb-3'}`}>
+        <ul className={`divide-y divide-stone-100 rounded-lg border border-stone-100 ${readOnly ? 'mt-3' : 'mb-3'}`}>
           {saved.map(a => (
             <li key={a.path} className="flex items-center gap-3 px-3 py-2">
-              <FileText size={16} className="shrink-0 text-gray-400" />
-              <span className="min-w-0 flex-1 truncate text-sm text-gray-900" title={a.name}>{a.name}</span>
-              <span className="shrink-0 text-xs text-gray-400">{formatBytes(a.size)}</span>
+              <FileText size={16} className="shrink-0 text-stone-400" />
+              <span className="min-w-0 flex-1 truncate text-sm text-stone-900" title={a.name}>{a.name}</span>
+              <span className="shrink-0 text-xs text-stone-400">{formatBytes(a.size)}</span>
               <ActionIconButton label="เปิดไฟล์" icon={<Eye size={16} />} onClick={() => open(a)} />
               {!readOnly && <ActionIconButton label="ลบไฟล์" tone="red" icon={<Trash2 size={16} />} onClick={() => onRemoveSaved?.(a)} />}
             </li>
           ))}
           {pending.map((f, i) => (
             <li key={`pending-${i}-${f.name}`} className="flex items-center gap-3 px-3 py-2">
-              <FileText size={16} className="shrink-0 text-blue-400" />
-              <span className="min-w-0 flex-1 truncate text-sm text-gray-900" title={f.name}>{f.name}</span>
-              <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">รอบันทึก</span>
-              <span className="shrink-0 text-xs text-gray-400">{formatBytes(f.size)}</span>
+              <FileText size={16} className="shrink-0 text-clay-400" />
+              <span className="min-w-0 flex-1 truncate text-sm text-stone-900" title={f.name}>{f.name}</span>
+              <span className="shrink-0 rounded-full bg-ochre-50 px-2 py-0.5 text-[11px] font-medium text-ochre-700">รอบันทึก</span>
+              <span className="shrink-0 text-xs text-stone-400">{formatBytes(f.size)}</span>
               <ActionIconButton label="เอาไฟล์ออก" tone="red" icon={<Trash2 size={16} />} onClick={() => onRemovePending?.(i)} />
             </li>
           ))}
@@ -85,7 +85,7 @@ export default function AttachmentsField({ saved, pending = [], readOnly, onAdd,
       {!readOnly && (
         <label
           className={`inline-flex items-center gap-2 rounded-lg border border-dashed px-4 py-2.5 text-sm font-medium ${
-            full ? 'cursor-not-allowed border-gray-200 text-gray-300' : 'cursor-pointer border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600'
+            full ? 'cursor-not-allowed border-stone-200 text-stone-300' : 'cursor-pointer border-stone-300 text-stone-600 hover:border-clay-400 hover:text-clay-600'
           }`}
         >
           <Paperclip size={16} /> {full ? `ครบ ${MAX_ATTACHMENTS} ไฟล์แล้ว` : 'แนบไฟล์'}

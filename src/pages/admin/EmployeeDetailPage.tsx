@@ -38,8 +38,8 @@ const HEADERS = [
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="mb-0.5 text-xs font-medium text-gray-500">{label}</div>
-      <div className="font-medium text-gray-900">{value || '-'}</div>
+      <div className="mb-0.5 text-xs font-medium text-stone-500">{label}</div>
+      <div className="font-medium text-stone-900">{value || '-'}</div>
     </div>
   )
 }
@@ -91,7 +91,7 @@ export default function EmployeeDetailPage() {
   const accessGroupName = (id?: string) => id ? (groups.find(a => a.id === id)?.name || id) : ''
 
   if (!profile) return (
-    <div className="flex items-center gap-2 p-4 text-sm text-gray-500"><Spinner size={16} /> กำลังโหลด...</div>
+    <div className="flex items-center gap-2 p-4 text-sm text-stone-500"><Spinner size={16} /> กำลังโหลด...</div>
   )
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? folders[0]?.id
@@ -135,7 +135,7 @@ export default function EmployeeDetailPage() {
 
         <div>
           <h2 className={`${ui.cardTitle} mb-3 flex items-center gap-2`}>
-            <FileText size={16} className="text-gray-400" /> เอกสารที่พิมพ์ ({subs.length})
+            <FileText size={16} className="text-stone-400" /> เอกสารที่พิมพ์ ({subs.length})
           </h2>
           <div className="mb-4">
             <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} resultCount={filtered.length} />
@@ -149,7 +149,7 @@ export default function EmployeeDetailPage() {
                 {filtered.map(r => (
                   <tr key={r.id} className={ui.tr}>
                     <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}>{r.docNumber}</td>
-                    <td className={`${ui.td} font-medium text-gray-900`}>{formName(r.formType)}</td>
+                    <td className={`${ui.td} font-medium text-stone-900`}>{formName(r.formType)}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>{formatDate(r.createdAt)}</td>
                     <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>
                     <td className={`${ui.td} text-center tabular-nums`}>{r.printCount}</td>
@@ -157,7 +157,7 @@ export default function EmployeeDetailPage() {
                     <td className={`${ui.td} whitespace-nowrap`}>
                       {editLabel(r, vcounts)
                         ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge>
-                        : <span className="text-gray-300">—</span>}
+                        : <span className="text-stone-300">—</span>}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2">
                       <div className="flex items-center justify-end gap-1.5">

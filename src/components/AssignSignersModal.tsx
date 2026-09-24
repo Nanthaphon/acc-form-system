@@ -59,27 +59,27 @@ export default function AssignSignersModal({ submission, settings, signers, curr
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-lg rounded-xl border border-stone-200 bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><PenLine size={18} /></div>
-          <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-gray-900">ส่งให้เซ็น — {submission.docNumber}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><X size={18} /></button>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><PenLine size={18} /></div>
+          <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-stone-900">ส่งให้เซ็น — {submission.docNumber}</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"><X size={18} /></button>
         </div>
         {allBlocks.length <= 1 ? (
-          <div className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">ฟอร์มนี้ไม่มีช่องให้ผู้อื่นเซ็น</div>
+          <div className="rounded-lg bg-stone-50 px-4 py-6 text-center text-sm text-stone-500">ฟอร์มนี้ไม่มีช่องให้ผู้อื่นเซ็น</div>
         ) : (
           <>
             <p className={`${ui.hint} mb-4`}>เลือกคนที่จะให้เซ็นแต่ละช่อง (ช่องผู้เบิก = ตัวคุณเอง) · ช่องที่ไม่เลือกจะเว้นว่างไว้เซ็นบนกระดาษ</p>
-            <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+            <div className="divide-y divide-stone-100 rounded-lg border border-stone-200">
               {allBlocks.map(b => {
                 const sig = sigFor(b.id)
                 return (
                   <div key={b.id} className="flex min-h-[52px] flex-wrap items-center gap-2 px-3 py-2">
-                    <span className="w-32 shrink-0 text-sm font-medium text-gray-700">{b.label}</span>
+                    <span className="w-32 shrink-0 text-sm font-medium text-stone-700">{b.label}</span>
                     {sig?.status === 'signed' ? (
                       <Badge tone="green">✔ เซ็นแล้วโดย {sig.assignedName}</Badge>
                     ) : isSelf(b.id) ? (
-                      <span className="text-sm text-gray-700">ตัวเอง (คุณ){sig?.status === 'pending' ? ' · รอเซ็น' : ''}</span>
+                      <span className="text-sm text-stone-700">ตัวเอง (คุณ){sig?.status === 'pending' ? ' · รอเซ็น' : ''}</span>
                     ) : (
                       <>
                         <SignerSelect

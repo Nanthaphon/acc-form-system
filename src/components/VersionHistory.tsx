@@ -34,20 +34,20 @@ export default function VersionHistory({ submissionId, columns, settings, compan
           const changes = older ? describeChanges(older, v, columns) : ['สร้างเอกสาร']
           const isLatest = idx === 0
           return (
-            <li key={v.id} className={`border-l-2 pl-4 ${isLatest ? 'border-blue-600' : 'border-gray-200'}`}>
+            <li key={v.id} className={`border-l-2 pl-4 ${isLatest ? 'border-clay-600' : 'border-stone-200'}`}>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                <span className="font-semibold text-gray-900">เวอร์ชัน {v.version}</span>
+                <span className="font-semibold text-stone-900">เวอร์ชัน {v.version}</span>
                 {isLatest && <Badge tone="green">ล่าสุด</Badge>}
-                <span className="text-gray-300">·</span>
-                <span className="text-gray-500">{formatDateTime(v.editedAt)}</span>
-                {v.editedByName && <><span className="text-gray-300">·</span><span className="text-gray-500">โดย {v.editedByName}</span></>}
+                <span className="text-stone-300">·</span>
+                <span className="text-stone-500">{formatDateTime(v.editedAt)}</span>
+                {v.editedByName && <><span className="text-stone-300">·</span><span className="text-stone-500">โดย {v.editedByName}</span></>}
                 <span className="ml-auto flex items-center gap-1.5">
                   <ActionIconButton label="ดูเวอร์ชันนี้" icon={<Eye size={16} />} onClick={() => setViewing(v)} />
                   {canRestore && <ActionIconButton label="กู้คืนเวอร์ชันนี้" icon={<RotateCcw size={16} />} onClick={() => onRestore(v)} />}
                 </span>
               </div>
-              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-gray-600">
-                {changes.length ? changes.map((c, i) => <li key={i}>{c}</li>) : <li className="text-gray-400">ไม่มีการเปลี่ยนแปลง</li>}
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-stone-600">
+                {changes.length ? changes.map((c, i) => <li key={i}>{c}</li>) : <li className="text-stone-400">ไม่มีการเปลี่ยนแปลง</li>}
               </ul>
             </li>
           )

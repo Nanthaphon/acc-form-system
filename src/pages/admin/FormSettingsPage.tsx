@@ -16,12 +16,12 @@ import { listAccessGroups } from '../../data/accessGroups'
 
 // Page-local extras on top of the shared `ui` tokens.
 // Neutral square icon button (same look as ActionIconButton) — a plain <button> so it can be disabled.
-const iconBtn = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-gray-900 shadow-sm ring-1 ring-gray-200/80 transition hover:bg-gray-50 disabled:opacity-40'
+const iconBtn = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-stone-900 shadow-sm ring-1 ring-stone-200/80 transition hover:bg-stone-50 disabled:opacity-40'
 // Compact dashed "add" button for nested panels (calc operands, dropdown options, chips).
-const btnDashedSm = 'inline-flex items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600'
+const btnDashedSm = 'inline-flex items-center justify-center gap-1 rounded-lg border border-dashed border-stone-300 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-600 hover:border-clay-400 hover:text-clay-600'
 // Nested panel inside a card (one column's settings, one company's logo).
-const subCard = 'rounded-xl border border-gray-200 bg-white p-4'
-const subPanel = 'rounded-lg bg-gray-50 p-3'
+const subCard = 'rounded-xl border border-stone-200 bg-white p-4'
+const subPanel = 'rounded-lg bg-stone-50 p-3'
 
 const OP_LABELS: Record<CalcDef['op'], string> = {
   multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', divide: '÷ หาร', percent: '% ร้อยละ',
@@ -61,9 +61,9 @@ function Section({ title, summary, defaultOpen, children }: {
   return (
     <details className={`${ui.card} group`} open={defaultOpen}>
       <summary className="flex cursor-pointer list-none items-center gap-3">
-        <ChevronDown size={18} className="shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
+        <ChevronDown size={18} className="shrink-0 text-stone-400 transition-transform group-open:rotate-180" />
         <h2 className={`${ui.cardTitle} shrink-0`}>{title}</h2>
-        {summary && <span className="min-w-0 flex-1 truncate text-right text-xs text-gray-400">{summary}</span>}
+        {summary && <span className="min-w-0 flex-1 truncate text-right text-xs text-stone-400">{summary}</span>}
       </summary>
       <div className="mt-4">{children}</div>
     </details>
@@ -302,7 +302,7 @@ export default function FormSettingsPage() {
   return (
     <div className="space-y-3">
       {/* Stays on screen while scrolling a long form, so saving is always one click away. */}
-      <div className="sticky top-0 z-20 -mt-2 bg-[#f4f6fb] pt-2">
+      <div className="sticky top-0 z-20 -mt-2 bg-sand-50 pt-2">
         <PageHeader
           icon={<Pencil size={20} />}
           title={`แก้ไขฟอร์ม — ${settings.name || settings.title}`}
@@ -319,7 +319,7 @@ export default function FormSettingsPage() {
       </div>
 
       {showPreview && (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-stone-50 p-4">
           <ExpenseClaimPreview company={previewCompany} header={previewHeader} items={previewItems} docNumber={settings.formCode || 'GAC6709-003'} settings={settings} />
         </div>
       )}
@@ -344,7 +344,7 @@ export default function FormSettingsPage() {
           <div className="sm:col-span-2">
             <Field label="กลุ่มที่เห็นฟอร์มนี้">
               {groups.length === 0 ? (
-                <p className="py-2.5 text-sm text-gray-400">ทุกคน · ยังไม่มีกลุ่ม</p>
+                <p className="py-2.5 text-sm text-stone-400">ทุกคน · ยังไม่มีกลุ่ม</p>
               ) : (
                 <MultiSelect
                   options={groups.map(g => ({ value: g.id, label: g.name }))}
@@ -381,8 +381,8 @@ export default function FormSettingsPage() {
         </div>
         <p className={`${ui.hint} mt-2`}>เห็นเฉพาะตอนกรอก ไม่ขึ้นบนเอกสารที่พิมพ์</p>
 
-        <div className="mt-5 border-t border-gray-100 pt-4">
-          <span className="text-xs font-medium text-gray-500">ช่องกรอกเพิ่มเติม (ใต้ชื่อผู้เบิก)</span>
+        <div className="mt-5 border-t border-stone-100 pt-4">
+          <span className="text-xs font-medium text-stone-500">ช่องกรอกเพิ่มเติม (ใต้ชื่อผู้เบิก)</span>
           {headerFields().length > 0 && (
             <div className="mt-2 space-y-2">
               {headerFields().map((f, i) => (
@@ -405,15 +405,15 @@ export default function FormSettingsPage() {
 
       <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE}`} defaultOpen>
         {/* What the table will look like — the quickest way to check the result. */}
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <div className="overflow-x-auto rounded-lg border border-stone-200">
           <table className="w-full text-left text-[11px]">
             <thead>
               <tr className={ui.thead}>
-                <th className="px-2 py-1.5 font-medium text-gray-500" style={{ width: `${seqColumnWidth(settings)}px` }}>ลำดับ</th>
+                <th className="px-2 py-1.5 font-medium text-stone-500" style={{ width: `${seqColumnWidth(settings)}px` }}>ลำดับ</th>
                 {columns.filter(c => !c.hidden).map(c => (
-                  <th key={c.key} className="whitespace-pre-line px-2 py-1.5 font-semibold text-gray-900">
-                    {c.label || <span className="font-normal text-gray-400">(ไม่มีชื่อ)</span>}
-                    {c.type === 'calc' && <span className="ml-1 font-normal text-gray-500">ƒ</span>}
+                  <th key={c.key} className="whitespace-pre-line px-2 py-1.5 font-semibold text-stone-900">
+                    {c.label || <span className="font-normal text-stone-400">(ไม่มีชื่อ)</span>}
+                    {c.type === 'calc' && <span className="ml-1 font-normal text-stone-500">ƒ</span>}
                   </th>
                 ))}
               </tr>
@@ -421,10 +421,10 @@ export default function FormSettingsPage() {
           </table>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 p-2">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-200 text-xs font-semibold text-gray-600">#</span>
-          <span className="text-sm text-gray-700">คอลัมน์ลำดับ</span>
-          <label className="flex items-center gap-1 text-xs text-gray-500" title="กว้างเกินไปจะกินที่คอลัมน์อื่น แคบเกินไปคำว่า “ลำดับ” จะตกบรรทัด">
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-stone-50 p-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-stone-200 text-xs font-semibold text-stone-600">#</span>
+          <span className="text-sm text-stone-700">คอลัมน์ลำดับ</span>
+          <label className="flex items-center gap-1 text-xs text-stone-500" title="กว้างเกินไปจะกินที่คอลัมน์อื่น แคบเกินไปคำว่า “ลำดับ” จะตกบรรทัด">
             กว้าง
             <input
               type="number"
@@ -444,9 +444,9 @@ export default function FormSettingsPage() {
             const isPercent = col.calc?.op === 'percent'
             const operands = col.calc ? calcOperands(col.calc) : []
             return (
-              <div key={i} className={`rounded-lg border border-gray-200 p-2 ${col.hidden ? 'bg-gray-50' : 'bg-white'}`}>
+              <div key={i} className={`rounded-lg border border-stone-200 p-2 ${col.hidden ? 'bg-stone-50' : 'bg-white'}`}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-50 text-xs font-semibold text-blue-600">{i + 1}</span>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-clay-50 text-xs font-semibold text-clay-600">{i + 1}</span>
                   <textarea
                     rows={1}
                     className={`${ui.inputSm} min-w-[150px] flex-1 resize-y`}
@@ -462,7 +462,7 @@ export default function FormSettingsPage() {
                     <option value="select">ตัวเลือก</option>
                     <option value="calc">คำนวณ</option>
                   </select>
-                  <label className="flex items-center gap-1 text-xs text-gray-500" title="ความกว้างบนเอกสาร · เว้นว่าง = อัตโนมัติ">
+                  <label className="flex items-center gap-1 text-xs text-stone-500" title="ความกว้างบนเอกสาร · เว้นว่าง = อัตโนมัติ">
                     กว้าง
                     <input
                       type="number"
@@ -472,7 +472,7 @@ export default function FormSettingsPage() {
                       className={`${ui.inputSm} w-[88px]`}
                     />
                   </label>
-                  <label className="flex cursor-pointer select-none items-center gap-1.5 text-sm text-gray-700" title="เอาออกจากเอกสารโดยไม่ต้องลบคอลัมน์">
+                  <label className="flex cursor-pointer select-none items-center gap-1.5 text-sm text-stone-700" title="เอาออกจากเอกสารโดยไม่ต้องลบคอลัมน์">
                     <input type="checkbox" checked={!col.hidden} onChange={() => toggleVisible(i)} />
                     แสดง
                   </label>
@@ -486,7 +486,7 @@ export default function FormSettingsPage() {
 
                 {col.type === 'calc' && (
                   <div className={`${subPanel} mt-2 flex flex-wrap items-center gap-2`}>
-                    <span className="text-xs text-gray-500">คำนวณจาก</span>
+                    <span className="text-xs text-stone-500">คำนวณจาก</span>
                     <select className={ui.inputSm} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
                       {(['multiply', 'subtract', 'add', 'divide'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
                       {/* ร้อยละ ถูกยกเลิก — คงไว้เฉพาะคอลัมน์เดิมที่ใช้อยู่ ให้ยังแก้ไขได้ */}
@@ -499,13 +499,13 @@ export default function FormSettingsPage() {
                           {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
                         </select>
                         <input type="number" className={`${ui.inputSm} w-20 text-right`} value={col.calc?.percent ?? 0} onChange={e => patchCalc(i, { percent: Number(e.target.value) })} />
-                        <span className="text-xs text-gray-500">%</span>
+                        <span className="text-xs text-stone-500">%</span>
                       </>
                     ) : (
                       <>
                         {operands.map((opKey, opIdx) => (
                           <div key={opIdx} className="flex items-center gap-1.5">
-                            {opIdx > 0 && <span className="text-sm text-gray-500">{OP_SYMBOL[col.calc?.op ?? 'multiply']}</span>}
+                            {opIdx > 0 && <span className="text-sm text-stone-500">{OP_SYMBOL[col.calc?.op ?? 'multiply']}</span>}
                             <select className={ui.inputSm} value={opKey} onChange={e => setOperand(i, opIdx, e.target.value)}>
                               <option value="">— เลือกคอลัมน์ —</option>
                               {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
@@ -529,11 +529,11 @@ export default function FormSettingsPage() {
 
                 {col.type === 'select' && (
                   <div className={`${subPanel} mt-2`}>
-                    <span className="text-xs text-gray-500">ตัวเลือกที่พนักงานเลือกได้</span>
+                    <span className="text-xs text-stone-500">ตัวเลือกที่พนักงานเลือกได้</span>
                     <div className="mt-2 space-y-2">
                       {(col.options ?? []).map((opt, optIdx) => (
                         <div key={optIdx} className="flex items-center gap-2">
-                          <span className="w-5 shrink-0 text-right text-xs text-gray-500">{optIdx + 1}.</span>
+                          <span className="w-5 shrink-0 text-right text-xs text-stone-500">{optIdx + 1}.</span>
                           <input
                             className={`${ui.inputSm} flex-1`}
                             value={opt}
@@ -584,11 +584,11 @@ export default function FormSettingsPage() {
           </Field>
         </div>
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
             <input type="checkbox" checked={settings.showRequester !== false} onChange={e => setSettings(s => ({ ...s, showRequester: e.target.checked }))} />
             แสดงชื่อ-ตำแหน่งผู้เบิก
           </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-stone-700">
             <input type="checkbox" checked={settings.showAmountWords !== false} onChange={e => setSettings(s => ({ ...s, showAmountWords: e.target.checked }))} />
             แสดงจำนวนเงินเป็นตัวอักษร
           </label>
@@ -615,15 +615,15 @@ export default function FormSettingsPage() {
       <Section title="หมวดค่าใช้จ่าย" summary={settings.categories.filter(Boolean).length ? settings.categories.filter(Boolean).join(', ') : 'ไม่มี'}>
         <div className="flex flex-wrap items-center gap-2">
           {settings.categories.map((c, i) => (
-            <span key={i} className="inline-flex items-center rounded-lg border border-gray-200 bg-gray-50 pl-2.5 focus-within:border-blue-500 focus-within:bg-white">
+            <span key={i} className="inline-flex items-center rounded-lg border border-stone-200 bg-stone-50 pl-2.5 focus-within:border-clay-500 focus-within:bg-white">
               <input
-                className="bg-transparent py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                className="bg-transparent py-1.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none"
                 size={Math.max(6, c.length + 1)}
                 value={c}
                 placeholder="ชื่อหมวด"
                 onChange={e => setCategory(i, e.target.value)}
               />
-              <button type="button" onClick={() => removeCategory(i)} aria-label={`ลบหมวด ${c}`} className="px-1.5 py-1.5 text-gray-400 hover:text-red-600">
+              <button type="button" onClick={() => removeCategory(i)} aria-label={`ลบหมวด ${c}`} className="px-1.5 py-1.5 text-stone-400 hover:text-brick-600">
                 <X size={14} />
               </button>
             </span>
@@ -650,17 +650,17 @@ export default function FormSettingsPage() {
         <div className="space-y-3">
           {companies.map(company => (
             <div key={company.id} className={`${subCard} flex flex-wrap items-center gap-4`}>
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-stone-50">
                 {company.logo
                   ? <img src={company.logo} alt={company.name} className="h-full w-full object-contain" />
-                  : <span className="px-1 text-center text-[10px] leading-tight text-gray-400">ไม่มีโลโก้</span>}
+                  : <span className="px-1 text-center text-[10px] leading-tight text-stone-400">ไม่มีโลโก้</span>}
               </div>
-              <div className="min-w-[140px] flex-1 text-sm font-semibold text-gray-900">{company.name}</div>
+              <div className="min-w-[140px] flex-1 text-sm font-semibold text-stone-900">{company.name}</div>
               <div className="flex items-center gap-2">
                 <input
                   type="file"
                   accept="image/*"
-                  className="text-xs text-gray-500 file:mr-2 file:cursor-pointer file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
+                  className="text-xs text-stone-500 file:mr-2 file:cursor-pointer file:rounded-lg file:border-0 file:bg-clay-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-clay-700 hover:file:bg-clay-100"
                   onChange={e => onLogoPick(company, e.target.files?.[0])}
                 />
                 {company.logo && (

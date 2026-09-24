@@ -162,9 +162,9 @@ export default function FormPage() {
   // A closed form (maintenance) is not accessible to employees via direct URL.
   if (!id && settings.active === false && !isAdmin) {
     return (
-      <div className="mx-auto max-w-md rounded-xl border border-gray-200 bg-white p-8 text-center">
-        <div className="text-lg font-semibold text-gray-900">ฟอร์มนี้ปิดปรับปรุงชั่วคราว</div>
-        <div className="mt-2 text-sm text-gray-500">กรุณากลับมาใหม่ภายหลัง</div>
+      <div className="mx-auto max-w-md rounded-xl border border-stone-200 bg-white p-8 text-center">
+        <div className="text-lg font-semibold text-stone-900">ฟอร์มนี้ปิดปรับปรุงชั่วคราว</div>
+        <div className="mt-2 text-sm text-stone-500">กรุณากลับมาใหม่ภายหลัง</div>
         <button onClick={() => nav('/')} className={`${ui.btnPrimary} mt-4`}>กลับหน้าหลัก</button>
       </div>
     )
@@ -174,7 +174,7 @@ export default function FormPage() {
     <div>
       <div className="no-print space-y-4">
         {locked && (
-          <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
             เอกสารนี้มีลายเซ็นแล้ว จึงแก้ไขเนื้อหาไม่ได้ — ถ้าต้องแก้ ให้ลบลายเซ็นออกก่อนที่หน้าประวัติ
           </div>
         )}
@@ -239,7 +239,7 @@ export default function FormPage() {
         >
           ไปหน้าประวัติ
         </button>
-        <span className="w-full text-xs text-gray-400 sm:w-auto">
+        <span className="w-full text-xs text-stone-400 sm:w-auto">
           ต้องการไฟล์ PDF: กดปุ่มนี้แล้วเลือกปลายทางเป็น “Save as PDF”
         </span>
       </div>

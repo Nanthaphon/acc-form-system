@@ -56,7 +56,7 @@ export default function DateInput({ value, onChange, className }: Props) {
         tabIndex={-1}
         title="เลือกวันที่"
         onClick={() => dateRef.current?.showPicker?.()}
-        className="absolute inset-y-0 right-1 flex items-center text-gray-400 hover:text-gray-600"
+        className="absolute inset-y-0 right-1 flex items-center text-stone-400 hover:text-stone-600"
       >
         <Calendar size={13} />
       </button>

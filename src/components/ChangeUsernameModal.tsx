@@ -52,14 +52,14 @@ export default function ChangeUsernameModal({ profile, onClose, onDone }: Props)
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8" onClick={close}>
-      <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
         <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><AtSign size={18} /></div>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><AtSign size={18} /></div>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold text-gray-900">เปลี่ยนชื่อผู้ใช้</h2>
-            <p className="truncate text-xs text-gray-500">{name} · ปัจจุบัน {profile.employeeId}</p>
+            <h2 className="truncate text-base font-semibold text-stone-900">เปลี่ยนชื่อผู้ใช้</h2>
+            <p className="truncate text-xs text-stone-500">{name} · ปัจจุบัน {profile.employeeId}</p>
           </div>
-          <button onClick={close} aria-label="ปิด" className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><X size={18} /></button>
+          <button onClick={close} aria-label="ปิด" className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"><X size={18} /></button>
         </div>
 
         {saved === null ? (
@@ -73,10 +73,10 @@ export default function ChangeUsernameModal({ profile, onClose, onDone }: Props)
               onChange={e => setValue(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') save() }}
             />
-            <p className="mt-1 text-[11px] text-gray-400">อย่างน้อย {MIN_LENGTH} ตัวอักษร · ใช้เป็นรหัสพนักงานด้วย</p>
-            <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2.5 text-xs text-gray-600">
+            <p className="mt-1 text-[11px] text-stone-400">อย่างน้อย {MIN_LENGTH} ตัวอักษร · ใช้เป็นรหัสพนักงานด้วย</p>
+            <div className="mt-3 rounded-lg bg-stone-50 px-3 py-2.5 text-xs text-stone-600">
               {followsPassword
-                ? <>รหัสผ่านยังเป็นรหัสเริ่มต้น จึงจะเปลี่ยนเป็น <span className="font-mono font-semibold text-gray-900">{next || '…'}</span> ตามไปด้วย</>
+                ? <>รหัสผ่านยังเป็นรหัสเริ่มต้น จึงจะเปลี่ยนเป็น <span className="font-mono font-semibold text-stone-900">{next || '…'}</span> ตามไปด้วย</>
                 : 'รหัสผ่านเดิมยังใช้ได้ตามปกติ'}
               {' · '}เอกสารเดิมของพนักงานยังอยู่ครบ
             </div>
@@ -89,14 +89,14 @@ export default function ChangeUsernameModal({ profile, onClose, onDone }: Props)
           </>
         ) : (
           <>
-            <div className="mb-3 flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">
+            <div className="mb-3 flex items-center gap-2 rounded-lg bg-olive-50 px-4 py-3 text-sm text-olive-800">
               <CheckCircle2 size={18} className="shrink-0" /> เปลี่ยนชื่อผู้ใช้แล้ว — แจ้ง {name} ให้ใช้ชื่อใหม่เข้าสู่ระบบ
             </div>
             <div className="space-y-2">
               <Credential label="ชื่อผู้ใช้" value={saved} />
               {followsPassword && <Credential label="รหัสผ่าน" value={saved} />}
             </div>
-            {!followsPassword && <p className="mt-2 text-xs text-gray-500">รหัสผ่านเดิมยังใช้ได้</p>}
+            {!followsPassword && <p className="mt-2 text-xs text-stone-500">รหัสผ่านเดิมยังใช้ได้</p>}
             <div className="mt-5 flex justify-end">
               <button onClick={close} className={ui.btnPrimary}>เสร็จสิ้น</button>
             </div>

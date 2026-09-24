@@ -74,7 +74,7 @@ export default function DashboardPage() {
   return (
     <div>
       {profile?.mustChangePassword && (
-        <div className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="mb-4 rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
           คุณยังใช้รหัสผ่านเริ่มต้น — <Link to="/change-password" className="font-medium underline">เปลี่ยนรหัสผ่าน</Link>
         </div>
       )}
@@ -99,15 +99,15 @@ export default function DashboardPage() {
               tabIndex={0}
               onClick={() => nav(`/group/${g.id}`)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${g.id}`) } }}
-              className={`relative cursor-pointer rounded-xl border border-gray-200 bg-white p-6 text-center transition hover:border-gray-300 hover:shadow-md ${isAdmin && !isActive(g) ? 'opacity-60' : ''}`}
+              className={`relative cursor-pointer rounded-xl border border-stone-200 bg-white p-6 text-center transition hover:border-stone-300 hover:shadow-md ${isAdmin && !isActive(g) ? 'opacity-60' : ''}`}
             >
               <FolderCardIcon count={count} />
-              <div className="mt-3 truncate font-medium text-gray-900">{g.name}</div>
-              <div className="text-sm text-gray-500">{count} ฟอร์ม</div>
+              <div className="mt-3 truncate font-medium text-stone-900">{g.name}</div>
+              <div className="text-sm text-stone-500">{count} ฟอร์ม</div>
               {isAdmin && (
                 <div className="mt-3 flex items-center justify-center gap-2">
                   <Switch on={isActive(g)} onChange={() => onToggleGroup(g)} />
-                  <span className={`text-xs font-medium ${isActive(g) ? 'text-green-600' : 'text-gray-400'}`}>{isActive(g) ? 'เปิด' : 'ปิด'}</span>
+                  <span className={`text-xs font-medium ${isActive(g) ? 'text-olive-600' : 'text-stone-400'}`}>{isActive(g) ? 'เปิด' : 'ปิด'}</span>
                 </div>
               )}
               {isAdmin && (

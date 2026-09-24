@@ -64,8 +64,8 @@ export default function EditEmployeePage() {
 
   if (!f) return (
     <div className="mx-auto max-w-2xl animate-pulse space-y-3">
-      <div className="h-7 w-48 rounded bg-gray-200" />
-      <div className="h-64 rounded-xl bg-gray-100" />
+      <div className="h-7 w-48 rounded bg-stone-200" />
+      <div className="h-64 rounded-xl bg-stone-100" />
     </div>
   )
 
@@ -81,7 +81,7 @@ export default function EditEmployeePage() {
       />
 
       {readOnly && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-ochre-200 bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
           <Lock size={16} className="shrink-0" /> บัญชี Super Admin แก้ไขได้เฉพาะ Super Admin
         </div>
       )}
@@ -102,7 +102,7 @@ export default function EditEmployeePage() {
                     </button>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400">{viewerIsSuper ? 'ใช้เข้าสู่ระบบ · เปลี่ยนแล้วมีผลทันที' : 'เปลี่ยนได้เฉพาะ Super Admin'}</p>
+                <p className="mt-1 text-[11px] text-stone-400">{viewerIsSuper ? 'ใช้เข้าสู่ระบบ · เปลี่ยนแล้วมีผลทันที' : 'เปลี่ยนได้เฉพาะ Super Admin'}</p>
               </div>
               <div>
                 <label className={ui.label}>ชื่อ</label>
@@ -146,7 +146,7 @@ export default function EditEmployeePage() {
                 {targetIsSuper ? (
                   <>
                     <select className={ui.input} disabled><option>Super Admin</option></select>
-                    <p className="mt-1 text-[11px] text-gray-400">สิทธิ์ของ Super Admin เปลี่ยนไม่ได้</p>
+                    <p className="mt-1 text-[11px] text-stone-400">สิทธิ์ของ Super Admin เปลี่ยนไม่ได้</p>
                   </>
                 ) : (
                   <select className={ui.input} value={f.role} onChange={e => set('role', e.target.value)}>

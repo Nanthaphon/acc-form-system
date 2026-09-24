@@ -58,7 +58,7 @@ export default function SignInboxPage() {
         />
 
         {!profile?.signatureImage && (
-          <div className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mb-4 rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
             คุณยังไม่ได้อัปโหลดลายเซ็น — <Link to="/profile" className="font-medium underline">ไปอัปโหลดที่หน้าข้อมูลของฉัน</Link> ก่อนจึงจะเซ็นได้
           </div>
         )}
@@ -73,11 +73,11 @@ export default function SignInboxPage() {
             <tbody className={ui.tbody}>
               {pendingRows.map(r => (
                 <tr key={r.id} className={`${ui.tr} align-top`}>
-                  <td className={`${ui.td} whitespace-nowrap font-medium text-gray-900`}>{r.docNumber}</td>
+                  <td className={`${ui.td} whitespace-nowrap font-medium text-stone-900`}>{r.docNumber}</td>
                   <td className={ui.td}>{formName(r.formType)}</td>
                   <td className={`${ui.td} whitespace-nowrap`}>{r.header.firstName} {r.header.lastName}</td>
                   <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>
-                  <td className={`${ui.td} whitespace-nowrap text-gray-500`}>{formatDate(r.createdAt)}</td>
+                  <td className={`${ui.td} whitespace-nowrap text-stone-500`}>{formatDate(r.createdAt)}</td>
                   <td className={ui.td}>{myBlocks(r).filter(b => b.status === 'pending').map(b => b.blockLabel).join(', ')}</td>
                   <td className={`${ui.td} whitespace-nowrap`}>
                     <div className="flex items-center justify-end gap-1.5">
@@ -124,11 +124,11 @@ export default function SignInboxPage() {
                 const lastSignedAt = Math.max(...mine.map(b => b.signedAt ?? 0))
                 return (
                   <tr key={r.id} className={ui.tr}>
-                    <td className={`${ui.td} whitespace-nowrap font-medium text-gray-900`}>{r.docNumber}</td>
+                    <td className={`${ui.td} whitespace-nowrap font-medium text-stone-900`}>{r.docNumber}</td>
                     <td className={ui.td}>{formName(r.formType)}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>{r.header.firstName} {r.header.lastName}</td>
                     <td className={ui.td}>{mine.map(b => b.blockLabel).join(', ')}</td>
-                    <td className={`${ui.td} whitespace-nowrap text-gray-500`}>{lastSignedAt ? formatDate(lastSignedAt) : '-'}</td>
+                    <td className={`${ui.td} whitespace-nowrap text-stone-500`}>{lastSignedAt ? formatDate(lastSignedAt) : '-'}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>
                       <div className="flex items-center justify-end">
                         <ActionIconButton label="ดูเอกสาร" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />

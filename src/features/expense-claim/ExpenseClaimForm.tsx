@@ -29,12 +29,12 @@ const CATEGORIES = ['ค่าไมล์เลทและค่าใช้�
 const STANDARD_WHT = 3 // % — the default หัก ณ ที่จ่าย rate
 const STANDARD_RETENTION = 5 // % — the usual ค่าประกันงาน held back
 
-const cardClass = 'rounded-xl border border-gray-200 bg-white p-6'
-const cardTitleClass = 'mb-4 text-[15px] font-semibold text-gray-900'
-const labelClass = 'mb-1.5 block text-xs font-medium text-gray-500'
-const inputClass = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+const cardClass = 'rounded-xl border border-stone-200 bg-white p-6'
+const cardTitleClass = 'mb-4 text-[15px] font-semibold text-stone-900'
+const labelClass = 'mb-1.5 block text-xs font-medium text-stone-500'
+const inputClass = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100'
 
-const blankClass = 'inline-block rounded-md border border-gray-200 bg-white px-2 py-1 align-middle text-sm leading-normal text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+const blankClass = 'inline-block rounded-md border border-stone-200 bg-white px-2 py-1 align-middle text-sm leading-normal text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100'
 // Off-screen copy of the blank's text, in the same font, used to measure it.
 // Thai has no usable average character width, so `size` / `ch` units would be
 // well off — only a real measurement is right.
@@ -124,16 +124,16 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                 <label
                   key={c}
                   className={`flex cursor-pointer select-none items-center gap-2 rounded-lg border px-3.5 py-2 text-sm transition-colors ${
-                    on ? 'border-blue-500 bg-blue-50 font-medium text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    on ? 'border-clay-500 bg-clay-50 font-medium text-clay-700' : 'border-stone-200 text-stone-600 hover:border-stone-300'
                   }`}
                 >
                   <input type="checkbox" className="hidden" checked={on} onChange={() => selectCategory(c)} />
                   <span
                     className={`flex h-[15px] w-[15px] items-center justify-center rounded-full border ${
-                      on ? 'border-blue-500' : 'border-gray-300'
+                      on ? 'border-clay-500' : 'border-stone-300'
                     }`}
                   >
-                    {on && <span className="h-[7px] w-[7px] rounded-full bg-blue-500" />}
+                    {on && <span className="h-[7px] w-[7px] rounded-full bg-clay-500" />}
                   </span>
                   {c}
                 </label>
@@ -177,11 +177,11 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
       {/* Blanks in the form's paragraphs — typed here, printed in place of the dots */}
       {fillTexts.length > 0 && (
         <div className={cardClass}>
-          <h2 className="text-[15px] font-semibold text-gray-900">ข้อความในเอกสาร</h2>
-          <p className="mb-4 mt-1 text-xs text-gray-500">กรอกข้อมูลในช่องว่างของข้อความ · ช่องที่เว้นว่างไว้จะพิมพ์ออกเป็น ........ ให้เขียนด้วยมือได้</p>
+          <h2 className="text-[15px] font-semibold text-stone-900">ข้อความในเอกสาร</h2>
+          <p className="mb-4 mt-1 text-xs text-stone-500">กรอกข้อมูลในช่องว่างของข้อความ · ช่องที่เว้นว่างไว้จะพิมพ์ออกเป็น ........ ให้เขียนด้วยมือได้</p>
           <div className="space-y-3">
             {fillTexts.map((t, i) => (
-              <div key={i} className="whitespace-pre-line rounded-lg bg-gray-50 px-4 py-3 text-sm leading-[2.75] text-gray-700">
+              <div key={i} className="whitespace-pre-line rounded-lg bg-stone-50 px-4 py-3 text-sm leading-[2.75] text-stone-700">
                 {parseTemplate(t).map((p, j) => p.kind === 'text'
                   ? <span key={j}>{p.text}</span>
                   : <BlankInput key={j} field={p.field} value={header.fields?.[p.field.key] ?? ''} onChange={v => setHField(p.field.key, v)} />)}
@@ -195,7 +195,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
       <div className={cardClass}>
         <h2 className={cardTitleClass}>{titles.items}</h2>
         {!hasColumns ? (
-          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+          <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
             ฟอร์มนี้ยังไม่ได้ตั้งค่าคอลัมน์<br />
             <span className="text-xs">ผู้ดูแลระบบต้องเพิ่มคอลัมน์ในหน้าแก้ไขฟอร์มก่อนจึงจะกรอกรายการได้</span>
           </div>
@@ -205,48 +205,48 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               <table className="w-full table-fixed border-separate border-spacing-0 text-xs leading-[1.9]" style={{ minWidth: `${tableMinWidth(vcols)}px` }}>
                 <thead>
                   <tr>
-                    <th className="w-8 border-b border-gray-200 bg-gray-50 px-1.5 py-2.5 text-center text-xs font-medium text-gray-500">#</th>
+                    <th className="w-8 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500">#</th>
                     {vcols.map(col => (
                       <th
                         key={col.key}
                         style={{ width: colWidth(col) ? `${colWidth(col)}px` : undefined }}
-                        className={`whitespace-pre-line break-words border-b border-gray-200 bg-gray-50 px-1.5 py-2.5 text-[11px] font-medium text-gray-600 ${
+                        className={`whitespace-pre-line break-words border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
                       >
                         {col.label}
-                        {col.type === 'calc' && <span className="ml-1 text-[10px] font-normal text-gray-400">(คำนวณ)</span>}
+                        {col.type === 'calc' && <span className="ml-1 text-[10px] font-normal text-stone-400">(คำนวณ)</span>}
                       </th>
                     ))}
-                    <th className="w-9 border-b border-gray-200 bg-gray-50 px-1.5 py-2.5"></th>
+                    <th className="w-9 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((row, i) => (
-                    <tr key={i} className="hover:bg-gray-50/60">
-                      <td className="border-b border-gray-100 p-2 text-center text-gray-400">{i + 1}</td>
+                    <tr key={i} className="hover:bg-stone-50/60">
+                      <td className="border-b border-stone-100 p-2 text-center text-stone-400">{i + 1}</td>
                       {vcols.map(col => (
-                        <td key={col.key} className="border-b border-gray-100 p-1">
+                        <td key={col.key} className="border-b border-stone-100 p-1">
                           {col.type === 'calc' ? (
-                            <div className="truncate px-1 text-right font-medium text-gray-900">
+                            <div className="truncate px-1 text-right font-medium text-stone-900">
                               {fmt(Number(computed[i][col.key]) || 0)}
                             </div>
                           ) : col.type === 'date' ? (
                             <DateInput
-                              className="w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              className="w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
                               value={row[col.key] as string}
                               onChange={v => setCell(i, col.key, v)}
                             />
                           ) : col.type === 'number' ? (
                             <input
                               type="number"
-                              className="w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-right text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              className="w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-right text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
                               value={row[col.key] as number}
                               onChange={e => setCell(i, col.key, Number(e.target.value))}
                             />
                           ) : col.type === 'select' ? (
                             <select
-                              className="w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              className="w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
                               value={row[col.key] as string}
                               onChange={e => setCell(i, col.key, e.target.value)}
                             >
@@ -255,14 +255,14 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                             </select>
                           ) : (
                             <input
-                              className="w-full min-w-0 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                              className="w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
                               value={row[col.key] as string}
                               onChange={e => setCell(i, col.key, e.target.value)}
                             />
                           )}
                         </td>
                       ))}
-                      <td className="border-b border-gray-100 p-2 text-center">
+                      <td className="border-b border-stone-100 p-2 text-center">
                         <ActionIconButton
                           label="ลบรายการ"
                           tone="red"
@@ -273,20 +273,20 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                     </tr>
                   ))}
                   {/* Totals row */}
-                  <tr className="font-semibold text-gray-900">
-                    <td className="border-t border-gray-200 px-2.5 py-2.5"></td>
+                  <tr className="font-semibold text-stone-900">
+                    <td className="border-t border-stone-200 px-2.5 py-2.5"></td>
                     {vcols.map((col, idx) => (
-                      <td key={col.key} className={`border-t border-gray-200 px-2.5 py-2.5 ${isTextCol(col.type) ? 'text-left' : 'text-right'}`}>
+                      <td key={col.key} className={`border-t border-stone-200 px-2.5 py-2.5 ${isTextCol(col.type) ? 'text-left' : 'text-right'}`}>
                         {idx === 0 ? 'รวม' : isTextCol(col.type) ? '' : fmt(columnTotals[col.key] ?? 0)}
                       </td>
                     ))}
-                    <td className="border-t border-gray-200"></td>
+                    <td className="border-t border-stone-200"></td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <button
-              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:border-clay-400 hover:text-clay-600"
               onClick={() => onItemsChange([...items, emptyRow(cols)])}
             >
               <Plus size={16} /> เพิ่มรายการ
@@ -297,8 +297,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
 
       {/* Summary + tax options */}
       {hasColumns && (
-        <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-5">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-700">
+        <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-5">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
             <label className="flex cursor-pointer items-center gap-2">
               <input type="checkbox" checked={!!header.vat} onChange={e => onHeaderChange({ ...header, vat: e.target.checked })} />
               ภาษีมูลค่าเพิ่ม (VAT) 7%
@@ -320,7 +320,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                   max={100}
                   step="0.01"
                   aria-label="อัตราค่าประกันงาน (%)"
-                  className="w-20 rounded-md border border-gray-200 bg-white px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-20 rounded-md border border-stone-200 bg-white px-2 py-1 text-right text-sm focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
                   value={header.retentionRate}
                   onChange={e => {
                     const n = Number(e.target.value)
@@ -360,7 +360,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         autoFocus={whtOther === ''}
                         placeholder="เช่น 1"
                         aria-label="อัตราหัก ณ ที่จ่าย (%)"
-                        className="w-20 rounded-md border border-gray-200 bg-white px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        className="w-20 rounded-md border border-stone-200 bg-white px-2 py-1 text-right text-sm focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
                         value={whtOther ?? String(header.whtRate ?? '')}
                         onChange={e => {
                           const v = e.target.value
@@ -377,15 +377,15 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
             </div>
           </div>
 
-          <div className="space-y-1 border-t border-gray-200 pt-3 text-sm">
-            <div className="flex justify-between text-gray-600"><span>ยอดรวม (ก่อนภาษี)</span><span>{fmt(tax.subtotal)}</span></div>
-            {header.vat && <div className="flex justify-between text-gray-600"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>+{fmt(tax.vatAmount)}</span></div>}
-            {!!header.whtRate && <div className="flex justify-between text-red-600"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>−{fmt(tax.whtAmount)}</span></div>}
-            {!!header.retentionRate && <div className="flex justify-between text-red-600"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>−{fmt(tax.retentionAmount)}</span></div>}
-            <div className="flex justify-between border-t border-gray-200 pt-2 text-base font-semibold text-gray-900">
+          <div className="space-y-1 border-t border-stone-200 pt-3 text-sm">
+            <div className="flex justify-between text-stone-600"><span>ยอดรวม (ก่อนภาษี)</span><span>{fmt(tax.subtotal)}</span></div>
+            {header.vat && <div className="flex justify-between text-stone-600"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>+{fmt(tax.vatAmount)}</span></div>}
+            {!!header.whtRate && <div className="flex justify-between text-brick-600"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>−{fmt(tax.whtAmount)}</span></div>}
+            {!!header.retentionRate && <div className="flex justify-between text-brick-600"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>−{fmt(tax.retentionAmount)}</span></div>}
+            <div className="flex justify-between border-t border-stone-200 pt-2 text-base font-semibold text-stone-900">
               <span>ยอดสุทธิ</span><span>{fmt(tax.netTotal)} บาท</span>
             </div>
-            <div className="text-xs text-gray-500">{`(${bahtText(tax.netTotal)})`}</div>
+            <div className="text-xs text-stone-500">{`(${bahtText(tax.netTotal)})`}</div>
           </div>
         </div>
       )}

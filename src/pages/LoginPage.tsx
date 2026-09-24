@@ -5,7 +5,7 @@ import { ClipboardList, LogIn } from 'lucide-react'
 import { loginWithEmployeeId } from '../data/auth'
 import { Spinner } from '../components/Spinner'
 
-const inputCls = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50'
+const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 disabled:bg-stone-50'
 
 export default function LoginPage() {
   const [employeeId, setEmployeeId] = useState('')
@@ -29,21 +29,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f4f6fb] p-4">
-      <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-sand-50 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#3b6fe0] to-[#5b8bff] text-white">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-clay-500 to-clay-400 text-white">
             <ClipboardList size={24} />
           </span>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">ระบบเบิกค่าใช้จ่าย</h1>
-            <p className="mt-0.5 text-sm text-gray-500">เข้าสู่ระบบเพื่อใช้งาน</p>
+            <h1 className="text-lg font-semibold text-stone-900">ระบบเบิกค่าใช้จ่าย</h1>
+            <p className="mt-0.5 text-sm text-stone-500">เข้าสู่ระบบเพื่อใช้งาน</p>
           </div>
         </div>
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-500">รหัสพนักงาน</label>
+            <label className="mb-1.5 block text-xs font-medium text-stone-500">รหัสพนักงาน</label>
             <input
               className={inputCls}
               placeholder="เช่น 1010122"
@@ -54,7 +54,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-gray-500">รหัสผ่าน</label>
+            <label className="mb-1.5 block text-xs font-medium text-stone-500">รหัสผ่าน</label>
             <input
               className={inputCls}
               type="password"
@@ -66,13 +66,13 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-brick-700">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-clay-600 py-2.5 text-sm font-medium text-white transition hover:bg-clay-700 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {loading ? <><Spinner size={16} /> กำลังเข้าสู่ระบบ...</> : <><LogIn size={16} /> เข้าสู่ระบบ</>}
           </button>

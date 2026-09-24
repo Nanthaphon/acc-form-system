@@ -35,7 +35,7 @@ export default function SubmissionPreviewPage() {
   }
 
   if (!sub || !settings) return (
-    <div className="flex items-center gap-2 p-4 text-sm text-gray-500"><Spinner size={16} /> กำลังโหลด...</div>
+    <div className="flex items-center gap-2 p-4 text-sm text-stone-500"><Spinner size={16} /> กำลังโหลด...</div>
   )
 
   // Only the document owner or an admin can print; others (e.g. assigned signers) view only.
@@ -50,7 +50,7 @@ export default function SubmissionPreviewPage() {
           onBack={() => nav(-1)}
           actions={canPrint
             ? <button type="button" onClick={onPrint} className={ui.btnPrimary}><Printer size={16} /> พิมพ์ / บันทึก PDF</button>
-            : <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-gray-500"><Eye size={16} /> ดูอย่างเดียว</span>}
+            : <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-2 text-sm font-medium text-stone-500"><Eye size={16} /> ดูอย่างเดียว</span>}
         />
       </div>
       {/* Approvers see the receipts here — the fill page is owner-only. */}

@@ -15,18 +15,15 @@ interface Props {
   groups?: FormGroup[]        // when provided, show a folder filter
   employees?: UserProfile[]   // when provided, show an employee filter
   resultCount: number
-  // The styling a page wants for the fields and the reset button. Defaults to
-  // the app theme; a page trying another one passes that theme instead.
-  tokens?: { inputSm: string; btnGhost: string }
 }
 
-export default function SubmissionFilterBar({ value, onChange, forms, groups, employees, resultCount, tokens = ui }: Props) {
-  const cls = tokens.inputSm
+export default function SubmissionFilterBar({ value, onChange, forms, groups, employees, resultCount }: Props) {
+  const cls = ui.inputSm
   const set = (patch: Partial<Filters>) => onChange({ ...value, ...patch })
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative">
-        <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
         <input
           className={`${cls} w-56 pl-8`}
           placeholder="ค้นหา เลขที่ / ชื่อฟอร์ม"
@@ -67,15 +64,15 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, em
       {value.datePreset === 'custom' && (
         <div className="flex items-center gap-2">
           <DateInput className={`${cls} w-36`} value={value.fromD} onChange={v => set({ fromD: v })} />
-          <span className="text-sm text-gray-400">ถึง</span>
+          <span className="text-sm text-stone-400">ถึง</span>
           <DateInput className={`${cls} w-36`} value={value.toD} onChange={v => set({ toD: v })} />
         </div>
       )}
-      <button type="button" onClick={() => onChange(emptyFilters)} className={tokens.btnGhost}>
+      <button type="button" onClick={() => onChange(emptyFilters)} className={ui.btnGhost}>
         <RotateCcw size={15} /> ล้างตัวกรอง
       </button>
-      <span className="ml-auto whitespace-nowrap text-sm text-gray-500">
-        <span className="font-medium text-gray-900">{resultCount}</span> รายการ
+      <span className="ml-auto whitespace-nowrap text-sm text-stone-500">
+        <span className="font-medium text-stone-900">{resultCount}</span> รายการ
       </span>
     </div>
   )

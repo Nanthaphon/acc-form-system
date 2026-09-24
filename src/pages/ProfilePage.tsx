@@ -9,8 +9,8 @@ import { listCompanies } from '../data/companies'
 import { roleLabel } from '../shared/roles'
 import type { Company } from '../types/schema'
 
-const labelCls = 'mb-1.5 block text-xs font-medium text-gray-500'
-const inputCls = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+const labelCls = 'mb-1.5 block text-xs font-medium text-stone-500'
+const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100'
 
 const FIELDS: Array<[key: string, label: string, placeholder: string, wide?: boolean]> = [
   ['firstName', 'ชื่อ', 'ชื่อจริง'],
@@ -71,25 +71,25 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-clay-50 text-clay-600">
           <UserRound size={24} />
         </div>
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-semibold text-gray-900">{fullName || 'ข้อมูลของฉัน'}</h1>
-          <p className="truncate text-sm text-gray-500">
+          <h1 className="truncate text-xl font-semibold text-stone-900">{fullName || 'ข้อมูลของฉัน'}</h1>
+          <p className="truncate text-sm text-stone-500">
             {form.position || 'ไม่ระบุตำแหน่ง'}
             {form.employeeId ? ` · รหัส ${form.employeeId}` : ''}
             {companyName ? ` · ${companyName}` : ''}
           </p>
         </div>
         {form.role === 'admin' && (
-          <span className="ml-auto shrink-0 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{roleLabel(form)}</span>
+          <span className="ml-auto shrink-0 rounded-full bg-clay-50 px-3 py-1 text-xs font-semibold text-clay-700">{roleLabel(form)}</span>
         )}
       </div>
 
       {/* ข้อมูลส่วนตัว */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-[15px] font-semibold text-gray-900">ข้อมูลส่วนตัว</h2>
+      <div className="rounded-xl border border-stone-200 bg-white p-6">
+        <h2 className="mb-4 text-[15px] font-semibold text-stone-900">ข้อมูลส่วนตัว</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {FIELDS.map(([k, label, placeholder]) => (
             <div key={k}>
@@ -113,24 +113,24 @@ export default function ProfilePage() {
       </div>
 
       {/* ลายเซ็น */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="rounded-xl border border-stone-200 bg-white p-6">
         <div className="mb-1 flex items-center gap-2">
-          <PenLine size={16} className="text-gray-400" />
-          <h2 className="text-[15px] font-semibold text-gray-900">ลายเซ็นของฉัน</h2>
+          <PenLine size={16} className="text-stone-400" />
+          <h2 className="text-[15px] font-semibold text-stone-900">ลายเซ็นของฉัน</h2>
         </div>
-        <p className="mb-4 text-xs text-gray-500">ใช้เซ็นเอกสารออนไลน์ · แนะนำรูปพื้นหลังโปร่ง (PNG) จะดูเหมือนเซ็นจริงมากกว่า</p>
+        <p className="mb-4 text-xs text-stone-500">ใช้เซ็นเอกสารออนไลน์ · แนะนำรูปพื้นหลังโปร่ง (PNG) จะดูเหมือนเซ็นจริงมากกว่า</p>
 
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex h-24 w-56 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-300 bg-gray-50">
+          <div className="flex h-24 w-56 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-stone-300 bg-stone-50">
             {uploading
-              ? <Spinner size={20} className="text-gray-400" />
+              ? <Spinner size={20} className="text-stone-400" />
               : form.signatureImage
                 ? <img src={form.signatureImage} alt="ลายเซ็น" className="h-full w-full object-contain p-2" />
-                : <span className="text-xs text-gray-400">ยังไม่มีลายเซ็น</span>}
+                : <span className="text-xs text-stone-400">ยังไม่มีลายเซ็น</span>}
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 hover:text-gray-900">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 hover:border-stone-300 hover:text-stone-900">
               <Upload size={16} />
               {form.signatureImage ? 'เปลี่ยนลายเซ็น' : 'อัปโหลดลายเซ็น'}
               <input type="file" accept="image/*" className="hidden" onChange={e => onSignaturePick(e.target.files?.[0])} />
@@ -147,7 +147,7 @@ export default function ProfilePage() {
         <button
           onClick={save}
           disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg bg-clay-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-clay-700 disabled:opacity-60"
         >
           {saving ? <><Spinner size={16} /> กำลังบันทึก...</> : <><Save size={16} /> บันทึก</>}
         </button>

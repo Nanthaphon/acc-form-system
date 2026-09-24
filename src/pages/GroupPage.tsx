@@ -124,7 +124,7 @@ export default function GroupPage() {
       {groupForms.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
@@ -132,7 +132,7 @@ export default function GroupPage() {
               className={`${ui.input} pl-9`}
             />
           </div>
-          <label className="ml-auto flex items-center gap-2 text-sm text-gray-500">
+          <label className="ml-auto flex items-center gap-2 text-sm text-stone-500">
             เรียงตาม
             <select
               value={sort.key}
@@ -165,18 +165,18 @@ export default function GroupPage() {
               tabIndex={0}
               onClick={() => nav(`/form/${form.formType}`)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/form/${form.formType}`) } }}
-              className={`relative cursor-pointer rounded-xl border border-gray-200 bg-white p-5 transition hover:border-gray-300 hover:shadow-md ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
+              className={`relative cursor-pointer rounded-xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-md ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
             >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><FileText size={20} /></div>
-              <div className="font-medium text-gray-900">{formDisplayName(form)}</div>
-              <div className="text-sm text-gray-500">{form.formCode}</div>
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileText size={20} /></div>
+              <div className="font-medium text-stone-900">{formDisplayName(form)}</div>
+              <div className="text-sm text-stone-500">{form.formCode}</div>
               {!!stamp && (
-                <div className="mt-1 text-xs text-gray-400">{showCreated ? 'สร้างเมื่อ' : 'แก้ไขล่าสุด'} {formatDate(stamp)}</div>
+                <div className="mt-1 text-xs text-stone-400">{showCreated ? 'สร้างเมื่อ' : 'แก้ไขล่าสุด'} {formatDate(stamp)}</div>
               )}
               {isAdmin && (
                 <div className="mt-3 flex items-center gap-2">
                   <Switch on={isActive(form)} onChange={() => onToggleForm(form)} />
-                  <span className={`text-xs font-medium ${isActive(form) ? 'text-green-600' : 'text-gray-400'}`}>{isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}</span>
+                  <span className={`text-xs font-medium ${isActive(form) ? 'text-olive-600' : 'text-stone-400'}`}>{isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}</span>
                 </div>
               )}
               {isAdmin && (
@@ -203,12 +203,12 @@ export default function GroupPage() {
           )
         })}
         {groupForms.length === 0 && (
-          <div className="col-span-full rounded-xl border border-dashed border-gray-300 bg-white px-4 py-10 text-center text-sm text-gray-400">
+          <div className="col-span-full rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
             ยังไม่มีฟอร์มในกลุ่มนี้
           </div>
         )}
         {groupForms.length > 0 && shownForms.length === 0 && (
-          <div className="col-span-full rounded-xl border border-dashed border-gray-300 bg-white px-4 py-10 text-center text-sm text-gray-400">
+          <div className="col-span-full rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
             ไม่พบฟอร์มที่ตรงกับ “{query}”
           </div>
         )}

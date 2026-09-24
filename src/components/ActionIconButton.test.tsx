@@ -26,7 +26,7 @@ describe('ActionIconButton', () => {
     )
 
     const link = screen.getByRole('link', { name: 'พิมพ์' })
-    expect(link).toHaveClass('text-gray-900')
+    expect(link).toHaveClass('text-stone-900')
     expect(link.className).not.toContain('text-emerald')
   })
 })
@@ -61,9 +61,9 @@ describe('ActionIconButton — labelled', () => {
         <ActionIconButton showLabel label="พิมพ์" tone="green" onClick={() => {}} icon={<Pencil size={16} />} />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('button', { name: 'ลบเอกสาร' })).toHaveClass('text-red-600')
+    expect(screen.getByRole('button', { name: 'ลบเอกสาร' })).toHaveClass('text-brick-600')
     const neutral = screen.getByRole('button', { name: 'พิมพ์' })
-    expect(neutral).toHaveClass('text-gray-700')
+    expect(neutral).toHaveClass('text-stone-700')
     expect(neutral.className).not.toContain('text-emerald')
   })
 })
