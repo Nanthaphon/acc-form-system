@@ -1,9 +1,10 @@
-// A field that is a dropdown once it has a list, and a text box until then.
+import { useId } from 'react'
+
+// A text box that suggests the values from Custom Field, and takes anything.
 //
-// The value a person already has is always kept as a choice, even when it is
-// not on the list. Otherwise opening an older employee — whose department was
-// typed before the list existed — would show the dropdown blank, and saving
-// anything else on the page would silently wipe the department.
+// แผนก and ตำแหน่ง are free text: a list may offer "Payroll" to click, but a
+// department the list does not have yet can still be typed. The browser shows
+// the suggestions under the box as it is typed into, narrowing them as it goes.
 export default function OptionInput({ value, options, onChange, placeholder, className, disabled }: {
   value: string
   options: string[]
@@ -12,25 +13,23 @@ export default function OptionInput({ value, options, onChange, placeholder, cla
   className?: string
   disabled?: boolean
 }) {
-  if (options.length === 0) {
-    return (
+  const listId = useId()
+  return (
+    <>
       <input
         className={className}
         placeholder={placeholder}
         value={value}
         disabled={disabled}
+        list={options.length > 0 ? listId : undefined}
+        autoComplete="off"
         onChange={e => onChange(e.target.value)}
       />
-    )
-  }
-
-  const current = value.trim()
-  const offList = current !== '' && !options.includes(current)
-  return (
-    <select className={className} value={current} disabled={disabled} onChange={e => onChange(e.target.value)}>
-      <option value="">— เลือก —</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-      {offList && <option value={current}>{current} (ไม่อยู่ในรายการ)</option>}
-    </select>
+      {options.length > 0 && (
+        <datalist id={listId}>
+          {options.map(o => <option key={o} value={o} />)}
+        </datalist>
+      )}
+    </>
   )
 }

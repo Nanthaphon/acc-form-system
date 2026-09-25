@@ -13,12 +13,10 @@
 
 export type Style =
   | 'body' | 'head' | 'headLeft' | 'req' | 'text' | 'reqText'
-  | 'title' | 'section' | 'bold' | 'wrap' | 'muted' | 'reqLabel' | 'step' | 'note'
 
 // Index into <cellXfs> below. The order here and there must match.
 const STYLE_INDEX: Record<Style, number> = {
   body: 0, head: 1, headLeft: 2, req: 3, text: 4, reqText: 5,
-  title: 6, section: 7, bold: 8, wrap: 9, muted: 10, reqLabel: 11, step: 12, note: 13,
 }
 
 export interface Cell { v: string; s?: Style }
@@ -42,6 +40,8 @@ export interface Sheet {
   rowHeights?: Record<number, number>
   freezeFirstRow?: boolean
   validations?: Validation[]
+  /** Kept out of the tab bar. Still there for anything that refers to it. */
+  hidden?: boolean
 }
 
 // ---------------------------------------------------------------- XML
@@ -74,13 +74,9 @@ const YELLOW = 'FFFFF3CD'
 // substituting another font.
 const STYLES = HEAD +
   `<styleSheet xmlns="${MAIN}">` +
-  '<fonts count="6">' +
+  '<fonts count="2">' +
     '<font><sz val="10"/><name val="Tahoma"/></font>' +
     '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Tahoma"/></font>' +
-    `<font><b/><sz val="14"/><color rgb="${NAVY}"/><name val="Tahoma"/></font>` +
-    '<font><b/><sz val="10"/><name val="Tahoma"/></font>' +
-    '<font><b/><sz val="10"/><color rgb="FFB00020"/><name val="Tahoma"/></font>' +
-    '<font><sz val="10"/><color rgb="FF555555"/><name val="Tahoma"/></font>' +
   '</fonts>' +
   // The first two fills are required by the format and never used directly.
   '<fills count="4">' +
@@ -91,21 +87,13 @@ const STYLES = HEAD +
   '</fills>' +
   '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
   '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-  '<cellXfs count="14">' +
+  '<cellXfs count="6">' +
     /* body     */ '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
     /* head     */ '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
     /* headLeft */ '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' +
     /* req      */ '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/>' +
     /* text     */ '<xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
     /* reqText  */ '<xf numFmtId="49" fontId="0" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/>' +
-    /* title    */ '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
-    /* section  */ '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
-    /* bold     */ '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
-    /* wrap     */ '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
-    /* muted    */ '<xf numFmtId="0" fontId="5" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
-    /* reqLabel */ '<xf numFmtId="0" fontId="4" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="top"/></xf>' +
-    /* step     */ '<xf numFmtId="0" fontId="3" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
-    /* note     */ '<xf numFmtId="0" fontId="5" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
   '</cellXfs>' +
   '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
   '</styleSheet>'
@@ -170,7 +158,7 @@ function sheetXml(sheet: Sheet, selected: boolean): string {
 
 function packageParts(sheets: Sheet[]): [string, string][] {
   const sheetEntries = sheets.map((s, i) =>
-    `<sheet name="${esc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')
+    `<sheet name="${esc(s.name)}" sheetId="${i + 1}"${s.hidden ? ' state="hidden"' : ''} r:id="rId${i + 1}"/>`).join('')
   const sheetRels = sheets.map((_, i) =>
     `<Relationship Id="rId${i + 1}" Type="${REL}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')
   const sheetTypes = sheets.map((_, i) =>

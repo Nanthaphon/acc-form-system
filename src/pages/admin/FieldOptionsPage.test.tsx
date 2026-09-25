@@ -32,16 +32,16 @@ describe('FieldOptionsPage', () => {
     show()
     await waitFor(() => expect(screen.getByText('Payroll')).toBeInTheDocument())
     const dept = within(section('แผนก'))
-    expect(dept.getByText('Dropdown · 2 ตัวเลือก')).toBeInTheDocument()
+    expect(dept.getByText('2 ตัวเลือก')).toBeInTheDocument()
     expect(dept.getByText('3 คน')).toBeInTheDocument()
     expect(dept.getByText('0 คน')).toBeInTheDocument() // บัญชี, listed but unused
   })
 
-  it('says a field without values is still free text', async () => {
+  it('says when a field has no values yet', async () => {
     show()
     await waitFor(() => expect(screen.getByText('Payroll')).toBeInTheDocument())
     const pos = within(section('ตำแหน่ง'))
-    expect(pos.getByText('พิมพ์อิสระ')).toBeInTheDocument()
+    expect(pos.getByText('ยังไม่มีตัวเลือก')).toBeInTheDocument()
   })
 
   // Building the list from what people already typed is the quick way in —

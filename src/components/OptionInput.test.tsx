@@ -5,28 +5,29 @@ import OptionInput from './OptionInput'
 describe('OptionInput', () => {
   it('is a plain text box while the field has no list', () => {
     render(<OptionInput value="" options={[]} onChange={() => {}} placeholder="เช่น Payroll" />)
-    expect(screen.getByPlaceholderText('เช่น Payroll').tagName).toBe('INPUT')
-    expect(screen.queryByRole('combobox')).toBeNull()
+    const box = screen.getByPlaceholderText('เช่น Payroll')
+    expect(box.tagName).toBe('INPUT')
+    expect(box).not.toHaveAttribute('list')
   })
 
-  it('becomes a dropdown of the list once there is one', () => {
-    render(<OptionInput value="" options={['Payroll', 'บัญชี']} onChange={() => {}} />)
-    const choices = screen.getAllByRole('option').map(o => o.textContent)
-    expect(choices).toEqual(['— เลือก —', 'Payroll', 'บัญชี'])
+  it('suggests the list once there is one', () => {
+    const { container } = render(<OptionInput value="" options={['Payroll', 'บัญชี']} onChange={() => {}} />)
+    const box = screen.getByRole('combobox')
+    const list = container.querySelector(`datalist#${CSS.escape(box.getAttribute('list')!)}`)
+    expect([...list!.querySelectorAll('option')].map(o => o.value)).toEqual(['Payroll', 'บัญชี'])
   })
 
-  // An employee whose department was typed before the list existed must not
-  // lose it the next time anyone saves their record.
-  it('keeps a value that is not on the list, and says so', () => {
+  // The list is a suggestion, not a rule: a department it does not have yet
+  // must still be typeable, and must still be saved as typed.
+  it('takes a value that is not on the list', () => {
+    const onChange = vi.fn()
+    render(<OptionInput value="" options={['Payroll']} onChange={onChange} />)
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Operation Team 6 (Haier)' } })
+    expect(onChange).toHaveBeenCalledWith('Operation Team 6 (Haier)')
+  })
+
+  it('shows a value already held, whether or not it is listed', () => {
     render(<OptionInput value="Payrol" options={['Payroll']} onChange={() => {}} />)
     expect(screen.getByRole('combobox')).toHaveValue('Payrol')
-    expect(screen.getByRole('option', { name: 'Payrol (ไม่อยู่ในรายการ)' })).toBeInTheDocument()
-  })
-
-  it('reports the chosen value', () => {
-    const onChange = vi.fn()
-    render(<OptionInput value="" options={['Payroll', 'บัญชี']} onChange={onChange} />)
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'บัญชี' } })
-    expect(onChange).toHaveBeenCalledWith('บัญชี')
   })
 })

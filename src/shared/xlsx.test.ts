@@ -6,19 +6,19 @@ import { parseEmployeeGrid } from './csv'
 import { buildEmployeeTemplate } from './employeeTemplate'
 import type { TemplateLists } from './employeeTemplate'
 
-// Lists shaped like the real system's: a group made on screen has a random
-// code, which is exactly why the template offers group names instead.
+// Lists shaped like the real system's. A group made on screen has a random
+// code, which is why the template offers group names; a company is offered
+// by the short name people know it by.
 const LISTS: TemplateLists = {
   companies: [
-    { id: 'globe', name: 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด' },
-    { id: 'besthrm', name: 'บริษัท เบสท์ เอช อาร์ เอ็ม จำกัด' },
+    { id: 'globe', name: 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด', shortName: 'Globe Syndicate' },
+    { id: 'besthrm', name: 'บริษัท เบสท์ เอช อาร์ เอ็ม จำกัด', shortName: 'Besthrm' },
   ],
   groups: [
     { id: 'pcms', name: 'PcMs' },
     { id: '80da51c6-06bb-4d7c-8eba-c8b227bccc39', name: 'HR' },
+    { id: '9d1c', name: 'ฝ่ายขาย' },
   ],
-  departments: ['Payroll', 'บัญชี', 'Finance'],
-  positions: [],
 }
 
 const build = async (lists: TemplateLists = LISTS) => {
@@ -53,36 +53,41 @@ describe('the template, as built from the live lists', () => {
     expect(errors).toEqual([])
   })
 
-  it('puts the system\'s own values on the ตัวเลือก sheet, one list per column', async () => {
-    const options = await readSheet(await build(), 'ตัวเลือก')
-    expect(options[0]).toEqual(['role', 'companyId', 'accessGroup', 'department'])
-    expect(options[1]).toEqual(['employee', 'globe', 'PcMs', 'Payroll'])
-    expect(options[2]).toEqual(['admin', 'besthrm', 'HR', 'บัญชี'])
-    expect(options[3]).toEqual(['', '', '', 'Finance'])
+  // One sheet to fill in and nothing else in the tab bar. The dropdowns still
+  // need their values somewhere in the file, so those sit on a hidden sheet.
+  it('shows one sheet, keeping the dropdown values on a hidden one', async () => {
+    const book = await readPart(await build(), 'xl/workbook.xml')
+    const sheets = [...book.matchAll(/<sheet name="([^"]+)"([^>]*)\/>/g)].map(m => [m[1], m[2].includes('state="hidden"')])
+    expect(sheets).toEqual([['พนักงาน', false], ['ตัวเลือก', true]])
   })
 
-  it('leaves out a list with nothing in it, rather than an empty dropdown', async () => {
+  it('offers companies by the name people know them by', async () => {
     const options = await readSheet(await build(), 'ตัวเลือก')
-    expect(options[0]).not.toContain('position')
+    expect(options[0]).toEqual(['role', 'companyId', 'accessGroup'])
+    expect(options.slice(1).map(r => r[1]).filter(Boolean)).toEqual(['Globe Syndicate', 'Besthrm'])
+    expect(options.slice(1).map(r => r[2]).filter(Boolean)).toEqual(['PcMs', 'HR', 'ฝ่ายขาย'])
   })
 
-  it('offers a dropdown for every list, each over exactly its own values', async () => {
+  it('falls back to the code for a company with no short name yet', async () => {
+    const options = await readSheet(await build({ ...LISTS, companies: [{ id: 'globe', name: 'x' }] }), 'ตัวเลือก')
+    expect(options[1][1]).toBe('globe')
+  })
+
+  it('gives role, company and group a dropdown — and แผนก and ตำแหน่ง none', async () => {
     const xml = await readPart(await build(), 'xl/worksheets/sheet1.xml')
-    const lists = [...xml.matchAll(/sqref="([A-Z]+)2:[A-Z]+1000"><formula1>([^<]+)<\/formula1>/g)]
-      .map(m => [m[1], m[2].replace(/&apos;|'/g, '\'')])
-    expect(lists).toEqual(expect.arrayContaining([
-      ['I', '\'ตัวเลือก\'!$A$2:$A$3'],   // role
-      ['D', '\'ตัวเลือก\'!$B$2:$B$3'],   // companyId
-      ['J', '\'ตัวเลือก\'!$C$2:$C$3'],   // accessGroup
-      ['F', '\'ตัวเลือก\'!$D$2:$D$4'],   // department — three values
-    ]))
+    const lists = Object.fromEntries([...xml.matchAll(/sqref="([A-Z]+)2:[A-Z]+1000"><formula1>([^<]+)<\/formula1>/g)].map(m => [m[1], m[2]]))
+    expect(lists.I).toBe("'ตัวเลือก'!$A$2:$A$3")   // role
+    expect(lists.D).toBe("'ตัวเลือก'!$B$2:$B$3")   // companyId
+    expect(lists.J).toBe("'ตัวเลือก'!$C$2:$C$4")   // accessGroup
+    expect(lists.E).toBeUndefined()                    // position
+    expect(lists.F).toBeUndefined()                    // department
   })
 
-  it('refuses a wrong role outright, but only warns on the lists that can grow', async () => {
+  it('refuses a wrong role outright, but only warns on lists that can grow', async () => {
     const xml = await readPart(await build(), 'xl/worksheets/sheet1.xml')
     const rule = (col: string) => new RegExp(`<dataValidation[^>]*sqref="${col}2:${col}1000"`).exec(xml)?.[0] ?? ''
     expect(rule('I')).not.toContain('errorStyle')          // role: the default, stop
-    expect(rule('F')).toContain('errorStyle="warning"')    // department
+    expect(rule('D')).toContain('errorStyle="warning"')    // companyId
     expect(rule('A')).toContain('type="textLength"')       // employeeId, 6+
   })
 
@@ -103,9 +108,8 @@ describe('the template, as built from the live lists', () => {
 
 describe('reading an .xlsx', () => {
   it('reads Thai text, which is where a wrong decoder would show up first', async () => {
-    const help = await readSheet(await build(), 'คำอธิบาย')
-    expect(help[0]?.[0]).toBe('วิธีใช้ไฟล์นี้')
-    expect(help.flat().some(cell => cell.includes('รหัสพนักงาน'))).toBe(true)
+    const options = await readSheet(await build(), 'ตัวเลือก')
+    expect(options.flat()).toContain('ฝ่ายขาย')
   })
 
   it('reads a workbook Excel itself wrote, which is the one people will upload', async () => {

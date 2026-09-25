@@ -1,6 +1,8 @@
 export type Role = 'employee' | 'admin'
 
-export interface Company { id: string; name: string; address: string; logo?: string | null; headerName?: string | null }
+// shortName is what people call the company ("Globe Syndicate") — used in the
+// employee import file. Empty until supabase/2026-09-25-company-short-name.sql runs.
+export interface Company { id: string; name: string; address: string; logo?: string | null; headerName?: string | null; shortName?: string | null }
 
 // ===== Dynamic column model =====
 export type ColumnType = 'text' | 'number' | 'calc' | 'date' | 'select'

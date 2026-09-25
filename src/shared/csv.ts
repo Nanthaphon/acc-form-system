@@ -98,7 +98,7 @@ export function parseEmployeeGrid(grid: string[][]): ParseResult {
 }
 
 export interface ImportLists {
-  companies: { id: string; name: string }[]
+  companies: { id: string; name: string; shortName?: string | null }[]
   groups: { id: string; name: string }[]
   departments: string[]
   positions: string[]
@@ -110,10 +110,13 @@ const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLow
  * Puts every row into the system's own spelling, and reports what it cannot
  * place — before anything is created, while the file can still be fixed.
  *
- * A company or group may be written as its code or as its name: the template's
- * group dropdown offers names, because a group made on screen has a code no
- * one could read. A department or position is checked only once that field
- * has a list; until then it is free text, as it has always been.
+ * A company may be written as its code, its short name or its full name, and
+ * a group as its code or its name: the template offers the names, because
+ * that is what people know them by. Both are stored as their code.
+ *
+ * แผนก and ตำแหน่ง are free text and never refused. When what was typed
+ * matches a Custom Field value apart from case or spacing, it is stored in
+ * the list's spelling, so "payroll " and "Payroll" do not become two departments.
  *
  * An empty list is treated as "could not load", never as "nothing is allowed",
  * so a failed request cannot turn into every row being refused.
@@ -126,7 +129,8 @@ export function checkAgainstLists(result: ParseResult, lists: ImportLists): Pars
     const out = { ...r }
 
     if (lists.companies.length > 0 && out.companyId) {
-      const c = lists.companies.find(x => same(x.id, out.companyId) || same(x.name, out.companyId))
+      const c = lists.companies.find(x =>
+        same(x.id, out.companyId) || same(x.name, out.companyId) || (!!x.shortName && same(x.shortName, out.companyId)))
       if (c) out.companyId = c.id
       else errors.push(`${where(r)}: ไม่พบบริษัท "${out.companyId}" ในระบบ`)
     }
@@ -137,15 +141,9 @@ export function checkAgainstLists(result: ParseResult, lists: ImportLists): Pars
       else errors.push(`${where(r)}: ไม่พบกลุ่ม "${out.accessGroup}" ในระบบ`)
     }
 
-    for (const [field, list, label] of [
-      ['department', lists.departments, 'แผนก'],
-      ['position', lists.positions, 'ตำแหน่ง'],
-    ] as const) {
-      const typed = out[field]
-      if (list.length === 0 || !typed) continue
-      const hit = list.find(v => same(v, typed))
+    for (const [field, list] of [['department', lists.departments], ['position', lists.positions]] as const) {
+      const hit = out[field] ? list.find(v => same(v, out[field])) : undefined
       if (hit) out[field] = hit
-      else errors.push(`${where(r)}: ${label} "${typed}" ไม่อยู่ในรายการ — เพิ่มได้ที่เมนู Custom Field`)
     }
 
     return out

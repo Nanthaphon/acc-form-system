@@ -37,8 +37,8 @@ describe('ImportCsvPage', () => {
     expect(screen.queryByText(/บันทึกเป็น CSV UTF-8/)).toBeNull()
   })
 
-  it('says where the column explanations are, so the help sheet gets opened', () => {
+  it('says which columns are lists and which are free text', () => {
     show()
-    expect(screen.getByText(/คำอธิบาย/)).toBeInTheDocument()
+    expect(screen.getByText(/แผนกและตำแหน่งพิมพ์ได้อิสระ/)).toBeInTheDocument()
   })
 })

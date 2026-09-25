@@ -3,11 +3,9 @@
 --
 -- Until now แผนก and ตำแหน่ง were typed freely, so the same department ends up
 -- spelled three ways ("Payroll", "payroll", "Payrol"). This adds a list per
--- field that an admin keeps under เมนู Custom Field. Once a field has values,
--- every place that fills it in — adding an employee, editing one, the
--- employee's own profile and the import file — offers them as a dropdown.
---
--- A field with no values yet keeps working exactly as before: free text.
+-- field that an admin keeps under เมนู Custom Field. The forms that fill the
+-- field in offer its values to click, and anything else can still be typed:
+-- the list suggests, it never refuses.
 --
 -- SAFE TO RUN MORE THAN ONCE. It creates, never drops, and seeds with
 -- "on conflict do nothing".

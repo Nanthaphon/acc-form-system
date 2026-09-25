@@ -64,7 +64,7 @@ export default function FieldOptionsPage() {
   async function onDelete(o: FieldOption) {
     const used = usage[o.field].get(o.value) ?? 0
     const msg = used > 0
-      ? `พนักงาน ${used} คนยังใช้ค่านี้อยู่ ข้อมูลของพวกเขาจะไม่หาย แต่ค่านี้จะเลือกใหม่ไม่ได้อีก`
+      ? `พนักงาน ${used} คนยังใช้ค่านี้อยู่ ข้อมูลของพวกเขาไม่หาย — แค่จะไม่ขึ้นเป็นคำแนะนำให้เลือกอีก`
       : 'ลบออกจากรายการตัวเลือก'
     if (!(await uiConfirm(msg, { title: `ลบ "${o.value}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteFieldOption(o.id); reload() }
@@ -81,8 +81,8 @@ export default function FieldOptionsPage() {
       />
 
       <p className="mb-5 text-sm text-stone-500">
-        ช่องที่มีตัวเลือก จะเป็น Dropdown ให้เลือกในหน้าเพิ่ม/แก้ไขพนักงาน หน้าข้อมูลของฉัน และในไฟล์นำเข้าพนักงาน ·
-        ช่องที่ยังไม่มีตัวเลือก พิมพ์ได้อิสระเหมือนเดิม
+        ตัวเลือกที่ตั้งไว้ จะขึ้นเป็นคำแนะนำให้กดเลือกตอนกรอกในหน้าเพิ่ม/แก้ไขพนักงานและหน้าข้อมูลของฉัน ·
+        ทั้งแผนกและตำแหน่งยังพิมพ์ค่าอื่นเองได้เสมอ รวมถึงตอนนำเข้าจากไฟล์
       </p>
 
       {missing ? (
@@ -104,8 +104,8 @@ export default function FieldOptionsPage() {
                 <div className="mb-2 flex items-center gap-2">
                   <h2 className="text-[15px] font-semibold text-stone-900">{label}</h2>
                   {rows.length > 0
-                    ? <Badge tone="blue">Dropdown · {rows.length} ตัวเลือก</Badge>
-                    : <Badge>พิมพ์อิสระ</Badge>}
+                    ? <Badge tone="blue">{rows.length} ตัวเลือก</Badge>
+                    : <Badge>ยังไม่มีตัวเลือก</Badge>}
                   <button type="button" onClick={() => onAdd(key, label)} className={`${ui.btnGhost} ml-auto`}>
                     <Plus size={16} /> เพิ่มตัวเลือก
                   </button>
@@ -124,7 +124,7 @@ export default function FieldOptionsPage() {
                       {loading ? (
                         <tr><td colSpan={3} className={ui.emptyCell}>กำลังโหลด...</td></tr>
                       ) : rows.length === 0 ? (
-                        <tr><td colSpan={3} className={ui.emptyCell}>ยังไม่มีตัวเลือก — ช่อง{label}พิมพ์ได้อิสระ</td></tr>
+                        <tr><td colSpan={3} className={ui.emptyCell}>ยังไม่มีตัวเลือก — กด “เพิ่มตัวเลือก” เพื่อให้มีคำแนะนำตอนกรอก{label}</td></tr>
                       ) : rows.map(o => (
                         <tr key={o.id} className={ui.tr}>
                           <td className={`${ui.td} font-medium text-stone-900`}>{o.value}</td>

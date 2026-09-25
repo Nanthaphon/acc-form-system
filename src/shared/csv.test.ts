@@ -37,7 +37,7 @@ describe('parseEmployeeCsv', () => {
 
 describe('checkAgainstLists', () => {
   const lists: ImportLists = {
-    companies: [{ id: 'globe', name: 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด' }],
+    companies: [{ id: 'globe', name: 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด', shortName: 'Globe Syndicate' }],
     groups: [{ id: '80da51c6-06bb-4d7c-8eba-c8b227bccc39', name: 'HR' }],
     departments: ['Payroll', 'บัญชี'],
     positions: [],
@@ -59,6 +59,13 @@ describe('checkAgainstLists', () => {
     expect(rows[0].accessGroup).toBe('80da51c6-06bb-4d7c-8eba-c8b227bccc39')
   })
 
+  // The template offers the short name, and people's own lists already use it.
+  it('takes a company by its short name, and stores its code', () => {
+    const { rows, errors } = check(row({ companyId: 'globe syndicate' }))
+    expect(errors).toEqual([])
+    expect(rows[0].companyId).toBe('globe')
+  })
+
   it('takes a company by its full name as well as its code', () => {
     const { rows, errors } = check(row({ companyId: 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด' }))
     expect(errors).toEqual([])
@@ -71,9 +78,11 @@ describe('checkAgainstLists', () => {
     expect(rows[0].department).toBe('Payroll')
   })
 
-  it('refuses a department that is not on the list, and says where to add it', () => {
-    const { errors } = check(row({ department: 'Payrol' }))
-    expect(errors).toEqual(['บรรทัด 2: แผนก "Payrol" ไม่อยู่ในรายการ — เพิ่มได้ที่เมนู Custom Field'])
+  // แผนก and ตำแหน่ง are free text: the Custom Field list suggests, it never refuses.
+  it('takes a department that is not on the list, exactly as typed', () => {
+    const { rows, errors } = check(row({ department: 'Operation Team 6 (Haier)' }))
+    expect(errors).toEqual([])
+    expect(rows[0].department).toBe('Operation Team 6 (Haier)')
   })
 
   it('leaves a field with no list as the free text it has always been', () => {
