@@ -70,7 +70,7 @@ export default function EmployeeListPage() {
         title="พนักงาน"
         subtitle={loading ? 'กำลังโหลด...' : `ทั้งหมด ${rows.length} คน · ยังใช้รหัสเริ่มต้น ${onDefault} คน`}
         actions={<>
-          <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> Import CSV</Link>
+          <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> นำเข้าพนักงาน</Link>
           <Link to="/admin/employees/new" className={ui.btnPrimary}><UserPlus size={16} /> เพิ่มพนักงาน</Link>
         </>}
       />

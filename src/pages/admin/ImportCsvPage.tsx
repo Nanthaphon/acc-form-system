@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, Download, FileSpreadsheet, FileUp, Upload } from 'lucide-react'
-import { parseEmployeeCsv } from '../../shared/csv'
+import { parseEmployeeCsv, parseEmployeeGrid } from '../../shared/csv'
 import type { CsvEmployeeRow } from '../../shared/csv'
+import { isXlsx, readSheet } from '../../shared/xlsx'
 import { importEmployees } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import type { Company } from '../../types/schema'
@@ -24,19 +25,9 @@ const COLUMNS: Array<[string, boolean, string]> = [
   ['accessGroup', false, 'รหัสกลุ่มการเข้าถึง'],
 ]
 const PREVIEW_ROWS = 8
-
-// A ready-to-fill template. The BOM makes Excel open the Thai text correctly.
-function downloadTemplate() {
-  const header = COLUMNS.map(c => c[0]).join(',')
-  const sample = '1010999,สมชาย,ใจดี,globe,เจ้าหน้าที่บัญชี,Payroll,,,employee,'
-  const blob = new Blob([`\uFEFF${header}\n${sample}\n`], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'employees-template.csv'
-  a.click()
-  URL.revokeObjectURL(url)
-}
+// The sheet the template asks people to fill in. Named rather than taken as
+// the first one, so adding a sheet to the workbook cannot change what is read.
+const SHEET = 'พนักงาน'
 
 export default function ImportCsvPage() {
   const nav = useNavigate()
@@ -56,8 +47,17 @@ export default function ImportCsvPage() {
   // Parse only — nothing is created until the admin reviews and confirms.
   async function onFile(file: File | undefined) {
     if (!file) return
-    const { rows, errors } = parseEmployeeCsv(await file.text())
-    setFileName(file.name); setRows(rows); setErrors(errors)
+    setFileName(file.name)
+    try {
+      const { rows, errors } = isXlsx(file)
+        ? parseEmployeeGrid(await readSheet(file, SHEET))
+        : parseEmployeeCsv(await file.text())
+      setRows(rows); setErrors(errors)
+    } catch (err: any) {
+      // A file that cannot be opened at all is reported where every other
+      // problem with the file is reported, rather than as a popup.
+      setRows([]); setErrors([err?.message || 'เปิดไฟล์นี้ไม่ได้'])
+    }
     if (inputRef.current) inputRef.current.value = '' // allow re-picking the fixed file
   }
 
@@ -96,8 +96,8 @@ export default function ImportCsvPage() {
         </button>
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileUp size={20} /></div>
         <div>
-          <h1 className="text-xl font-semibold text-stone-900">Import พนักงานจาก CSV</h1>
-          <p className="text-sm text-stone-500">เพิ่มพนักงานหลายคนพร้อมกันจากไฟล์ CSV</p>
+          <h1 className="text-xl font-semibold text-stone-900">นำเข้าพนักงานจากไฟล์</h1>
+          <p className="text-sm text-stone-500">เพิ่มพนักงานหลายคนพร้อมกันจากไฟล์ Excel</p>
         </div>
       </div>
 
@@ -110,27 +110,27 @@ export default function ImportCsvPage() {
             download
             className="inline-flex items-center gap-2 rounded-lg bg-clay-600 px-3 py-2 text-sm font-medium text-white hover:bg-clay-700"
           >
-            <Download size={16} /> ดาวน์โหลดไฟล์ Excel (แนะนำ)
+            <Download size={16} /> ดาวน์โหลดไฟล์ Excel
           </a>
-          <button
-            type="button"
-            onClick={downloadTemplate}
-            className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:border-stone-300 hover:text-stone-900"
-          >
-            <Download size={16} /> ไฟล์ CSV เปล่า
-          </button>
         </div>
 
         <p className={`${ui.hint} mb-4`}>
-          ไฟล์ Excel มีคำอธิบายทุกคอลัมน์และมีรายการให้เลือก (สิทธิ์ · บริษัท · กลุ่ม) —
-          กรอกเสร็จแล้วต้อง <span className="font-medium text-stone-700">บันทึกเป็น CSV UTF-8</span> ก่อนอัปโหลด เพราะระบบอ่านเฉพาะไฟล์ .csv
+          ไฟล์นี้มีชีต <span className="font-medium text-stone-700">"คำอธิบาย"</span> บอกว่าแต่ละคอลัมน์กรอกอะไร
+          และช่องที่มีค่าตายตัว (สิทธิ์ · บริษัท · กลุ่ม) เป็นรายการให้เลือก ไม่ต้องพิมพ์เอง —
+          กรอกเสร็จแล้ว <span className="font-medium text-stone-700">อัปโหลดไฟล์ .xlsx ได้เลย</span> ไม่ต้องแปลงเป็นอย่างอื่น
         </p>
 
         <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 px-6 py-8 text-center hover:border-clay-400 hover:bg-clay-50/40">
           <FileSpreadsheet size={28} className="text-stone-400" />
-          <span className="text-sm font-medium text-stone-700">{fileName || 'คลิกเพื่อเลือกไฟล์ .csv'}</span>
-          <span className="text-xs text-stone-400">{fileName ? 'คลิกเพื่อเลือกไฟล์อื่น' : 'ไฟล์ UTF-8 · แถวแรกเป็นชื่อคอลัมน์'}</span>
-          <input ref={inputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={e => onFile(e.target.files?.[0])} />
+          <span className="text-sm font-medium text-stone-700">{fileName || 'คลิกเพื่อเลือกไฟล์ที่กรอกแล้ว'}</span>
+          <span className="text-xs text-stone-400">{fileName ? 'คลิกเพื่อเลือกไฟล์อื่น' : 'รับไฟล์ .xlsx และ .csv'}</span>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={e => onFile(e.target.files?.[0])}
+          />
         </label>
 
         <details className="mt-4 text-sm">
