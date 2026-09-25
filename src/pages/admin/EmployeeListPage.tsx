@@ -1,4 +1,4 @@
-import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users } from 'lucide-react'
@@ -16,6 +16,7 @@ import type { Company, UserProfile } from '../../types/schema'
 
 const HEADERS = ['ชื่อ-นามสกุล', 'ชื่อผู้ใช้', 'รหัสผ่าน', 'ตำแหน่ง / แผนก', 'บริษัท', 'สิทธิ์', '']
 const STATES: PasswordState[] = ['default', 'temporary', 'own']
+const CHECKBOX = 'h-4 w-4 cursor-pointer rounded accent-clay-600 disabled:cursor-not-allowed disabled:opacity-30'
 
 // The default password is the username, so it can be shown; any other is hashed.
 function PasswordCell({ p }: { p: UserProfile }) {
@@ -38,11 +39,22 @@ export default function EmployeeListPage() {
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
   const [pwFor, setPwFor] = useState<UserProfile | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState<{ done: number; total: number } | null>(null)
 
-  function load() { listEmployees().then(r => { setRows(r); setLoading(false) }) }
+  function load() {
+    listEmployees().then(r => {
+      setRows(r); setLoading(false)
+      // Someone deleted, or removed elsewhere, cannot stay ticked.
+      const present = new Set(r.map(p => p.uid))
+      setSelected(prev => new Set([...prev].filter(uid => present.has(uid))))
+    })
+  }
   useEffect(() => { load(); listCompanies().then(setCompanies) }, [])
 
   const viewerIsSuper = isSuperAdmin(profile)
+  // The same rule as the row's delete button, which the database enforces too.
+  const deletable = (r: UserProfile) => r.uid !== profile?.uid && !isSuperAdmin(r)
   // Only the Super Admin may edit the Super Admin's account.
   const locked = (r: UserProfile) => isSuperAdmin(r) && !viewerIsSuper
   const companyName = (id: string) => companies.find(c => c.id === id)?.name || id
@@ -52,6 +64,58 @@ export default function EmployeeListPage() {
     ? rows.filter(r => `${r.employeeId} ${r.firstName} ${r.lastName} ${r.position} ${r.department}`.toLowerCase().includes(needle))
     : rows
   const onDefault = rows.filter(r => passwordState(r) === 'default').length
+
+  // "Select all" means everyone the search is showing, not everyone there is:
+  // what is ticked should be what can be seen.
+  const visible = filtered.filter(deletable)
+  const allTicked = visible.length > 0 && visible.every(r => selected.has(r.uid))
+  const someTicked = visible.some(r => selected.has(r.uid))
+  const picked = rows.filter(r => selected.has(r.uid) && deletable(r))
+  const pickedHidden = picked.filter(r => !filtered.includes(r)).length
+
+  function toggle(uid: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(uid)) next.delete(uid)
+      else next.add(uid)
+      return next
+    })
+  }
+  function toggleAll() {
+    setSelected(prev => {
+      const next = new Set(prev)
+      for (const r of visible) {
+        if (allTicked) next.delete(r.uid)
+        else next.add(r.uid)
+      }
+      return next
+    })
+  }
+
+  async function onDeleteSelected() {
+    const n = picked.length
+    const names = picked.slice(0, 8).map(r => `• ${r.firstName} ${r.lastName} (${r.employeeId})`).join('\n')
+    const more = n > 8 ? `\nและอีก ${n - 8} คน` : ''
+    // Typing the number rather than clicking OK: this removes logins and every
+    // document these people ever made, and cannot be undone.
+    const typed = await uiPrompt(
+      `ลบบัญชี login และเอกสารทั้งหมดของทุกคนต่อไปนี้อย่างถาวร ย้อนกลับไม่ได้\n\n${names}${more}\n\nพิมพ์ ${n} เพื่อยืนยัน`,
+      { title: `ลบพนักงาน ${n} คน ?`, tone: 'danger', confirmText: 'ลบ', placeholder: String(n) },
+    )
+    if (typed === null) return
+    if (typed.trim() !== String(n)) { uiAlert(`ตัวเลขไม่ตรงกับ ${n} — ยังไม่ได้ลบใคร`); return }
+
+    const failed: string[] = []
+    for (const [i, r] of picked.entries()) {
+      setDeleting({ done: i, total: n })
+      try { await deleteEmployee(r.uid) }
+      catch (err: any) { failed.push(`• ${r.firstName} ${r.lastName} (${r.employeeId}) — ${err?.message || 'เกิดข้อผิดพลาด'}`) }
+    }
+    setDeleting(null)
+    load()
+    if (failed.length === 0) uiAlert(`ลบพนักงานแล้ว ${n} คน`, { tone: 'success' })
+    else uiAlert(`ลบแล้ว ${n - failed.length} คน · ไม่สำเร็จ ${failed.length} คน\n\n${failed.join('\n')}`, { title: 'ลบไม่ครบทุกคน', tone: 'danger' })
+  }
 
   async function onDelete(r: UserProfile) {
     if (!(await uiConfirm(`จะลบบัญชี login และประวัติทั้งหมดของคนนี้อย่างถาวร`, { title: `ลบพนักงาน "${r.firstName} ${r.lastName}" (${r.employeeId}) ?`, tone: 'danger', confirmText: 'ลบ' }))) return
@@ -95,14 +159,58 @@ export default function EmployeeListPage() {
         </div>
       </div>
 
+      {picked.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-rose-100 bg-rose-50 px-4 py-2.5 text-sm">
+          <span className="font-medium text-stone-900">เลือกแล้ว {picked.length} คน</span>
+          {pickedHidden > 0 && <span className="text-stone-500">(ไม่อยู่ในผลค้นหาตอนนี้ {pickedHidden} คน)</span>}
+          <button type="button" onClick={() => setSelected(new Set())} disabled={!!deleting} className={ui.btnGhost}>
+            ยกเลิกการเลือก
+          </button>
+          <button
+            type="button"
+            onClick={onDeleteSelected}
+            disabled={!!deleting}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-brick-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brick-700 disabled:opacity-60"
+          >
+            {deleting
+              ? <><Spinner size={16} /> กำลังลบ {deleting.done + 1}/{deleting.total}</>
+              : <><Trash2 size={16} /> ลบ {picked.length} คน</>}
+          </button>
+        </div>
+      )}
+
       <div className={ui.tableWrap}>
         <table className={ui.table}>
           <thead className={ui.thead}>
-            <tr>{HEADERS.map(h => <th key={h} className={ui.th}>{h}</th>)}</tr>
+            <tr>
+              <th className={`${ui.th} w-10`}>
+                <input
+                  type="checkbox"
+                  aria-label="เลือกทั้งหมด"
+                  className={CHECKBOX}
+                  checked={allTicked}
+                  disabled={visible.length === 0 || !!deleting}
+                  ref={el => { if (el) el.indeterminate = someTicked && !allTicked }}
+                  onChange={toggleAll}
+                />
+              </th>
+              {HEADERS.map(h => <th key={h} className={ui.th}>{h}</th>)}
+            </tr>
           </thead>
           <tbody className={ui.tbody}>
             {filtered.map(r => (
-              <tr key={r.uid} className={ui.tr}>
+              <tr key={r.uid} className={`${ui.tr} ${selected.has(r.uid) ? 'bg-rose-50/50' : ''}`}>
+                <td className={`${ui.td} w-10`}>
+                  <input
+                    type="checkbox"
+                    aria-label={`เลือก ${r.firstName} ${r.lastName}`}
+                    className={CHECKBOX}
+                    checked={selected.has(r.uid) && deletable(r)}
+                    disabled={!deletable(r) || !!deleting}
+                    title={deletable(r) ? undefined : r.uid === profile?.uid ? 'ลบบัญชีของตัวเองไม่ได้' : 'ลบบัญชี Super Admin ไม่ได้'}
+                    onChange={() => toggle(r.uid)}
+                  />
+                </td>
                 <td className={`${ui.td} whitespace-nowrap`}>
                   <Link to={`/admin/employees/${r.uid}`} className="font-medium text-stone-900 hover:text-clay-600">
                     {r.firstName} {r.lastName}
@@ -137,11 +245,11 @@ export default function EmployeeListPage() {
               </tr>
             ))}
             {loading && (
-              <tr><td colSpan={HEADERS.length} className={ui.emptyCell}><Spinner size={20} className="mx-auto" /></td></tr>
+              <tr><td colSpan={HEADERS.length + 1} className={ui.emptyCell}><Spinner size={20} className="mx-auto" /></td></tr>
             )}
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={HEADERS.length} className={ui.emptyCell}>
+                <td colSpan={HEADERS.length + 1} className={ui.emptyCell}>
                   {rows.length === 0 ? 'ยังไม่มีพนักงาน' : `ไม่พบพนักงานที่ตรงกับ “${q}”`}
                 </td>
               </tr>
