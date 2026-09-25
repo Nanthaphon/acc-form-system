@@ -5,6 +5,8 @@ export interface CsvEmployeeRow {
   employeeId: string; firstName: string; lastName: string
   position: string; department: string; companyId: string
   defaultJob: string; bankAccount: string; role: Role; accessGroup?: string
+  /** Where the row sits in the person's own file, header = 1. For messages. */
+  line?: number
 }
 
 export interface ParseResult { rows: CsvEmployeeRow[]; errors: string[] }
@@ -56,6 +58,7 @@ function rowsFromRecords(records: Record<string, string>[], firstLine = 2): Pars
       bankAccount: clean(raw.bankAccount),
       role: (role === 'admin' ? 'admin' : 'employee') as Role,
       accessGroup: clean(raw.accessGroup) || undefined,
+      line,
     })
   })
 
@@ -92,4 +95,61 @@ export function parseEmployeeGrid(grid: string[][]): ParseResult {
     return record
   })
   return rowsFromRecords(records)
+}
+
+export interface ImportLists {
+  companies: { id: string; name: string }[]
+  groups: { id: string; name: string }[]
+  departments: string[]
+  positions: string[]
+}
+
+const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+
+/**
+ * Puts every row into the system's own spelling, and reports what it cannot
+ * place — before anything is created, while the file can still be fixed.
+ *
+ * A company or group may be written as its code or as its name: the template's
+ * group dropdown offers names, because a group made on screen has a code no
+ * one could read. A department or position is checked only once that field
+ * has a list; until then it is free text, as it has always been.
+ *
+ * An empty list is treated as "could not load", never as "nothing is allowed",
+ * so a failed request cannot turn into every row being refused.
+ */
+export function checkAgainstLists(result: ParseResult, lists: ImportLists): ParseResult {
+  const errors = [...result.errors]
+  const where = (r: CsvEmployeeRow) => (r.line ? `บรรทัด ${r.line}` : `รหัส ${r.employeeId}`)
+
+  const rows = result.rows.map(r => {
+    const out = { ...r }
+
+    if (lists.companies.length > 0 && out.companyId) {
+      const c = lists.companies.find(x => same(x.id, out.companyId) || same(x.name, out.companyId))
+      if (c) out.companyId = c.id
+      else errors.push(`${where(r)}: ไม่พบบริษัท "${out.companyId}" ในระบบ`)
+    }
+
+    if (lists.groups.length > 0 && out.accessGroup) {
+      const g = lists.groups.find(x => same(x.id, out.accessGroup!) || same(x.name, out.accessGroup!))
+      if (g) out.accessGroup = g.id
+      else errors.push(`${where(r)}: ไม่พบกลุ่ม "${out.accessGroup}" ในระบบ`)
+    }
+
+    for (const [field, list, label] of [
+      ['department', lists.departments, 'แผนก'],
+      ['position', lists.positions, 'ตำแหน่ง'],
+    ] as const) {
+      const typed = out[field]
+      if (list.length === 0 || !typed) continue
+      const hit = list.find(v => same(v, typed))
+      if (hit) out[field] = hit
+      else errors.push(`${where(r)}: ${label} "${typed}" ไม่อยู่ในรายการ — เพิ่มได้ที่เมนู Custom Field`)
+    }
+
+    return out
+  })
+
+  return { rows, errors }
 }

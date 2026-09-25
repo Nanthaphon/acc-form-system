@@ -1,23 +1,36 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { readSheet, isXlsx } from './xlsx'
+import { readSheet, readPart, isXlsx } from './xlsx'
 import { parseEmployeeGrid } from './csv'
+import { buildEmployeeTemplate } from './employeeTemplate'
+import type { TemplateLists } from './employeeTemplate'
 
-// The fixture is the template the app actually hands out. Reading it here means
-// the two can never drift apart: change the workbook in a way this reader
-// cannot follow, and the test that fails is this one — not an admin's import.
-const TEMPLATE = join(__dirname, '..', '..', 'public', 'employees-template.xlsx')
-const template = () => {
-  const file = readFileSync(TEMPLATE)
-  return file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer
+// Lists shaped like the real system's: a group made on screen has a random
+// code, which is exactly why the template offers group names instead.
+const LISTS: TemplateLists = {
+  companies: [
+    { id: 'globe', name: 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด' },
+    { id: 'besthrm', name: 'บริษัท เบสท์ เอช อาร์ เอ็ม จำกัด' },
+  ],
+  groups: [
+    { id: 'pcms', name: 'PcMs' },
+    { id: '80da51c6-06bb-4d7c-8eba-c8b227bccc39', name: 'HR' },
+  ],
+  departments: ['Payroll', 'บัญชี', 'Finance'],
+  positions: [],
 }
 
-// The same template after Microsoft Excel opened, filled in and re-saved it.
-// Excel lays a workbook out differently from the library that generated ours —
-// different zip entries, different extra fields, its own shared-string table —
-// and Excel's version is the one that will actually be uploaded. A reader that
-// only ever meets files from its own generator has not been tested.
+const build = async (lists: TemplateLists = LISTS) => {
+  const bytes = await buildEmployeeTemplate(lists)
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+}
+
+// The template after Microsoft Excel opened, filled in and re-saved it.
+// Excel lays a workbook out differently from anything we write — different
+// zip entries, different extra fields, its own shared-string table — and
+// Excel's version is the one that will actually be uploaded. A reader that
+// only ever meets files from its own writer has not been tested.
 const EXCEL = join(__dirname, '__fixtures__', 'written-by-excel.xlsx')
 const writtenByExcel = () => {
   const file = readFileSync(EXCEL)
@@ -29,30 +42,90 @@ const HEADERS = [
   'department', 'defaultJob', 'bankAccount', 'role', 'accessGroup',
 ]
 
+describe('the template, as built from the live lists', () => {
+  it('has the headers the importer reads', async () => {
+    expect((await readSheet(await build(), 'พนักงาน'))[0]).toEqual(HEADERS)
+  })
+
+  it('ships empty, with nothing to remember to delete', async () => {
+    const { rows, errors } = parseEmployeeGrid(await readSheet(await build(), 'พนักงาน'))
+    expect(rows).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  it('puts the system\'s own values on the ตัวเลือก sheet, one list per column', async () => {
+    const options = await readSheet(await build(), 'ตัวเลือก')
+    expect(options[0]).toEqual(['role', 'companyId', 'accessGroup', 'department'])
+    expect(options[1]).toEqual(['employee', 'globe', 'PcMs', 'Payroll'])
+    expect(options[2]).toEqual(['admin', 'besthrm', 'HR', 'บัญชี'])
+    expect(options[3]).toEqual(['', '', '', 'Finance'])
+  })
+
+  it('leaves out a list with nothing in it, rather than an empty dropdown', async () => {
+    const options = await readSheet(await build(), 'ตัวเลือก')
+    expect(options[0]).not.toContain('position')
+  })
+
+  it('offers a dropdown for every list, each over exactly its own values', async () => {
+    const xml = await readPart(await build(), 'xl/worksheets/sheet1.xml')
+    const lists = [...xml.matchAll(/sqref="([A-Z]+)2:[A-Z]+1000"><formula1>([^<]+)<\/formula1>/g)]
+      .map(m => [m[1], m[2].replace(/&apos;|'/g, '\'')])
+    expect(lists).toEqual(expect.arrayContaining([
+      ['I', '\'ตัวเลือก\'!$A$2:$A$3'],   // role
+      ['D', '\'ตัวเลือก\'!$B$2:$B$3'],   // companyId
+      ['J', '\'ตัวเลือก\'!$C$2:$C$3'],   // accessGroup
+      ['F', '\'ตัวเลือก\'!$D$2:$D$4'],   // department — three values
+    ]))
+  })
+
+  it('refuses a wrong role outright, but only warns on the lists that can grow', async () => {
+    const xml = await readPart(await build(), 'xl/worksheets/sheet1.xml')
+    const rule = (col: string) => new RegExp(`<dataValidation[^>]*sqref="${col}2:${col}1000"`).exec(xml)?.[0] ?? ''
+    expect(rule('I')).not.toContain('errorStyle')          // role: the default, stop
+    expect(rule('F')).toContain('errorStyle="warning"')    // department
+    expect(rule('A')).toContain('type="textLength"')       // employeeId, 6+
+  })
+
+  it('keeps the digit columns as text, so Excel cannot eat a leading zero', async () => {
+    const xml = await readPart(await build(), 'xl/worksheets/sheet1.xml')
+    const styles = await readPart(await build(), 'xl/styles.xml')
+    const styleOf = (col: number) => Number(new RegExp(`<col min="${col}" max="${col}"[^>]*style="(\\d+)"`).exec(xml)?.[1])
+    const xfs = [...styles.matchAll(/<xf numFmtId="(\d+)"[^>]*xfId/g)].map(m => m[1])
+    expect(xfs[styleOf(1)]).toBe('49') // employeeId
+    expect(xfs[styleOf(8)]).toBe('49') // bankAccount
+  })
+
+  it('builds the same bytes from the same lists', async () => {
+    const [a, b] = await Promise.all([build(), build()])
+    expect(new Uint8Array(a)).toEqual(new Uint8Array(b))
+  })
+})
+
 describe('reading an .xlsx', () => {
-  it('reads the headers out of the template the app gives people', async () => {
-    const grid = await readSheet(template(), 'พนักงาน')
-    expect(grid[0]).toEqual(HEADERS)
-  })
-
   it('reads Thai text, which is where a wrong decoder would show up first', async () => {
-    const help = await readSheet(template(), 'คำอธิบาย')
+    const help = await readSheet(await build(), 'คำอธิบาย')
+    expect(help[0]?.[0]).toBe('วิธีใช้ไฟล์นี้')
     expect(help.flat().some(cell => cell.includes('รหัสพนักงาน'))).toBe(true)
-    expect(help[0]?.[0]).toBe('วิธีใช้ไฟล์นี้')
   })
 
-  // The values a person may type are the values the dropdowns offer, and both
-  // come from this one sheet — so nothing can be offered that import refuses.
-  it('carries the allowed values on their own sheet', async () => {
-    const options = await readSheet(template(), 'ตัวเลือก')
-    expect(options[0]).toEqual(['role', 'companyId', 'accessGroup'])
-    expect(options[1]).toEqual(['employee', 'globe', 'dx'])
-    expect(options[2]).toEqual(['admin', 'besthrm', 'pcms'])
+  it('reads a workbook Excel itself wrote, which is the one people will upload', async () => {
+    const { rows, errors } = parseEmployeeGrid(await readSheet(writtenByExcel(), 'พนักงาน'))
+    expect(errors).toEqual([])
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({
+      employeeId: '1020001', firstName: 'สมหญิง', lastName: 'รักงาน',
+      companyId: 'globe', position: 'ผู้จัดการฝ่ายบัญชี', department: 'Finance',
+      defaultJob: 'ปิดงบรายเดือน', bankAccount: '987-6-54321-0', role: 'admin',
+    })
   })
 
-  it('reads the named sheet, not whichever one happens to be first', async () => {
-    const help = await readSheet(template(), 'คำอธิบาย')
-    expect(help[0]?.[0]).toBe('วิธีใช้ไฟล์นี้')
+  // An employee id is a string of digits, not a quantity. Left as a number it
+  // would lose a leading zero and a long bank account would come back as
+  // 9.87654E+11, so the template sets both columns to text.
+  it('keeps digits as digits through Excel, rather than as numbers', async () => {
+    const grid = await readSheet(writtenByExcel(), 'พนักงาน')
+    expect(grid[1][0]).toBe('1020001')
+    expect(grid[1][7]).toBe('987-6-54321-0')
   })
 
   it('refuses a file that is not a workbook at all', async () => {
@@ -68,31 +141,15 @@ describe('reading an .xlsx', () => {
   })
 })
 
-describe('the template, read end to end', () => {
-  // The template used to ship a filled example row that had to be deleted
-  // before importing. Nobody deletes it reliably, and the cost of forgetting
-  // was a real employee called สมชาย ใจดี — so the sheet now starts empty.
-  it('ships empty, with nothing to remember to delete', async () => {
-    const { rows, errors } = parseEmployeeGrid(await readSheet(template(), 'พนักงาน'))
-    expect(rows).toEqual([])
-    expect(errors).toEqual([])
-  })
-
+describe('turning the grid into employees', () => {
   // The guard stays for the copies of the old template already downloaded.
-  it('still refuses that example row if an older file is uploaded', () => {
+  it('still refuses the old template\'s example row', () => {
     const { rows, errors } = parseEmployeeGrid([
       ['employeeId', 'firstName', 'lastName', 'companyId'],
       ['1010999', 'สมชาย', 'ใจดี', 'globe'],
     ])
     expect(rows).toEqual([])
     expect(errors).toEqual([expect.stringContaining('แถวตัวอย่าง')])
-  })
-
-  it('ignores the hundreds of styled but empty rows the template carries', async () => {
-    const grid = await readSheet(template(), 'พนักงาน')
-    expect(grid.length).toBeGreaterThan(100) // the rows are really there
-    const { errors } = parseEmployeeGrid(grid)
-    expect(errors.filter(e => e.includes('ขาดค่า'))).toEqual([])
   })
 
   it('reads a filled-in row by header name, whatever order the columns are in', () => {
@@ -102,28 +159,7 @@ describe('the template, read end to end', () => {
     ]
     const { rows, errors } = parseEmployeeGrid(shuffled)
     expect(errors).toEqual([])
-    expect(rows[0]).toMatchObject({ employeeId: '1010001', firstName: 'สมหญิง', role: 'admin' })
-  })
-
-  it('reads a workbook Excel itself wrote, which is the one people will upload', async () => {
-    const { rows, errors } = parseEmployeeGrid(await readSheet(writtenByExcel(), 'พนักงาน'))
-    expect(errors).toEqual([])
-    expect(rows).toHaveLength(2)
-    expect(rows[0]).toEqual({
-      employeeId: '1020001', firstName: 'สมหญิง', lastName: 'รักงาน',
-      companyId: 'globe', position: 'ผู้จัดการฝ่ายบัญชี', department: 'Finance',
-      defaultJob: 'ปิดงบรายเดือน', bankAccount: '987-6-54321-0',
-      role: 'admin', accessGroup: undefined,
-    })
-  })
-
-  // An employee id is a string of digits, not a quantity. Left as a number it
-  // would lose a leading zero and a long bank account would come back as
-  // 9.87654E+11, so the template sets both columns to text.
-  it('keeps digits as digits through Excel, rather than as numbers', async () => {
-    const grid = await readSheet(writtenByExcel(), 'พนักงาน')
-    expect(grid[1][0]).toBe('1020001')
-    expect(grid[1][7]).toBe('987-6-54321-0')
+    expect(rows[0]).toMatchObject({ employeeId: '1010001', firstName: 'สมหญิง', role: 'admin', line: 2 })
   })
 
   it('says which headers are missing rather than importing blanks', () => {

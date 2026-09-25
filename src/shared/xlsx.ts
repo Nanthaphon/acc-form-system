@@ -170,3 +170,11 @@ export async function readSheet(file: Blob | ArrayBuffer, sheetName?: string): P
 
 /** True for a file the reader should be given rather than the CSV parser. */
 export const isXlsx = (file: File) => /\.xlsx$/i.test(file.name)
+
+/** One part of the file as text, e.g. "xl/worksheets/sheet1.xml" — for the
+ *  tests that need to look at what was written, not just what reads back. */
+export async function readPart(file: Blob | ArrayBuffer, name: string): Promise<string> {
+  const source = file as Blob
+  const parts = await unzip(typeof source.arrayBuffer === 'function' ? await source.arrayBuffer() : file as ArrayBuffer)
+  return text(parts.get(name))
+}

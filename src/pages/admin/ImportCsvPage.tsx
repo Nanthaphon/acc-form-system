@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, ArrowLeft, Download, FileSpreadsheet, FileUp, Upload } from 'lucide-react'
-import { parseEmployeeCsv, parseEmployeeGrid } from '../../shared/csv'
-import type { CsvEmployeeRow } from '../../shared/csv'
+import { checkAgainstLists, parseEmployeeCsv, parseEmployeeGrid } from '../../shared/csv'
+import type { CsvEmployeeRow, ImportLists } from '../../shared/csv'
 import { isXlsx, readSheet } from '../../shared/xlsx'
 import { importEmployees } from '../../data/users'
 import { listCompanies } from '../../data/companies'
+import { listAccessGroups } from '../../data/accessGroups'
+import { loadOptionLists } from '../../data/fieldOptions'
+import { dbErrorMessage } from '../../shared/dbError'
 import type { Company } from '../../types/schema'
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { Spinner } from '../../components/Spinner'
@@ -16,6 +19,23 @@ const PREVIEW_ROWS = 8
 // the first one, so adding a sheet to the workbook cannot change what is read.
 const SHEET = 'พนักงาน'
 
+// The lists as they stand right now — fetched again for every download and
+// every upload, so a department added a minute ago is already in both.
+async function loadLists(): Promise<ImportLists> {
+  const [companies, groups, options] = await Promise.all([listCompanies(), listAccessGroups(), loadOptionLists()])
+  return { companies, groups, departments: options.department, positions: options.position }
+}
+
+function saveFile(bytes: Uint8Array, name: string, type: string) {
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  a.click()
+  // Revoked a moment later: revoking at once can cancel the download itself.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 export default function ImportCsvPage() {
   const nav = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -24,6 +44,7 @@ export default function ImportCsvPage() {
   const [rows, setRows] = useState<CsvEmployeeRow[]>([])
   const [errors, setErrors] = useState<string[]>([])
   const [importing, setImporting] = useState(false)
+  const [building, setBuilding] = useState(false)
   useEffect(() => { listCompanies().then(setCompanies) }, [])
 
   function reset() {
@@ -36,9 +57,10 @@ export default function ImportCsvPage() {
     if (!file) return
     setFileName(file.name)
     try {
-      const { rows, errors } = isXlsx(file)
+      const parsed = isXlsx(file)
         ? parseEmployeeGrid(await readSheet(file, SHEET))
         : parseEmployeeCsv(await file.text())
+      const { rows, errors } = checkAgainstLists(parsed, await loadLists())
       setRows(rows); setErrors(errors)
     } catch (err: any) {
       // A file that cannot be opened at all is reported where every other
@@ -46,6 +68,20 @@ export default function ImportCsvPage() {
       setRows([]); setErrors([err?.message || 'เปิดไฟล์นี้ไม่ได้'])
     }
     if (inputRef.current) inputRef.current.value = '' // allow re-picking the fixed file
+  }
+
+  // Built on request, from the live lists. The builder is loaded only here,
+  // so the rest of the app does not carry it.
+  async function downloadTemplate() {
+    setBuilding(true)
+    try {
+      const [lists, template] = await Promise.all([loadLists(), import('../../shared/employeeTemplate')])
+      saveFile(await template.buildEmployeeTemplate(lists), 'employees-template.xlsx', template.TEMPLATE_MIME)
+    } catch (e) {
+      uiAlert('สร้างไฟล์ไม่สำเร็จ: ' + dbErrorMessage(e))
+    } finally {
+      setBuilding(false)
+    }
   }
 
   async function onImport() {
@@ -92,18 +128,14 @@ export default function ImportCsvPage() {
       <div className="rounded-xl border border-stone-200 bg-white p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-[15px] font-semibold text-stone-900">1. เลือกไฟล์</h2>
-          <a
-            href="/employees-template.xlsx"
-            download
-            className="inline-flex items-center gap-2 rounded-lg bg-clay-600 px-3 py-2 text-sm font-medium text-white hover:bg-clay-700"
-          >
-            <Download size={16} /> ดาวน์โหลดไฟล์ Excel
-          </a>
+          <button type="button" onClick={downloadTemplate} disabled={building} className={ui.btnPrimary}>
+            {building ? <Spinner size={16} /> : <Download size={16} />} ดาวน์โหลดไฟล์ Excel
+          </button>
         </div>
 
         <p className={`${ui.hint} mb-4`}>
           ไฟล์นี้มีชีต <span className="font-medium text-stone-700">"คำอธิบาย"</span> บอกว่าแต่ละคอลัมน์กรอกอะไร
-          และช่องที่มีค่าตายตัว (สิทธิ์ · บริษัท · กลุ่ม) เป็นรายการให้เลือก ไม่ต้องพิมพ์เอง —
+          และช่องที่มีค่าตายตัว (สิทธิ์ · บริษัท · กลุ่ม · แผนก) เป็นรายการให้เลือก ไม่ต้องพิมพ์เอง —
           กรอกเสร็จแล้ว <span className="font-medium text-stone-700">อัปโหลดไฟล์ .xlsx ได้เลย</span> ไม่ต้องแปลงเป็นอย่างอื่น
         </p>
 

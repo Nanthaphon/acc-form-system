@@ -4,23 +4,27 @@ import { MemoryRouter } from 'react-router-dom'
 import ImportCsvPage from './ImportCsvPage'
 
 vi.mock('../../data/companies', () => ({ listCompanies: vi.fn(() => Promise.resolve([])) }))
+vi.mock('../../data/accessGroups', () => ({ listAccessGroups: vi.fn(() => Promise.resolve([])) }))
+vi.mock('../../data/fieldOptions', () => ({
+  loadOptionLists: vi.fn(() => Promise.resolve({ department: [], position: [] })),
+}))
 vi.mock('../../data/users', () => ({ importEmployees: vi.fn() }))
 
 const show = () => render(<MemoryRouter><ImportCsvPage /></MemoryRouter>)
 
 describe('ImportCsvPage', () => {
-  it('offers one file to download, the one that explains itself', () => {
+  // The file is built on click from the live lists, not served from public/:
+  // a fixed file cannot know the departments and groups this system has today.
+  it('offers the template as a download built on request', () => {
     show()
-    const links = screen.getAllByRole('link')
-    expect(links).toHaveLength(1)
-    expect(links[0]).toHaveAttribute('href', '/employees-template.xlsx')
-    expect(links[0]).toHaveAttribute('download')
+    expect(screen.getByRole('button', { name: /ดาวน์โหลดไฟล์ Excel/ })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /ดาวน์โหลด/ })).toBeNull()
   })
 
   // A plain CSV template used to sit beside the Excel one and was the likelier
   // of the two to be clicked — while being the only one that cannot carry the
   // dropdowns or the help sheet that make the import understandable.
-  it('no longer offers a bare CSV template', () => {
+  it('does not offer a bare CSV template', () => {
     show()
     expect(screen.queryByRole('button', { name: /CSV/ })).toBeNull()
   })
