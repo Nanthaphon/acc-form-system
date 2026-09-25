@@ -36,11 +36,18 @@ describe('reading an .xlsx', () => {
   })
 
   it('reads Thai text, which is where a wrong decoder would show up first', async () => {
-    const grid = await readSheet(template(), 'พนักงาน')
-    expect(grid[1]).toEqual([
-      '1010999', 'สมชาย', 'ใจดี', 'globe', 'เจ้าหน้าที่บัญชี',
-      'Payroll', 'งานบัญชีทั่วไป', '123-4-56789-0', 'employee', '',
-    ])
+    const help = await readSheet(template(), 'คำอธิบาย')
+    expect(help.flat().some(cell => cell.includes('รหัสพนักงาน'))).toBe(true)
+    expect(help[0]?.[0]).toBe('วิธีใช้ไฟล์นี้')
+  })
+
+  // The values a person may type are the values the dropdowns offer, and both
+  // come from this one sheet — so nothing can be offered that import refuses.
+  it('carries the allowed values on their own sheet', async () => {
+    const options = await readSheet(template(), 'ตัวเลือก')
+    expect(options[0]).toEqual(['role', 'companyId', 'accessGroup'])
+    expect(options[1]).toEqual(['employee', 'globe', 'dx'])
+    expect(options[2]).toEqual(['admin', 'besthrm', 'pcms'])
   })
 
   it('reads the named sheet, not whichever one happens to be first', async () => {
@@ -62,9 +69,22 @@ describe('reading an .xlsx', () => {
 })
 
 describe('the template, read end to end', () => {
-  it('stops the example row from becoming a real employee', async () => {
+  // The template used to ship a filled example row that had to be deleted
+  // before importing. Nobody deletes it reliably, and the cost of forgetting
+  // was a real employee called สมชาย ใจดี — so the sheet now starts empty.
+  it('ships empty, with nothing to remember to delete', async () => {
     const { rows, errors } = parseEmployeeGrid(await readSheet(template(), 'พนักงาน'))
-    expect(rows).toHaveLength(0)
+    expect(rows).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+  // The guard stays for the copies of the old template already downloaded.
+  it('still refuses that example row if an older file is uploaded', () => {
+    const { rows, errors } = parseEmployeeGrid([
+      ['employeeId', 'firstName', 'lastName', 'companyId'],
+      ['1010999', 'สมชาย', 'ใจดี', 'globe'],
+    ])
+    expect(rows).toEqual([])
     expect(errors).toEqual([expect.stringContaining('แถวตัวอย่าง')])
   })
 
