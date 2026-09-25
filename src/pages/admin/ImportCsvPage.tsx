@@ -4,7 +4,8 @@ import { AlertTriangle, ArrowLeft, Download, FileSpreadsheet, FileUp, Upload } f
 import { checkAgainstLists, parseEmployeeCsv, parseEmployeeGrid } from '../../shared/csv'
 import type { CsvEmployeeRow, ImportLists } from '../../shared/csv'
 import { isXlsx, readSheet } from '../../shared/xlsx'
-import { importEmployees } from '../../data/users'
+import { existingEmployeeIds, importEmployees, isRateLimited } from '../../data/users'
+import type { ImportProgress } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import { loadOptionLists } from '../../data/fieldOptions'
@@ -42,13 +43,16 @@ export default function ImportCsvPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [fileName, setFileName] = useState('')
   const [rows, setRows] = useState<CsvEmployeeRow[]>([])
+  // People in the file who already have an account: shown, then left alone.
+  const [skipped, setSkipped] = useState<CsvEmployeeRow[]>([])
+  const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [errors, setErrors] = useState<string[]>([])
   const [importing, setImporting] = useState(false)
   const [building, setBuilding] = useState(false)
   useEffect(() => { listCompanies().then(setCompanies) }, [])
 
   function reset() {
-    setFileName(''); setRows([]); setErrors([])
+    setFileName(''); setRows([]); setSkipped([]); setErrors([])
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -60,12 +64,22 @@ export default function ImportCsvPage() {
       const parsed = isXlsx(file)
         ? parseEmployeeGrid(await readSheet(file, SHEET))
         : parseEmployeeCsv(await file.text())
-      const { rows, errors } = checkAgainstLists(parsed, await loadLists())
-      setRows(rows); setErrors(errors)
+      const [lists, existing] = await Promise.all([
+        loadLists(),
+        // If this cannot be read, nobody is skipped: an existing person then
+        // fails as already registered, which harms nothing.
+        existingEmployeeIds().catch(() => new Set<string>()),
+      ])
+      const { rows, errors } = checkAgainstLists(parsed, lists)
+      // Running the same file again — after a partial failure, say — must not
+      // report everyone who made it the first time as a failure.
+      setRows(rows.filter(r => !existing.has(r.employeeId)))
+      setSkipped(rows.filter(r => existing.has(r.employeeId)))
+      setErrors(errors)
     } catch (err: any) {
       // A file that cannot be opened at all is reported where every other
       // problem with the file is reported, rather than as a popup.
-      setRows([]); setErrors([err?.message || 'เปิดไฟล์นี้ไม่ได้'])
+      setRows([]); setSkipped([]); setErrors([err?.message || 'เปิดไฟล์นี้ไม่ได้'])
     }
     if (inputRef.current) inputRef.current.value = '' // allow re-picking the fixed file
   }
@@ -88,18 +102,22 @@ export default function ImportCsvPage() {
     if (!(await uiConfirm(`ระบบจะสร้างบัญชีเข้าใช้ให้ทุกคน รหัสผ่านเริ่มต้น = รหัสพนักงาน`, { title: `นำเข้าพนักงาน ${rows.length} คน ?`, confirmText: 'นำเข้า' }))) return
     setImporting(true)
     try {
-      const res = await importEmployees(rows)
+      const res = await importEmployees(rows, setProgress)
       if (res.failed.length === 0) {
         uiAlert(`เพิ่มพนักงานสำเร็จ ${res.ok} คน`, { title: 'นำเข้าเรียบร้อย', tone: 'success' })
       } else {
         const lines = res.failed.map(f => `• ${f.employeeId} — ${f.reason}`).join('\n')
-        uiAlert(`สำเร็จ ${res.ok} คน · ไม่สำเร็จ ${res.failed.length} คน\n\n${lines}`, { title: 'นำเข้าไม่ครบทุกคน', tone: 'danger' })
+        const limited = res.failed.some(f => isRateLimited({ message: f.reason }))
+          ? '\n\nSupabase ยังไม่ยอมให้สร้างบัญชีเพิ่มแม้รอแล้ว — นำเข้าไฟล์เดิมซ้ำได้ภายหลัง คนที่สร้างแล้วจะถูกข้ามให้เอง'
+          : ''
+        uiAlert(`สำเร็จ ${res.ok} คน · ไม่สำเร็จ ${res.failed.length} คน\n\n${lines}${limited}`, { title: 'นำเข้าไม่ครบทุกคน', tone: 'danger' })
       }
       reset()
     } catch (err: any) {
       uiAlert('นำเข้าไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
     } finally {
       setImporting(false)
+      setProgress(null)
     }
   }
 
@@ -167,10 +185,19 @@ export default function ImportCsvPage() {
               </ul>
             </div>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-stone-500">ไม่พบข้อมูลพนักงานในไฟล์</p>
+            <p className="text-sm text-stone-500">
+              {skipped.length > 0 ? `ทุกคนในไฟล์ (${skipped.length} คน) มีบัญชีในระบบแล้ว — ไม่มีใครต้องนำเข้าเพิ่ม` : 'ไม่พบข้อมูลพนักงานในไฟล์'}
+            </p>
           ) : (
             <>
-              <p className="mb-3 text-sm text-stone-600">พบพนักงาน <b className="text-stone-900">{rows.length}</b> คน{rows.length > PREVIEW_ROWS ? ` — แสดง ${PREVIEW_ROWS} คนแรก` : ''}</p>
+              <p className="mb-3 text-sm text-stone-600">
+                พนักงานใหม่ <b className="text-stone-900">{rows.length}</b> คน{rows.length > PREVIEW_ROWS ? ` — แสดง ${PREVIEW_ROWS} คนแรก` : ''}
+                {skipped.length > 0 && (
+                  <span className="text-stone-500" title={skipped.map(r => r.employeeId).join(', ')}>
+                    {' '}· มีบัญชีในระบบแล้ว {skipped.length} คน จะข้ามไป
+                  </span>
+                )}
+              </p>
               <div className="overflow-x-auto rounded-lg border border-stone-100">
                 <table className="w-full text-sm">
                   <thead className="bg-stone-50 text-stone-600">
@@ -194,7 +221,7 @@ export default function ImportCsvPage() {
             </>
           )}
 
-          <div className="mt-5 flex items-center gap-2.5">
+          <div className="mt-5 flex flex-wrap items-center gap-2.5">
             {ready && (
               <button
                 type="button"
@@ -202,7 +229,9 @@ export default function ImportCsvPage() {
                 disabled={importing}
                 className="inline-flex items-center gap-2 rounded-lg bg-clay-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-clay-700 disabled:opacity-60"
               >
-                {importing ? <><Spinner size={16} /> กำลังนำเข้า...</> : <><Upload size={16} /> นำเข้า {rows.length} คน</>}
+                {importing
+                  ? <><Spinner size={16} /> กำลังนำเข้า {progress ? `${Math.min(progress.done + 1, progress.total)}/${progress.total}` : '...'}</>
+                  : <><Upload size={16} /> นำเข้า {rows.length} คน</>}
               </button>
             )}
             <button
@@ -213,6 +242,11 @@ export default function ImportCsvPage() {
             >
               ล้างไฟล์
             </button>
+            {progress?.waiting !== undefined && (
+              <span className="text-sm text-ochre-700">
+                Supabase จำกัดจำนวนการสร้างบัญชีต่อช่วงเวลา — รอ {progress.waiting} วินาทีแล้วจะทำต่อให้เอง อย่าปิดหน้านี้
+              </span>
+            )}
           </div>
         </div>
       )}

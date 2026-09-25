@@ -8,7 +8,11 @@ vi.mock('../../data/accessGroups', () => ({ listAccessGroups: vi.fn(() => Promis
 vi.mock('../../data/fieldOptions', () => ({
   loadOptionLists: vi.fn(() => Promise.resolve({ department: [], position: [] })),
 }))
-vi.mock('../../data/users', () => ({ importEmployees: vi.fn() }))
+vi.mock('../../data/users', () => ({
+  importEmployees: vi.fn(),
+  existingEmployeeIds: vi.fn(() => Promise.resolve(new Set())),
+  isRateLimited: vi.fn(() => false),
+}))
 
 const show = () => render(<MemoryRouter><ImportCsvPage /></MemoryRouter>)
 

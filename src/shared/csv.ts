@@ -13,6 +13,11 @@ export interface ParseResult { rows: CsvEmployeeRow[]; errors: string[] }
 
 const REQUIRED = ['employeeId', 'firstName', 'lastName', 'companyId'] as const
 
+// The employee ID is also the first password, and Supabase refuses a password
+// shorter than 6. An account for a shorter ID cannot be created at all — so it
+// is reported here, with the rest of the file, rather than failing mid-import.
+export const MIN_EMPLOYEE_ID = 6
+
 // The example row shipped in the template. Left in, it would create a real
 // employee called สมชาย ใจดี — so it is refused by name rather than dropped
 // quietly, which would be the same surprise in the other direction.
@@ -30,6 +35,9 @@ const clean = (v: unknown) => String(v ?? '').trim()
 function rowsFromRecords(records: Record<string, string>[], firstLine = 2): ParseResult {
   const rows: CsvEmployeeRow[] = []
   const errors: string[] = []
+  // The second of two rows with one ID would fail as already registered half
+  // way through the import — say so now, pointing at both lines.
+  const seenAt = new Map<string, number>()
 
   records.forEach((raw, idx) => {
     const line = idx + firstLine
@@ -42,6 +50,15 @@ function rowsFromRecords(records: Record<string, string>[], firstLine = 2): Pars
     }
     for (const field of REQUIRED) {
       if (!clean(raw[field])) errors.push(`บรรทัด ${line}: ขาดค่า ${field}`)
+    }
+    const id = clean(raw.employeeId)
+    if (id && seenAt.has(id)) {
+      errors.push(`บรรทัด ${line}: รหัสพนักงาน "${id}" ซ้ำกับบรรทัด ${seenAt.get(id)}`)
+    } else if (id) {
+      seenAt.set(id, line)
+    }
+    if (id && id.length < MIN_EMPLOYEE_ID) {
+      errors.push(`บรรทัด ${line}: รหัสพนักงาน "${id}" สั้นเกินไป — ต้องยาวอย่างน้อย ${MIN_EMPLOYEE_ID} ตัว เพราะใช้เป็นรหัสผ่านเริ่มต้นด้วย`)
     }
     const role = clean(raw.role) || 'employee'
     if (role !== 'employee' && role !== 'admin') {

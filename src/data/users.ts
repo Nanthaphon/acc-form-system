@@ -75,11 +75,62 @@ export async function deleteEmployee(uid: string): Promise<void> {
   const { error } = await supabase.rpc('delete_employee', { target: uid })
   if (error) throw error
 }
-export async function importEmployees(rows: CsvEmployeeRow[]): Promise<{ ok: number; failed: { employeeId: string; reason: string }[] }> {
-  let ok = 0; const failed: { employeeId: string; reason: string }[] = []
-  for (const r of rows) {
-    try { await createEmployee(r); ok++ }
-    catch (e: any) { failed.push({ employeeId: r.employeeId, reason: e?.message || 'error' }) }
+// Supabase Auth allows only so many sign-ups per IP in a short window (30 per
+// 5 minutes unless raised under Authentication > Rate Limits). An import of
+// 60 people runs straight into it, and every account after the limit used to
+// fail outright. It is a wait, not an error: the allowance refills a little
+// every few seconds, so a refused account is retried after a pause.
+export function isRateLimited(e: unknown): boolean {
+  const err = (e ?? {}) as { status?: number; code?: string; message?: string }
+  return err.status === 429 || err.code === 'over_request_rate_limit' || /rate limit/i.test(err.message ?? '')
+}
+
+const RETRY_EVERY_S = 12
+// Past this, the limit is not refilling at all and waiting longer only hides
+// that from the person watching the screen.
+const GIVE_UP_AFTER_S = 6 * 60
+
+export interface ImportProgress {
+  done: number
+  total: number
+  /** Seconds until the next try, while Supabase is refusing sign-ups. */
+  waiting?: number
+}
+
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+
+export async function importEmployees(
+  rows: CsvEmployeeRow[],
+  onProgress?: (p: ImportProgress) => void,
+): Promise<{ ok: number; failed: { employeeId: string; reason: string }[] }> {
+  let ok = 0
+  const failed: { employeeId: string; reason: string }[] = []
+  const total = rows.length
+
+  for (const [i, r] of rows.entries()) {
+    onProgress?.({ done: i, total })
+    let waited = 0
+    for (;;) {
+      try { await createEmployee(r); ok++; break }
+      catch (e: any) {
+        if (isRateLimited(e) && waited < GIVE_UP_AFTER_S) {
+          for (let s = RETRY_EVERY_S; s > 0; s--) { onProgress?.({ done: i, total, waiting: s }); await sleep(1000) }
+          waited += RETRY_EVERY_S
+          continue
+        }
+        failed.push({ employeeId: r.employeeId, reason: e?.message || 'error' })
+        break
+      }
+    }
   }
+  onProgress?.({ done: total, total })
   return { ok, failed }
+}
+
+/** Every employee ID already in the system — so an import run twice, or re-run
+ *  after a partial failure, skips the people it already created. */
+export async function existingEmployeeIds(): Promise<Set<string>> {
+  const { data, error } = await supabase.from('profiles').select('employeeId')
+  if (error) throw error
+  return new Set((data ?? []).map(p => String((p as { employeeId: string }).employeeId)))
 }

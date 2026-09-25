@@ -107,3 +107,18 @@ describe('checkAgainstLists', () => {
     expect(errors).toEqual([])
   })
 })
+
+describe('what would fail half way through an import, caught before it starts', () => {
+  const head = 'employeeId,firstName,lastName,companyId'
+
+  // The ID is also the first password, and Supabase refuses one shorter than 6.
+  it('refuses an employee ID shorter than 6, and says why', () => {
+    const { errors } = parseEmployeeCsv(`${head}\n3,Wirun,Pidwung,globe`)
+    expect(errors).toEqual(['บรรทัด 2: รหัสพนักงาน "3" สั้นเกินไป — ต้องยาวอย่างน้อย 6 ตัว เพราะใช้เป็นรหัสผ่านเริ่มต้นด้วย'])
+  })
+
+  it('refuses the same employee ID twice, pointing at both lines', () => {
+    const { errors } = parseEmployeeCsv(`${head}\n1010001,ก,ข,globe\n1010002,ค,ง,globe\n1010001,จ,ฉ,globe`)
+    expect(errors).toEqual(['บรรทัด 4: รหัสพนักงาน "1010001" ซ้ำกับบรรทัด 2'])
+  })
+})
