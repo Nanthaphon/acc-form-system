@@ -11,19 +11,6 @@ import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { Spinner } from '../../components/Spinner'
 import { ui } from '../../components/ui'
 
-// CSV columns, in template order: [name, required, what goes in it]
-const COLUMNS: Array<[string, boolean, string]> = [
-  ['employeeId', true, 'รหัสพนักงาน — อย่างน้อย 6 ตัว ใช้เป็นรหัสผ่านเริ่มต้น'],
-  ['firstName', true, 'ชื่อ'],
-  ['lastName', true, 'นามสกุล'],
-  ['companyId', true, 'รหัสบริษัท'],
-  ['position', false, 'ตำแหน่ง'],
-  ['department', false, 'แผนก'],
-  ['defaultJob', false, 'Job เริ่มต้น'],
-  ['bankAccount', false, 'เลขบัญชี'],
-  ['role', false, 'employee = พนักงาน, admin = Account Admin (เว้นว่าง = employee)'],
-  ['accessGroup', false, 'รหัสกลุ่มการเข้าถึง'],
-]
 const PREVIEW_ROWS = 8
 // The sheet the template asks people to fill in. Named rather than taken as
 // the first one, so adding a sheet to the workbook cannot change what is read.
@@ -132,21 +119,6 @@ export default function ImportCsvPage() {
             onChange={e => onFile(e.target.files?.[0])}
           />
         </label>
-
-        <details className="mt-4 text-sm">
-          <summary className="cursor-pointer select-none font-medium text-stone-700">คอลัมน์ในไฟล์</summary>
-          <ul className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
-            {COLUMNS.map(([name, required, note]) => (
-              <li key={name} className="flex items-baseline gap-2 text-xs text-stone-600">
-                <code className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5 text-[11px] text-stone-800">{name}</code>
-                <span>{note}{required && <span className="ml-1 text-brick-500">*</span>}</span>
-              </li>
-            ))}
-          </ul>
-          {companies.length > 0 && (
-            <p className="mt-2 text-xs text-stone-500">รหัสบริษัทที่ใช้ได้: {companies.map(c => `${c.id} (${c.name})`).join(', ')}</p>
-          )}
-        </details>
       </div>
 
       {/* Step 2: review */}
