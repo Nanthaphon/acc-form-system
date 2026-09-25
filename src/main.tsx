@@ -24,6 +24,7 @@ import PrintHistoryPage from './pages/admin/PrintHistoryPage'
 import FormSettingsPage from './pages/admin/FormSettingsPage'
 import SignInboxPage from './pages/SignInboxPage'
 import AccessGroupsPage from './pages/admin/AccessGroupsPage'
+import FieldOptionsPage from './pages/admin/FieldOptionsPage'
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
       { path: 'admin/import', element: <RequireAdmin><ImportCsvPage /></RequireAdmin> },
       { path: 'admin/prints', element: <RequireAdmin><PrintHistoryPage /></RequireAdmin> },
       { path: 'admin/access-groups', element: <RequireAdmin><AccessGroupsPage /></RequireAdmin> },
+      { path: 'admin/field-options', element: <RequireAdmin><FieldOptionsPage /></RequireAdmin> },
       { path: 'admin/form-settings', element: <RequireAdmin><FormSettingsPage /></RequireAdmin> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

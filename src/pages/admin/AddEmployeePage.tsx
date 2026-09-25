@@ -9,6 +9,8 @@ import { createEmployee } from '../../data/users'
 import type { NewEmployee } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
+import { loadOptionLists, NO_OPTIONS } from '../../data/fieldOptions'
+import OptionInput from '../../components/OptionInput'
 import { ROLE_OPTIONS } from '../../shared/roles'
 import type { Company, AccessGroup, Role } from '../../types/schema'
 
@@ -24,14 +26,14 @@ export default function AddEmployeePage() {
   const nav = useNavigate()
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
+  const [lists, setLists] = useState(NO_OPTIONS)
   const [f, setF] = useState(EMPTY)
   const [mustChange, setMustChange] = useState(true)
   const [saving, setSaving] = useState(false)
   const [created, setCreated] = useState<{ employeeId: string; name: string; mustChange: boolean } | null>(null)
-  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups) }, [])
+  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups); loadOptionLists().then(setLists) }, [])
 
   const set = (k: keyof typeof EMPTY, v: string) => setF(prev => ({ ...prev, [k]: v }))
-  // Store the department id plus its name (for display).
   const username = f.employeeId.trim()
 
   async function submit(e: React.FormEvent) {
@@ -135,7 +137,7 @@ export default function AddEmployeePage() {
             </div>
             <div className="sm:col-span-2">
               <label className={ui.label}>ตำแหน่ง</label>
-              <input className={ui.input} placeholder="เช่น เจ้าหน้าที่บัญชี" value={f.position} onChange={e => set('position', e.target.value)} />
+              <OptionInput className={ui.input} placeholder="เช่น เจ้าหน้าที่บัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
             </div>
           </div>
         </div>
@@ -146,7 +148,7 @@ export default function AddEmployeePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={ui.label}>แผนก</label>
-              <input className={ui.input} placeholder="เช่น Payroll" value={f.department} onChange={e => set('department', e.target.value)} />
+              <OptionInput className={ui.input} placeholder="เช่น Payroll" value={f.department} options={lists.department} onChange={v => set('department', v)} />
             </div>
             <div>
               <label className={ui.label}>บริษัท</label>

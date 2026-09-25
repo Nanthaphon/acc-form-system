@@ -6,6 +6,9 @@ import { Spinner } from '../components/Spinner'
 import { useAuth } from '../auth/AuthProvider'
 import { updateProfile } from '../data/users'
 import { listCompanies } from '../data/companies'
+import { loadOptionLists, NO_OPTIONS } from '../data/fieldOptions'
+import type { OptionField } from '../data/fieldOptions'
+import OptionInput from '../components/OptionInput'
 import { roleLabel } from '../shared/roles'
 import type { Company } from '../types/schema'
 
@@ -24,10 +27,11 @@ const FIELDS: Array<[key: string, label: string, placeholder: string, wide?: boo
 export default function ProfilePage() {
   const { profile, refresh } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
+  const [lists, setLists] = useState(NO_OPTIONS)
   const [form, setForm] = useState(profile)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
-  useEffect(() => { listCompanies().then(setCompanies) }, [])
+  useEffect(() => { listCompanies().then(setCompanies); loadOptionLists().then(setLists) }, [])
   useEffect(() => setForm(profile), [profile])
   if (!form) return null
 
@@ -94,11 +98,12 @@ export default function ProfilePage() {
           {FIELDS.map(([k, label, placeholder]) => (
             <div key={k}>
               <label className={labelCls}>{label}</label>
-              <input
+              <OptionInput
                 className={inputCls}
                 placeholder={placeholder}
                 value={(form as any)[k] || ''}
-                onChange={e => set(k, e.target.value)}
+                options={k in lists ? lists[k as OptionField] : []}
+                onChange={v => set(k, v)}
               />
             </div>
           ))}

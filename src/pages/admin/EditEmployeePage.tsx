@@ -6,6 +6,8 @@ import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid, updateProfile } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
+import { loadOptionLists, NO_OPTIONS } from '../../data/fieldOptions'
+import OptionInput from '../../components/OptionInput'
 import { dbErrorMessage } from '../../shared/dbError'
 import { isSuperAdmin, ROLE_OPTIONS } from '../../shared/roles'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
@@ -18,18 +20,18 @@ export default function EditEmployeePage() {
   const { profile: me, refresh } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
+  const [lists, setLists] = useState(NO_OPTIONS)
   const [f, setF] = useState<UserProfile | null>(null)
   const [saving, setSaving] = useState(false)
   const [changingUsername, setChangingUsername] = useState(false)
 
-  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups) }, [])
+  useEffect(() => { listCompanies().then(setCompanies); listAccessGroups().then(setGroups); loadOptionLists().then(setLists) }, [])
   useEffect(() => {
     if (!uid) return
     getProfileByUid(uid).then(p => setF(p))
   }, [uid])
 
   const set = (k: keyof UserProfile, v: string) => setF(prev => prev ? { ...prev, [k]: v } : prev)
-  // Store the department id plus its name (for display).
 
   const viewerIsSuper = isSuperAdmin(me)
   const targetIsSuper = isSuperAdmin(f)
@@ -114,7 +116,7 @@ export default function EditEmployeePage() {
               </div>
               <div className="sm:col-span-2">
                 <label className={ui.label}>ตำแหน่ง</label>
-                <input className={ui.input} placeholder="เช่น หัวหน้าฝ่ายบัญชี" value={f.position} onChange={e => set('position', e.target.value)} />
+                <OptionInput className={ui.input} placeholder="เช่น หัวหน้าฝ่ายบัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
               </div>
             </div>
           </div>
@@ -125,7 +127,7 @@ export default function EditEmployeePage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={ui.label}>แผนก</label>
-                <input className={ui.input} placeholder="เช่น Payroll" value={f.department} onChange={e => set('department', e.target.value)} />
+                <OptionInput className={ui.input} placeholder="เช่น Payroll" value={f.department} options={lists.department} onChange={v => set('department', v)} />
               </div>
               <div>
                 <label className={ui.label}>บริษัท</label>

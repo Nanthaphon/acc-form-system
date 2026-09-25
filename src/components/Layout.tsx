@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
-import { ClipboardList, FileText, History, Inbox, KeyRound, LogOut, Printer, Tags, User, Users } from 'lucide-react'
+import { ClipboardList, FileText, History, Inbox, KeyRound, ListChecks, LogOut, Printer, Tags, User, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { logout } from '../data/auth'
 import { countMyPendingToSign } from '../data/submissions'
@@ -55,6 +55,9 @@ export default function Layout() {
             </NavLink>
             <NavLink to="/admin/access-groups" className={navLinkClass}>
               <Tags size={18} className="opacity-85" /> จัดการกลุ่ม
+            </NavLink>
+            <NavLink to="/admin/field-options" className={navLinkClass}>
+              <ListChecks size={18} className="opacity-85" /> Custom Field
             </NavLink>
           </>}
           <NavLink to="/profile" className={navLinkClass}>
