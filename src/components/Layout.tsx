@@ -44,7 +44,17 @@ export default function Layout() {
           </NavLink>
           <NavLink to="/sign" className={navLinkClass}>
             <Inbox size={18} className="opacity-85" /> รอฉันเซ็น
-            {toSign > 0 && <span className="ml-auto rounded-full bg-ochre-500 px-2 py-0.5 text-[11px] font-bold text-clay-900">{toSign}</span>}
+            {/* A round badge for one digit, a pill past that; red and white is
+                what a waiting count looks like everywhere else, and reads on
+                the dark sidebar and the teal active row alike (5.6:1). */}
+            {toSign > 0 && (
+              <span
+                aria-label={`รอเซ็น ${toSign} ฉบับ`}
+                className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brick-600 px-1.5 text-[11px] font-semibold leading-none tabular-nums text-white shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
+              >
+                {toSign > 99 ? '99+' : toSign}
+              </span>
+            )}
           </NavLink>
           {profile?.role === 'admin' && <>
             <NavLink to="/admin/employees" className={navLinkClass}>
