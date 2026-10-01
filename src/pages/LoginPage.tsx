@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ClipboardList, LogIn } from 'lucide-react'
+import { LogIn } from 'lucide-react'
 import { loginWithEmployeeId } from '../data/auth'
 import { Spinner } from '../components/Spinner'
 
@@ -32,11 +32,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-sand-50 p-4">
       <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-clay-500 to-clay-400 text-white">
-            <ClipboardList size={24} />
-          </span>
+          <img src="/logo.webp" alt="" className="h-16 w-16 object-contain" />
           <div>
-            <h1 className="text-lg font-semibold text-stone-900">ระบบเบิกค่าใช้จ่าย</h1>
+            <h1 className="text-lg font-semibold text-stone-900">เบิกบาน</h1>
             <p className="mt-0.5 text-sm text-stone-500">เข้าสู่ระบบเพื่อใช้งาน</p>
           </div>
         </div>
