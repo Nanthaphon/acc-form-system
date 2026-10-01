@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { ClipboardList, FileText, History, Inbox, KeyRound, ListChecks, LogOut, Printer, Tags, User, Users } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { logout } from '../data/auth'
-import { countMyPendingToSign } from '../data/submissions'
-import { onPendingSignChanged } from '../shared/pendingSignBus'
+import { usePendingSignCount } from '../shared/usePendingSignCount'
 import { roleLabel } from '../shared/roles'
 import NavCountBadge from './NavCountBadge'
 
@@ -17,16 +15,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 export default function Layout() {
   const { profile } = useAuth()
-  const [toSign, setToSign] = useState(0)
-  const uid = profile?.uid
-  // Refetch on load and again whenever a signature action fires, so the badge
-  // clears as soon as the last document is signed.
-  const refreshToSign = useCallback(() => {
-    if (uid) countMyPendingToSign(uid).then(setToSign)
-    else setToSign(0)
-  }, [uid])
-  useEffect(() => { refreshToSign() }, [refreshToSign])
-  useEffect(() => onPendingSignChanged(refreshToSign), [refreshToSign])
+  const toSign = usePendingSignCount(profile?.uid)
   return (
     <div className="flex min-h-screen bg-sand-50">
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-clay-900 pb-4 text-clay-100">
