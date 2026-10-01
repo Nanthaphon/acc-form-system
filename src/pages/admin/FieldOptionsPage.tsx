@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, ListChecks, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, ListChecks, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import { dbErrorMessage } from '../../shared/dbError'
@@ -13,6 +13,10 @@ import type { FieldOption, OptionField } from '../../data/fieldOptions'
 
 type Usage = Record<OptionField, Map<string, number>>
 const NO_USAGE: Usage = { department: new Map(), position: new Map() }
+// A list this long is quicker to search than to scroll.
+const SEARCH_FROM = 8
+// The card holds its own scrolling list, so it keeps its padding off the edges.
+const cardClass = ui.card.replace('p-6', 'overflow-hidden')
 
 function writeError(e: unknown): string {
   if ((e as { code?: string } | null)?.code === '23505') return 'มีตัวเลือกนี้อยู่แล้ว'
@@ -25,6 +29,7 @@ export default function FieldOptionsPage() {
   const [usage, setUsage] = useState<Usage>(NO_USAGE)
   const [loading, setLoading] = useState(true)
   const [missing, setMissing] = useState(false)
+  const [queries, setQueries] = useState<Record<string, string>>({})
 
   async function reload() {
     try {
@@ -41,8 +46,8 @@ export default function FieldOptionsPage() {
 
   const valuesOf = (field: OptionField) => options.filter(o => o.field === field)
 
-  async function onAdd(field: OptionField, label: string, preset?: string) {
-    const value = preset ?? (await uiPrompt(`พิมพ์${label}ที่จะให้เลือกได้`, { title: `เพิ่มตัวเลือก${label}`, confirmText: 'เพิ่ม' }))?.trim()
+  async function onAdd(field: OptionField, label: string) {
+    const value = (await uiPrompt(`พิมพ์${label}ที่จะให้เลือกได้`, { title: `เพิ่มตัวเลือก${label}`, confirmText: 'เพิ่ม' }))?.trim()
     if (!value) return
     const existing = matchOption(valuesOf(field).map(o => o.value), value)
     if (existing) { uiAlert(`มี "${existing}" อยู่ในรายการแล้ว`); return }
@@ -72,18 +77,13 @@ export default function FieldOptionsPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-5xl">
       <PageHeader
         onBack={() => nav('/')}
         icon={<ListChecks size={20} />}
         title="Custom Field"
-        subtitle="รายการตัวเลือกของข้อมูลพนักงาน"
+        subtitle="ตัวเลือกที่ขึ้นให้กดเลือกตอนกรอกข้อมูลพนักงาน · พิมพ์ค่าอื่นเองได้เสมอ"
       />
-
-      <p className="mb-5 text-sm text-stone-500">
-        ตัวเลือกที่ตั้งไว้ จะขึ้นเป็นคำแนะนำให้กดเลือกตอนกรอกในหน้าเพิ่ม/แก้ไขพนักงานและหน้าข้อมูลของฉัน ·
-        ทั้งแผนกและตำแหน่งยังพิมพ์ค่าอื่นเองได้เสมอ รวมถึงตอนนำเข้าจากไฟล์
-      </p>
 
       {missing ? (
         <div className="flex gap-3 rounded-2xl border border-ochre-200 bg-ochre-50 p-5 text-sm text-ochre-700">
@@ -94,15 +94,15 @@ export default function FieldOptionsPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="grid gap-5 lg:grid-cols-2">
           {OPTION_FIELDS.map(({ key, label }) => {
             const rows = valuesOf(key)
-            const listed = new Set(rows.map(o => o.value))
-            const unlisted = [...usage[key].entries()].filter(([v]) => !listed.has(v)).sort((a, b) => b[1] - a[1])
+            const q = (queries[key] ?? '').trim().toLowerCase()
+            const shown = q ? rows.filter(o => o.value.toLowerCase().includes(q)) : rows
             return (
-              <section key={key}>
-                <div className="mb-2 flex items-center gap-2">
-                  <h2 className="text-[15px] font-semibold text-stone-900">{label}</h2>
+              <section key={key} className={cardClass}>
+                <div className="flex items-center gap-2 border-b border-stone-100 px-5 py-4">
+                  <h2 className={ui.cardTitle}>{label}</h2>
                   {rows.length > 0
                     ? <Badge tone="blue">{rows.length} ตัวเลือก</Badge>
                     : <Badge>ยังไม่มีตัวเลือก</Badge>}
@@ -111,54 +111,38 @@ export default function FieldOptionsPage() {
                   </button>
                 </div>
 
-                <div className={ui.tableWrap}>
-                  <table className={ui.table}>
-                    <thead className={ui.thead}>
-                      <tr>
-                        <th className={ui.th}>ตัวเลือก</th>
-                        <th className={`${ui.th} text-right`}>พนักงานที่ใช้</th>
-                        <th className={ui.th} aria-label="จัดการ" />
-                      </tr>
-                    </thead>
-                    <tbody className={ui.tbody}>
-                      {loading ? (
-                        <tr><td colSpan={3} className={ui.emptyCell}>กำลังโหลด...</td></tr>
-                      ) : rows.length === 0 ? (
-                        <tr><td colSpan={3} className={ui.emptyCell}>ยังไม่มีตัวเลือก — กด “เพิ่มตัวเลือก” เพื่อให้มีคำแนะนำตอนกรอก{label}</td></tr>
-                      ) : rows.map(o => (
-                        <tr key={o.id} className={ui.tr}>
-                          <td className={`${ui.td} font-medium text-stone-900`}>{o.value}</td>
-                          <td className={`${ui.td} text-right tabular-nums`}>{usage[key].get(o.value) ?? 0} คน</td>
-                          <td className={ui.td}>
-                            <div className="flex items-center justify-end gap-1.5">
-                              <ActionIconButton label="เปลี่ยนชื่อ" icon={<Pencil size={16} />} onClick={() => onRename(o, label)} />
-                              <ActionIconButton label="ลบตัวเลือก" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(o)} />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Values people already have that the list does not know about —
-                    the quickest way to build a list is from what is already there. */}
-                {!loading && unlisted.length > 0 && (
-                  <div className="mt-2 text-xs text-stone-500">
-                    <span className="mr-1">มีในข้อมูลพนักงานแต่ยังไม่อยู่ในรายการ:</span>
-                    {unlisted.map(([v, n]) => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => onAdd(key, label, v)}
-                        title={`เพิ่ม "${v}" เข้ารายการ`}
-                        className="mb-1 mr-1 inline-flex items-center gap-1 rounded-lg border border-dashed border-stone-300 px-2 py-0.5 text-stone-600 transition-colors hover:border-clay-600 hover:text-clay-700"
-                      >
-                        <Plus size={12} /> {v} <span className="text-stone-400">({n})</span>
-                      </button>
-                    ))}
+                {rows.length > SEARCH_FROM && (
+                  <div className="relative border-b border-stone-100 px-5 py-3">
+                    <Search size={15} className="pointer-events-none absolute left-8 top-1/2 -translate-y-1/2 text-stone-400" />
+                    <input
+                      value={queries[key] ?? ''}
+                      onChange={e => setQueries(prev => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={`ค้นหา${label} (${rows.length} รายการ)`}
+                      className={`${ui.input} pl-9`}
+                    />
                   </div>
                 )}
+
+                <ul className="max-h-[26rem] divide-y divide-stone-100 overflow-auto">
+                  {loading ? (
+                    <li className="px-5 py-10 text-center text-sm text-stone-400">กำลังโหลด...</li>
+                  ) : rows.length === 0 ? (
+                    <li className="px-5 py-10 text-center text-sm text-stone-400">
+                      ยังไม่มีตัวเลือก — กด “เพิ่มตัวเลือก” เพื่อให้มีคำแนะนำตอนกรอก{label}
+                    </li>
+                  ) : shown.length === 0 ? (
+                    <li className="px-5 py-10 text-center text-sm text-stone-400">ไม่พบ “{queries[key]}”</li>
+                  ) : shown.map(o => (
+                    <li key={o.id} className="flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-stone-50">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-stone-900" title={o.value}>{o.value}</span>
+                      <span className="shrink-0 text-xs tabular-nums text-stone-400">{usage[key].get(o.value) ?? 0} คน</span>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <ActionIconButton label="เปลี่ยนชื่อ" icon={<Pencil size={16} />} onClick={() => onRename(o, label)} />
+                        <ActionIconButton label="ลบตัวเลือก" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(o)} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </section>
             )
           })}

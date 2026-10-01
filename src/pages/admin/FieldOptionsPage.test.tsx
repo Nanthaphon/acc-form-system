@@ -44,15 +44,6 @@ describe('FieldOptionsPage', () => {
     expect(pos.getByText('ยังไม่มีตัวเลือก')).toBeInTheDocument()
   })
 
-  // Building the list from what people already typed is the quick way in —
-  // and it is how a misspelling like "Payrol" gets noticed.
-  it('offers the values already in use that the list does not have', async () => {
-    show()
-    await waitFor(() => expect(screen.getByText('Payroll')).toBeInTheDocument())
-    expect(within(section('แผนก')).getByRole('button', { name: /Payrol \(1\)/ })).toBeInTheDocument()
-    expect(within(section('ตำแหน่ง')).getByRole('button', { name: /เจ้าหน้าที่บัญชี \(2\)/ })).toBeInTheDocument()
-  })
-
   it('tells the admin to run the SQL when the table is not there yet', async () => {
     list.mockImplementation(() => Promise.reject({ code: 'PGRST205' }))
     show()
