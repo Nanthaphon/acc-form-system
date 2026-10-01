@@ -6,6 +6,7 @@ import { logout } from '../data/auth'
 import { countMyPendingToSign } from '../data/submissions'
 import { onPendingSignChanged } from '../shared/pendingSignBus'
 import { roleLabel } from '../shared/roles'
+import NavCountBadge from './NavCountBadge'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm transition-colors ${
@@ -43,17 +44,11 @@ export default function Layout() {
             <History size={18} className="opacity-85" /> ประวัติ
           </NavLink>
           <NavLink to="/sign" className={navLinkClass}>
-            <Inbox size={18} className="opacity-85" /> รอฉันเซ็น
-            {/* A round badge for one digit, a pill past that; red and white is
-                what a waiting count looks like everywhere else, and reads on
-                the dark sidebar and the teal active row alike (5.6:1). */}
-            {toSign > 0 && (
-              <span
-                aria-label={`รอเซ็น ${toSign} ฉบับ`}
-                className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brick-600 px-1.5 text-[11px] font-semibold leading-none tabular-nums text-white shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
-              >
-                {toSign > 99 ? '99+' : toSign}
-              </span>
+            {({ isActive }) => (
+              <>
+                <Inbox size={18} className="opacity-85" /> รอฉันเซ็น
+                <NavCountBadge count={toSign} active={isActive} label={`รอเซ็น ${toSign} ฉบับ`} />
+              </>
             )}
           </NavLink>
           {profile?.role === 'admin' && <>
