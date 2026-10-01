@@ -7,7 +7,6 @@ import { signBlockAsSelf, unsignDocument, canRemoveSignature } from '../data/sub
 import type { Signer } from '../data/submissions'
 import { uiAlert, uiConfirm } from './dialog/dialogService'
 import { dbErrorMessage } from '../shared/dbError'
-import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 import { Badge, ui } from './ui'
 import { Spinner } from './Spinner'
 
@@ -39,7 +38,6 @@ export default function SignNowModal({ submission, settings, me, mySignature, on
     setBusyId(blockId)
     try {
       await signBlockAsSelf(submission, { id: blockId, label: blockLabel }, me)
-      notifyPendingSignChanged()
       onDone(); onClose()
     } catch (e: any) {
       uiAlert('เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด'))
@@ -57,7 +55,6 @@ export default function SignNowModal({ submission, settings, me, mySignature, on
     setBusyId(blockId)
     try {
       await unsignDocument(submission.id, blockId)
-      notifyPendingSignChanged()
       onDone(); onClose()
     } catch (e) {
       uiAlert(dbErrorMessage(e), { title: 'ลบลายเซ็นไม่สำเร็จ' })

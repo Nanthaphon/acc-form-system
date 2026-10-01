@@ -3,6 +3,7 @@ import type { Submission, SubmissionSummary, SubmissionStatus, DocSignature, Sig
 import { formatDocNumber } from '../shared/docNumber'
 import { addVersion } from './versions'
 import { deleteAttachmentFiles } from './attachments'
+import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 
 export interface Editor { uid: string; name: string }
 
@@ -68,6 +69,7 @@ export async function deleteSubmission(id: string): Promise<void> {
   const { data: gone, error } = await supabase.from('submissions').delete().eq('id', id).select('id')
   if (error) throw error
   if (!gone?.length) throw new Error('ลบเอกสารไม่ได้ — อาจไม่มีสิทธิ์ลบ หรือเอกสารถูกลบไปแล้ว')
+  notifyPendingSignChanged() // the document may have been waiting on someone
 }
 
 // ----- Online signatures -----
@@ -81,11 +83,13 @@ export async function listSigners(): Promise<Signer[]> {
 export async function assignSigners(subId: string, assignments: DocSignature[]): Promise<void> {
   const { error } = await supabase.rpc('assign_signers', { sub_id: subId, assignments })
   if (error) throw error
+  notifyPendingSignChanged()
 }
 // Assigned signer stamps their saved signature onto a block.
 export async function signDocument(subId: string, blockId: string): Promise<void> {
   const { error } = await supabase.rpc('sign_document', { sub_id: subId, block_id: blockId })
   if (error) throw error
+  notifyPendingSignChanged()
 }
 // The assignment list to send when someone stamps their own signature onto one
 // block. assign_signers REPLACES the whole pending set, so every other pending
@@ -119,11 +123,13 @@ export function canRemoveSignature(sig: DocSignature, myUid: string, ownerUid: s
 export async function unsignDocument(subId: string, blockId: string): Promise<void> {
   const { error } = await supabase.rpc('unsign_document', { sub_id: subId, block_id: blockId })
   if (error) throw error
+  notifyPendingSignChanged()
 }
 // Owner recalls a document from signing — clears all assignments (back to draft).
 export async function cancelSigning(subId: string): Promise<void> {
   const { error } = await supabase.rpc('cancel_signing', { sub_id: subId })
   if (error) throw error
+  notifyPendingSignChanged()
 }
 // ----- Document lists -----
 // Columns the lists show. Item rows and attachments are only needed on the

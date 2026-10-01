@@ -18,7 +18,6 @@ import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
 import SignNowModal from '../../components/SignNowModal'
 import StatusBadge from '../../components/StatusBadge'
-import { notifyPendingSignChanged } from '../../shared/pendingSignBus'
 import ActionIconButton from '../../components/ActionIconButton'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import ColumnPicker from '../../components/ColumnPicker'
@@ -93,7 +92,7 @@ export default function HistoryPage() {
       ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับไปสถานะ "เสร็จสิ้น"`
       : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับไปสถานะ "เสร็จสิ้น"`
     if (!(await uiConfirm(msg, { tone: 'danger', confirmText: 'ยกเลิกส่งเซ็น' }))) return
-    try { await cancelSigning(r.id); load(); notifyPendingSignChanged() }
+    try { await cancelSigning(r.id); load() }
     catch (e: any) { uiAlert('ยกเลิกไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
   }
   return (

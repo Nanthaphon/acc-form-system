@@ -2,6 +2,7 @@ import { supabase, supabaseSecondary } from '../lib/supabase'
 import { employeeIdToEmail } from './auth'
 import type { UserProfile, Role } from '../types/schema'
 import type { CsvEmployeeRow } from '../shared/csv'
+import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 
 export interface NewEmployee {
   employeeId: string; firstName: string; lastName: string
@@ -74,6 +75,7 @@ export async function updateProfile(uid: string, patch: Partial<UserProfile>): P
 export async function deleteEmployee(uid: string): Promise<void> {
   const { error } = await supabase.rpc('delete_employee', { target: uid })
   if (error) throw error
+  notifyPendingSignChanged() // their documents went too
 }
 // Supabase Auth allows only so many sign-ups per IP in a short window (30 per
 // 5 minutes unless raised under Authentication > Rate Limits). An import of
