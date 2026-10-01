@@ -9,6 +9,9 @@ interface AuthCtx { user: User | null; profile: UserProfile | null; loading: boo
 const Ctx = createContext<AuthCtx>({ user: null, profile: null, loading: true, refresh: async () => {} })
 export const useAuth = () => useContext(Ctx)
 
+// How long the first screen waits for the profile before opening without it.
+export const PROFILE_WAIT_MS = 3000
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -21,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    let openAnyway: ReturnType<typeof setTimeout> | undefined
     // Fires INITIAL_SESSION right away, then on every sign-in/out and token refresh.
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       const u = session?.user ?? null
@@ -30,12 +34,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (uid === uidRef.current) return
       uidRef.current = uid
       setUser(u)
+      // Waiting for the profile gives the first screen a name and a role, but it
+      // must never hold the app on its spinner: the query can hang for good when
+      // another tab is sitting on the auth lock. After PROFILE_WAIT_MS the app
+      // opens without it (RequireAuth copes with no profile) and it fills in late.
+      clearTimeout(openAnyway)
+      openAnyway = setTimeout(() => setLoading(false), PROFILE_WAIT_MS)
       // Never await a Supabase call inside this callback: the auth lock is held
       // while it runs, so the query would wait on it forever and every request
       // after it would hang — the app looks frozen. Defer it instead.
-      setTimeout(() => { loadProfile(uid).finally(() => setLoading(false)) }, 0)
+      setTimeout(() => {
+        loadProfile(uid).finally(() => { clearTimeout(openAnyway); setLoading(false) })
+      }, 0)
     })
-    return () => sub.subscription.unsubscribe()
+    return () => { clearTimeout(openAnyway); sub.subscription.unsubscribe() }
   }, [])
 
   return <Ctx.Provider value={{ user, profile, loading, refresh: () => loadProfile(user?.id ?? null) }}>{children}</Ctx.Provider>
