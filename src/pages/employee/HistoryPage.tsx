@@ -52,7 +52,8 @@ export default function HistoryPage() {
   const filtered = applyFilters(rows, filters, { formGroup, formName })
   // A doc can be sent for signing if its form has someone besides the requester
   // to sign, and it isn't fully signed yet.
-  const canSend = (r: SubmissionSummary) => canRequestSignatures(formOf(r.formType)) && subStatus(r) !== 'signed'
+  const canSend = (r: SubmissionSummary) =>
+    !!formOf(r.formType) && canRequestSignatures(formOf(r.formType)) && subStatus(r) !== 'signed'
   // Admins sign their own document on the spot, without sending it to anyone
   // first — and take a signature back off again when they signed the wrong
   // line. Always offered, including on a form with a single signature line

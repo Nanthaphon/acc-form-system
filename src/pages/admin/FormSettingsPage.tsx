@@ -87,10 +87,14 @@ export default function FormSettingsPage() {
   const [groups, setGroups] = useState<AccessGroup[]>([])
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   function loadCompanies() { listCompanies(true).then(setCompanies) } // logos are edited here
   useEffect(() => {
-    getFormSettings(formType).then(setSettings)
+    setLoaded(false)
+    getFormSettings(formType)
+      .then(s => { setSettings(s); setLoaded(true) })
+      .catch(e => uiAlert(dbErrorMessage(e), { title: 'โหลดฟอร์มไม่สำเร็จ' }))
     loadCompanies()
     listAccessGroups().then(setGroups)
   }, [formType])
@@ -242,10 +246,16 @@ export default function FormSettingsPage() {
   }
 
   async function save() {
+    // Saving what is on screen before the form arrived would write the built-in
+    // defaults over the real configuration.
+    if (!loaded) { uiAlert('ยังโหลดฟอร์มนี้ไม่สำเร็จ — รีเฟรชหน้าก่อนบันทึก', { title: 'บันทึกไม่ได้' }); return }
     setSaving(true)
     try {
       const skipped = await updateFormSettings({
         ...settings, formType,
+        // `undefined` disappears in JSON and the column keeps its old value, so an
+        // emptied width has to be sent as an explicit null.
+        seqWidth: settings.seqWidth ?? null,
         // Always write the multi-group list and clear the legacy single field,
         // otherwise un-ticking every group would fall back to the old value.
         accessGroups: selectedGroups, accessGroup: null,

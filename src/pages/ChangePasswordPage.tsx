@@ -12,7 +12,7 @@ const labelCls = 'mb-1.5 block text-xs font-medium text-stone-500'
 const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100'
 
 export default function ChangePasswordPage() {
-  const { profile, refresh } = useAuth()
+  const { user, profile, refresh } = useAuth()
   const nav = useNavigate()
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
@@ -26,7 +26,8 @@ export default function ChangePasswordPage() {
     setSaving(true)
     try {
       await changeMyPassword(pw)
-      await markOwnPasswordChanged(profile!.uid)
+      const uid = profile?.uid ?? user?.id
+      if (uid) await markOwnPasswordChanged(uid)
       await refresh()
       uiAlert('เปลี่ยนรหัสผ่านเรียบร้อย ครั้งหน้าให้ใช้รหัสผ่านใหม่ในการเข้าสู่ระบบ', { tone: 'success' })
       nav('/')

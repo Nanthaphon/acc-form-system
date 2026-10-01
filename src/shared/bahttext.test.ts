@@ -17,3 +17,13 @@ describe('bahtText', () => {
   it('สิบสองล้าน', () => expect(bahtText(12000000)).toBe('สิบสองล้านบาทถ้วน'))
   it('ล้านเต็มรูป', () => expect(bahtText(1234567)).toBe('หนึ่งล้านสองแสนสามหมื่นสี่พันห้าร้อยหกสิบเจ็ดบาทถ้วน'))
 })
+
+describe('bahtText below zero', () => {
+  // A deduction bigger than the claim used to print "undefinedพันสี่ร้อยบาทถ้วน".
+  it('reads a negative amount as ลบ…, never "undefined"', () => {
+    expect(bahtText(-400)).toBe('ลบสี่ร้อยบาทถ้วน')
+    expect(bahtText(-5.25)).toBe('ลบห้าบาทยี่สิบห้าสตางค์')
+    expect(bahtText(-0.5)).toBe('ลบห้าสิบสตางค์')
+    expect(bahtText(-1000000)).not.toContain('undefined')
+  })
+})

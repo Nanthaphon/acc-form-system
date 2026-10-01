@@ -32,9 +32,14 @@ function readInteger(n: number): string {
 
 export function bahtText(amount: number): string {
   const rounded = Math.round(amount * 100) / 100
-  const baht = Math.floor(rounded)
-  const satang = Math.round((rounded - baht) * 100)
-  if (satang === 0) return readInteger(baht) + 'บาทถ้วน'
+  // A total can land below zero (a deduction larger than the claim, a subtract
+  // column that went past it). The digits used to come from String(-400), whose
+  // leading "-" read as undefined — the document printed "undefinedพันสี่ร้อยบาทถ้วน".
+  const sign = rounded < 0 ? 'ลบ' : ''
+  const abs = Math.abs(rounded)
+  const baht = Math.floor(abs)
+  const satang = Math.round((abs - baht) * 100)
+  if (satang === 0) return sign + readInteger(baht) + 'บาทถ้วน'
   const bahtPart = baht === 0 ? '' : readInteger(baht) + 'บาท'
-  return bahtPart + readInteger(satang) + 'สตางค์'
+  return sign + bahtPart + readInteger(satang) + 'สตางค์'
 }

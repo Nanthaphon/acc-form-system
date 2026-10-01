@@ -31,10 +31,14 @@ export async function createSubmission(dr: SubmissionDraft, docPrefix: string, e
 }
 export async function updateSubmission(id: string, s: Submission, editor?: Editor): Promise<void> {
   const before = await getSubmission(id)
-  const { error } = await supabase.from('submissions')
+  const { data: saved, error } = await supabase.from('submissions')
     .update({ header: s.header, items: s.items, totals: s.totals, updatedAt: Date.now() })
     .eq('id', id)
+    .select('id')
   if (error) throw error
+  // An update the database refuses (not yours, or signed) comes back 204 with no
+  // error and no rows — without this check the editor said 'saved' regardless.
+  if (!saved?.length) throw new Error('บันทึกไม่ได้ — เอกสารนี้อาจถูกลบ ถูกเซ็นแล้ว หรือไม่ใช่เอกสารของคุณ')
   // Add a version only when the content actually changed.
   const changed = !before
     || JSON.stringify(before.header) !== JSON.stringify(s.header)
@@ -212,7 +216,10 @@ export function statusLabel(s: SubmissionSummary): string {
 }
 
 export async function getSubmission(id: string): Promise<Submission | null> {
-  const { data } = await supabase.from('submissions').select('*').eq('id', id).maybeSingle()
+  const { data, error } = await supabase.from('submissions').select('*').eq('id', id).maybeSingle()
+  // A failed read must not read as 'the document is gone': the save path treats
+  // null as 'nothing to update' and would report success without writing.
+  if (error) throw error
   return (data as Submission) ?? null
 }
 export async function listMySubmissions(uid: string): Promise<SubmissionSummary[]> {

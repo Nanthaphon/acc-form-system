@@ -60,7 +60,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
   const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate)
-  const hasTax = !!header.vat || !!header.whtRate
+  const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const totalCols = vcols.length + 1 // + leading seq column

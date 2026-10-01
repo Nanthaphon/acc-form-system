@@ -9,7 +9,7 @@ import { listAccessGroups } from '../../data/accessGroups'
 import { loadOptionLists, NO_OPTIONS } from '../../data/fieldOptions'
 import OptionInput from '../../components/OptionInput'
 import { dbErrorMessage } from '../../shared/dbError'
-import { isSuperAdmin, ROLE_OPTIONS } from '../../shared/roles'
+import { isSuperAdmin, roleLabel, ROLE_OPTIONS } from '../../shared/roles'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { PageHeader, ui } from '../../components/ui'
 import type { Company, UserProfile, AccessGroup } from '../../types/schema'
@@ -35,6 +35,9 @@ export default function EditEmployeePage() {
 
   const viewerIsSuper = isSuperAdmin(me)
   const targetIsSuper = isSuperAdmin(f)
+  // Changing your own role takes effect immediately and can leave nobody with
+  // admin rights, so it is only ever done to someone else.
+  const isSelf = f?.uid === me?.uid
   // The Super Admin's account can be changed only by the Super Admin (the database enforces it too).
   const readOnly = targetIsSuper && !viewerIsSuper
 
@@ -53,7 +56,7 @@ export default function EditEmployeePage() {
         firstName: f.firstName, lastName: f.lastName, position: f.position,
         department: f.department, companyId: f.companyId, defaultJob: f.defaultJob,
         bankAccount: f.bankAccount, accessGroup: f.accessGroup,
-        ...(targetIsSuper ? {} : { role: f.role }),
+        ...(targetIsSuper || isSelf ? {} : { role: f.role }),
       })
       uiAlert('บันทึกข้อมูลพนักงานแล้ว', { tone: 'success' })
       nav('/admin/employees')
@@ -145,10 +148,10 @@ export default function EditEmployeePage() {
               </div>
               <div>
                 <label className={ui.label}>สิทธิ์การใช้งาน</label>
-                {targetIsSuper ? (
+                {targetIsSuper || isSelf ? (
                   <>
-                    <select className={ui.input} disabled><option>Super Admin</option></select>
-                    <p className="mt-1 text-[11px] text-stone-400">สิทธิ์ของ Super Admin เปลี่ยนไม่ได้</p>
+                    <select className={ui.input} disabled><option>{roleLabel(f)}</option></select>
+                    <p className="mt-1 text-[11px] text-stone-400">{targetIsSuper ? 'สิทธิ์ของ Super Admin เปลี่ยนไม่ได้' : 'เปลี่ยนสิทธิ์ของตัวเองไม่ได้'}</p>
                   </>
                 ) : (
                   <select className={ui.input} value={f.role} onChange={e => set('role', e.target.value)}>

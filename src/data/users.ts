@@ -52,7 +52,8 @@ export async function listEmployees(): Promise<UserProfile[]> {
 // After someone sets their own password. Two writes, so the first still lands
 // on a database that doesn't have the passwordIsDefault column yet.
 export async function markOwnPasswordChanged(uid: string): Promise<void> {
-  await supabase.from('profiles').update({ mustChangePassword: false }).eq('uid', uid)
+  const { error } = await supabase.from('profiles').update({ mustChangePassword: false }).eq('uid', uid)
+  if (error) throw error // otherwise the page says 'changed' and RequireAuth sends them straight back
   await supabase.from('profiles').update({ passwordIsDefault: false }).eq('uid', uid)
 }
 // Super Admin only (checked in the database): set anyone's login password.

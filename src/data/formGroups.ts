@@ -1,13 +1,11 @@
 import { supabase } from '../lib/supabase'
 import type { FormGroup } from '../types/schema'
 
-const DEFAULT_GROUP: FormGroup = { id: 'default', name: 'ฟอร์มทั่วไป', sortOrder: 0, createdAt: 0 }
-
 export async function listGroups(): Promise<FormGroup[]> {
   const { data, error } = await supabase.from('form_groups').select('*').order('sortOrder', { ascending: true })
-  // If the table doesn't exist yet / query errors / is empty, fall back to the
-  // built-in default group so the dashboard still renders.
-  if (error || !data || data.length === 0) return [DEFAULT_GROUP]
+  // Never invent a folder: a phantom one hides the real folders when a read
+  // fails, and blocks deleting the last real folder.
+  if (error || !data) return []
   return data as FormGroup[]
 }
 

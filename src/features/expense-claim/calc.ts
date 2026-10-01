@@ -11,24 +11,34 @@ export function visibleColumns(columns: FormColumn[]): FormColumn[] {
   return columns.filter(c => !c.hidden)
 }
 
-// Compute every calc column (in array order) from its calc def.
-// Later calc columns can reference earlier (already-computed) calc columns.
+// Compute every calc column from its calc def.
+// A formula may name a calc column that sits later in the table: the values are
+// resolved repeatedly until nothing changes, so where a column sits on screen
+// never changes the number. A formula that refers back to itself settles at 0.
+function evalCalc(col: FormColumn, out: ExpenseRow): number {
+  const num = (key: string): number => Number(out[key]) || 0
+  const { op, percent } = col.calc!
+  const ops = calcOperands(col.calc!)
+  switch (op) {
+    case 'multiply': return round2(ops.length ? ops.reduce((acc, k) => acc * num(k), 1) : 0)
+    case 'add': return round2(ops.reduce((acc, k) => acc + num(k), 0))
+    case 'subtract': return round2(ops.reduce((acc, k, i) => i === 0 ? num(k) : acc - num(k), 0))
+    case 'divide': return round2(ops.reduce((acc, k, i) => i === 0 ? num(k) : (num(k) === 0 ? acc : acc / num(k)), 0))
+    case 'percent': return round2(num(ops[0] ?? '') * (percent ?? 0) / 100)
+  }
+  return 0
+}
+
 export function computeRow(columns: FormColumn[], row: ExpenseRow): ExpenseRow {
   const out: ExpenseRow = { ...row }
-  const num = (key: string): number => Number(out[key]) || 0
-  for (const col of columns) {
-    if (col.type !== 'calc' || !col.calc) continue
-    const { op, percent } = col.calc
-    const ops = calcOperands(col.calc)
-    let value = 0
-    switch (op) {
-      case 'multiply': value = ops.length ? ops.reduce((acc, k) => acc * num(k), 1) : 0; break
-      case 'add': value = ops.reduce((acc, k) => acc + num(k), 0); break
-      case 'subtract': value = ops.reduce((acc, k, i) => i === 0 ? num(k) : acc - num(k), 0); break
-      case 'divide': value = ops.reduce((acc, k, i) => i === 0 ? num(k) : (num(k) === 0 ? acc : acc / num(k)), 0); break
-      case 'percent': value = num(ops[0] ?? '') * (percent ?? 0) / 100; break
+  const calcCols = columns.filter(c => c.type === 'calc' && c.calc)
+  for (let pass = 0; pass < calcCols.length; pass++) {
+    let changed = false
+    for (const col of calcCols) {
+      const value = evalCalc(col, out)
+      if (out[col.key] !== value) { out[col.key] = value; changed = true }
     }
-    out[col.key] = round2(value)
+    if (!changed) break
   }
   return out
 }

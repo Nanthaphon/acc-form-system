@@ -33,16 +33,24 @@ export async function writeSkippingMissing(
 }
 
 export async function getFormSettings(formType: string): Promise<FormSettings> {
-  const { data } = await supabase.from('form_settings').select('*').eq('formType', formType).maybeSingle()
-  if (!data) return { ...EXPENSE_CLAIM_DEFAULTS, formType }
+  const { data, error } = await supabase.from('form_settings').select('*').eq('formType', formType).maybeSingle()
+  // A failed read used to be indistinguishable from "no such form", and the
+  // editor then offered the built-in expense-claim configuration as if it were
+  // this form — saving it overwrote the real one.
+  if (error) throw error
+  if (!data) {
+    if (formType === 'expense-claim') return { ...EXPENSE_CLAIM_DEFAULTS, formType }
+    // The form is gone. Show it empty rather than someone else's columns.
+    return { ...EXPENSE_CLAIM_DEFAULTS, formType, name: 'ไม่พบฟอร์มนี้', title: 'ไม่พบฟอร์มนี้', columns: [], categories: [], notes: [] }
+  }
   return withColumnsFallback(data as FormSettings)
 }
 
 export async function listForms(): Promise<FormSettings[]> {
   const { data, error } = await supabase.from('form_settings').select('*')
-  // If the query errors or returns nothing, fall back to the built-in form so
-  // the app still shows something to fill.
-  if (error || !data || data.length === 0) return [EXPENSE_CLAIM_DEFAULTS]
+  // Never invent a form: a phantom row cannot be deleted (the delete matches no
+  // row, so the card came back for ever) and employees could fill it in.
+  if (error || !data) return []
   return (data as FormSettings[]).map(withColumnsFallback)
 }
 

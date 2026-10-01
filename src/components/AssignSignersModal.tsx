@@ -42,9 +42,14 @@ export default function AssignSignersModal({ submission, settings, signers, curr
         const uid = isSelf(b.id) ? currentUid : assign[b.id]
         return { blockId: b.id, blockLabel: b.label, assignedUid: uid, assignedName: isSelf(b.id) ? currentName : signerName(uid), status: 'pending' as const }
       })
+    // Blocks the form no longer lists are not in `allBlocks`, and assign_signers
+    // keeps only already-signed entries — resend their pending assignments or the
+    // people waiting on them are dropped without a word.
+    const listed = new Set(allBlocks.map(b => b.id))
+    const strays = sigs.filter(x => x.status === 'pending' && !listed.has(x.blockId))
     setBusy(true)
     try {
-      await assignSigners(submission.id, assignments)
+      await assignSigners(submission.id, [...assignments, ...strays])
       if (currentSignature) {
         for (const b of pending.filter(b => isSelf(b.id))) { try { await signDocument(submission.id, b.id) } catch { /* leave pending */ } }
       }

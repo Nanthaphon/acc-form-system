@@ -73,6 +73,9 @@ export default function GroupPage() {
 
   async function onCreateForm() {
     if (!groupId) return
+    // The folder may have been deleted in another tab; a form created here would
+    // belong to no folder and be unreachable from the dashboard.
+    if (!group) { uiAlert('ไม่พบโฟลเดอร์นี้ อาจถูกลบไปแล้ว — กลับไปหน้าแรกแล้วลองใหม่', { title: 'สร้างฟอร์มไม่ได้' }); return }
     const name = (await uiPrompt('ตั้งชื่อฟอร์มใหม่', { title: 'สร้างฟอร์ม', placeholder: 'เช่น ใบเบิกค่าใช้จ่าย', confirmText: 'สร้าง' }))?.trim()
     if (!name) return
     try {

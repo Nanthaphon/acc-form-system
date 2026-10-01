@@ -87,7 +87,7 @@ export interface FormSettings {
   bodyText?: string                    // free declaration/certification paragraph shown below the table, above signatures
   showRequester?: boolean              // show the ชื่อ/นามสกุล/ตำแหน่ง/Job line (default true)
   showAmountWords?: boolean            // show the "เป็นจำนวนเงิน ... บาทถ้วน" box (default true)
-  seqWidth?: number                    // width of the leading ลำดับ column (see SEQ_COLUMN_WIDTH)
+  seqWidth?: number | null                    // width of the leading ลำดับ column (see SEQ_COLUMN_WIDTH)
   requesterTitle?: string              // heading above the requester fields on the fill-in screen (read via sectionTitles)
   itemsTitle?: string                  // heading above the items table on the fill-in screen (read via sectionTitles)
 }

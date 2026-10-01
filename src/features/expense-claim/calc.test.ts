@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, round2, taxSummary } from './calc'
 import { EXPENSE_CLAIM_DEFAULT_COLUMNS, emptyRow } from '../../types/schema'
+import type { FormColumn } from '../../types/schema'
 
 const cols = EXPENSE_CLAIM_DEFAULT_COLUMNS
 
@@ -72,5 +73,31 @@ describe('taxSummary — ค่าประกันงาน', () => {
   })
   it('rounds to satang', () => {
     expect(taxSummary(333.33, false, 0, 5).retentionAmount).toBe(16.67)
+  })
+})
+
+describe('formula order', () => {
+  const cols: FormColumn[] = [
+    { key: 'net', label: 'สุทธิ', type: 'calc', calc: { op: 'subtract', operands: ['gross', 'fee'] } },
+    { key: 'gross', label: 'ก่อนหัก', type: 'calc', calc: { op: 'multiply', operands: ['days', 'rate'] } },
+    { key: 'fee', label: 'ค่าธรรมเนียม', type: 'calc', calc: { op: 'percent', a: 'gross', percent: 3 } },
+    { key: 'days', label: 'วัน', type: 'number' },
+    { key: 'rate', label: 'วันละ', type: 'number' },
+  ]
+
+  // Moving a calc column above the one it reads used to silently make it 0.
+  it('resolves a formula that names a column placed later in the table', () => {
+    const r = computeRow(cols, { days: 27, rate: 500 })
+    expect(r.gross).toBe(13500)
+    expect(r.fee).toBe(405)
+    expect(r.net).toBe(13095)
+  })
+
+  it('settles a formula that refers back to itself at 0 instead of looping', () => {
+    const loop: FormColumn[] = [
+      { key: 'a', label: 'a', type: 'calc', calc: { op: 'add', operands: ['b'] } },
+      { key: 'b', label: 'b', type: 'calc', calc: { op: 'add', operands: ['a'] } },
+    ]
+    expect(computeRow(loop, {}).a).toBe(0)
   })
 })
