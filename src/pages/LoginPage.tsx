@@ -34,7 +34,7 @@ export default function LoginPage() {
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <img src="/logo.webp" alt="" className="h-16 w-16 object-contain" />
           <div>
-            <h1 className="text-lg font-semibold text-stone-900">เบิกบาน</h1>
+            <h1 className="text-lg font-semibold text-stone-900">Acc Documents</h1>
             <p className="mt-0.5 text-sm text-stone-500">เข้าสู่ระบบเพื่อใช้งาน</p>
           </div>
         </div>

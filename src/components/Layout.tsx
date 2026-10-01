@@ -23,7 +23,7 @@ export default function Layout() {
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white p-1 shadow-[0_2px_8px_rgba(0,0,0,0.22)]">
             <img src="/logo.webp" alt="" className="h-full w-full object-contain" />
           </span>
-          เบิกบาน
+          Acc Documents
         </div>
         <nav className="flex flex-col gap-0.5 px-3 py-2">
           <NavLink to="/" end className={navLinkClass}>
