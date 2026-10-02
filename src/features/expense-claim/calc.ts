@@ -133,15 +133,19 @@ const COL_MIN_PX = 80       // any other column, when the form sets no width
 const SEQ_COL_PX = 32      // the "#" column (w-8)
 const ACTION_COL_PX = 36   // the delete-row column (w-9)
 
-// The width a column is rendered at, or undefined to let it flex. A date column
-// never goes below DATE_COL_MIN_PX — narrower and its value is unreadable.
-export function colWidth(col: FormColumn): number | undefined {
-  // The stored width is millimetres of paper; on screen that is pixels.
-  const px = col.width ? Math.round(col.width * PX_PER_MM) : undefined
-  if (col.type === 'date') return Math.max(px ?? 0, DATE_COL_MIN_PX)
-  return px
+// The fill-in table shows the columns in the proportions the sheet will print
+// them in — as percentages, so the table fills whatever width the screen gives
+// it. Millimetres cannot be used directly here: a form whose widths add up to
+// more than a page would otherwise draw a table several screens wide.
+export function fillColumnPercents(seqMm: number, cols: FormColumn[]): string[] {
+  const { cols: mm } = printWidthsMm(seqMm, cols.map(c => c.width))
+  const total = mm.reduce((sum, w) => sum + w, 0) || 1
+  return mm.map(w => `${((w / total) * 100).toFixed(3)}%`)
 }
-// Width below which the table scrolls instead of shrinking its columns.
+// Width below which the table scrolls instead of squeezing its columns out of
+// use. Only the readable minimum counts — a wide setting belongs on paper, not
+// in a table someone has to type into.
 export function tableMinWidth(cols: FormColumn[]): number {
-  return SEQ_COL_PX + ACTION_COL_PX + cols.reduce((sum, c) => sum + (colWidth(c) ?? COL_MIN_PX), 0)
+  return SEQ_COL_PX + ACTION_COL_PX
+    + cols.reduce((sum, c) => sum + (c.type === 'date' ? DATE_COL_MIN_PX : COL_MIN_PX), 0)
 }

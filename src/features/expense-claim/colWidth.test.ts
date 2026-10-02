@@ -1,34 +1,44 @@
 import { describe, it, expect } from 'vitest'
 import type { FormColumn } from '../../types/schema'
-import { colWidth, tableMinWidth, DATE_COL_MIN_PX, PX_PER_MM } from './calc'
+import { fillColumnPercents, tableMinWidth, DATE_COL_MIN_PX } from './calc'
 
 const col = (type: FormColumn['type'], width?: number): FormColumn =>
-  ({ key: 'k', label: 'l', type, width })
-// A width is millimetres of paper; on screen it is drawn at 96dpi.
-const px = (mm: number) => Math.round(mm * PX_PER_MM)
+  ({ key: `k${width ?? 'x'}${type}`, label: 'l', type, width })
+const pct = (s: string) => Number(s.replace('%', ''))
 
-describe('colWidth', () => {
-  it('lets a column with no width flex', () => {
-    expect(colWidth(col('text'))).toBeUndefined()
-    expect(colWidth(col('number'))).toBeUndefined()
+describe('fillColumnPercents', () => {
+  it('splits the row the way the sheet will', () => {
+    // One column left blank takes the slack, so the two fixed ones keep their ratio.
+    const p = fillColumnPercents(10, [col('text', 40), col('text', 20), col('text')]).map(pct)
+    expect(p[0] / p[1]).toBeCloseTo(2, 5) // 40mm reads twice as wide as 20mm
+    expect(p[0] + p[1] + p[2]).toBeCloseTo(100, 2)
   })
-  it('draws an explicit width at its paper size', () => {
-    expect(colWidth(col('text', 50))).toBe(px(50))
+
+  it('lets the last column take the slack when every width is set', () => {
+    const p = fillColumnPercents(10, [col('text', 40), col('text', 20)]).map(pct)
+    expect(p[1]).toBeGreaterThan(p[0]) // 20mm + everything left over
   })
-  it('gives a date column a floor so dd/mm/yyyy always fits', () => {
-    expect(colWidth(col('date'))).toBe(DATE_COL_MIN_PX)
-    expect(colWidth(col('date', 15))).toBe(DATE_COL_MIN_PX) // 15mm ≈ 57px, too narrow
+
+  it('still fills the row when the widths would overflow the page', () => {
+    // 3 × 200mm is far past A4; on screen it is still three equal columns.
+    const p = fillColumnPercents(10, [col('number', 200), col('number', 200), col('number', 200)]).map(pct)
+    expect(p[0]).toBeCloseTo(p[2], 3)
+    expect(p.reduce((a, b) => a + b, 0)).toBeCloseTo(100, 2)
   })
-  it('still honours a date width that is wide enough', () => {
-    expect(colWidth(col('date', 50))).toBe(px(50))
+
+  it('shares the row between the columns left blank', () => {
+    const p = fillColumnPercents(10, [col('text', 100), col('text'), col('text')]).map(pct)
+    expect(p[1]).toBeCloseTo(p[2], 3)
+    expect(p[0]).toBeGreaterThan(p[1])
   })
 })
 
 describe('tableMinWidth', () => {
-  it('sums the columns plus the # and delete columns', () => {
-    expect(tableMinWidth([col('text'), col('number', 30)])).toBe(32 + 36 + 80 + px(30))
+  // Only what a person needs to read and type counts — a wide setting is for paper.
+  it('reserves a readable minimum per column, plus the # and delete columns', () => {
+    expect(tableMinWidth([col('text'), col('number', 300)])).toBe(32 + 36 + 80 + 80)
   })
-  it('reserves the full date width', () => {
+  it('gives a date column room for dd/mm/yyyy', () => {
     expect(tableMinWidth([col('date')])).toBe(32 + 36 + DATE_COL_MIN_PX)
   })
   it('is just the fixed columns when a form has none of its own', () => {

@@ -2,8 +2,8 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
-import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns, colWidth, tableMinWidth } from './calc'
+import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
+import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
@@ -86,6 +86,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   // Paragraphs that have blanks to fill (plain paragraphs need no input).
   const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
   const vcols = visibleColumns(cols)
+  // Same proportions the sheet will print, so what is typed matches what comes out.
+  const colPercents = fillColumnPercents(SEQ_COLUMN_WIDTH, vcols)
   const hasColumns = vcols.length > 0
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
@@ -204,10 +206,10 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                 <thead>
                   <tr>
                     <th className="w-8 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500">#</th>
-                    {vcols.map(col => (
+                    {vcols.map((col, ci) => (
                       <th
                         key={col.key}
-                        style={{ width: colWidth(col) ? `${colWidth(col)}px` : undefined }}
+                        style={{ width: colPercents[ci] }}
                         className={`whitespace-pre-line break-words border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}

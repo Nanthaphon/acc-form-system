@@ -120,10 +120,10 @@ export function canSeeForm(f: Pick<FormSettings, 'accessGroup' | 'accessGroups'>
 }
 
 // The leading ลำดับ column is built in rather than configured as a column, so
-// its width is a form setting of its own. The default is narrow enough for the
-// row numbers but too narrow for the word "ลำดับ" itself, which is why it can
-// be set per form.
-export const SEQ_COLUMN_WIDTH = 30
+// its width is a form setting of its own, in millimetres like every other
+// column. The default fits the row numbers but not the word "ลำดับ" spelled
+// out, which is why a form can widen it.
+export const SEQ_COLUMN_WIDTH = 10
 export function seqColumnWidth(f?: Pick<FormSettings, 'seqWidth'> | null): number {
   const w = f?.seqWidth
   return typeof w === 'number' && w > 0 ? w : SEQ_COLUMN_WIDTH
