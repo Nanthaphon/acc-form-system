@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import FormSettingsPage from './FormSettingsPage'
+import { getFormSettings } from '../../data/formSettings'
 import type { FormSettings } from '../../types/schema'
 
 const settings = {
@@ -87,5 +88,29 @@ describe('FormSettingsPage', () => {
     const types = screen.getAllByTitle('ชนิดข้อมูล')[0]
     expect([...types.querySelectorAll('option')].map(o => o.textContent))
       .toEqual(['ข้อความ', 'ตัวเลข', 'วันที่', 'ตัวเลือก', 'คำนวณ'])
+  })
+
+  // Writing this by hand means adding a column, switching its type and picking
+  // two operands — the shape every one of these forms needs.
+  it('builds a วันทำงาน × วันละ column in one click', async () => {
+    vi.mocked(getFormSettings).mockResolvedValueOnce({
+      ...settings,
+      columns: [
+        { key: 'days', label: 'วันทำงาน', type: 'number' },
+        { key: 'rate', label: 'วันละ', type: 'number' },
+      ],
+    } as unknown as FormSettings)
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /คอลัมน์คูณ/ }))
+    expect(screen.getByDisplayValue('วันทำงาน × วันละ')).toBeInTheDocument()
+  })
+
+  it('says why it cannot when there is only one numeric column', async () => {
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /คอลัมน์คูณ/ }))
+    expect(screen.queryByDisplayValue(/×/)).not.toBeInTheDocument()
   })
 })

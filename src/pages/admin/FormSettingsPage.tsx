@@ -237,6 +237,25 @@ export default function FormSettingsPage() {
       patchColumn(idx, { hidden: true })
     }
   }
+  // "วันทำงาน × วันละ" is the shape nearly every one of these forms needs, and
+  // writing it by hand means adding a column, switching its type and picking two
+  // operands. One button does the lot, from the last two numeric columns.
+  function addMultiplyColumn() {
+    const numeric = settings.columns.filter(c => !isTextCol(c.type) && !c.hidden)
+    const a = numeric[numeric.length - 2]
+    const b = numeric[numeric.length - 1]
+    if (!a || !b) {
+      uiAlert('ต้องมีคอลัมน์ตัวเลขอย่างน้อย 2 คอลัมน์ก่อน จึงจะสร้างคอลัมน์คูณได้', { title: 'ยังสร้างไม่ได้' })
+      return
+    }
+    setColumns([...settings.columns, {
+      key: newColumnKey(settings.columns),
+      label: `${a.label} × ${b.label}`,
+      type: 'calc',
+      calc: { op: 'multiply', operands: [a.key, b.key] },
+    }])
+  }
+
   // Exactly one column is the document total; marking one clears the rest.
   function setTotalColumn(idx: number) {
     setColumns(settings.columns.map((c, i) => (
@@ -611,6 +630,9 @@ export default function FormSettingsPage() {
         <div className="mt-3 flex flex-wrap gap-2">
           <button className={ui.btnDashed} onClick={() => insertColumnAt(columns.length)}>
             <Plus size={16} /> เพิ่มคอลัมน์
+          </button>
+          <button className={btnDashedSm} onClick={addMultiplyColumn} title="สร้างคอลัมน์คำนวณ คูณคอลัมน์ตัวเลขสองช่องล่าสุด เช่น วันทำงาน × วันละ">
+            <Plus size={14} /> คอลัมน์คูณ (เช่น วันทำงาน × วันละ)
           </button>
           {columns.length > 0 && (
             <button className={btnDashedSm} onClick={() => insertColumnAt(0)}>
