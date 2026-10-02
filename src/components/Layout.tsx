@@ -16,6 +16,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export default function Layout() {
   const { profile } = useAuth()
   const toSign = usePendingSignCount(profile?.uid)
+  const isAdmin = profile?.role === 'admin'
   return (
     <div className="flex min-h-screen bg-sand-50">
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-clay-900 pb-4 text-clay-100">
@@ -30,7 +31,7 @@ export default function Layout() {
             <FileText size={18} className="opacity-85" /> แบบฟอร์มเบิกจ่าย
           </NavLink>
           <NavLink to="/history" className={navLinkClass}>
-            <History size={18} className="opacity-85" /> ประวัติ
+            <History size={18} className="opacity-85" /> {isAdmin ? 'ประวัติของผู้ดูแลระบบ' : 'ประวัติ'}
           </NavLink>
           <NavLink to="/sign" className={navLinkClass}>
             {({ isActive }) => (
@@ -40,7 +41,7 @@ export default function Layout() {
               </>
             )}
           </NavLink>
-          {profile?.role === 'admin' && <>
+          {isAdmin && <>
             <NavLink to="/admin/employees" className={navLinkClass}>
               <Users size={18} className="opacity-85" /> พนักงาน
             </NavLink>
