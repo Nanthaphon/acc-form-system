@@ -65,10 +65,9 @@ function BlankInput({ field, value, onChange }: { field: TemplateField; value: s
       <input
         aria-label={field.label}
         title={field.label}
-        placeholder={field.label}
         inputMode={number ? 'decimal' : undefined}
         style={{ width: `${width}px` }}
-        className={`${blankClass} max-w-full ${number ? 'text-right tabular-nums' : ''}`}
+        className={`${blankClass} max-w-full text-center ${number ? 'tabular-nums' : ''}`}
         value={value}
         onChange={e => onChange(e.target.value)}
       />
@@ -177,8 +176,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
       {/* Blanks in the form's paragraphs — typed here, printed in place of the dots */}
       {fillTexts.length > 0 && (
         <div className={cardClass}>
-          <h2 className="text-[15px] font-semibold text-stone-900">ข้อความในเอกสาร</h2>
-          <p className="mb-4 mt-1 text-xs text-stone-500">กรอกข้อมูลในช่องว่างของข้อความ · ช่องที่เว้นว่างไว้จะพิมพ์ออกเป็น ........ ให้เขียนด้วยมือได้</p>
+          <h2 className={cardTitleClass}>ข้อความในเอกสาร</h2>
           <div className="space-y-3">
             {fillTexts.map((t, i) => (
               <div key={i} className="whitespace-pre-line rounded-lg bg-stone-50 px-4 py-3 text-sm leading-[2.75] text-stone-700">

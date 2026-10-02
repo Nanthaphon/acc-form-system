@@ -2,7 +2,7 @@ import { uiAlert } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, Pencil, Printer, Receipt, Save } from 'lucide-react'
+import { Eye, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment } from '../../types/schema'
@@ -180,15 +180,20 @@ export default function FormPage() {
         )}
         <PageHeader
           onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
-          icon={<Receipt size={20} />}
           title={settings.name || settings.title}
           subtitle={`เลขที่ ${docNumber}`}
-          actions={
-            <button className={ui.btnSecondary} onClick={() => setShowPreview(!showPreview)}>
-              {showPreview ? <><Pencil size={16} /> แก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
-            </button>
-          }
         />
+        {/* Switching between filling and checking happens all the way down a long
+            form, so the button stays put instead of making anyone scroll back up. */}
+        <button
+          type="button"
+          onClick={() => setShowPreview(p => !p)}
+          title={showPreview ? 'กลับไปแก้ไข' : 'ดูตัวอย่างเอกสาร'}
+          aria-label={showPreview ? 'กลับไปแก้ไข' : 'ดูตัวอย่างเอกสาร'}
+          className="no-print fixed right-6 top-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-white text-stone-700 shadow-[0_6px_20px_rgba(22,32,36,0.18)] ring-1 ring-stone-200/70 transition hover:text-clay-700 hover:shadow-[0_10px_26px_rgba(22,32,36,0.22)]"
+        >
+          {showPreview ? <Pencil size={20} /> : <Eye size={20} />}
+        </button>
         {!showPreview && (
           <div className={ui.card}>
             <label className={ui.label}>บริษัท</label>

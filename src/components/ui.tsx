@@ -36,7 +36,7 @@ export const ui = {
 
 // Page title row: optional back button, icon tile, title + subtitle, actions on the right.
 export function PageHeader({ icon, title, subtitle, onBack, actions }: {
-  icon: ReactNode
+  icon?: ReactNode
   title: ReactNode
   subtitle?: ReactNode
   onBack?: () => void
@@ -53,7 +53,7 @@ export function PageHeader({ icon, title, subtitle, onBack, actions }: {
           <ArrowLeft size={16} /> กลับ
         </button>
       )}
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-clay-50 text-clay-600">{icon}</div>
+      {icon && <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-clay-50 text-clay-600">{icon}</div>}
       <div className="min-w-0">
         <h1 className="truncate text-xl font-semibold text-stone-900">{title}</h1>
         {subtitle && <p className="truncate text-sm text-stone-500">{subtitle}</p>}

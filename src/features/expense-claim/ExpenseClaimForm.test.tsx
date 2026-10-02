@@ -48,7 +48,12 @@ describe('ExpenseClaimForm', () => {
       />,
     )
     expect(screen.getByText('ข้อความในเอกสาร')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('ผู้จ่าย'), { target: { value: 'สมชาย' } })
+    // The blanks sit inside a sentence: a placeholder would read as if the
+    // sentence already said something, and the value is centred on its line.
+    const blank = screen.getByLabelText('ผู้จ่าย')
+    expect(blank).not.toHaveAttribute('placeholder')
+    expect(blank).toHaveClass('text-center')
+    fireEvent.change(blank, { target: { value: 'สมชาย' } })
     expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ fields: { 'tpl:ผู้จ่าย': 'สมชาย' } }))
   })
 
