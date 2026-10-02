@@ -106,7 +106,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">
                 {company?.logo
-                  ? <img src={company.logo} alt="logo" className="h-10 w-10 shrink-0 border border-black object-contain" />
+                  ? <img src={company.logo} alt="logo" className="h-10 w-10 shrink-0 object-contain" />
                   : <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-black text-center text-[9px] leading-tight">
                       LOGO
                     </div>}
