@@ -11,7 +11,7 @@ import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyT
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
 
 const DEFAULT_ADDRESS =
-  '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
+  '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น 6 ถนนพัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
 
 // Rows that fit on a single sheet. When items exceed this, they overflow onto
 // the next sheet (stacked below on screen, a new page when printed). Every

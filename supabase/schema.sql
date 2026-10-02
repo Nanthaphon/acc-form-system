@@ -120,7 +120,7 @@ create policy counters_all on counters for all using (auth.uid() is not null) wi
 
 -- ===== Seed companies =====
 insert into companies (id, name, address) values
-  ('globe', 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด', '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น6 ถ.พัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'),
+  ('globe', 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด', '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น 6 ถนนพัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'),
   ('besthrm', 'บริษัท เบสท์ เอช อาร์ เอ็ม จำกัด', '-')
 on conflict (id) do nothing;
 
