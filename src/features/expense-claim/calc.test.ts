@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, round2, taxSummary } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, round2, taxSummary, printWidthsMm } from './calc'
 import { EXPENSE_CLAIM_DEFAULT_COLUMNS, emptyRow } from '../../types/schema'
 import type { FormColumn } from '../../types/schema'
 
@@ -99,5 +99,37 @@ describe('formula order', () => {
       { key: 'b', label: 'b', type: 'calc', calc: { op: 'add', operands: ['a'] } },
     ]
     expect(computeRow(loop, {}).a).toBe(0)
+  })
+})
+
+describe('printWidthsMm', () => {
+  // A width is millimetres on the sheet, not a share of it.
+  it('gives a column exactly what was set and shares the rest', () => {
+    const { seq, cols } = printWidthsMm(10, [25, undefined, undefined], 177)
+    expect(seq).toBe(10)
+    expect(cols[0]).toBe(25)
+    expect(cols[1]).toBe(71) // (177 − 35) ÷ 2
+    expect(cols[2]).toBe(71)
+    expect(seq + cols.reduce((a, b) => a + b, 0)).toBe(177)
+  })
+
+  it('stretches the last column when every width is set but the table falls short', () => {
+    const { seq, cols } = printWidthsMm(50, [20], 177)
+    expect(seq).toBe(50)
+    expect(cols[0]).toBe(127) // 20 + the 107mm left over
+  })
+
+  it('scales everything down rather than running off the page', () => {
+    const { seq, cols } = printWidthsMm(20, [100, 100, 100], 177)
+    const total = seq + cols.reduce((a, b) => a + b, 0)
+    expect(total).toBeCloseTo(177, 5)
+    expect(cols[0]).toBeCloseTo(cols[1], 5) // the proportions survive
+    expect(seq).toBeLessThan(20)
+  })
+
+  it('keeps a shared column usable when the fixed ones already fill the page', () => {
+    const { seq, cols } = printWidthsMm(10, [170, undefined], 177)
+    expect(cols[1]).toBeGreaterThan(0)
+    expect(seq + cols[0] + cols[1]).toBeCloseTo(177, 5) // scaled to fit, nothing off the page
   })
 })

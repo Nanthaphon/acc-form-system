@@ -59,7 +59,7 @@ describe('FormSettingsPage', () => {
     show()
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
     expect(screen.getByText('GAC6709-008 · เห็นได้: ทุกคน')).toBeInTheDocument()
-    expect(screen.getByText('4 คอลัมน์ · แสดง 3/12')).toBeInTheDocument()
+    expect(screen.getByText(/4 คอลัมน์ . แสดง 3.12/)).toBeInTheDocument() // the summary also carries the width budget
     expect(screen.getByText('ผู้รับเงิน · รายการรับคืน · ช่องเพิ่มเติม 0')).toBeInTheDocument()
     expect(screen.getByText('2 ช่อง · ผู้จัดทำเอกสาร, ผู้ตรวจสอบ')).toBeInTheDocument()
     expect(screen.getByText('ไม่มีข้อความ')).toBeInTheDocument()

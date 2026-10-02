@@ -83,6 +83,40 @@ export function taxSummary(subtotal: number, vat?: boolean, whtRate?: number, re
   return { subtotal, vatAmount, whtAmount, retentionAmount, netTotal }
 }
 
+// ----- Printed column widths -----
+// A width is a real measurement in millimetres on the sheet. The table lives
+// inside an A4 page (210mm) less its 10mm margins and the frame padding.
+export const PRINT_TABLE_MM = 177
+// A column left to share the leftover never collapses below this.
+const AUTO_MIN_MM = 12
+export const PX_PER_MM = 96 / 25.4
+
+// What each column actually gets on paper, in millimetres: a width that was set
+// is honoured as typed, columns left blank share what is left over, and if every
+// column is set but the table would stop short, the last one takes the rest so
+// the table still meets the frame. Anything over the page is scaled down to fit.
+export function printWidthsMm(
+  seqMm: number, widths: (number | undefined)[], budget = PRINT_TABLE_MM,
+): { seq: number; cols: number[] } {
+  const fixedTotal = seqMm + widths.reduce((sum: number, w) => sum + (w ?? 0), 0)
+  const autoCount = widths.filter(w => !w).length
+  let cols: number[]
+  if (autoCount > 0) {
+    const share = Math.max((budget - fixedTotal) / autoCount, AUTO_MIN_MM)
+    cols = widths.map(w => w || share)
+  } else {
+    cols = widths.map(w => w as number)
+    const slack = budget - fixedTotal
+    if (slack > 0 && cols.length > 0) cols[cols.length - 1] += slack
+  }
+  const total = seqMm + cols.reduce((sum, w) => sum + w, 0)
+  if (total > budget && total > 0) {
+    const scale = budget / total
+    return { seq: seqMm * scale, cols: cols.map(w => w * scale) }
+  }
+  return { seq: seqMm, cols }
+}
+
 // Fill-in table sizing. The table is `table-fixed`, where a cell's min-width is
 // ignored — only an explicit width counts — so the floor has to be applied to
 // the width itself, and the table needs its own min-width to overflow (and
@@ -97,8 +131,10 @@ const ACTION_COL_PX = 36   // the delete-row column (w-9)
 // The width a column is rendered at, or undefined to let it flex. A date column
 // never goes below DATE_COL_MIN_PX — narrower and its value is unreadable.
 export function colWidth(col: FormColumn): number | undefined {
-  if (col.type === 'date') return Math.max(col.width ?? 0, DATE_COL_MIN_PX)
-  return col.width
+  // The stored width is millimetres of paper; on screen that is pixels.
+  const px = col.width ? Math.round(col.width * PX_PER_MM) : undefined
+  if (col.type === 'date') return Math.max(px ?? 0, DATE_COL_MIN_PX)
+  return px
 }
 // Width below which the table scrolls instead of shrinking its columns.
 export function tableMinWidth(cols: FormColumn[]): number {

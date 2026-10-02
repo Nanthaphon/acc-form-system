@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'luci
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
+import { PRINT_TABLE_MM } from '../../features/expense-claim/calc'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
@@ -294,6 +295,10 @@ export default function FormSettingsPage() {
 
   const columns = settings.columns
   const visibleCount = columns.filter(c => !c.hidden).length
+  // Widths are millimetres on the sheet: what is set is used as typed and only
+  // the leftover is shared out, so the admin needs to see the page budget.
+  const setWidthMm = seqColumnWidth(settings) + columns.filter(c => !c.hidden).reduce((sum, c) => sum + (c.width ?? 0), 0)
+  const overPage = setWidthMm > PRINT_TABLE_MM
   const previewCompany = companies[0] ?? null
   const previewHeader: ExpenseHeader = {
     subject: settings.subject, categories: settings.categories.slice(0, 1),
@@ -413,7 +418,12 @@ export default function FormSettingsPage() {
         </div>
       </Section>
 
-      <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE}`} defaultOpen>
+      <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE} · กว้างรวม ${Math.round(setWidthMm)}/${PRINT_TABLE_MM} มม.`} defaultOpen>
+        <p className={`mb-3 text-xs ${overPage ? 'text-brick-600' : 'text-stone-500'}`}>
+          {overPage
+            ? `ความกว้างที่กำหนดรวม ${Math.round(setWidthMm)} มม. เกินพื้นที่ตารางบน A4 (${PRINT_TABLE_MM} มม.) ตอนพิมพ์ระบบจะย่อทุกคอลัมน์ลงตามสัดส่วนให้พอดีหน้า`
+            : `ความกว้างเป็นมิลลิเมตรบนกระดาษ A4 (พื้นที่ตาราง ${PRINT_TABLE_MM} มม.) · คอลัมน์ที่เว้นว่างไว้จะแบ่งที่เหลือเท่าๆ กัน`}
+        </p>
         {/* What the table will look like — the quickest way to check the result. */}
         <div className="overflow-x-auto rounded-lg border border-stone-200">
           <table className="w-full text-left text-[11px]">
@@ -435,7 +445,7 @@ export default function FormSettingsPage() {
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-stone-200 text-xs font-semibold text-stone-600">#</span>
           <span className="text-sm text-stone-700">คอลัมน์ลำดับ</span>
           <label className="flex items-center gap-1 text-xs text-stone-500" title="กว้างเกินไปจะกินที่คอลัมน์อื่น แคบเกินไปคำว่า “ลำดับ” จะตกบรรทัด">
-            กว้าง
+            กว้าง (มม.)
             <input
               type="number"
               min={1}
@@ -473,7 +483,7 @@ export default function FormSettingsPage() {
                     <option value="calc">คำนวณ</option>
                   </select>
                   <label className="flex items-center gap-1 text-xs text-stone-500" title="ความกว้างบนเอกสาร · เว้นว่าง = อัตโนมัติ">
-                    กว้าง
+                    กว้าง (มม.)
                     <input
                       type="number"
                       placeholder="อัตโนมัติ"

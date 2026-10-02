@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../typ
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -65,13 +65,12 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const totalCols = vcols.length + 1 // + leading seq column
 
-  // Column widths as proportional percentages (not px) so the table always fits
-  // the page frame exactly, no matter how many columns or how wide their hints.
-  // Columns without a width hint fall back to a default weight.
-  const SEQ_WEIGHT = seqColumnWidth(settings)
-  const widthWeights = vcols.map(c => c.width ?? 70)
-  const weightTotal = SEQ_WEIGHT + widthWeights.reduce((a, b) => a + b, 0)
-  const pct = (w: number) => `${((w / weightTotal) * 100).toFixed(3)}%`
+  // Widths are millimetres on the sheet (printWidthsMm) rendered as percentages,
+  // so the table fills the frame exactly whatever the paper size.
+  const mm = printWidthsMm(seqColumnWidth(settings), vcols.map(c => c.width))
+  const SEQ_WEIGHT = mm.seq
+  const widthWeights = mm.cols
+  const pct = (w: number) => `${((w / PRINT_TABLE_MM) * 100).toFixed(3)}%`
 
   // Totals footer: label spans the seq column + leading text columns up to the first visible numeric/calc column.
   const firstNumericIdx = vcols.findIndex(c => !isTextCol(c.type))
