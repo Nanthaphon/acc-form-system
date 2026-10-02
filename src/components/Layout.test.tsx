@@ -25,13 +25,13 @@ describe('sidebar', () => {
   it('names the admin\'s own history, and leaves the employee wording alone', () => {
     show('admin')
     expect(screen.getByRole('link', { name: /ประวัติของผู้ดูแลระบบ/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /ประวัติการพิมพ์ทั้งหมด/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /ประวัติพิมพ์ทั้งหมดในระบบ/ })).toBeInTheDocument()
   })
 
   it('shows an employee the plain wording and no admin menus', () => {
     show('employee')
     expect(screen.getByRole('link', { name: /^ประวัติ$/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /ผู้ดูแลระบบ/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /ประวัติการพิมพ์ทั้งหมด/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /ประวัติพิมพ์ทั้งหมดในระบบ/ })).not.toBeInTheDocument()
   })
 })

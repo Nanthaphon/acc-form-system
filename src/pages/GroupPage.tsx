@@ -2,7 +2,7 @@ import { uiAlert, uiConfirm, uiPrompt } from '../components/dialog/dialogService
 import { dbErrorMessage } from '../shared/dbError'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, FileText, Folder, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, FileText, Folder, LayoutGrid, List, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
 import ActionIconButton from '../components/ActionIconButton'
 import { PageHeader, ui } from '../components/ui'
 import { useAuth } from '../auth/AuthProvider'
@@ -16,6 +16,13 @@ import { formatDate } from '../shared/date'
 import Switch from '../components/Switch'
 
 const SORT_PREF_KEY = 'formListSort'
+const VIEW_PREF_KEY = 'formListView'
+
+type FormView = 'card' | 'list'
+// Cards suit a folder of a few forms; a list reads faster once there are many.
+function loadViewPref(): FormView {
+  try { return localStorage.getItem(VIEW_PREF_KEY) === 'list' ? 'list' : 'card' } catch { return 'card' }
+}
 
 // Remember the viewer's sort choice between visits (per browser). Storage can
 // throw (private mode, blocked site data) — then just start from name A→Z.
@@ -42,6 +49,7 @@ export default function GroupPage() {
   const [forms, setForms] = useState<FormSettings[]>([])
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState(loadSortPref)
+  const [view, setView] = useState<FormView>(loadViewPref)
 
   function reload() {
     listGroups().then(setGroups)
@@ -51,6 +59,9 @@ export default function GroupPage() {
   useEffect(() => {
     try { localStorage.setItem(SORT_PREF_KEY, JSON.stringify(sort)) } catch { /* ignore */ }
   }, [sort])
+  useEffect(() => {
+    try { localStorage.setItem(VIEW_PREF_KEY, view) } catch { /* ignore */ }
+  }, [view])
 
   const group = groups.find(g => g.id === groupId)
   // Same fallback rule as the dashboard: forms without a groupId belong to the first group.
@@ -155,9 +166,25 @@ export default function GroupPage() {
             {sort.dir === 'asc' ? <ArrowUpNarrowWide size={16} /> : <ArrowDownWideNarrow size={16} />}
             {dirLabel(sort.key, sort.dir)}
           </button>
+          <div className="flex overflow-hidden rounded-xl border border-stone-200/60 bg-white">
+            {([['card', LayoutGrid, 'มุมมองการ์ด'], ['list', List, 'มุมมองรายการ']] as const).map(([v, Icon, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                aria-label={label}
+                aria-pressed={view === v}
+                title={label}
+                className={`flex h-[42px] w-11 items-center justify-center transition-colors ${view === v ? 'bg-clay-600 text-white' : 'text-stone-500 hover:bg-stone-50'}`}
+              >
+                <Icon size={16} />
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
+      {view === 'card' && shownForms.length > 0 && (
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
         {shownForms.map(form => {
           const stamp = showCreated ? form.createdAt : form.updatedAt
@@ -205,17 +232,61 @@ export default function GroupPage() {
             </div>
           )
         })}
-        {groupForms.length === 0 && (
-          <div className="col-span-full rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
-            ยังไม่มีฟอร์มในกลุ่มนี้
-          </div>
-        )}
-        {groupForms.length > 0 && shownForms.length === 0 && (
-          <div className="col-span-full rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
-            ไม่พบฟอร์มที่ตรงกับ “{query}”
-          </div>
-        )}
       </div>
+      )}
+
+      {view === 'list' && shownForms.length > 0 && (
+        <div className={ui.tableWrap}>
+          <ul className="divide-y divide-stone-100">
+            {shownForms.map(form => {
+              const stamp = showCreated ? form.createdAt : form.updatedAt
+              return (
+                <li
+                  key={form.formType}
+                  className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-stone-50 ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => nav(`/form/${form.formType}`)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileText size={18} /></span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-stone-900">{formDisplayName(form)}</span>
+                      <span className="block truncate text-xs text-stone-500">
+                        {form.formCode}
+                        {!!stamp && ` · ${showCreated ? 'สร้างเมื่อ' : 'แก้ไขล่าสุด'} ${formatDate(stamp)}`}
+                      </span>
+                    </span>
+                  </button>
+                  {isAdmin && (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Switch on={isActive(form)} onChange={() => onToggleForm(form)} />
+                      <span className={`hidden text-xs font-medium sm:inline ${isActive(form) ? 'text-olive-600' : 'text-stone-400'}`}>
+                        {isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}
+                      </span>
+                      <ActionIconButton label="ตั้งค่าฟอร์ม" icon={<Settings size={16} />} onClick={() => nav(`/form/${form.formType}/edit`)} />
+                      <ActionIconButton label="เปลี่ยนชื่อฟอร์ม" icon={<Pencil size={16} />} onClick={() => onRenameForm(form)} />
+                      <ActionIconButton label="ลบฟอร์ม" tone="red" icon={<Trash2 size={16} />} onClick={() => onDeleteForm(form)} />
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+
+      {groupForms.length === 0 && (
+        <div className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
+          ยังไม่มีฟอร์มในกลุ่มนี้
+        </div>
+      )}
+      {groupForms.length > 0 && shownForms.length === 0 && (
+        <div className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
+          ไม่พบฟอร์มที่ตรงกับ “{query}”
+        </div>
+      )}
     </div>
   )
 }
