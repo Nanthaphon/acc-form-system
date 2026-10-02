@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, round2, taxSummary, printWidthsMm } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, round2, taxSummary, printWidthsMm, totalColumn } from './calc'
 import { EXPENSE_CLAIM_DEFAULT_COLUMNS, emptyRow } from '../../types/schema'
 import type { FormColumn } from '../../types/schema'
 
@@ -131,5 +131,25 @@ describe('printWidthsMm', () => {
     const { seq, cols } = printWidthsMm(10, [170, undefined], 177)
     expect(cols[1]).toBeGreaterThan(0)
     expect(seq + cols[0] + cols[1]).toBeCloseTo(177, 5) // scaled to fit, nothing off the page
+  })
+})
+
+describe('totalColumn', () => {
+  const c = (key: string, type: FormColumn['type'], isTotal?: boolean): FormColumn =>
+    ({ key, label: key, type, isTotal })
+
+  it('uses the column the form marked', () => {
+    expect(totalColumn([c('a', 'number'), c('b', 'number', true), c('z', 'calc')])?.key).toBe('b')
+  })
+
+  it('ignores a mark that landed on a text column', () => {
+    expect(totalColumn([c('note', 'text', true), c('sum', 'number')])?.key).toBe('sum')
+  })
+
+  // A form built before the picker existed has nothing marked.
+  it('falls back to the last calc column, then the last number column', () => {
+    expect(totalColumn([c('n', 'number'), c('x', 'calc'), c('y', 'calc')])?.key).toBe('y')
+    expect(totalColumn([c('n1', 'number'), c('n2', 'number'), c('t', 'text')])?.key).toBe('n2')
+    expect(totalColumn([c('t', 'text')])).toBeUndefined()
   })
 })

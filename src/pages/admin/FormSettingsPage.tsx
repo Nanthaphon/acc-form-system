@@ -5,9 +5,9 @@ import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, isTextCol } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { PRINT_TABLE_MM } from '../../features/expense-claim/calc'
+import { PRINT_TABLE_MM, totalColumn } from '../../features/expense-claim/calc'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
@@ -237,6 +237,19 @@ export default function FormSettingsPage() {
       patchColumn(idx, { hidden: true })
     }
   }
+  // Exactly one column is the document total; marking one clears the rest.
+  function setTotalColumn(idx: number) {
+    setColumns(settings.columns.map((c, i) => (
+      i === idx ? { ...c, isTotal: true } : c.isTotal ? { ...c, isTotal: false } : c
+    )))
+  }
+  // A formula pointing at a column that was deleted, retyped or never chosen
+  // quietly computes 0 — the admin has to be told.
+  function brokenOperands(col: FormColumn): string[] {
+    if (col.type !== 'calc' || !col.calc) return []
+    return calcOperands(col.calc).filter(k => !k || !settings.columns.some(c => c.key === k && !isTextCol(c.type)))
+  }
+
   function removeColumn(idx: number) { setColumns(settings.columns.filter((_, i) => i !== idx)) }
   function moveColumn(idx: number, dir: -1 | 1) {
     const j = idx + dir
@@ -299,6 +312,9 @@ export default function FormSettingsPage() {
   // the leftover is shared out, so the admin needs to see the page budget.
   const setWidthMm = seqColumnWidth(settings) + columns.filter(c => !c.hidden).reduce((sum, c) => sum + (c.width ?? 0), 0)
   const overPage = setWidthMm > PRINT_TABLE_MM
+  const docTotalCol = totalColumn(columns)
+  const markedTotal = columns.some(c => c.isTotal && !isTextCol(c.type))
+  const brokenCount = columns.filter(c => brokenOperands(c).length > 0).length
   const previewCompany = companies[0] ?? null
   const previewHeader: ExpenseHeader = {
     subject: settings.subject, categories: settings.categories.slice(0, 1),
@@ -424,6 +440,12 @@ export default function FormSettingsPage() {
             ? `ความกว้างที่กำหนดรวม ${Math.round(setWidthMm)} มม. เกินพื้นที่ตารางบน A4 (${PRINT_TABLE_MM} มม.) ตอนพิมพ์ระบบจะย่อทุกคอลัมน์ลงตามสัดส่วนให้พอดีหน้า`
             : `ความกว้างเป็นมิลลิเมตรบนกระดาษ A4 (พื้นที่ตาราง ${PRINT_TABLE_MM} มม.) · คอลัมน์ที่เว้นว่างไว้จะแบ่งที่เหลือเท่าๆ กัน`}
         </p>
+        <p className={`mb-3 text-xs ${brokenCount > 0 ? 'text-brick-600' : 'text-stone-500'}`}>
+          {docTotalCol
+            ? `ยอดรวมของเอกสารมาจากคอลัมน์ "${docTotalCol.label || docTotalCol.key}"${markedTotal ? '' : ' — ยังไม่ได้เลือกไว้ ระบบจึงใช้คอลัมน์ตัวเลขสุดท้าย ติ๊ก “ยอดรวม” ที่คอลัมน์ที่ต้องการได้'}`
+            : 'ฟอร์มนี้ยังไม่มีคอลัมน์ตัวเลข จึงยังไม่มียอดรวม'}
+          {brokenCount > 0 && ` · มีสูตรที่อ้างคอลัมน์ไม่ครบ ${brokenCount} คอลัมน์`}
+        </p>
         {/* What the table will look like — the quickest way to check the result. */}
         <div className="overflow-x-auto rounded-lg border border-stone-200">
           <table className="w-full text-left text-[11px]">
@@ -496,6 +518,15 @@ export default function FormSettingsPage() {
                     <input type="checkbox" checked={!col.hidden} onChange={() => toggleVisible(i)} />
                     แสดง
                   </label>
+                  {!isTextCol(col.type) && (
+                    <label
+                      className="flex cursor-pointer select-none items-center gap-1.5 text-sm text-stone-700"
+                      title="ยอดรวมของเอกสาร — ใช้คิด VAT หัก ณ ที่จ่าย ยอดสุทธิ และจำนวนเงินตัวอักษร"
+                    >
+                      <input type="radio" name="docTotalColumn" checked={!!col.isTotal} onChange={() => setTotalColumn(i)} />
+                      ยอดรวม
+                    </label>
+                  )}
                   <div className="ml-auto flex items-center gap-1">
                     <button className={iconBtn} onClick={() => moveColumn(i, -1)} disabled={i === 0} title="เลื่อนขึ้น"><ChevronUp size={16} /></button>
                     <button className={iconBtn} onClick={() => moveColumn(i, 1)} disabled={i === columns.length - 1} title="เลื่อนลง"><ChevronDown size={16} /></button>
@@ -504,13 +535,16 @@ export default function FormSettingsPage() {
                   </div>
                 </div>
 
+                {col.type === 'calc' && brokenOperands(col).length > 0 && (
+                  <p className="mt-2 text-xs text-brick-600">
+                    สูตรนี้ยังอ้างถึงคอลัมน์ที่ไม่มีอยู่หรือยังไม่ได้เลือก ผลลัพธ์จะเป็น 0 ทุกแถว
+                  </p>
+                )}
                 {col.type === 'calc' && (
                   <div className={`${subPanel} mt-2 flex flex-wrap items-center gap-2`}>
                     <span className="text-xs text-stone-500">คำนวณจาก</span>
                     <select className={ui.inputSm} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
-                      {(['multiply', 'subtract', 'add', 'divide'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
-                      {/* ร้อยละ ถูกยกเลิก — คงไว้เฉพาะคอลัมน์เดิมที่ใช้อยู่ ให้ยังแก้ไขได้ */}
-                      {col.calc?.op === 'percent' && <option value="percent">{OP_LABELS.percent}</option>}
+                      {(['multiply', 'subtract', 'add', 'divide', 'percent'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
                     </select>
                     {isPercent ? (
                       <>

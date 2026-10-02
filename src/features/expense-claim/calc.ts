@@ -54,14 +54,19 @@ export function computeColumnTotals(columns: FormColumn[], rows: ExpenseRow[]): 
   return totals
 }
 
-// The grand total = column-sum of the isTotal column (fallback: last calc column, else 0).
-export function grandTotal(columns: FormColumn[], rows: ExpenseRow[]): number {
-  const totals = computeColumnTotals(columns, rows)
-  // Only a numeric/calc column can be the grand total. Ignore an isTotal flag
-  // that landed on a text column, and fall back to the last calc/number column.
-  const totalCol = columns.find(c => c.isTotal && !isTextCol(c.type))
+// The column whose sum is the document total — what the tax, the net and the
+// baht text are all computed from. Marked with isTotal; a form that never marked
+// one falls back to the last calc column, then the last number column. Only a
+// numeric column can be it, so an isTotal left on a text column is ignored.
+export function totalColumn(columns: FormColumn[]): FormColumn | undefined {
+  return columns.find(c => c.isTotal && !isTextCol(c.type))
     ?? [...columns].reverse().find(c => c.type === 'calc')
     ?? [...columns].reverse().find(c => c.type === 'number')
+}
+
+export function grandTotal(columns: FormColumn[], rows: ExpenseRow[]): number {
+  const totals = computeColumnTotals(columns, rows)
+  const totalCol = totalColumn(columns)
   if (!totalCol) return 0
   return round2(totals[totalCol.key] ?? 0)
 }
