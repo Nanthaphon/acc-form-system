@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, round2, taxSummary, printWidthsMm, totalColumn } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, rowHasNumbers, round2, taxSummary, printWidthsMm, totalColumn } from './calc'
 import { EXPENSE_CLAIM_DEFAULT_COLUMNS, emptyRow } from '../../types/schema'
 import type { FormColumn } from '../../types/schema'
 
@@ -199,5 +199,34 @@ describe('one money column with the tax under the table', () => {
     const tax = taxSummary(4000, false, 3)
     expect(tax.whtAmount).toBe(120)
     expect(tax.netTotal).toBe(3880)
+  })
+})
+
+describe('rowHasNumbers', () => {
+  it('แถวที่ยังไม่ได้กรอกตัวเลข ถือว่าว่าง', () => {
+    expect(rowHasNumbers(cols, emptyRow(cols))).toBe(false)
+  })
+
+  it('กรอกตัวเลขแม้ช่องเดียว ถือว่ามีข้อมูล (รวมเลข 0 ที่พิมพ์เอง)', () => {
+    expect(rowHasNumbers(cols, { ...emptyRow(cols), workDays: 1 })).toBe(true)
+    expect(rowHasNumbers(cols, { ...emptyRow(cols), workDays: 0 })).toBe(true)
+  })
+
+  it('ฟอร์มที่ไม่มีคอลัมน์ตัวเลขเลย ไม่ต้องรออะไร', () => {
+    const textOnly: FormColumn[] = [{ key: 'detail', label: 'รายละเอียด', type: 'text' }]
+    expect(rowHasNumbers(textOnly, emptyRow(textOnly))).toBe(true)
+  })
+})
+
+describe('emptyRow', () => {
+  it('ช่องตัวเลขเริ่มต้นเป็นค่าว่าง ไม่ใช่เลข 0', () => {
+    const r = emptyRow(cols)
+    expect(r.workDays).toBe('')
+    expect(r.ratePerDay).toBe('')
+  })
+
+  it('ค่าว่างยังคำนวณได้เหมือนเดิม (ว่าง = 0)', () => {
+    const r = computeRow(cols, { ...emptyRow(cols), workDays: 2 })
+    expect(r.amountBeforeWht).toBe(0)
   })
 })

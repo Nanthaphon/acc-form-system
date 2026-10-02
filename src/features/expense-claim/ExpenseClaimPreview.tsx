@@ -1,8 +1,8 @@
-import type { Company, ExpenseHeader, ExpenseRow, FormSettings } from '../../types/schema'
+import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, rowHasNumbers, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -58,6 +58,13 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const cols = settings.columns
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
+  // Print a figure only once the row holds one: a row left empty stays empty,
+  // the way it would on the paper form, instead of printing 0.00 everywhere.
+  const cellMoney = (row: ExpenseRow, col: FormColumn): string => {
+    const raw = row[col.key]
+    const filled = col.type === 'calc' ? rowHasNumbers(cols, row) : String(raw ?? '').trim() !== ''
+    return filled ? money(Number(raw) || 0) : ' '
+  }
   const columnTotals = computeColumnTotals(cols, items)
   const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate)
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
@@ -198,7 +205,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                           ? formatIsoDate(computed[i][col.key] as string)
                           : isTextCol(col.type)
                           ? (computed[i][col.key] as string)
-                          : money(Number(computed[i][col.key]) || 0)}
+                          : cellMoney(computed[i], col)}
                       </td>
                     ))}
                   </tr>

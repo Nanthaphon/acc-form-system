@@ -71,3 +71,36 @@ describe('ExpenseClaimForm', () => {
     expect(screen.queryByText('ข้อความในเอกสาร')).not.toBeInTheDocument()
   })
 })
+
+describe('ช่องตัวเลขในตาราง', () => {
+  it('แถวใหม่ไม่ใส่เลข 0 มาให้ แต่มีข้อความจางๆ ในช่องแทน', () => {
+    render(
+      <ExpenseClaimForm
+        header={header}
+        items={[emptyRow(EXPENSE_CLAIM_DEFAULT_COLUMNS)]}
+        columns={EXPENSE_CLAIM_DEFAULT_COLUMNS}
+        onHeaderChange={() => {}}
+        onItemsChange={() => {}}
+      />,
+    )
+    const boxes = screen.getAllByPlaceholderText('0') as HTMLInputElement[]
+    expect(boxes.length).toBeGreaterThan(0)
+    for (const b of boxes) expect(b.value).toBe('')
+  })
+
+  it('ลบตัวเลขออกจนหมด ช่องกลับมาว่าง ไม่เด้งเป็น 0', () => {
+    const onItemsChange = vi.fn()
+    render(
+      <ExpenseClaimForm
+        header={header}
+        items={[{ ...emptyRow(EXPENSE_CLAIM_DEFAULT_COLUMNS), workDays: 2 }]}
+        columns={EXPENSE_CLAIM_DEFAULT_COLUMNS}
+        onHeaderChange={() => {}}
+        onItemsChange={onItemsChange}
+      />,
+    )
+    const box = screen.getAllByPlaceholderText('0')[0]
+    fireEvent.change(box, { target: { value: '' } })
+    expect(onItemsChange.mock.calls[0][0][0].workDays).toBe('')
+  })
+})

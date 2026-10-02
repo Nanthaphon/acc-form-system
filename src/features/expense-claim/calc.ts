@@ -29,6 +29,15 @@ function evalCalc(col: FormColumn, out: ExpenseRow): number {
   return 0
 }
 
+// Has anyone typed a number into this row? An untouched row shows its calc
+// columns blank instead of 0.00 — the paper form leaves those cells empty.
+// A form with no number columns has nothing to wait for, so it always shows.
+export function rowHasNumbers(columns: FormColumn[], row: ExpenseRow): boolean {
+  const nums = columns.filter(c => c.type === 'number')
+  if (!nums.length) return true
+  return nums.some(c => String(row[c.key] ?? '').trim() !== '')
+}
+
 export function computeRow(columns: FormColumn[], row: ExpenseRow): ExpenseRow {
   const out: ExpenseRow = { ...row }
   const calcCols = columns.filter(c => c.type === 'calc' && c.calc)

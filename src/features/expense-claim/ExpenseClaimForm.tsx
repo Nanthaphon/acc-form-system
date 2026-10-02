@@ -3,7 +3,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, rowHasNumbers, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
@@ -229,7 +229,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         <td key={col.key} className="border-b border-stone-100 p-1">
                           {col.type === 'calc' ? (
                             <div className="truncate px-1 text-right font-medium text-stone-900">
-                              {fmt(Number(computed[i][col.key]) || 0)}
+                              {rowHasNumbers(cols, row) ? fmt(Number(computed[i][col.key]) || 0) : ''}
                             </div>
                           ) : col.type === 'date' ? (
                             <DateInput
@@ -240,9 +240,10 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                           ) : col.type === 'number' ? (
                             <input
                               type="number"
-                              className="w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-right text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
-                              value={row[col.key] as number}
-                              onChange={e => setCell(i, col.key, Number(e.target.value))}
+                              placeholder="0"
+                              className="w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-right text-xs placeholder:text-stone-300 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
+                              value={(row[col.key] ?? '') as string | number}
+                              onChange={e => setCell(i, col.key, e.target.value === '' ? '' : Number(e.target.value))}
                             />
                           ) : col.type === 'select' ? (
                             <select

@@ -306,6 +306,8 @@ export interface SubmissionVersion {
 // Build a blank row for the given columns: text -> '', number/calc -> 0
 export function emptyRow(columns: FormColumn[]): ExpenseRow {
   const row: ExpenseRow = {}
-  for (const c of columns) row[c.key] = isTextCol(c.type) ? '' : 0
+  // Numbers start empty rather than at 0, so an untouched cell looks untouched.
+  // Number('') is 0, so every formula reads them exactly as before.
+  for (const c of columns) row[c.key] = c.type === 'calc' ? 0 : ''
   return row
 }
