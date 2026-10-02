@@ -1,7 +1,7 @@
 import { uiAlert } from '../components/dialog/dialogService'
+import SignatureField from '../components/SignatureField'
 import { useEffect, useState } from 'react'
-import { PenLine, Save, Trash2, Upload, UserRound } from 'lucide-react'
-import ActionIconButton from '../components/ActionIconButton'
+import { PenLine, Save, UserRound } from 'lucide-react'
 import { Spinner } from '../components/Spinner'
 import { useAuth } from '../auth/AuthProvider'
 import { updateProfile } from '../data/users'
@@ -30,7 +30,6 @@ export default function ProfilePage() {
   const [lists, setLists] = useState(NO_OPTIONS)
   const [form, setForm] = useState(profile)
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
   useEffect(() => { listCompanies().then(setCompanies); loadOptionLists().then(setLists) }, [])
   useEffect(() => setForm(profile), [profile])
   if (!form) return null
@@ -48,25 +47,6 @@ export default function ProfilePage() {
     }
   }
   const set = (k: string, v: string) => setForm({ ...form!, [k]: v })
-
-  async function onSignaturePick(file: File | undefined) {
-    if (!file) return
-    setUploading(true)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const dataUrl = String(reader.result)
-      if (dataUrl.length > 400000) { uiAlert('ไฟล์ใหญ่เกินไป แนะนำลายเซ็นเล็กกว่า ~300KB'); setUploading(false); return }
-      try { await updateProfile(form!.uid, { signatureImage: dataUrl }); await refresh() }
-      catch { uiAlert('อัปโหลดลายเซ็นไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
-      finally { setUploading(false) }
-    }
-    reader.onerror = () => { setUploading(false); uiAlert('อ่านไฟล์ไม่สำเร็จ') }
-    reader.readAsDataURL(file)
-  }
-  async function removeSignature() {
-    try { await updateProfile(form!.uid, { signatureImage: null } as any); await refresh() }
-    catch { uiAlert('ลบลายเซ็นไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
-  }
 
   const fullName = `${form.firstName ?? ''} ${form.lastName ?? ''}`.trim()
   const companyName = companies.find(c => c.id === form.companyId)?.name
@@ -125,26 +105,7 @@ export default function ProfilePage() {
         </div>
         <p className="mb-4 text-xs text-stone-500">ใช้เซ็นเอกสารออนไลน์ · แนะนำรูปพื้นหลังโปร่ง (PNG) จะดูเหมือนเซ็นจริงมากกว่า</p>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex h-24 w-56 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-stone-300 bg-stone-50">
-            {uploading
-              ? <Spinner size={20} className="text-stone-400" />
-              : form.signatureImage
-                ? <img src={form.signatureImage} alt="ลายเซ็น" className="h-full w-full object-contain p-2" />
-                : <span className="text-xs text-stone-400">ยังไม่มีลายเซ็น</span>}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 hover:border-stone-300 hover:text-stone-900">
-              <Upload size={16} />
-              {form.signatureImage ? 'เปลี่ยนลายเซ็น' : 'อัปโหลดลายเซ็น'}
-              <input type="file" accept="image/*" className="hidden" onChange={e => onSignaturePick(e.target.files?.[0])} />
-            </label>
-            {form.signatureImage && (
-              <ActionIconButton label="ลบลายเซ็น" tone="red" icon={<Trash2 size={16} />} onClick={removeSignature} />
-            )}
-          </div>
-        </div>
+        <SignatureField uid={form.uid} signature={form.signatureImage} onChanged={refresh} />
       </div>
 
       {/* Actions */}

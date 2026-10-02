@@ -9,6 +9,14 @@ export function isSuperAdmin(p?: RoleInfo | null): boolean {
   return !!p && p.role === 'admin' && !!p.isSuperAdmin
 }
 
+// Who may set someone's password or put a signature on their account: any
+// admin — but the Super Admin's own account is only ever touched by the Super
+// Admin (the database enforces the same rule).
+export function canManageLogin(viewer?: RoleInfo | null, target?: RoleInfo | null): boolean {
+  if (viewer?.role !== 'admin') return false
+  return isSuperAdmin(target) ? isSuperAdmin(viewer) : true
+}
+
 export const ROLE_OPTIONS: { value: UserProfile['role']; label: string }[] = [
   { value: 'employee', label: 'พนักงาน' },
   { value: 'admin', label: 'Account Admin' },

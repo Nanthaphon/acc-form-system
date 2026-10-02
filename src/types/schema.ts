@@ -181,7 +181,7 @@ export interface UserProfile {
   groupId?: string
   accessGroup?: string
   createdAt: number
-  signatureImage?: string          // saved signature (data URL), reused when signing documents
+  signatureImage?: string | null          // saved signature (data URL), reused when signing documents
   isSuperAdmin?: boolean           // the one admin who may set anyone's password (see shared/roles)
   passwordIsDefault?: boolean      // password is still the default one (= employeeId)
 }

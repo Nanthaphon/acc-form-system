@@ -11,7 +11,7 @@ import { listEmployees, deleteEmployee } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import { useAuth } from '../../auth/AuthProvider'
-import { isSuperAdmin, passwordState, PASSWORD_STATE, roleLabel, roleTone } from '../../shared/roles'
+import { canManageLogin, isSuperAdmin, passwordState, PASSWORD_STATE, roleLabel, roleTone } from '../../shared/roles'
 import type { PasswordState } from '../../shared/roles'
 import type { AccessGroup, Company, UserProfile } from '../../types/schema'
 
@@ -261,7 +261,7 @@ export default function EmployeeListPage() {
                 <td className={`${ui.td} whitespace-nowrap`}><Badge tone={roleTone(r)}>{roleLabel(r)}</Badge></td>
                 <td className="px-4 py-2">
                   <div className="flex items-center justify-end gap-1.5">
-                    {viewerIsSuper && r.uid !== profile?.uid && (
+                    {canManageLogin(profile, r) && r.uid !== profile?.uid && (
                       <ActionIconButton label="ตั้งรหัสผ่านใหม่" icon={<KeyRound size={16} />} onClick={() => setPwFor(r)} />
                     )}
                     {!locked(r) && (

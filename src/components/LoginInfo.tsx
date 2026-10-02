@@ -64,7 +64,7 @@ export default function LoginInfo({ profile, onSetPassword, onChangeUsername }: 
         />
       </div>
       {!onSetPassword && st !== 'default' && (
-        <p className="mt-3 text-xs text-stone-500">ถ้าพนักงานลืมรหัสผ่าน ให้ Super Admin ตั้งรหัสใหม่ให้</p>
+        <p className="mt-3 text-xs text-stone-500">ถ้าพนักงานลืมรหัสผ่าน ให้ผู้ดูแลระบบตั้งรหัสใหม่ให้</p>
       )}
     </div>
   )

@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FileText, Pencil, Printer, Trash2, UserRound } from 'lucide-react'
+import { FileText, Pencil, PenLine, Printer, Trash2, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
@@ -14,10 +14,11 @@ import type { UserProfile, SubmissionSummary, FormSettings, Company, AccessGroup
 import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
-import { isSuperAdmin, roleLabel } from '../../shared/roles'
+import { canManageLogin, isSuperAdmin, roleLabel } from '../../shared/roles'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ActionIconButton from '../../components/ActionIconButton'
 import LoginInfo from '../../components/LoginInfo'
+import SignatureField from '../../components/SignatureField'
 import SetPasswordModal from '../../components/SetPasswordModal'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { Spinner } from '../../components/Spinner'
@@ -99,7 +100,10 @@ export default function EmployeeDetailPage() {
   const viewerIsSuper = isSuperAdmin(me)
   // Only the Super Admin may edit the Super Admin's account, rename usernames and set others' passwords.
   const canEdit = !isSuperAdmin(profile) || viewerIsSuper
-  const canSetPassword = viewerIsSuper && profile.uid !== me?.uid
+  // Any admin can hand someone a new password (and a signature); only the Super
+  // Admin touches the Super Admin's own account.
+  const canManage = canManageLogin(me, profile)
+  const canSetPassword = canManage && profile.uid !== me?.uid
 
   return (
     <div>
@@ -121,6 +125,17 @@ export default function EmployeeDetailPage() {
           onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined}
           onChangeUsername={viewerIsSuper ? () => setChangingUsername(true) : undefined}
         />
+
+        {/* Not everyone can manage a signature image on their own; an admin can
+            put one on the account so the person can sign documents online. */}
+        <div className={ui.card}>
+          <div className="mb-1 flex items-center gap-2">
+            <PenLine size={16} className="text-stone-400" />
+            <h2 className={ui.cardTitle}>ลายเซ็น</h2>
+          </div>
+          <p className="mb-4 text-xs text-stone-500">ใช้ตอนพนักงานคนนี้เซ็นเอกสารออนไลน์ · แนะนำรูปพื้นหลังโปร่ง</p>
+          <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
+        </div>
 
         <div className={ui.card}>
           <div className="grid grid-cols-2 gap-5 text-sm md:grid-cols-3">
