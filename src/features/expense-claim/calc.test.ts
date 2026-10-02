@@ -153,3 +153,28 @@ describe('totalColumn', () => {
     expect(totalColumn([c('t', 'text')])).toBeUndefined()
   })
 })
+
+// The shape the paper form uses: วันทำงาน × วันละ, 3% off it, and the net as the
+// document total (supabase/2026-10-02-amount-columns-gac69-005.sql builds it).
+describe('วันทำงาน × วันละ with the 3% line', () => {
+  const cols: FormColumn[] = [
+    { key: 'days', label: 'วันทำงาน', type: 'number' },
+    { key: 'rate', label: 'วันละ', type: 'number' },
+    { key: 'amountBefore', label: 'จำนวนเงินก่อนหัก', type: 'calc', calc: { op: 'multiply', operands: ['days', 'rate'] } },
+    { key: 'whtAmount', label: 'หักภาษี ณ ที่จ่าย 3%', type: 'calc', calc: { op: 'percent', a: 'amountBefore', percent: 3 } },
+    { key: 'amountNet', label: 'จำนวนเงินรวม', type: 'calc', isTotal: true, calc: { op: 'subtract', operands: ['amountBefore', 'whtAmount'] } },
+  ]
+
+  it('multiplies the row and takes 3% off it', () => {
+    const r = computeRow(cols, { days: 2, rate: 500 })
+    expect(r.amountBefore).toBe(1000)
+    expect(r.whtAmount).toBe(30)
+    expect(r.amountNet).toBe(970)
+  })
+
+  it('totals the marked column, not the rate', () => {
+    const rows = [{ days: 2, rate: 500 }, { days: 1, rate: 1000 }]
+    expect(grandTotal(cols, rows)).toBe(1940) // 970 + 970
+    expect(bahtTextForRows(cols, rows)).toBe('หนึ่งพันเก้าร้อยสี่สิบบาทถ้วน')
+  })
+})
