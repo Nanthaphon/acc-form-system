@@ -178,3 +178,26 @@ describe('วันทำงาน × วันละ with the 3% line', () => {
     expect(bahtTextForRows(cols, rows)).toBe('หนึ่งพันเก้าร้อยสี่สิบบาทถ้วน')
   })
 })
+
+// What the form ends up with once the per-row 3% line is dropped: one money
+// column, and the withholding handled under the table instead.
+describe('one money column with the tax under the table', () => {
+  const cols: FormColumn[] = [
+    { key: 'days', label: 'วันทำงาน', type: 'number' },
+    { key: 'rate', label: 'วันละ', type: 'number' },
+    { key: 'amountBefore', label: 'จำนวนเงิน', type: 'calc', isTotal: true, calc: { op: 'multiply', operands: ['days', 'rate'] } },
+  ]
+
+  it('multiplies the row and totals the money column, not the rate', () => {
+    const rows = [{ days: 2, rate: 500 }, { days: 3, rate: 1000 }]
+    expect(computeRow(cols, rows[0]).amountBefore).toBe(1000)
+    expect(grandTotal(cols, rows)).toBe(4000)
+    expect(bahtTextForRows(cols, rows)).toBe('สี่พันบาทถ้วน')
+  })
+
+  it('takes the 3% off the whole claim, as the document does', () => {
+    const tax = taxSummary(4000, false, 3)
+    expect(tax.whtAmount).toBe(120)
+    expect(tax.netTotal).toBe(3880)
+  })
+})
