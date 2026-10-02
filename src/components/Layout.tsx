@@ -19,7 +19,7 @@ export default function Layout() {
   const isAdmin = profile?.role === 'admin'
   return (
     <div className="flex min-h-screen bg-sand-50">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-clay-900 pb-4 text-clay-100">
+      <aside className="sticky top-0 flex h-screen w-[17.5rem] shrink-0 flex-col bg-clay-900 pb-4 text-clay-100">
         <div className="flex items-center gap-2.5 px-5 py-5 text-base font-semibold text-white">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white p-1 shadow-[0_2px_8px_rgba(0,0,0,0.22)]">
             <img src="/logo.webp" alt="" className="h-full w-full object-contain" />
@@ -36,20 +36,20 @@ export default function Layout() {
           <NavLink to="/sign" className={navLinkClass}>
             {({ isActive }) => (
               <>
-                <Inbox size={18} className="opacity-85" /> รอฉันเซ็น
+                <Inbox size={18} className="opacity-85" /> ฟอร์มเอกสารรอเซ็น
                 <NavCountBadge count={toSign} active={isActive} label={`รอเซ็น ${toSign} ฉบับ`} />
               </>
             )}
           </NavLink>
           {isAdmin && <>
             <NavLink to="/admin/employees" className={navLinkClass}>
-              <Users size={18} className="opacity-85" /> พนักงาน
+              <Users size={18} className="opacity-85" /> ข้อมูลพนักงาน
             </NavLink>
             <NavLink to="/admin/prints" className={navLinkClass}>
-              <Printer size={18} className="opacity-85" /> ประวัติการพิมพ์ทั้งหมด
+              <Printer size={18} className="opacity-85" /> ประวัติการพิมพ์ทั้งหมดในระบบ
             </NavLink>
             <NavLink to="/admin/access-groups" className={navLinkClass}>
-              <Tags size={18} className="opacity-85" /> จัดการกลุ่ม
+              <Tags size={18} className="opacity-85" /> จัดการสิทธิ์เข้าถึงฟอร์ม
             </NavLink>
             <NavLink to="/admin/field-options" className={navLinkClass}>
               <ListChecks size={18} className="opacity-85" /> Custom Field

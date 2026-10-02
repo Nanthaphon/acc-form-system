@@ -45,7 +45,7 @@ export default function AccessGroupsPage() {
       <PageHeader
         onBack={() => nav('/')}
         icon={<Tags size={20} />}
-        title="จัดการกลุ่ม"
+        title="จัดการสิทธิ์เข้าถึงฟอร์ม"
         subtitle={loading ? 'กำลังโหลด...' : `ทั้งหมด ${groups.length} กลุ่ม`}
         actions={
           <button onClick={onAdd} className={ui.btnPrimary}>

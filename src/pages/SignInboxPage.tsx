@@ -44,13 +44,13 @@ export default function SignInboxPage() {
 
   return (
     <div className="space-y-8">
-      {/* รอฉันเซ็น */}
+      {/* ฟอร์มเอกสารรอเซ็น */}
       <div>
         <PageHeader
           icon={<Inbox size={20} />}
           title={
             <span className="inline-flex items-center gap-2">
-              รอฉันเซ็น
+              ฟอร์มเอกสารรอเซ็น
               {!loading && <Badge tone="amber">{pendingRows.length}</Badge>}
             </span>
           }

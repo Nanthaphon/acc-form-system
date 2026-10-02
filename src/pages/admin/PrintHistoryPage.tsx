@@ -89,7 +89,7 @@ export default function PrintHistoryPage() {
     <div>
       <PageHeader
         icon={<Printer size={20} />}
-        title="ประวัติการพิมพ์ทั้งหมด"
+        title="ประวัติการพิมพ์ทั้งหมดในระบบ"
         subtitle={`ทั้งหมด ${rows.length} รายการ`}
       />
       <div className="mb-4">

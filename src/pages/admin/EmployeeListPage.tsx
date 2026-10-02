@@ -145,7 +145,7 @@ export default function EmployeeListPage() {
     <div>
       <PageHeader
         icon={<Users size={20} />}
-        title="พนักงาน"
+        title="ข้อมูลพนักงาน"
         subtitle={loading ? 'กำลังโหลด...' : `ทั้งหมด ${rows.length} คน · ยังใช้รหัสเริ่มต้น ${onDefault} คน`}
         actions={<>
           <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> นำเข้าพนักงาน</Link>

@@ -53,7 +53,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
       if (currentSignature) {
         for (const b of pending.filter(b => isSelf(b.id))) { try { await signDocument(submission.id, b.id) } catch { /* leave pending */ } }
       }
-      uiAlert('ส่งให้เซ็นแล้ว — ผู้ถูกเลือกจะเห็นในเมนู "รอฉันเซ็น"', { tone: 'success' })
+      uiAlert('ส่งให้เซ็นแล้ว — ผู้ถูกเลือกจะเห็นในเมนู "ฟอร์มเอกสารรอเซ็น"', { tone: 'success' })
       onDone(); onClose()
     } catch (e: any) {
       uiAlert('ส่งให้เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด'))

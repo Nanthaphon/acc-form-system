@@ -1,4 +1,4 @@
-// Tiny pub/sub so the sidebar "รอฉันเซ็น" badge refreshes the moment a signature
+// Tiny pub/sub so the sidebar "ฟอร์มเอกสารรอเซ็น" badge refreshes the moment a signature
 // action happens anywhere (signing, assigning signers, cancelling a request) —
 // the count is otherwise only fetched once when the profile loads.
 const listeners = new Set<() => void>()
