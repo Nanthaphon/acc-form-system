@@ -35,3 +35,10 @@ describe('sidebar', () => {
     expect(screen.queryByRole('link', { name: /ประวัติพิมพ์ทั้งหมดในระบบ/ })).not.toBeInTheDocument()
   })
 })
+
+describe('manual menu', () => {
+  it('everyone gets the manual in the sidebar', () => {
+    show('employee')
+    expect(screen.getByRole('link', { name: /คู่มือการใช้งาน/ })).toHaveAttribute('href', '/manual')
+  })
+})

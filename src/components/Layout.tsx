@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import {
-  FileText, History, Inbox, KeyRound, ListChecks, LogOut,
+  BookOpen, FileText, History, Inbox, KeyRound, ListChecks, LogOut,
   PanelLeftClose, PanelLeftOpen, Printer, Tags, User, Users,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
@@ -47,6 +47,7 @@ export default function Layout() {
       { to: '/admin/field-options', icon: ListChecks, label: 'Custom Field' },
     ] : []),
     { to: '/profile', icon: User, label: 'ข้อมูลของฉัน' },
+    { to: '/manual', icon: BookOpen, label: 'คู่มือการใช้งาน' },
   ]
 
   const navRow = ({ to, icon: Icon, label, end, count }: NavItem) => (
