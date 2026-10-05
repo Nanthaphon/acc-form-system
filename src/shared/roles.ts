@@ -33,7 +33,7 @@ export function roleTone(p: RoleInfo): Tone {
 // Where a login password stands. Passwords are stored one-way (hashed), so only
 // the default one (= the employee ID) can ever be shown.
 //   default   — still the default password
-//   temporary — set by the Super Admin, the employee hasn't changed it yet
+//   temporary — set by an admin, the employee hasn't changed it yet
 //   own       — the employee chose it
 export type PasswordState = 'default' | 'temporary' | 'own'
 
@@ -45,6 +45,6 @@ export function passwordState(p: Pick<UserProfile, 'mustChangePassword' | 'passw
 
 export const PASSWORD_STATE: Record<PasswordState, { label: string; tone: Tone; hint: string; short: string }> = {
   default: { label: 'รหัสเริ่มต้น', tone: 'amber', hint: 'ยังใช้รหัสเริ่มต้น (= ชื่อผู้ใช้)', short: 'รหัสผ่าน = ชื่อผู้ใช้' },
-  temporary: { label: 'รหัสชั่วคราว', tone: 'blue', hint: 'Super Admin ตั้งให้ · รอพนักงานเปลี่ยน', short: 'Super Admin ตั้งให้' },
+  temporary: { label: 'รหัสชั่วคราว', tone: 'blue', hint: 'ผู้ดูแลระบบตั้งให้ · รอพนักงานเปลี่ยน', short: 'ผู้ดูแลระบบตั้งให้' },
   own: { label: 'ตั้งเองแล้ว', tone: 'green', hint: 'พนักงานเปลี่ยนรหัสเองแล้ว · ระบบเก็บแบบเข้ารหัส ดูย้อนหลังไม่ได้', short: 'พนักงานตั้งเอง (ดูไม่ได้)' },
 }

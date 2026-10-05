@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { BookOpen, LogIn } from 'lucide-react'
 import { loginWithEmployeeId } from '../data/auth'
 import { Spinner } from '../components/Spinner'
-import { MANUAL_PDF } from '../shared/manual'
+import { EMPLOYEE_MANUAL } from '../shared/manual'
 
 const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 disabled:bg-stone-50'
 
@@ -79,7 +79,7 @@ export default function LoginPage() {
 
         {/* First day: the manual is reachable before signing in, too. */}
         <a
-          href={MANUAL_PDF}
+          href={EMPLOYEE_MANUAL.pdf}
           target="_blank"
           rel="noreferrer"
           className="mt-5 flex items-center justify-center gap-1.5 text-sm text-clay-700 hover:underline"
