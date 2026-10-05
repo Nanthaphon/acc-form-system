@@ -15,12 +15,21 @@ export function visibleColumns(columns: FormColumn[]): FormColumn[] {
 // A formula may name a calc column that sits later in the table: the values are
 // resolved repeatedly until nothing changes, so where a column sits on screen
 // never changes the number. A formula that refers back to itself settles at 0.
+//
+// A product leaves out the cells nobody filled in: วันละ 1,000 with วันทำงาน
+// still blank is 1,000, not 0 — the blank reads as "one", the way a rate on
+// its own is meant. A 0 someone typed still counts, and a row with none of
+// its operands filled stays 0.
 function evalCalc(col: FormColumn, out: ExpenseRow): number {
   const num = (key: string): number => Number(out[key]) || 0
+  const filled = (key: string): boolean => { const v = out[key]; return v !== '' && v !== undefined && v !== null }
   const { op, percent } = col.calc!
   const ops = calcOperands(col.calc!)
   switch (op) {
-    case 'multiply': return round2(ops.length ? ops.reduce((acc, k) => acc * num(k), 1) : 0)
+    case 'multiply': {
+      const given = ops.filter(filled)
+      return round2(given.length ? given.reduce((acc, k) => acc * num(k), 1) : 0)
+    }
     case 'add': return round2(ops.reduce((acc, k) => acc + num(k), 0))
     case 'subtract': return round2(ops.reduce((acc, k, i) => i === 0 ? num(k) : acc - num(k), 0))
     case 'divide': return round2(ops.reduce((acc, k, i) => i === 0 ? num(k) : (num(k) === 0 ? acc : acc / num(k)), 0))

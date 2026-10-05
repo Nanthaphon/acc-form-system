@@ -225,8 +225,26 @@ describe('emptyRow', () => {
     expect(r.ratePerDay).toBe('')
   })
 
-  it('ค่าว่างยังคำนวณได้เหมือนเดิม (ว่าง = 0)', () => {
-    const r = computeRow(cols, { ...emptyRow(cols), workDays: 2 })
+  it('ช่องว่างไม่ถูกนับในการคูณ: วันละ 1,000 โดยยังไม่กรอกวันทำงาน = 1,000', () => {
+    const r = computeRow(cols, { ...emptyRow(cols), ratePerDay: 1000 })
+    expect(r.amountBeforeWht).toBe(1000)
+  })
+
+  it('กรอกวันทำงาน 2 วัน วันละ 1,000 = 2,000', () => {
+    const r = computeRow(cols, { ...emptyRow(cols), workDays: 2, ratePerDay: 1000 })
+    expect(r.amountBeforeWht).toBe(2000)
+  })
+
+  it('เลข 0 ที่พิมพ์เองยังนับ: วันทำงาน 0 = 0', () => {
+    const r = computeRow(cols, { ...emptyRow(cols), workDays: 0, ratePerDay: 1000 })
     expect(r.amountBeforeWht).toBe(0)
+  })
+
+  it('ยังไม่กรอกอะไรเลย = 0', () => {
+    expect(computeRow(cols, emptyRow(cols)).amountBeforeWht).toBe(0)
+  })
+
+  it('ยอดรวมของเอกสารนับแถวที่กรอกแค่วันละด้วย', () => {
+    expect(grandTotal(cols, [{ ...emptyRow(cols), ratePerDay: 1000 }, { ...emptyRow(cols), workDays: 2, ratePerDay: 1000 }])).toBe(2910)
   })
 })
