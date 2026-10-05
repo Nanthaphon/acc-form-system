@@ -3,7 +3,8 @@ import { Calendar } from 'lucide-react'
 
 // Text-based date field that ALWAYS shows dd/mm/yyyy (ค.ศ), regardless of the
 // browser locale. Stores/emits the value as ISO "yyyy-mm-dd" like a native
-// <input type="date">, and keeps a native picker behind a calendar button.
+// <input type="date">. Clicking anywhere in the field opens the native picker,
+// and the date can still be typed in.
 
 function isoToDisplay(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '')
@@ -32,6 +33,12 @@ export default function DateInput({ value, onChange, className }: Props) {
   // Keep the display in sync when the stored value changes elsewhere.
   useEffect(() => { setText(isoToDisplay(value)) }, [value])
 
+  // showPicker throws where it is unsupported or blocked (e.g. a cross-origin
+  // frame); typing still works there, so it is fine to ignore.
+  function openPicker() {
+    try { dateRef.current?.showPicker?.() } catch { /* type the date instead */ }
+  }
+
   function handleText(raw: string) {
     const s = autoSlash(raw)
     setText(s)
@@ -50,12 +57,13 @@ export default function DateInput({ value, onChange, className }: Props) {
         className={`${className ?? ''} pr-6`}
         value={text}
         onChange={e => handleText(e.target.value)}
+        onClick={openPicker}
       />
       <button
         type="button"
         tabIndex={-1}
         title="เลือกวันที่"
-        onClick={() => dateRef.current?.showPicker?.()}
+        onClick={openPicker}
         className="absolute inset-y-0 right-1 flex items-center text-stone-400 hover:text-stone-600"
       >
         <Calendar size={13} />
@@ -65,7 +73,7 @@ export default function DateInput({ value, onChange, className }: Props) {
         type="date"
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        className="pointer-events-none absolute bottom-1 right-1 h-4 w-4 opacity-0"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
         tabIndex={-1}
         aria-hidden
       />
