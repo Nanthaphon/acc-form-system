@@ -7,6 +7,8 @@ import { listVersions } from '../data/versions'
 import { describeChanges } from '../shared/versionDiff'
 import { formatDateTime } from '../shared/date'
 import ExpenseClaimPreview from '../features/expense-claim/ExpenseClaimPreview'
+import { storedImagePaths } from '../shared/rowImages'
+import { useImageUrls } from '../shared/useImageUrls'
 
 interface Props {
   submissionId: string
@@ -23,6 +25,7 @@ export default function VersionHistory({ submissionId, columns, settings, compan
   const [viewing, setViewing] = useState<SubmissionVersion | null>(null)
 
   useEffect(() => { listVersions(submissionId).then(setVersions) }, [submissionId, refreshKey])
+  const imageUrls = useImageUrls(viewing ? storedImagePaths(columns, viewing.items) : [])
   if (versions.length === 0) return null
 
   return (
@@ -61,7 +64,7 @@ export default function VersionHistory({ submissionId, columns, settings, compan
               <span className="text-sm">ดูเวอร์ชัน {viewing.version} · {formatDateTime(viewing.editedAt)}</span>
               <button className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-sm font-medium hover:bg-white/30" onClick={() => setViewing(null)}><X size={14} /> ปิด</button>
             </div>
-            <ExpenseClaimPreview company={company} header={viewing.header} items={viewing.items} docNumber="" settings={settings} />
+            <ExpenseClaimPreview company={company} header={viewing.header} items={viewing.items} docNumber="" settings={settings} imageUrls={imageUrls} />
           </div>
         </div>
       )}

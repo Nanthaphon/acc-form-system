@@ -5,11 +5,12 @@ export type Role = 'employee' | 'admin'
 export interface Company { id: string; name: string; address: string; logo?: string | null; headerName?: string | null; shortName?: string | null }
 
 // ===== Dynamic column model =====
-export type ColumnType = 'text' | 'number' | 'calc' | 'date' | 'select'
+export type ColumnType = 'text' | 'number' | 'calc' | 'date' | 'select' | 'image'
 
-// Textual columns (string values, left-aligned, never summed).
+// Textual columns (string values, left-aligned, never summed). An image cell
+// holds the stored picture's path, so it is one of them too.
 export function isTextCol(type: ColumnType): boolean {
-  return type === 'text' || type === 'date' || type === 'select'
+  return type === 'text' || type === 'date' || type === 'select' || type === 'image'
 }
 export interface CalcDef {
   op: 'multiply' | 'subtract' | 'add' | 'percent' | 'divide'

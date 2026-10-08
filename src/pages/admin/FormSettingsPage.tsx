@@ -522,6 +522,7 @@ export default function FormSettingsPage() {
                     <option value="date">วันที่</option>
                     <option value="select">ตัวเลือก</option>
                     <option value="calc">คำนวณ</option>
+                    <option value="image">รูปภาพ</option>
                   </select>
                   <label className="flex items-center gap-1 text-xs text-stone-500" title="ความกว้างบนเอกสาร · เว้นว่าง = อัตโนมัติ">
                     กว้าง (มม.)

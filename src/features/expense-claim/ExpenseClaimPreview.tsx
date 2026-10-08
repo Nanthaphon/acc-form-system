@@ -7,8 +7,17 @@ import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
 import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyTemplate'
+import { numberImages } from '../../shared/rowImages'
+import type { NumberedImage } from '../../shared/rowImages'
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
+interface Props {
+  company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[]
+  imageUrls?: Record<string, string>   // pictures in image columns: stored path or pending token → URL to show
+}
+
+// Pictures on the attachment pages after the document: two to a sheet, each
+// the full width, so a bank book photographed sideways stays readable.
+const IMAGES_PER_PAGE = 2
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น 6 ถนนพัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
@@ -54,7 +63,7 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
   )
 }
 
-export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures }: Props) {
+export default function ExpenseClaimPreview({ company, header, items, docNumber, settings = EXPENSE_CLAIM_DEFAULTS, signatures, imageUrls = {} }: Props) {
   const cols = settings.columns
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
@@ -65,6 +74,12 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     const filled = col.type === 'calc' ? rowHasNumbers(cols, row) : String(raw ?? '').trim() !== ''
     return filled ? money(Number(raw) || 0) : ' '
   }
+  // A table cell is too small to read a bank book in, so a picture shows as a
+  // thumbnail plus its number, and prints full size on the attachment pages.
+  const images = numberImages(cols, items)
+  const imageNo = new Map(images.map(im => [im.value, im.no]))
+  const imagePages: NumberedImage[][] = []
+  for (let i = 0; i < images.length; i += IMAGES_PER_PAGE) imagePages.push(images.slice(i, i + IMAGES_PER_PAGE))
   const columnTotals = computeColumnTotals(cols, items)
   const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate)
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
@@ -201,7 +216,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                     <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
                     {vcols.map(col => (
                       <td key={col.key} className={`break-words border border-black px-1 py-0.5 leading-[2] ${isTextCol(col.type) ? '' : 'text-right'}`}>
-                        {col.type === 'date'
+                        {col.type === 'image'
+                          ? <ImageThumb value={computed[i][col.key] as string} no={imageNo.get(computed[i][col.key] as string)} url={imageUrls[computed[i][col.key] as string]} />
+                          : col.type === 'date'
                           ? formatIsoDate(computed[i][col.key] as string)
                           : isTextCol(col.type)
                           ? (computed[i][col.key] as string)
@@ -274,6 +291,48 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
           </div>
         )
       })}
+
+      {imagePages.map((page, pi) => (
+        <div key={`img-${pi}`} className="doc-page border border-black bg-white p-6 text-xs">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm font-bold">เอกสารแนบ — {settings.title}</div>
+              <div>เลขที่ {docNumber}</div>
+            </div>
+            <div className="text-right">
+              <div>{settings.formCode}</div>
+              {imagePages.length > 1 && <div>แผ่นแนบ {pi + 1} / {imagePages.length}</div>}
+            </div>
+          </div>
+          <div className="mt-2 border-t-2 border-black" />
+          <div className="mt-4 flex flex-col gap-4">
+            {page.map(im => (
+              <figure key={im.no} className="flex flex-col border border-black">
+                <div className="flex h-[118mm] items-center justify-center bg-white p-2">
+                  {imageUrls[im.value]
+                    ? <img src={imageUrls[im.value]} alt={`รูป ${im.no}`} className="max-h-full max-w-full object-contain" />
+                    : <span className="text-stone-400">รูป {im.no}</span>}
+                </div>
+                <figcaption className="border-t border-black px-2 py-1 leading-snug">
+                  <span className="font-bold">รูป {im.no}</span> · แถว {im.row} · {im.column}{im.label ? ` · ${im.label}` : ''}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
+  )
+}
+
+// A picture in a table cell: a small thumbnail and its number on the
+// attachment pages ("รูป 2").
+function ImageThumb({ value, no, url }: { value: string; no?: number; url?: string }) {
+  if (!value) return null
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      {url && <img src={url} alt="" className="h-[6mm] w-[9mm] border border-black object-cover" />}
+      <span className="whitespace-nowrap">รูป {no}</span>
+    </span>
   )
 }

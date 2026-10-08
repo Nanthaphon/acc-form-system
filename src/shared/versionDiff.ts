@@ -30,6 +30,10 @@ export function describeChanges(prev: Snap, curr: Snap, columns: FormColumn[]): 
     for (const col of columns) {
       if (col.type === 'calc') continue // computed automatically — not a manual edit
       const a = cellText(col, prev.items[i]?.[col.key]), b = cellText(col, curr.items[i]?.[col.key])
+      if (col.type === 'image') { // a picture's storage path means nothing to a reader
+        if (a !== b) out.push(`รายการที่ ${i + 1}: ${col.label} ${!a ? 'แนบรูป' : !b ? 'เอารูปออก' : 'เปลี่ยนรูป'}`)
+        continue
+      }
       if (a !== b) out.push(`รายการที่ ${i + 1}: ${col.label} ${a || '—'} → ${b || '—'}`)
     }
   }

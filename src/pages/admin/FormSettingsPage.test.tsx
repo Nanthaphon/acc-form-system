@@ -87,7 +87,7 @@ describe('FormSettingsPage', () => {
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
     const types = screen.getAllByTitle('ชนิดข้อมูล')[0]
     expect([...types.querySelectorAll('option')].map(o => o.textContent))
-      .toEqual(['ข้อความ', 'ตัวเลข', 'วันที่', 'ตัวเลือก', 'คำนวณ'])
+      .toEqual(['ข้อความ', 'ตัวเลข', 'วันที่', 'ตัวเลือก', 'คำนวณ', 'รูปภาพ'])
   })
 
   // Writing this by hand means adding a column, switching its type and picking

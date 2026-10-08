@@ -10,6 +10,8 @@ import DateInput from '../../components/DateInput'
 import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
 import type { TemplateField } from '../../shared/bodyTemplate'
 import { BLANK_LIMITS, blankWidth } from './blankSizing'
+import ImageCell from './ImageCell'
+import type { RowImages } from './ImageCell'
 
 interface Props {
   header: ExpenseHeader
@@ -23,6 +25,7 @@ interface Props {
   bodyText?: string | null
   requesterTitle?: string     // section headings, editable per form (see sectionTitles)
   itemsTitle?: string
+  images?: RowImages          // pictures in image columns; without it those cells cannot take a picture
 }
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
@@ -79,7 +82,7 @@ function fmt(n: number): string {
   return formatMoney(n)
 }
 
-export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle }: Props) {
+export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle, images }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
   const titles = sectionTitles({ requesterTitle, itemsTitle })
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
@@ -244,6 +247,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                               className="w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-right text-xs placeholder:text-stone-300 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
                               value={(row[col.key] ?? '') as string | number}
                               onChange={e => setCell(i, col.key, e.target.value === '' ? '' : Number(e.target.value))}
+                            />
+                          ) : col.type === 'image' ? (
+                            <ImageCell
+                              value={(row[col.key] ?? '') as string}
+                              images={images}
+                              onChange={v => setCell(i, col.key, v)}
+                              label={`${col.label.replace(/\s+/g, ' ')} แถว ${i + 1}`}
                             />
                           ) : col.type === 'select' ? (
                             <select
