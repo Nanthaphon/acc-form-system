@@ -10,8 +10,6 @@ import type { Submission, FormSettings, Company } from '../types/schema'
 import AttachmentsField from '../components/AttachmentsField'
 import { Spinner } from '../components/Spinner'
 import { PageHeader, ui } from '../components/ui'
-import { storedImagePaths } from '../shared/rowImages'
-import { useImageUrls } from '../shared/useImageUrls'
 
 export default function SubmissionPreviewPage() {
   const { id } = useParams()
@@ -30,8 +28,6 @@ export default function SubmissionPreviewPage() {
       if (s.header.companyId) setCompany(await getCompany(s.header.companyId))
     })
   }, [id])
-
-  const imageUrls = useImageUrls(sub && settings ? storedImagePaths(settings.columns, sub.items) : [])
 
   async function onPrint() {
     if (sub) await incrementPrint(sub.id)
@@ -61,7 +57,7 @@ export default function SubmissionPreviewPage() {
       {(sub.attachments?.length ?? 0) > 0 && (
         <div className="no-print mb-4"><AttachmentsField saved={sub.attachments ?? []} readOnly /></div>
       )}
-      <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} signatures={sub.signatures} imageUrls={imageUrls} />
+      <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} signatures={sub.signatures} />
     </div>
   )
 }

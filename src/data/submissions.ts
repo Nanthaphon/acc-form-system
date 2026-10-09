@@ -8,9 +8,7 @@ import { notifyPendingSignChanged } from '../shared/pendingSignBus'
 export interface Editor { uid: string; name: string }
 
 export type SubmissionDraft = Omit<Submission,
-  'id' | 'docNumber' | 'createdAt' | 'updatedAt' | 'printCount' | 'lastPrintedAt'> & {
-  id?: string // chosen up front when pictures in the table are stored under it
-}
+  'id' | 'docNumber' | 'createdAt' | 'updatedAt' | 'printCount' | 'lastPrintedAt'>
 
 export async function createSubmission(dr: SubmissionDraft, docPrefix: string, editor?: Editor): Promise<Submission> {
   const now = Date.now()
@@ -69,13 +67,8 @@ export async function deleteSubmission(id: string): Promise<void> {
   // with no error, so the files were destroyed while the document survived —
   // which is why the delete is now checked by what it returns, not by the
   // absence of an error.
-  const { data } = await supabase.from('submissions').select('attachments,items').eq('id', id).maybeSingle()
-  const paths = [
-    ...((data?.attachments ?? []) as { path: string }[]).map(a => a.path),
-    // pictures in the table: every cell value stored under this document's folder
-    ...((data?.items ?? []) as Record<string, unknown>[]).flatMap(r => Object.values(r))
-      .filter((v): v is string => typeof v === 'string' && v.startsWith(`${id}/`)),
-  ]
+  const { data } = await supabase.from('submissions').select('attachments').eq('id', id).maybeSingle()
+  const paths = ((data?.attachments ?? []) as { path: string }[]).map(a => a.path)
   if (paths.length) await deleteAttachmentFiles(paths)
   const { data: gone, error } = await supabase.from('submissions').delete().eq('id', id).select('id')
   if (error) throw error

@@ -78,23 +78,3 @@ export async function openAttachment(path: string): Promise<void> {
   if (win) win.location.href = data.signedUrl
   else window.location.href = data.signedUrl
 }
-
-// ----- pictures in the table (image columns) -----
-// Stored next to the document's attachments, under the same folder, so the
-// same storage rules decide who may see, add or remove them.
-
-export async function uploadRowImage(path: string, image: Blob): Promise<void> {
-  const { error } = await supabase.storage.from(ATTACHMENT_BUCKET)
-    .upload(path, image, { contentType: 'image/jpeg', upsert: true })
-  if (error) throw error
-}
-
-// URLs for showing stored pictures, an hour long, fetched in one round trip.
-export async function signedImageUrls(paths: string[]): Promise<Record<string, string>> {
-  if (!paths.length) return {}
-  const { data, error } = await supabase.storage.from(ATTACHMENT_BUCKET).createSignedUrls(paths, 3600)
-  if (error || !data) return {}
-  const out: Record<string, string> = {}
-  for (const d of data) if (d.path && d.signedUrl) out[d.path] = d.signedUrl
-  return out
-}

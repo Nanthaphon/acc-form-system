@@ -15,11 +15,9 @@ import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPrevie
 import { createSubmission, updateSubmission, getSubmission, incrementPrint, isSigned } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
-import { uploadAttachments, deleteAttachmentFiles, saveAttachmentList, uploadRowImage } from '../../data/attachments'
+import { uploadAttachments, deleteAttachmentFiles, saveAttachmentList } from '../../data/attachments'
 import AttachmentsField from '../../components/AttachmentsField'
 import { Spinner } from '../../components/Spinner'
-import { newPendingToken, resolvePending, shrinkImage, storedImagePaths, withoutImages } from '../../shared/rowImages'
-import { useImageUrls } from '../../shared/useImageUrls'
 
 export default function FormPage() {
   const { id, formType } = useParams()
@@ -45,27 +43,6 @@ export default function FormPage() {
     position: profile?.position ?? '', job: profile?.defaultJob ?? '',
   })
   const [items, setItems] = useState<ExpenseRow[]>([emptyRow(EXPENSE_CLAIM_DEFAULTS.columns)])
-  // Pictures in image columns: picked ones wait here (shrunk) until saving
-  // uploads them; `unsent` keeps any whose upload failed after the document
-  // itself was created, so the next save sends them again.
-  const [pendingImages, setPendingImages] = useState<Record<string, Blob>>({})
-  const [localImageUrls, setLocalImageUrls] = useState<Record<string, string>>({})
-  const [unsentImages, setUnsentImages] = useState<{ path: string; blob: Blob }[]>([])
-  const imageUrls = useImageUrls(storedImagePaths(settings.columns, items), localImageUrls)
-
-  async function pickImage(file: File): Promise<string | null> {
-    if (!file.type.startsWith('image/')) { uiAlert('เลือกได้เฉพาะไฟล์รูปภาพ (JPG, PNG)'); return null }
-    try {
-      const blob = await shrinkImage(file)
-      const token = newPendingToken()
-      setPendingImages(p => ({ ...p, [token]: blob }))
-      setLocalImageUrls(u => ({ ...u, [token]: URL.createObjectURL(blob) }))
-      return token
-    } catch {
-      uiAlert('อ่านรูปนี้ไม่ได้ — ลองเลือกไฟล์ JPG หรือ PNG', { title: 'แนบรูปไม่สำเร็จ' })
-      return null
-    }
-  }
 
   function buildTotals(): ExpenseTotals {
     const subtotal = grandTotal(settings.columns, items)
@@ -100,8 +77,7 @@ export default function FormPage() {
     getSubmission(cloneId).then(s => {
       if (!s) return
       setHeader(s.header); setItems(s.items) // copy content only — new number is assigned on save
-      // …but not the pictures: they belong to the original document
-      getFormSettings(s.formType).then(fs => { setSettings(fs); setItems(withoutImages(fs.columns, s.items)) })
+      getFormSettings(s.formType).then(setSettings)
     })
   }, [id, cloneId])
   useEffect(() => { if (header.companyId) getCompany(header.companyId).then(setCompany) }, [header.companyId])
@@ -129,46 +105,21 @@ export default function FormPage() {
   async function persist(totals: ExpenseTotals) {
     const editor = { uid: profile!.uid, name: `${profile!.firstName ?? ''} ${profile!.lastName ?? ''}`.trim() }
     let subId = savedId
-    // Picked pictures get their storage paths now. A new document's id is
-    // chosen here too, because the pictures are stored under it — and storage
-    // only accepts them once the document row exists, so for a new document
-    // they go up right after it is created; for a saved one, before the update.
-    const docId = savedId ?? crypto.randomUUID()
-    const { items: savedItems, uploads } = resolvePending(settings.columns, items, docId)
-    const toUpload = [
-      ...unsentImages,
-      ...uploads.flatMap(u => pendingImages[u.token] ? [{ path: u.path, blob: pendingImages[u.token] }] : []),
-    ]
-    const sendImages = async () => { for (const im of toUpload) await uploadRowImage(im.path, im.blob) }
-    let imagesSent = true
     try {
       if (savedId) {
-        try { await sendImages() } catch {
-          uiAlert('อัปโหลดรูปในตารางไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วกด “บันทึก” อีกครั้ง', { title: 'บันทึกไม่สำเร็จ' })
-          return
-        }
         const existing = await getSubmission(savedId)
-        if (existing) await updateSubmission(savedId, { ...existing, header, items: savedItems, totals }, editor)
+        if (existing) await updateSubmission(savedId, { ...existing, header, items, totals }, editor)
       } else {
         const created = await createSubmission({
-          id: docId, formType: settings.formType, header, items: savedItems, totals,
+          formType: settings.formType, header, items, totals,
           createdBy: profile!.uid, createdByEmployeeId: profile!.employeeId,
         }, settings.formCode || '', editor)
         subId = created.id
         setSavedId(created.id); setDocNumber(created.docNumber)
-        try { await sendImages() } catch { imagesSent = false }
       }
       setVersionRefresh(n => n + 1)
     } catch (e) {
       uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })
-      return
-    }
-    // The cells now hold paths; their previews carry over from the tokens.
-    setItems(savedItems)
-    setLocalImageUrls(u => ({ ...u, ...Object.fromEntries(uploads.map(x => [x.path, u[x.token]])) }))
-    setUnsentImages(imagesSent ? [] : toUpload)
-    if (!imagesSent) {
-      uiAlert('บันทึกเอกสารแล้ว แต่อัปโหลดรูปในตารางไม่สำเร็จ — กด “บันทึก” อีกครั้งเพื่อส่งรูป', { title: 'อัปโหลดรูปไม่สำเร็จ' })
       return
     }
 
@@ -258,7 +209,7 @@ export default function FormPage() {
             </select>
           </div>
         )}
-        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} images={{ urls: imageUrls, pick: pickImage }} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} />}
         {!showPreview && (
           <AttachmentsField
             saved={attachments}
@@ -270,7 +221,7 @@ export default function FormPage() {
         )}
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
-        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sigs} imageUrls={imageUrls} />
+        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sigs} />
       </div>
       <div className="no-print mt-4 flex flex-wrap items-center gap-2.5">
         <button
