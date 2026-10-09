@@ -66,12 +66,14 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     return filled ? money(Number(raw) || 0) : ' '
   }
   const columnTotals = computeColumnTotals(cols, items)
-  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate, taxBases(cols, items, settings.perRowTax))
-  // Forms that charge VAT or withholding per line print the ticks, so the
-  // sheet itself shows which lines were taxed.
-  const tickCols = settings.perRowTax
-    ? [{ key: ROW_VAT_KEY, label: 'VAT\n7%' }, { key: ROW_WHT_KEY, label: 'หัก ณ\nที่จ่าย' }]
-    : []
+  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate,
+    taxBases(cols, items, { vat: header.vatScope, wht: header.whtScope }))
+  // A tax charged on chosen lines prints its ticks, so the sheet itself shows
+  // which lines were taxed; one charged on everything needs no column.
+  const tickCols = [
+    ...(header.vat && header.vatScope === 'rows' ? [{ key: ROW_VAT_KEY, label: 'VAT\n7%' }] : []),
+    ...(header.whtRate && header.whtScope === 'rows' ? [{ key: ROW_WHT_KEY, label: 'หัก ณ\nที่จ่าย' }] : []),
+  ]
   const TICK_MM = 11
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
   const bahtWords = bahtText(tax.netTotal)

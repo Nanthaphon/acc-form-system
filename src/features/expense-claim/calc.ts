@@ -1,4 +1,4 @@
-import type { FormColumn, ExpenseRow } from '../../types/schema'
+import type { FormColumn, ExpenseRow, TaxScope } from '../../types/schema'
 import { calcOperands, isTextCol } from '../../types/schema'
 import { bahtText } from '../../shared/bahttext'
 
@@ -93,11 +93,13 @@ export function bahtTextForRows(columns: FormColumn[], rows: ExpenseRow[]): stri
   return bahtText(grandTotal(columns, rows))
 }
 
-// ----- Tax chosen per row -----
-// Some forms charge VAT or withholding tax on SOME lines only — a supplier's
-// work is withheld, a hotel bill is not. Those forms (perRowTax) carry a tick
-// per row under these reserved keys, which no column can use: a column key is
-// generated as col1, col2, … and never holds a colon.
+// ----- What each tax is charged on -----
+// A document charges VAT (and withholding) either on everything, which is the
+// usual way, or on chosen lines only — a supplier's work is withheld while a
+// hotel bill is not. Each tax is decided on its own, per document: one can be
+// charged on everything while the other is picked line by line.
+// Picked lines carry a tick under these reserved keys, which no column can use:
+// a column key is generated as col1, col2, … and never holds a colon.
 export const ROW_VAT_KEY = 'tax:vat'
 export const ROW_WHT_KEY = 'tax:wht'
 export function isRowTicked(row: ExpenseRow, key: string): boolean {
@@ -106,18 +108,20 @@ export function isRowTicked(row: ExpenseRow, key: string): boolean {
 export const TICK = 1
 export const UNTICK = ''
 
-// What VAT and withholding are each worked out on. Without perRowTax that is
-// the whole subtotal, exactly as before; with it, only the ticked rows count.
+// What VAT and withholding are each worked out on, given how this document
+// charges them. 'all' is the whole subtotal; 'rows' is the ticked lines.
 export function taxBases(
-  columns: FormColumn[], rows: ExpenseRow[], perRowTax?: boolean,
-): { vat: number; wht: number } | undefined {
-  if (!perRowTax) return undefined
+  columns: FormColumn[], rows: ExpenseRow[], scopes: { vat?: TaxScope; wht?: TaxScope },
+): { vat: number; wht: number } {
+  const everything = grandTotal(columns, rows)
   const totalCol = totalColumn(columns)
-  if (!totalCol) return { vat: 0, wht: 0 }
-  const sum = (key: string) => round2(rows
+  const ticked = (key: string) => !totalCol ? 0 : round2(rows
     .filter(r => isRowTicked(r, key))
     .reduce((s, r) => s + (Number(computeRow(columns, r)[totalCol.key]) || 0), 0))
-  return { vat: sum(ROW_VAT_KEY), wht: sum(ROW_WHT_KEY) }
+  return {
+    vat: scopes.vat === 'rows' ? ticked(ROW_VAT_KEY) : everything,
+    wht: scopes.wht === 'rows' ? ticked(ROW_WHT_KEY) : everything,
+  }
 }
 
 // VAT (7%), withholding tax and ค่าประกันงาน are all computed on the items

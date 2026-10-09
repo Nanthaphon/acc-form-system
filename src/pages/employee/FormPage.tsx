@@ -46,7 +46,7 @@ export default function FormPage() {
 
   function buildTotals(): ExpenseTotals {
     const subtotal = grandTotal(settings.columns, items)
-    const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate, taxBases(settings.columns, items, settings.perRowTax))
+    const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate, taxBases(settings.columns, items, { vat: header.vatScope, wht: header.whtScope }))
     return {
       columnTotals: computeColumnTotals(settings.columns, items),
       grandTotal: subtotal,
@@ -209,7 +209,7 @@ export default function FormPage() {
             </select>
           </div>
         )}
-        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} perRowTax={settings.perRowTax} showSeq={settings.showSeq !== false} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} showSeq={settings.showSeq !== false} />}
         {!showPreview && (
           <AttachmentsField
             saved={attachments}

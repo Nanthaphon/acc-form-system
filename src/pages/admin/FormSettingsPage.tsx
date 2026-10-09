@@ -657,24 +657,6 @@ export default function FormSettingsPage() {
         </div>
       </Section>
 
-      <Section title="ภาษีและการหักเงิน" summary={settings.perRowTax ? 'เลือกรายการที่คิดภาษีได้ในตาราง' : 'คิดจากยอดรวมทั้งเอกสาร'}>
-        <label className="flex cursor-pointer items-start gap-2.5 text-sm text-stone-700">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={!!settings.perRowTax}
-            onChange={e => setSettings(s => ({ ...s, perRowTax: e.target.checked }))}
-          />
-          <span>
-            คิด VAT / หัก ณ ที่จ่าย เป็นรายรายการ
-            <span className="mt-0.5 block text-xs text-stone-500">
-              ตารางจะมีช่องติ๊กเพิ่ม 2 ช่อง ให้ผู้กรอกเลือกว่ารายการไหนคิด VAT และรายการไหนหัก ณ ที่จ่าย ·
-              ไม่ติ๊ก = คิดจากยอดรวมทั้งเอกสารเหมือนเดิม
-            </span>
-          </span>
-        </label>
-      </Section>
-
       <Section title="ข้อความในเอกสาร" summary={textSummary}>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Field label="เหนือตาราง">

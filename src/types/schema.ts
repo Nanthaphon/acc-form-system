@@ -89,7 +89,6 @@ export interface FormSettings {
   showAmountWords?: boolean            // show the "เป็นจำนวนเงิน ... บาทถ้วน" box (default true)
   seqWidth?: number | null                    // width of the leading ลำดับ column (see SEQ_COLUMN_WIDTH)
   showSeq?: boolean                    // show the ลำดับ column at all (default true — see showSeqColumn)
-  perRowTax?: boolean                  // VAT / หัก ณ ที่จ่าย are chosen per row (see ROW_VAT_KEY in calc)
   requesterTitle?: string              // heading above the requester fields on the fill-in screen (read via sectionTitles)
   itemsTitle?: string                  // heading above the items table on the fill-in screen (read via sectionTitles)
 }
@@ -203,6 +202,9 @@ export interface ExpenseTotals {
   netTotal?: number            // subtotal + VAT − withholding − retention
 }
 
+// Whether a tax is charged on the whole document or only on chosen lines.
+export type TaxScope = 'all' | 'rows'
+
 export interface ExpenseHeader {
   subject: string
   categories: string[]
@@ -212,7 +214,9 @@ export interface ExpenseHeader {
   position: string
   job: string
   vat?: boolean                // add 7% VAT
+  vatScope?: TaxScope          // on everything (default) or only the ticked lines
   whtRate?: number             // withholding tax rate: 0 | 3 | 5
+  whtScope?: TaxScope
   retentionRate?: number       // ค่าประกันงาน held back (%), deducted like withholding
   fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
