@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, rowHasNumbers, rowLines, taxBases, taxSummary, visibleColumns, printWidthsMm, PRINT_ROWS_PER_PAGE, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
+import { computeRow, computeColumnTotals, fillerRows, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -92,6 +92,11 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   // so hide the grand-total row and the amount-in-words box.
   const hasNumericCols = firstNumericIdx >= 0
 
+  // Signature blocks (configured per form), laid out in rows of 3.
+  const sigBlocks = formSignatureBlocks(settings)
+  const sigRows: SigBlock[][] = []
+  for (let i = 0; i < sigBlocks.length; i += 3) sigRows.push(sigBlocks.slice(i, i + 3))
+
   // Sheets are filled by how tall the rows print, not by how many there are:
   // a detail that wraps onto three lines takes three rows' worth of the sheet.
   const printed = (row: ExpenseRow, col: FormColumn): string =>
@@ -99,20 +104,32 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
       : isTextCol(col.type) ? String(row[col.key] ?? '')
       : cellMoney(row, col)
   const lineCounts = computed.map(r => rowLines(widthWeights, vcols.map(c => printed(r, c))))
-  const pages = paginateRows(lineCounts)
+  // What is left of the sheet once the rest of this particular form has taken
+  // its share: a form with two paragraphs, six signature blocks and ten notes
+  // has far less room for rows than a bare one, and gets what it actually has.
+  const paragraphLines = (text?: string | null) =>
+    text?.trim() ? rowLines([PRINT_TABLE_MM], [text]) : 0
+  const bodyMm = printBodyMm({
+    categoryRows: Math.ceil(settings.categories.filter(Boolean).length / 2),
+    showRequester: settings.showRequester !== false,
+    headerFields: (settings.headerFields ?? []).length,
+    introLines: paragraphLines(settings.introText),
+    bodyLines: paragraphLines(settings.bodyText),
+    headLines: rowLines([...widthWeights, ...tickCols.map(() => TICK_MM)], [...vcols.map(c => c.label), ...tickCols.map(t => t.label)]),
+    taxLines: hasTax ? 2 + (header.vat ? 1 : 0) + (header.whtRate ? 1 : 0) + (header.retentionRate ? 1 : 0) : 0,
+    showAmountWords: hasNumericCols && settings.showAmountWords !== false,
+    signatureRows: sigRows.length,
+    noteLines: notes.length ? notes.length + 1 : 0,
+  })
+  const pages = paginateRows(lineCounts.map(rowHeightMm), bodyMm)
   const totalPages = pages.length
-
-  // Signature blocks (configured per form), laid out in rows of 3.
-  const sigBlocks = formSignatureBlocks(settings)
-  const sigRows: SigBlock[][] = []
-  for (let i = 0; i < sigBlocks.length; i += 3) sigRows.push(sigBlocks.slice(i, i + 3))
 
   return (
     <div id="print-area" style={{ fontFamily: "'Sarabun', serif" }} className="mx-auto max-w-3xl space-y-6 text-black print:space-y-0">
       {pages.map((page, pageIdx) => {
         const rowIdxs = page.rows
         // Pad each sheet's table to a full height so every sheet looks identical.
-        const emptyRowCount = Math.max(0, PRINT_ROWS_PER_PAGE - page.lines)
+        const emptyRowCount = fillerRows(bodyMm, page.usedMm)
 
         return (
           <div key={pageIdx} className="doc-page bg-white p-6 text-xs">

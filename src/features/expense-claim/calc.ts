@@ -138,24 +138,102 @@ export function taxSummary(
 }
 
 // ----- Printed pagination -----
-// A sheet holds this many single-line rows under the heading. A row whose text
-// wraps takes the space of as many lines, so the count below is a budget of
-// LINES, not of rows.
-export const PRINT_ROWS_PER_PAGE = 14
-// At the printed 10px size a Thai character takes about 2.1mm, and each cell
-// keeps ~2mm of padding. Latin letters, digits and punctuation are narrower, so
-// they count for a fraction of one — measured against the real sheet, where a
-// 37mm column holds ~17 Thai characters a line but a 10-character date fits a
-// 20mm one. The estimate is meant to round UP: a line left spare costs nothing,
-// while one too few pushes the signatures onto a second sheet.
+// How many rows a sheet holds is not a fixed number: it is whatever is left of
+// the page once the rest of the form has taken its share. Every millimetre
+// below was measured off a printed sheet (A4, print stylesheet applied).
+// A4 less the 10mm print margin top and bottom.
+export const PRINT_SHEET_MM = 276
+// One line of a table row. Each figure below includes the gap above its block,
+// which is most of what the form spends: two signature rows alone take 62mm.
+const TABLE_LINE_MM = 5.3        // one wrapped line inside a row
+const ROW_BASE_MM = 1.3          // …plus this much for the row itself
+const EMPTY_ROW_MM = 5.6         // a blank ruled row, which carries no text
+const HEADER_BAND_MM = 18.5      // logo, company, document title, rule, form code
+const CATEGORY_BLOCK_MM = 2.1    // the category checkboxes…
+const CATEGORY_ROW_MM = 4.75     // …two to a row
+const REQUESTER_MM = 7.7         // ชื่อ / นามสกุล / ตำแหน่ง / Job
+const HEADER_FIELD_MM = 6.6      // each extra field above the table
+const PARAGRAPH_BLOCK_MM = 3.5   // a form paragraph…
+const TEXT_LINE_MM = 4.8         // …and each of its lines
+const THEAD_PADDING_MM = 5.2     // the gap above the table, plus the heading's own padding
+const TOTALS_ROW_MM = 6.6
+const TAX_BLOCK_MM = 2.1         // the VAT / withholding box…
+const TAX_LINE_MM = 4.3          // …and each line in it
+const BAHT_BOX_MM = 10.1         // เป็นจำนวนเงิน … บาทถ้วน
+const SIGNATURE_ROW_MM = 30.9    // one row of up to three signature blocks
+const NOTES_BLOCK_MM = 6.35      // หมายเหตุ…
+const NOTE_LINE_MM = 4.24        // …and each line of it
+// Printing is unforgiving: a sheet 1mm too full spills onto another page, so
+// the estimate keeps a little in hand.
+const SAFETY_MM = 2
+
+// What the sheet spends on everything except the table's own rows — the
+// heading and the totals row included, since neither is a row anyone fills in.
+export interface SheetParts {
+  categoryRows?: number
+  showRequester?: boolean
+  headerFields?: number
+  introLines?: number
+  bodyLines?: number
+  headLines?: number       // the tallest column heading, in lines
+  taxLines?: number        // lines in the tax box; 0 when there is no box
+  showAmountWords?: boolean
+  signatureRows?: number
+  noteLines?: number       // the notes, including their heading
+}
+export function sheetOverheadMm(p: SheetParts): number {
+  const paragraphs = (p.introLines ?? 0) + (p.bodyLines ?? 0)
+  return HEADER_BAND_MM
+    + (p.categoryRows ? CATEGORY_BLOCK_MM + p.categoryRows * CATEGORY_ROW_MM : 0)
+    + (p.showRequester ? REQUESTER_MM : 0)
+    + (p.headerFields ?? 0) * HEADER_FIELD_MM
+    + (p.introLines ? PARAGRAPH_BLOCK_MM : 0) + (p.bodyLines ? PARAGRAPH_BLOCK_MM : 0)
+    + paragraphs * TEXT_LINE_MM
+    + (p.headLines ?? 1) * TABLE_LINE_MM + THEAD_PADDING_MM
+    + TOTALS_ROW_MM
+    + (p.taxLines ? TAX_BLOCK_MM + p.taxLines * TAX_LINE_MM : 0)
+    + (p.showAmountWords ? BAHT_BOX_MM : 0)
+    + (p.signatureRows ?? 0) * SIGNATURE_ROW_MM
+    + (p.noteLines ? NOTES_BLOCK_MM + p.noteLines * NOTE_LINE_MM : 0)
+    + SAFETY_MM
+}
+
+// How many millimetres of table rows a sheet of this form can hold. Never less
+// than one row, so a form with a great deal around the table still prints one.
+export function printBodyMm(p: SheetParts): number {
+  return Math.max(rowHeightMm(1), PRINT_SHEET_MM - sheetOverheadMm(p))
+}
+
+// What a row costs on paper. Every row pays once for its own padding and then
+// per line of wrapped text; a row left blank is shorter than one with text in
+// it, which is why a sheet cannot simply be budgeted in lines.
+export function rowHeightMm(lines: number): number {
+  return ROW_BASE_MM + Math.max(1, lines) * TABLE_LINE_MM
+}
+
+// How many blank rows are drawn under the last one, to rule the sheet down to
+// a full page the way the paper form does.
+export function fillerRows(availableMm: number, usedMm: number): number {
+  return Math.max(0, Math.floor((availableMm - usedMm) / EMPTY_ROW_MM))
+}
+// At the printed 10px size a Thai letter takes about 2.1mm, and each cell keeps
+// ~2mm of padding. Latin letters, digits and punctuation are narrower, so they
+// count for a fraction of one — and Thai vowels and tone marks sit above or
+// below the letter they belong to, taking no width at all. Counting those as
+// letters is what used to make the estimate run a line over on every row.
 const THAI_CHAR_MM = 2.1
 const NARROW_CHAR_RATIO = 0.55
 const CELL_PADDING_MM = 2.2
+// The marks that print above or below: ั, ิ–ฺ, ็–๎
+const ZERO_WIDTH_THAI = /[ัิ-ฺ็-๎]/
 
-// Roughly how many Thai-character widths a piece of text takes up.
+// Roughly how many Thai-letter widths a piece of text takes up.
 function textWidth(text: string): number {
   let w = 0
-  for (const ch of text) w += ch.charCodeAt(0) < 0x0e00 ? NARROW_CHAR_RATIO : 1
+  for (const ch of text) {
+    if (ZERO_WIDTH_THAI.test(ch)) continue
+    w += ch.charCodeAt(0) < 0x0e00 ? NARROW_CHAR_RATIO : 1
+  }
   return w
 }
 
@@ -175,18 +253,18 @@ export function rowLines(widthsMm: number[], texts: string[]): number {
 // Split the rows across sheets by how tall they print, not how many they are.
 // Padding every sheet to a fixed row COUNT is what used to push the totals and
 // signatures off the page as soon as a detail wrapped onto three lines.
-export function paginateRows(lines: number[], budget = PRINT_ROWS_PER_PAGE): { rows: number[]; lines: number }[] {
-  const pages: { rows: number[]; lines: number }[] = []
+export function paginateRows(heightsMm: number[], availableMm: number): { rows: number[]; usedMm: number }[] {
+  const pages: { rows: number[]; usedMm: number }[] = []
   let page: number[] = []
   let used = 0
-  lines.forEach((n, i) => {
+  heightsMm.forEach((mm, i) => {
     // A row taller than a whole sheet still has to go somewhere: it gets its own.
-    if (page.length && used + n > budget) { pages.push({ rows: page, lines: used }); page = []; used = 0 }
+    if (page.length && used + mm > availableMm) { pages.push({ rows: page, usedMm: used }); page = []; used = 0 }
     page.push(i)
-    used += n
+    used += mm
   })
-  if (page.length) pages.push({ rows: page, lines: used })
-  if (!pages.length) pages.push({ rows: [], lines: 0 })
+  if (page.length) pages.push({ rows: page, usedMm: used })
+  if (!pages.length) pages.push({ rows: [], usedMm: 0 })
   return pages
 }
 

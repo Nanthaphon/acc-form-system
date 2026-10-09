@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { FormColumn } from '../../types/schema'
-import { fillColumnPercents, tableMinWidth, DATE_COL_MIN_PX, rowLines, paginateRows } from './calc'
+import { fillColumnPercents, tableMinWidth, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm, fillerRows } from './calc'
 
 const col = (type: FormColumn['type'], width?: number): FormColumn =>
   ({ key: `k${width ?? 'x'}${type}`, label: 'l', type, width })
@@ -63,11 +63,29 @@ describe('rowLines', () => {
     expect(rowLines([20], ['05/10/2026'])).toBe(1)
   })
 
-  // Measured on the printed sheet: this detail really does wrap onto four lines
-  // in a 37mm column. The estimate must never come out under what prints.
-  it('never comes out under what the browser lays out', () => {
-    expect(rowLines([37], ['เงินช่วยเหลือพิธีพราหมณ์ สถานการณ์น้ำท่วม เมื่อวันที่ 28/09/69'])).toBeGreaterThanOrEqual(4)
-    expect(rowLines([37], ['บจก.แอดริติค ค่าผลิตสติ๊กเกอร์ไดคัทตามแบบ สำหรับติดตั้งงานผนังบูธ Samsung AV'])).toBeGreaterThanOrEqual(4)
+  // Thai vowels and tone marks print above or below the letter and take no width
+  // of their own. Counting them made every detail look a line longer than it is.
+  it('does not count the marks above and below a Thai letter', () => {
+    expect(rowLines([37], ['ที่'])).toBe(1)
+    // 'เงินช่วยเหลือ' is 13 characters but only 10 of them take any width
+    expect(rowLines([24], ['เงินช่วยเหลือ'])).toBe(1)
+  })
+
+  // Each of these was measured on the printed sheet. The estimate must never
+  // come out UNDER what prints, and should rarely come out more than one over.
+  it.each([
+    ['เงินช่วยเหลือพิธีพราหมณ์ สถานการณ์น้ำท่วม เมื่อวันที่ 28/09/69', 37, 3],
+    ['โรงแรมอีเล็กซ์ค่าที่พัก ค่าที่พัก วันที่ 05-08/10/2569 รวม 3 คืน', 37, 2],
+    ['บจก.แอดริติค ค่าผลิตสติ๊กเกอร์ไดคัทตามแบบ สำหรับติดตั้งงานผนังบูธ Samsung AV', 37, 3],
+    ['ค่ารถเช่า ค่าเช่ารถ 05-10/10/69', 37, 2],
+    ['เงินช่วยเหลือพิธีพราหมณ์ สถานการณ์น้ำท่วม เมื่อวันที่ 28/09/69 รายการที่ 1', 59.1, 2],
+    ['05/10/2026', 20, 1],
+    ['เงินช่วยเหลือชีพ', 17, 2],
+    ['ค่าเช่ารถ', 17, 1],
+  ])('matches the sheet within a line: %s', (text, width, printed) => {
+    const est = rowLines([width as number], [text as string])
+    expect(est).toBeGreaterThanOrEqual(printed as number)
+    expect(est).toBeLessThanOrEqual((printed as number) + 1)
   })
 
   it('counts a line break the admin typed into the text', () => {
@@ -79,26 +97,93 @@ describe('rowLines', () => {
   })
 })
 
+describe('rowHeightMm', () => {
+  // Measured on the printed sheet: a row with one line of text is 6.6mm, two
+  // lines 11.9mm, three 17.2mm — each line costs the same, and the row itself
+  // costs once. Budgeting in "lines" alone cannot express that.
+  it('matches the row heights measured on the sheet', () => {
+    expect(rowHeightMm(1)).toBeCloseTo(6.6, 1)
+    expect(rowHeightMm(2)).toBeCloseTo(11.9, 1)
+    expect(rowHeightMm(3)).toBeCloseTo(17.2, 1)
+  })
+})
+
 describe('paginateRows', () => {
-  it('fills a sheet by the lines its rows print, not by how many they are', () => {
-    // 4 rows of 3 lines fill a 14-line sheet; the fifth starts the next one.
-    const pages = paginateRows([3, 3, 3, 3, 3])
+  it('fills a sheet by how tall its rows print, not by how many they are', () => {
+    // Four 17mm rows fill a 70mm sheet; the fifth starts the next one.
+    const pages = paginateRows([17, 17, 17, 17, 17], 70)
     expect(pages.map(p => p.rows)).toEqual([[0, 1, 2, 3], [4]])
-    expect(pages[0].lines).toBe(12)
+    expect(pages[0].usedMm).toBe(68)
   })
 
-  it('keeps single-line rows at 14 to a sheet, as the paper form has it', () => {
-    const pages = paginateRows(Array(20).fill(1))
-    expect(pages[0].rows).toHaveLength(14)
-    expect(pages[1].rows).toHaveLength(6)
+  it('fits more short rows than tall ones on the same sheet', () => {
+    const short = paginateRows(Array(20).fill(rowHeightMm(1)), 70)
+    const tall = paginateRows(Array(20).fill(rowHeightMm(3)), 70)
+    expect(short[0].rows.length).toBeGreaterThan(tall[0].rows.length)
+    expect(short[0].rows).toHaveLength(10)   // 70mm / 6.6mm
+    expect(tall[0].rows).toHaveLength(4)     // 70mm / 17.2mm
   })
 
   it('a row taller than a whole sheet still gets one of its own', () => {
-    const pages = paginateRows([1, 20, 1])
+    const pages = paginateRows([6, 300, 6], 70)
     expect(pages.map(p => p.rows)).toEqual([[0], [1], [2]])
   })
 
   it('an empty document is one empty sheet', () => {
-    expect(paginateRows([])).toEqual([{ rows: [], lines: 0 }])
+    expect(paginateRows([], 70)).toEqual([{ rows: [], usedMm: 0 }])
+  })
+})
+
+describe('fillerRows', () => {
+  it('rules the rest of the sheet with blank rows', () => {
+    expect(fillerRows(84.5, 58.2)).toBe(4)     // the measured sheet: 4 blanks under 4 rows
+  })
+
+  it('draws none when the rows already fill the sheet', () => {
+    expect(fillerRows(84.5, 84)).toBe(0)
+    expect(fillerRows(84.5, 100)).toBe(0)
+  })
+})
+
+describe('printLineBudget', () => {
+  // Measured off a printed sheet: this form leaves 148mm for its rows, which is
+  // room for about 22 lines. The estimate must land under that, never over.
+  const gac69005 = {
+    categoryRows: 2, showRequester: true, headerFields: 2, headLines: 2,
+    taxLines: 4, showAmountWords: true, signatureRows: 2, noteLines: 5,
+  }
+
+  it('matches the room the sheet really has', () => {
+    // Measured on the printed sheet: this form spends 191.5mm of the 276mm,
+    // leaving 84.5mm of rows. The estimate may be a little under, never over.
+    expect(sheetOverheadMm(gac69005)).toBeGreaterThanOrEqual(185)
+    expect(sheetOverheadMm(gac69005)).toBeLessThanOrEqual(200)
+    expect(printBodyMm(gac69005)).toBeGreaterThanOrEqual(70)
+    expect(printBodyMm(gac69005)).toBeLessThanOrEqual(84.5)
+  })
+
+  it('holds the four rows of the real document on one sheet', () => {
+    // The document in the report: details wrapping onto 3, 2, 3 and 2 lines.
+    const heights = [3, 2, 3, 2].map(rowHeightMm)
+    expect(paginateRows(heights, printBodyMm(gac69005))).toHaveLength(1)
+  })
+
+  it('keeps the whole sheet within A4', () => {
+    expect(sheetOverheadMm(gac69005) + printBodyMm(gac69005)).toBeLessThanOrEqual(PRINT_SHEET_MM)
+  })
+
+  it('a bare form — no categories, notes or paragraphs — fits many more rows', () => {
+    expect(printBodyMm({ headLines: 1, signatureRows: 1 })).toBeGreaterThan(printBodyMm(gac69005))
+  })
+
+  it('a form heavy with text around the table gets fewer', () => {
+    const heavy = { ...gac69005, introLines: 4, bodyLines: 4, signatureRows: 2, noteLines: 9 }
+    expect(printBodyMm(heavy)).toBeLessThan(printBodyMm(gac69005))
+  })
+
+  it('never falls below one row, however crowded the form', () => {
+    const crowded = { introLines: 40, bodyLines: 40, signatureRows: 6, noteLines: 20 }
+    expect(printBodyMm(crowded)).toBe(rowHeightMm(1))
+    expect(paginateRows([rowHeightMm(1)], printBodyMm(crowded))).toHaveLength(1)
   })
 })
