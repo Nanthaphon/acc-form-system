@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, isTextCol } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, showSeqColumn, isTextCol } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
 import { PRINT_TABLE_MM, totalColumn } from '../../features/expense-claim/calc'
 import MultiSelect from '../../components/MultiSelect'
@@ -327,9 +327,11 @@ export default function FormSettingsPage() {
 
   const columns = settings.columns
   const visibleCount = columns.filter(c => !c.hidden).length
+  const showSeq = showSeqColumn(settings)
   // Widths are millimetres on the sheet: what is set is used as typed and only
   // the leftover is shared out, so the admin needs to see the page budget.
-  const setWidthMm = seqColumnWidth(settings) + columns.filter(c => !c.hidden).reduce((sum, c) => sum + (c.width ?? 0), 0)
+  const setWidthMm = (showSeq ? seqColumnWidth(settings) : 0)
+    + columns.filter(c => !c.hidden).reduce((sum, c) => sum + (c.width ?? 0), 0)
   const overPage = setWidthMm > PRINT_TABLE_MM
   const docTotalCol = totalColumn(columns)
   const markedTotal = columns.some(c => c.isTotal && !isTextCol(c.type))
@@ -484,19 +486,32 @@ export default function FormSettingsPage() {
 
         <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-stone-50 p-2">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-stone-200 text-xs font-semibold text-stone-600">#</span>
-          <span className="text-sm text-stone-700">คอลัมน์ลำดับ</span>
-          <label className="flex items-center gap-1 text-xs text-stone-500" title="กว้างเกินไปจะกินที่คอลัมน์อื่น แคบเกินไปคำว่า “ลำดับ” จะตกบรรทัด">
+          <label className="flex cursor-pointer items-center gap-1.5 text-sm text-stone-700">
+            <input
+              type="checkbox"
+              checked={showSeq}
+              onChange={e => setField('showSeq', e.target.checked)}
+            />
+            คอลัมน์ลำดับ
+          </label>
+          <label
+            className={`flex items-center gap-1 text-xs text-stone-500 ${showSeq ? '' : 'opacity-40'}`}
+            title="กว้างเกินไปจะกินที่คอลัมน์อื่น แคบเกินไปคำว่า “ลำดับ” จะตกบรรทัด"
+          >
             กว้าง (มม.)
             <input
               type="number"
               min={1}
+              disabled={!showSeq}
               placeholder={String(SEQ_COLUMN_WIDTH)}
               value={settings.seqWidth ?? ''}
               onChange={e => setField('seqWidth', e.target.value ? Number(e.target.value) : undefined)}
               className={`${ui.inputSm} w-[88px]`}
             />
           </label>
-          <span className={`${ui.hint} ml-auto`}>เป็นคอลัมน์ในตัว ลบไม่ได้</span>
+          <span className={`${ui.hint} ml-auto`}>
+            {showSeq ? 'เป็นคอลัมน์ในตัว ลบไม่ได้' : 'ไม่แสดงในเอกสาร — ที่ว่างไปให้คอลัมน์อื่น'}
+          </span>
         </div>
 
         <div className="mt-2 space-y-2">

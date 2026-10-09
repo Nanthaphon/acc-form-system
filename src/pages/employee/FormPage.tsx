@@ -209,7 +209,7 @@ export default function FormPage() {
             </select>
           </div>
         )}
-        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} perRowTax={settings.perRowTax} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} perRowTax={settings.perRowTax} showSeq={settings.showSeq !== false} />}
         {!showPreview && (
           <AttachmentsField
             saved={attachments}

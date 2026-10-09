@@ -1,5 +1,5 @@
 import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } from '../../types/schema'
-import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
+import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
@@ -76,18 +76,19 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
-  const totalCols = vcols.length + 1 + tickCols.length // + leading seq column, + the tax ticks
+  const withSeq = showSeqColumn(settings)
+  const totalCols = vcols.length + (withSeq ? 1 : 0) + tickCols.length // + the ลำดับ column, + the tax ticks
 
   // Widths are millimetres on the sheet (printWidthsMm) rendered as percentages,
   // so the table fills the frame exactly whatever the paper size.
-  const mm = printWidthsMm(seqColumnWidth(settings), vcols.map(c => c.width), PRINT_TABLE_MM - tickCols.length * TICK_MM)
+  const mm = printWidthsMm(withSeq ? seqColumnWidth(settings) : 0, vcols.map(c => c.width), PRINT_TABLE_MM - tickCols.length * TICK_MM)
   const SEQ_WEIGHT = mm.seq
   const widthWeights = mm.cols
   const pct = (w: number) => `${((w / PRINT_TABLE_MM) * 100).toFixed(3)}%`
 
   // Totals footer: label spans the seq column + leading text columns up to the first visible numeric/calc column.
   const firstNumericIdx = vcols.findIndex(c => !isTextCol(c.type))
-  const labelSpan = firstNumericIdx < 0 ? totalCols : firstNumericIdx + 1
+  const labelSpan = firstNumericIdx < 0 ? totalCols : firstNumericIdx + (withSeq ? 1 : 0)
   // Forms with no numeric/calc columns (e.g. a work-report) have nothing to sum,
   // so hide the grand-total row and the amount-in-words box.
   const hasNumericCols = firstNumericIdx >= 0
@@ -207,7 +208,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             <table className="mt-3 w-full table-fixed border-collapse border border-black text-[10px]">
               <thead>
                 <tr>
-                  <th style={{ width: pct(SEQ_WEIGHT) }} className="border border-black px-1 py-1">ลำดับ</th>
+                  {withSeq && <th style={{ width: pct(SEQ_WEIGHT) }} className="border border-black px-1 py-1">ลำดับ</th>}
                   {vcols.map((col, ci) => (
                     <th
                       key={col.key}
@@ -225,7 +226,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               <tbody>
                 {rowIdxs.map(i => (
                   <tr key={i}>
-                    <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>
+                    {withSeq && <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>}
                     {vcols.map(col => (
                       <td key={col.key} className={`break-words border border-black px-1 py-0.5 leading-[2] ${isTextCol(col.type) ? '' : 'text-right'}`}>
                         {col.type === 'date'

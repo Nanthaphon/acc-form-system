@@ -88,6 +88,7 @@ export interface FormSettings {
   showRequester?: boolean              // show the ชื่อ/นามสกุล/ตำแหน่ง/Job line (default true)
   showAmountWords?: boolean            // show the "เป็นจำนวนเงิน ... บาทถ้วน" box (default true)
   seqWidth?: number | null                    // width of the leading ลำดับ column (see SEQ_COLUMN_WIDTH)
+  showSeq?: boolean                    // show the ลำดับ column at all (default true — see showSeqColumn)
   perRowTax?: boolean                  // VAT / หัก ณ ที่จ่าย are chosen per row (see ROW_VAT_KEY in calc)
   requesterTitle?: string              // heading above the requester fields on the fill-in screen (read via sectionTitles)
   itemsTitle?: string                  // heading above the items table on the fill-in screen (read via sectionTitles)
@@ -125,6 +126,11 @@ export function canSeeForm(f: Pick<FormSettings, 'accessGroup' | 'accessGroups'>
 // column. The default fits the row numbers but not the word "ลำดับ" spelled
 // out, which is why a form can widen it.
 export const SEQ_COLUMN_WIDTH = 10
+// A form with no use for row numbers can drop the column and give the
+// millimetres to the others. Forms saved before the setting existed keep it.
+export function showSeqColumn(f?: Pick<FormSettings, 'showSeq'> | null): boolean {
+  return f?.showSeq !== false
+}
 export function seqColumnWidth(f?: Pick<FormSettings, 'seqWidth'> | null): number {
   const w = f?.seqWidth
   return typeof w === 'number' && w > 0 ? w : SEQ_COLUMN_WIDTH

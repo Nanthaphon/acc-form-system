@@ -24,6 +24,7 @@ interface Props {
   requesterTitle?: string     // section headings, editable per form (see sectionTitles)
   itemsTitle?: string
   perRowTax?: boolean         // VAT / หัก ณ ที่จ่าย are ticked per row instead of applying to the whole document
+  showSeq?: boolean           // show the ลำดับ column (default true)
 }
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
@@ -80,7 +81,7 @@ function fmt(n: number): string {
   return formatMoney(n)
 }
 
-export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle, perRowTax }: Props) {
+export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle, perRowTax, showSeq = true }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
   const titles = sectionTitles({ requesterTitle, itemsTitle })
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
@@ -88,7 +89,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
   const vcols = visibleColumns(cols)
   // Same proportions the sheet will print, so what is typed matches what comes out.
-  const colPercents = fillColumnPercents(SEQ_COLUMN_WIDTH, vcols)
+  const colPercents = fillColumnPercents(showSeq ? SEQ_COLUMN_WIDTH : 0, vcols)
   const hasColumns = vcols.length > 0
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
@@ -213,7 +214,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               <table className="w-full table-fixed border-separate border-spacing-0 text-xs leading-[1.9]" style={{ minWidth: `${tableMinWidth(vcols)}px` }}>
                 <thead>
                   <tr>
-                    <th className="w-8 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500">#</th>
+                    {showSeq && <th className="w-8 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500">#</th>}
                     {vcols.map((col, ci) => (
                       <th
                         key={col.key}
@@ -237,7 +238,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                 <tbody>
                   {items.map((row, i) => (
                     <tr key={i} className="hover:bg-stone-50/60">
-                      <td className="border-b border-stone-100 p-2 text-center text-stone-400">{i + 1}</td>
+                      {showSeq && <td className="border-b border-stone-100 p-2 text-center text-stone-400">{i + 1}</td>}
                       {vcols.map(col => (
                         <td key={col.key} className="border-b border-stone-100 p-1">
                           {col.type === 'calc' ? (
@@ -298,7 +299,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                   ))}
                   {/* Totals row */}
                   <tr className="font-semibold text-stone-900">
-                    <td className="border-t border-stone-200 px-2.5 py-2.5"></td>
+                    {showSeq && <td className="border-t border-stone-200 px-2.5 py-2.5"></td>}
                     {vcols.map((col, idx) => (
                       <td key={col.key} className={`border-t border-stone-200 px-2.5 py-2.5 ${isTextCol(col.type) ? 'text-left' : 'text-right'}`}>
                         {idx === 0 ? 'รวม' : isTextCol(col.type) ? '' : fmt(columnTotals[col.key] ?? 0)}
