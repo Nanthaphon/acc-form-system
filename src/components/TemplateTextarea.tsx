@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import GrowTextarea from './GrowTextarea'
 import { CalendarDays, CircleHelp, Hash, TextCursorInput, WandSparkles } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { uiPrompt } from './dialog/dialogService'
@@ -23,7 +24,7 @@ const HELP = 'พิมพ์ {{ชื่อช่อง}} ในข้อคว
 // toolbar inserts {{ชื่อช่อง}} tokens at the cursor, and old dotted blanks can
 // be converted in one click.
 export default function TemplateTextarea({ value, onChange, placeholder }: Props) {
-  const ref = useRef<HTMLTextAreaElement>(null)
+  const ref = useRef<HTMLTextAreaElement | null>(null)
   const dotted = countDottedBlanks(value)
 
   async function insert(type: TemplateFieldType, label: string) {
@@ -48,12 +49,12 @@ export default function TemplateTextarea({ value, onChange, placeholder }: Props
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white focus-within:border-clay-500 focus-within:ring-2 focus-within:ring-clay-100">
-      <textarea
-        ref={ref}
-        className="block min-h-[64px] w-full resize-y rounded-t-lg border-0 bg-transparent px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none"
+      <GrowTextarea
+        inputRef={ref}
+        className="block min-h-[64px] w-full rounded-t-lg border-0 bg-transparent px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none"
         value={value}
         placeholder={placeholder}
-        onChange={e => onChange(e.target.value)}
+        onChange={onChange}
       />
       <div className="flex flex-wrap items-center gap-0.5 border-t border-stone-100 px-2 py-1">
         <span className="mr-1 text-xs text-stone-400">แทรกช่องกรอก</span>

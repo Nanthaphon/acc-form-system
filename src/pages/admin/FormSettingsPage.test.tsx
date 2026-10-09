@@ -82,6 +82,17 @@ describe('FormSettingsPage', () => {
     expect(types.map(t => t.value)).toEqual(['date', 'text', 'number', 'text'])
   })
 
+  it('lets a heading of two lines be read whole — the box grows with it', async () => {
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+    const heading = screen.getAllByPlaceholderText('ชื่อคอลัมน์')[0]
+    expect(heading.tagName).toBe('TEXTAREA')
+    expect(heading.className).toContain('resize-none')
+    expect(heading.className).toContain('overflow-hidden')
+    fireEvent.change(heading, { target: { value: 'ต้นทุน\nSupplier' } })
+    expect((screen.getAllByPlaceholderText('ชื่อคอลัมน์')[0] as HTMLTextAreaElement).value).toBe('ต้นทุน\nSupplier')
+  })
+
   it('names the column types in Thai only — no English jargon to decode', async () => {
     show()
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())

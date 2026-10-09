@@ -13,6 +13,7 @@ import { ui, PageHeader, Badge } from '../../components/ui'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import { listCompanies, updateCompanyLogo } from '../../data/companies'
 import TemplateTextarea from '../../components/TemplateTextarea'
+import GrowTextarea from '../../components/GrowTextarea'
 import { listAccessGroups } from '../../data/accessGroups'
 
 // Page-local extras on top of the shared `ui` tokens.
@@ -523,13 +524,12 @@ export default function FormSettingsPage() {
               <div key={i} className={`rounded-lg border border-stone-200 p-2 ${col.hidden ? 'bg-stone-50' : 'bg-white'}`}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-clay-50 text-xs font-semibold text-clay-600">{i + 1}</span>
-                  <textarea
-                    rows={1}
-                    className={`${ui.inputSm} min-w-[150px] flex-1 resize-y`}
+                  <GrowTextarea
+                    className={`${ui.inputSm} min-w-[150px] flex-1`}
                     placeholder="ชื่อคอลัมน์"
                     title="กด Enter เพื่อขึ้นบรรทัดใหม่ในหัวตาราง"
                     value={col.label}
-                    onChange={e => patchColumn(i, { label: e.target.value })}
+                    onChange={v => patchColumn(i, { label: v })}
                   />
                   <select className={ui.inputSm} title="ชนิดข้อมูล" value={col.type} onChange={e => changeType(i, e.target.value as ColumnType)}>
                     <option value="text">ข้อความ</option>
@@ -728,7 +728,7 @@ export default function FormSettingsPage() {
           <div className="space-y-2">
             {settings.notes.map((n, i) => (
               <div key={i} className="flex items-start gap-2">
-                <textarea className={`${ui.input} min-h-[44px] resize-y py-2`} value={n} onChange={e => setNote(i, e.target.value)} />
+                <GrowTextarea className={`${ui.input} min-h-[44px] py-2`} value={n} onChange={v => setNote(i, v)} />
                 <button className={`${iconBtn} mt-1.5`} onClick={() => removeNote(i)} title="ลบหมายเหตุ"><Trash2 size={16} /></button>
               </div>
             ))}
