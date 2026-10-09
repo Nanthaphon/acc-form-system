@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { ALargeSmall, Plus, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
-import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField, TaxScope } from '../../types/schema'
+import type { DocTextSize, ExpenseHeader, ExpenseRow, FormColumn, HeaderField, TaxScope } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, ROW_VAT_KEY, ROW_WHT_KEY, TICK, UNTICK } from './calc'
 import { bahtText } from '../../shared/bahttext'
@@ -11,8 +11,7 @@ import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
 import type { TemplateField } from '../../shared/bodyTemplate'
 import { BLANK_LIMITS, blankWidth } from './blankSizing'
 import GrowTextarea from '../../components/GrowTextarea'
-import { useTableTextSize, TEXT_SIZES } from '../../shared/tableTextSize'
-import type { TableTextSize } from '../../shared/tableTextSize'
+import { textSizeOf, textSizeStyles, TEXT_SIZES } from '../../shared/textSize'
 
 interface Props {
   header: ExpenseHeader
@@ -29,10 +28,16 @@ interface Props {
   showSeq?: boolean           // show the ลำดับ column (default true)
 }
 
-// Larger or smaller text in the table, for whoever is reading it.
-function TextSizePicker({ value, onChange }: { value: TableTextSize; onChange: (v: TableTextSize) => void }) {
+// Larger or smaller text, in the table being filled in and in the document it
+// prints as. It is the document's own setting, saved with it.
+function TextSizePicker({ value, onChange }: { value: DocTextSize; onChange: (v: DocTextSize) => void }) {
   return (
-    <span role="radiogroup" aria-label="ขนาดตัวอักษรในตาราง" className="inline-flex items-center gap-1">
+    <span
+      role="radiogroup"
+      aria-label="ขนาดตัวอักษร"
+      title="ขนาดตัวอักษรในตารางและในเอกสารที่พิมพ์ออกมา — เล็กลงเพื่อใส่รายการได้มากขึ้นต่อแผ่น"
+      className="inline-flex items-center gap-1"
+    >
       <ALargeSmall size={15} className="mr-0.5 shrink-0 text-stone-400" aria-hidden />
       <span className="inline-flex overflow-hidden rounded-lg border border-stone-200 bg-white text-xs">
         {TEXT_SIZES.map(s => (
@@ -130,7 +135,8 @@ function fmt(n: number): string {
 export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle, showSeq = true }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
   const titles = sectionTitles({ requesterTitle, itemsTitle })
-  const { size: textSize, setSize: setTextSize, cellText, headText } = useTableTextSize()
+  const textSize = textSizeOf(header.textSize)
+  const { cell: cellText, head: headText } = textSizeStyles(textSize)
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
   // Paragraphs that have blanks to fill (plain paragraphs need no input).
   const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
@@ -257,7 +263,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
       <div className={cardClass}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className={cardTitleClass.replace('mb-4 ', '')}>{titles.items}</h2>
-          <TextSizePicker value={textSize} onChange={setTextSize} />
+          <TextSizePicker value={textSize} onChange={v => onHeaderChange({ ...header, textSize: v })} />
         </div>
         {!hasColumns ? (
           <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">

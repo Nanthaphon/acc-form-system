@@ -205,6 +205,9 @@ export interface ExpenseTotals {
 // Whether a tax is charged on the whole document or only on chosen lines.
 export type TaxScope = 'all' | 'rows'
 
+// How large the text is in this document — see shared/textSize.
+export type DocTextSize = 'small' | 'normal' | 'large'
+
 export interface ExpenseHeader {
   subject: string
   categories: string[]
@@ -218,6 +221,7 @@ export interface ExpenseHeader {
   whtRate?: number             // withholding tax rate: 0 | 3 | 5
   whtScope?: TaxScope
   retentionRate?: number       // ค่าประกันงาน held back (%), deducted like withholding
+  textSize?: DocTextSize       // how large this document's text prints (default ปกติ)
   fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
 

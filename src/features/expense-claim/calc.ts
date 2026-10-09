@@ -184,34 +184,40 @@ export interface SheetParts {
   signatureRows?: number
   noteLines?: number       // the notes, including their heading
 }
-export function sheetOverheadMm(p: SheetParts): number {
+// `scale` is the document's chosen text size (1 = ปกติ). Each figure below is
+// what was measured on a real sheet at ปกติ, plus the part of it that is text
+// — stretched or shrunk by that size. The rest of each figure is margins,
+// padding, ruled lines and the logo, which stay put however large the text is.
+export function sheetOverheadMm(p: SheetParts, scale = 1): number {
+  const grown = (mm: number, textMm: number) => mm + textMm * (scale - 1)
   const paragraphs = (p.introLines ?? 0) + (p.bodyLines ?? 0)
-  return HEADER_BAND_MM
-    + (p.categoryRows ? CATEGORY_BLOCK_MM + p.categoryRows * CATEGORY_ROW_MM : 0)
-    + (p.showRequester ? REQUESTER_MM : 0)
-    + (p.headerFields ?? 0) * HEADER_FIELD_MM
+  return grown(HEADER_BAND_MM, 7)
+    + (p.categoryRows ? CATEGORY_BLOCK_MM + p.categoryRows * grown(CATEGORY_ROW_MM, 4.75) : 0)
+    + (p.showRequester ? grown(REQUESTER_MM, 4.5) : 0)
+    + (p.headerFields ?? 0) * grown(HEADER_FIELD_MM, 4.5)
     + (p.introLines ? PARAGRAPH_BLOCK_MM : 0) + (p.bodyLines ? PARAGRAPH_BLOCK_MM : 0)
-    + paragraphs * TEXT_LINE_MM
-    + (p.headLines ?? 1) * TABLE_LINE_MM + THEAD_PADDING_MM
-    + TOTALS_ROW_MM
-    + (p.taxLines ? TAX_BLOCK_MM + p.taxLines * TAX_LINE_MM : 0)
-    + (p.showAmountWords ? BAHT_BOX_MM : 0)
-    + (p.signatureRows ?? 0) * SIGNATURE_ROW_MM
-    + (p.noteLines ? NOTES_BLOCK_MM + p.noteLines * NOTE_LINE_MM : 0)
+    + paragraphs * TEXT_LINE_MM * scale
+    + (p.headLines ?? 1) * TABLE_LINE_MM * scale + grown(THEAD_PADDING_MM, 1)
+    + grown(TOTALS_ROW_MM, 5.3)
+    + (p.taxLines ? TAX_BLOCK_MM + p.taxLines * TAX_LINE_MM * scale : 0)
+    + (p.showAmountWords ? grown(BAHT_BOX_MM, 4.5) : 0)
+    + (p.signatureRows ?? 0) * grown(SIGNATURE_ROW_MM, 11)
+    + (p.noteLines ? grown(NOTES_BLOCK_MM, 4) + p.noteLines * NOTE_LINE_MM * scale : 0)
     + SAFETY_MM
 }
 
 // How many millimetres of table rows a sheet of this form can hold. Never less
 // than one row, so a form with a great deal around the table still prints one.
-export function printBodyMm(p: SheetParts): number {
-  return Math.max(rowHeightMm(1), PRINT_SHEET_MM - sheetOverheadMm(p))
+export function printBodyMm(p: SheetParts, scale = 1): number {
+  return Math.max(rowHeightMm(1, scale), PRINT_SHEET_MM - sheetOverheadMm(p, scale))
 }
 
-// What a row costs on paper. Every row pays once for its own padding and then
-// per line of wrapped text; a row left blank is shorter than one with text in
-// it, which is why a sheet cannot simply be budgeted in lines.
-export function rowHeightMm(lines: number): number {
-  return ROW_BASE_MM + Math.max(1, lines) * TABLE_LINE_MM
+// What a row costs on paper. Every row pays once for its own padding — which is
+// the same at any text size — and then per line of wrapped text; a row left
+// blank is shorter than one with text in it, which is why a sheet cannot simply
+// be budgeted in lines.
+export function rowHeightMm(lines: number, scale = 1): number {
+  return ROW_BASE_MM + Math.max(1, lines) * TABLE_LINE_MM * scale
 }
 
 // At the printed 10px size a Thai letter takes about 2.1mm, and each cell keeps
@@ -235,13 +241,16 @@ function textWidth(text: string): number {
   return w
 }
 
-// How many printed lines a row needs: its tallest cell decides.
-export function rowLines(widthsMm: number[], texts: string[]): number {
+// How many printed lines a row needs: its tallest cell decides. The column is
+// as wide as it ever was — it is the letters that grow or shrink with the
+// document's chosen size, so fewer or more of them fit on a line.
+export function rowLines(widthsMm: number[], texts: string[], scale = 1): number {
+  const charMm = THAI_CHAR_MM * scale
   let lines = 1
   texts.forEach((text, i) => {
     if (!text) return
-    const usable = Math.max((widthsMm[i] ?? 0) - CELL_PADDING_MM, THAI_CHAR_MM)
-    const perLine = Math.max(1, usable / THAI_CHAR_MM)
+    const usable = Math.max((widthsMm[i] ?? 0) - CELL_PADDING_MM, charMm)
+    const perLine = Math.max(1, usable / charMm)
     const n = text.split('\n').reduce((sum, part) => sum + Math.max(1, Math.ceil(textWidth(part) / perLine)), 0)
     if (n > lines) lines = n
   })
