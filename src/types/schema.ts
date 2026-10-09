@@ -88,6 +88,7 @@ export interface FormSettings {
   showRequester?: boolean              // show the ชื่อ/นามสกุล/ตำแหน่ง/Job line (default true)
   showAmountWords?: boolean            // show the "เป็นจำนวนเงิน ... บาทถ้วน" box (default true)
   seqWidth?: number | null                    // width of the leading ลำดับ column (see SEQ_COLUMN_WIDTH)
+  perRowTax?: boolean                  // VAT / หัก ณ ที่จ่าย are chosen per row (see ROW_VAT_KEY in calc)
   requesterTitle?: string              // heading above the requester fields on the fill-in screen (read via sectionTitles)
   itemsTitle?: string                  // heading above the items table on the fill-in screen (read via sectionTitles)
 }

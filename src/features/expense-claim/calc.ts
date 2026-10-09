@@ -93,23 +93,107 @@ export function bahtTextForRows(columns: FormColumn[], rows: ExpenseRow[]): stri
   return bahtText(grandTotal(columns, rows))
 }
 
+// ----- Tax chosen per row -----
+// Some forms charge VAT or withholding tax on SOME lines only — a supplier's
+// work is withheld, a hotel bill is not. Those forms (perRowTax) carry a tick
+// per row under these reserved keys, which no column can use: a column key is
+// generated as col1, col2, … and never holds a colon.
+export const ROW_VAT_KEY = 'tax:vat'
+export const ROW_WHT_KEY = 'tax:wht'
+export function isRowTicked(row: ExpenseRow, key: string): boolean {
+  return row[key] === 1 || row[key] === '1'
+}
+export const TICK = 1
+export const UNTICK = ''
+
+// What VAT and withholding are each worked out on. Without perRowTax that is
+// the whole subtotal, exactly as before; with it, only the ticked rows count.
+export function taxBases(
+  columns: FormColumn[], rows: ExpenseRow[], perRowTax?: boolean,
+): { vat: number; wht: number } | undefined {
+  if (!perRowTax) return undefined
+  const totalCol = totalColumn(columns)
+  if (!totalCol) return { vat: 0, wht: 0 }
+  const sum = (key: string) => round2(rows
+    .filter(r => isRowTicked(r, key))
+    .reduce((s, r) => s + (Number(computeRow(columns, r)[totalCol.key]) || 0), 0))
+  return { vat: sum(ROW_VAT_KEY), wht: sum(ROW_WHT_KEY) }
+}
+
 // VAT (7%), withholding tax and ค่าประกันงาน are all computed on the items
-// subtotal (pre-VAT), the standard Thai basis.
+// subtotal (pre-VAT), the standard Thai basis — or, on a form that charges them
+// per row, on just the rows ticked for each (`bases`).
 // Net = subtotal + VAT − withholding − retention.
 export interface TaxResult { subtotal: number; vatAmount: number; whtAmount: number; retentionAmount: number; netTotal: number }
-export function taxSummary(subtotal: number, vat?: boolean, whtRate?: number, retentionRate?: number): TaxResult {
-  const vatAmount = vat ? round2(subtotal * 0.07) : 0
-  const whtAmount = whtRate ? round2(subtotal * whtRate / 100) : 0
+export function taxSummary(
+  subtotal: number, vat?: boolean, whtRate?: number, retentionRate?: number,
+  bases?: { vat: number; wht: number },
+): TaxResult {
+  const vatAmount = vat ? round2((bases?.vat ?? subtotal) * 0.07) : 0
+  const whtAmount = whtRate ? round2((bases?.wht ?? subtotal) * whtRate / 100) : 0
   // ค่าประกันงาน (retention) is held back on the pre-VAT amount, like withholding.
   const retentionAmount = retentionRate ? round2(subtotal * retentionRate / 100) : 0
   const netTotal = round2(subtotal + vatAmount - whtAmount - retentionAmount)
   return { subtotal, vatAmount, whtAmount, retentionAmount, netTotal }
 }
 
+// ----- Printed pagination -----
+// A sheet holds this many single-line rows under the heading. A row whose text
+// wraps takes the space of as many lines, so the count below is a budget of
+// LINES, not of rows.
+export const PRINT_ROWS_PER_PAGE = 14
+// At the printed 10px size a Thai character takes about 2.1mm, and each cell
+// keeps ~2mm of padding. Latin letters, digits and punctuation are narrower, so
+// they count for a fraction of one — measured against the real sheet, where a
+// 37mm column holds ~17 Thai characters a line but a 10-character date fits a
+// 20mm one. The estimate is meant to round UP: a line left spare costs nothing,
+// while one too few pushes the signatures onto a second sheet.
+const THAI_CHAR_MM = 2.1
+const NARROW_CHAR_RATIO = 0.55
+const CELL_PADDING_MM = 2.2
+
+// Roughly how many Thai-character widths a piece of text takes up.
+function textWidth(text: string): number {
+  let w = 0
+  for (const ch of text) w += ch.charCodeAt(0) < 0x0e00 ? NARROW_CHAR_RATIO : 1
+  return w
+}
+
+// How many printed lines a row needs: its tallest cell decides.
+export function rowLines(widthsMm: number[], texts: string[]): number {
+  let lines = 1
+  texts.forEach((text, i) => {
+    if (!text) return
+    const usable = Math.max((widthsMm[i] ?? 0) - CELL_PADDING_MM, THAI_CHAR_MM)
+    const perLine = Math.max(1, usable / THAI_CHAR_MM)
+    const n = text.split('\n').reduce((sum, part) => sum + Math.max(1, Math.ceil(textWidth(part) / perLine)), 0)
+    if (n > lines) lines = n
+  })
+  return lines
+}
+
+// Split the rows across sheets by how tall they print, not how many they are.
+// Padding every sheet to a fixed row COUNT is what used to push the totals and
+// signatures off the page as soon as a detail wrapped onto three lines.
+export function paginateRows(lines: number[], budget = PRINT_ROWS_PER_PAGE): { rows: number[]; lines: number }[] {
+  const pages: { rows: number[]; lines: number }[] = []
+  let page: number[] = []
+  let used = 0
+  lines.forEach((n, i) => {
+    // A row taller than a whole sheet still has to go somewhere: it gets its own.
+    if (page.length && used + n > budget) { pages.push({ rows: page, lines: used }); page = []; used = 0 }
+    page.push(i)
+    used += n
+  })
+  if (page.length) pages.push({ rows: page, lines: used })
+  if (!pages.length) pages.push({ rows: [], lines: 0 })
+  return pages
+}
+
 // ----- Printed column widths -----
 // A width is a real measurement in millimetres on the sheet. The table lives
-// inside an A4 page (210mm) less its 10mm margins and the frame padding.
-export const PRINT_TABLE_MM = 177
+// inside an A4 page (210mm) less its 10mm margins on each side.
+export const PRINT_TABLE_MM = 190
 // A column left to share the leftover never collapses below this.
 const AUTO_MIN_MM = 12
 export const PX_PER_MM = 96 / 25.4

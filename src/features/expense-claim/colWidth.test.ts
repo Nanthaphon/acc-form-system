@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { FormColumn } from '../../types/schema'
-import { fillColumnPercents, tableMinWidth, DATE_COL_MIN_PX } from './calc'
+import { fillColumnPercents, tableMinWidth, DATE_COL_MIN_PX, rowLines, paginateRows } from './calc'
 
 const col = (type: FormColumn['type'], width?: number): FormColumn =>
   ({ key: `k${width ?? 'x'}${type}`, label: 'l', type, width })
@@ -43,5 +43,62 @@ describe('tableMinWidth', () => {
   })
   it('is just the fixed columns when a form has none of its own', () => {
     expect(tableMinWidth([])).toBe(68)
+  })
+})
+
+describe('rowLines', () => {
+  it('a row whose cells all fit on one line takes one', () => {
+    expect(rowLines([30, 60], ['05/10/2026', 'ค่าแท็กซี่'])).toBe(1)
+  })
+
+  it('counts the lines a long detail wraps onto — the tallest cell decides', () => {
+    // 60mm holds about 27 Thai characters a line, so 90 of them need four.
+    expect(rowLines([30, 60], ['05/10/2026', 'ก'.repeat(90)])).toBe(4)
+  })
+
+  it('counts Latin text as narrower than Thai, as it prints', () => {
+    // The same 40 characters: Thai wraps onto two lines in 37mm, Latin fits one.
+    expect(rowLines([37], ['ก'.repeat(40)])).toBe(3)
+    expect(rowLines([37], ['A'.repeat(40)])).toBe(2)
+    expect(rowLines([20], ['05/10/2026'])).toBe(1)
+  })
+
+  // Measured on the printed sheet: this detail really does wrap onto four lines
+  // in a 37mm column. The estimate must never come out under what prints.
+  it('never comes out under what the browser lays out', () => {
+    expect(rowLines([37], ['เงินช่วยเหลือพิธีพราหมณ์ สถานการณ์น้ำท่วม เมื่อวันที่ 28/09/69'])).toBeGreaterThanOrEqual(4)
+    expect(rowLines([37], ['บจก.แอดริติค ค่าผลิตสติ๊กเกอร์ไดคัทตามแบบ สำหรับติดตั้งงานผนังบูธ Samsung AV'])).toBeGreaterThanOrEqual(4)
+  })
+
+  it('counts a line break the admin typed into the text', () => {
+    expect(rowLines([60], ['บรรทัดหนึ่ง\nบรรทัดสอง\nบรรทัดสาม'])).toBe(3)
+  })
+
+  it('an empty row still takes its one line', () => {
+    expect(rowLines([30, 60], ['', ''])).toBe(1)
+  })
+})
+
+describe('paginateRows', () => {
+  it('fills a sheet by the lines its rows print, not by how many they are', () => {
+    // 4 rows of 3 lines fill a 14-line sheet; the fifth starts the next one.
+    const pages = paginateRows([3, 3, 3, 3, 3])
+    expect(pages.map(p => p.rows)).toEqual([[0, 1, 2, 3], [4]])
+    expect(pages[0].lines).toBe(12)
+  })
+
+  it('keeps single-line rows at 14 to a sheet, as the paper form has it', () => {
+    const pages = paginateRows(Array(20).fill(1))
+    expect(pages[0].rows).toHaveLength(14)
+    expect(pages[1].rows).toHaveLength(6)
+  })
+
+  it('a row taller than a whole sheet still gets one of its own', () => {
+    const pages = paginateRows([1, 20, 1])
+    expect(pages.map(p => p.rows)).toEqual([[0], [1], [2]])
+  })
+
+  it('an empty document is one empty sheet', () => {
+    expect(paginateRows([])).toEqual([{ rows: [], lines: 0 }])
   })
 })

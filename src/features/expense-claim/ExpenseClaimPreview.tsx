@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, rowHasNumbers, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, rowHasNumbers, rowLines, taxBases, taxSummary, visibleColumns, printWidthsMm, PRINT_ROWS_PER_PAGE, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -13,11 +13,11 @@ interface Props { company: Company | null; header: ExpenseHeader; items: Expense
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น 6 ถนนพัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
 
-// Rows that fit on a single sheet. When items exceed this, they overflow onto
-// the next sheet (stacked below on screen, a new page when printed). Every
-// sheet is a complete form on its own — same header, requester, grand total,
-// amount-in-words, signatures and notes.
-const ROWS_PER_PAGE = 14
+// How many rows fit on a sheet is decided by how tall they print — see
+// paginateRows and PRINT_ROWS_PER_PAGE in calc. Rows beyond the first sheet
+// overflow onto the next (stacked below on screen, a new page when printed),
+// and every sheet is a complete form on its own: same header, requester, grand
+// total, amount-in-words, signatures and notes.
 
 // A form paragraph with its {{blanks}} filled from the document: typed values
 // sit on a dotted line, empty blanks print as dots to be written by hand.
@@ -66,15 +66,21 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     return filled ? money(Number(raw) || 0) : ' '
   }
   const columnTotals = computeColumnTotals(cols, items)
-  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate)
+  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate, taxBases(cols, items, settings.perRowTax))
+  // Forms that charge VAT or withholding per line print the ticks, so the
+  // sheet itself shows which lines were taxed.
+  const tickCols = settings.perRowTax
+    ? [{ key: ROW_VAT_KEY, label: 'VAT\n7%' }, { key: ROW_WHT_KEY, label: 'หัก ณ\nที่จ่าย' }]
+    : []
+  const TICK_MM = 11
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
-  const totalCols = vcols.length + 1 // + leading seq column
+  const totalCols = vcols.length + 1 + tickCols.length // + leading seq column, + the tax ticks
 
   // Widths are millimetres on the sheet (printWidthsMm) rendered as percentages,
   // so the table fills the frame exactly whatever the paper size.
-  const mm = printWidthsMm(seqColumnWidth(settings), vcols.map(c => c.width))
+  const mm = printWidthsMm(seqColumnWidth(settings), vcols.map(c => c.width), PRINT_TABLE_MM - tickCols.length * TICK_MM)
   const SEQ_WEIGHT = mm.seq
   const widthWeights = mm.cols
   const pct = (w: number) => `${((w / PRINT_TABLE_MM) * 100).toFixed(3)}%`
@@ -86,13 +92,14 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   // so hide the grand-total row and the amount-in-words box.
   const hasNumericCols = firstNumericIdx >= 0
 
-  // Split the row indices into pages of ROWS_PER_PAGE. Always at least one page
-  // (so an empty form still renders a blank sheet).
-  const pages: number[][] = []
-  for (let i = 0; i < items.length; i += ROWS_PER_PAGE) {
-    pages.push(Array.from({ length: Math.min(ROWS_PER_PAGE, items.length - i) }, (_, k) => i + k))
-  }
-  if (pages.length === 0) pages.push([])
+  // Sheets are filled by how tall the rows print, not by how many there are:
+  // a detail that wraps onto three lines takes three rows' worth of the sheet.
+  const printed = (row: ExpenseRow, col: FormColumn): string =>
+    col.type === 'date' ? formatIsoDate(row[col.key] as string)
+      : isTextCol(col.type) ? String(row[col.key] ?? '')
+      : cellMoney(row, col)
+  const lineCounts = computed.map(r => rowLines(widthWeights, vcols.map(c => printed(r, c))))
+  const pages = paginateRows(lineCounts)
   const totalPages = pages.length
 
   // Signature blocks (configured per form), laid out in rows of 3.
@@ -102,12 +109,13 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
   return (
     <div id="print-area" style={{ fontFamily: "'Sarabun', serif" }} className="mx-auto max-w-3xl space-y-6 text-black print:space-y-0">
-      {pages.map((rowIdxs, pageIdx) => {
+      {pages.map((page, pageIdx) => {
+        const rowIdxs = page.rows
         // Pad each sheet's table to a full height so every sheet looks identical.
-        const emptyRowCount = Math.max(0, ROWS_PER_PAGE - rowIdxs.length)
+        const emptyRowCount = Math.max(0, PRINT_ROWS_PER_PAGE - page.lines)
 
         return (
-          <div key={pageIdx} className="doc-page border border-black bg-white p-6 text-xs">
+          <div key={pageIdx} className="doc-page bg-white p-6 text-xs">
             {/* Header band */}
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">
@@ -193,6 +201,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                       {col.label}
                     </th>
                   ))}
+                  {tickCols.map(t => (
+                    <th key={t.key} style={{ width: pct(TICK_MM) }} className="whitespace-pre-line border border-black px-1 py-1 leading-[2]">{t.label}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -206,6 +217,11 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                           : isTextCol(col.type)
                           ? (computed[i][col.key] as string)
                           : cellMoney(computed[i], col)}
+                      </td>
+                    ))}
+                    {tickCols.map(t => (
+                      <td key={t.key} className="border border-black px-1 py-0.5 text-center leading-[2]">
+                        {isRowTicked(items[i], t.key) ? '☑' : ''}
                       </td>
                     ))}
                   </tr>
@@ -226,6 +242,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                         {isTextCol(col.type) ? '' : money(columnTotals[col.key] ?? 0)}
                       </td>
                     ))}
+                    {tickCols.map(t => <td key={t.key} className="border border-black px-1 py-1"></td>)}
                   </tr>
                 )}
               </tbody>

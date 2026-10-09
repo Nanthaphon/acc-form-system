@@ -7,7 +7,7 @@ import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { computeColumnTotals, grandTotal, taxSummary } from '../../features/expense-claim/calc'
+import { computeColumnTotals, grandTotal, taxBases, taxSummary } from '../../features/expense-claim/calc'
 import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
@@ -46,7 +46,7 @@ export default function FormPage() {
 
   function buildTotals(): ExpenseTotals {
     const subtotal = grandTotal(settings.columns, items)
-    const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate)
+    const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate, taxBases(settings.columns, items, settings.perRowTax))
     return {
       columnTotals: computeColumnTotals(settings.columns, items),
       grandTotal: subtotal,
@@ -209,7 +209,7 @@ export default function FormPage() {
             </select>
           </div>
         )}
-        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} perRowTax={settings.perRowTax} />}
         {!showPreview && (
           <AttachmentsField
             saved={attachments}
