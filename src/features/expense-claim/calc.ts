@@ -147,7 +147,6 @@ export const PRINT_SHEET_MM = 276
 // which is most of what the form spends: two signature rows alone take 62mm.
 const TABLE_LINE_MM = 5.3        // one wrapped line inside a row
 const ROW_BASE_MM = 1.3          // …plus this much for the row itself
-const EMPTY_ROW_MM = 5.6         // a blank ruled row, which carries no text
 const HEADER_BAND_MM = 18.5      // logo, company, document title, rule, form code
 const CATEGORY_BLOCK_MM = 2.1    // the category checkboxes…
 const CATEGORY_ROW_MM = 4.75     // …two to a row
@@ -211,11 +210,6 @@ export function rowHeightMm(lines: number): number {
   return ROW_BASE_MM + Math.max(1, lines) * TABLE_LINE_MM
 }
 
-// How many blank rows are drawn under the last one, to rule the sheet down to
-// a full page the way the paper form does.
-export function fillerRows(availableMm: number, usedMm: number): number {
-  return Math.max(0, Math.floor((availableMm - usedMm) / EMPTY_ROW_MM))
-}
 // At the printed 10px size a Thai letter takes about 2.1mm, and each cell keeps
 // ~2mm of padding. Latin letters, digits and punctuation are narrower, so they
 // count for a fraction of one — and Thai vowels and tone marks sit above or

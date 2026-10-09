@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { FormColumn } from '../../types/schema'
-import { fillColumnPercents, tableMinWidth, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm, fillerRows } from './calc'
+import { fillColumnPercents, tableMinWidth, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm } from './calc'
 
 const col = (type: FormColumn['type'], width?: number): FormColumn =>
   ({ key: `k${width ?? 'x'}${type}`, label: 'l', type, width })
@@ -131,17 +131,6 @@ describe('paginateRows', () => {
 
   it('an empty document is one empty sheet', () => {
     expect(paginateRows([], 70)).toEqual([{ rows: [], usedMm: 0 }])
-  })
-})
-
-describe('fillerRows', () => {
-  it('rules the rest of the sheet with blank rows', () => {
-    expect(fillerRows(84.5, 58.2)).toBe(4)     // the measured sheet: 4 blanks under 4 rows
-  })
-
-  it('draws none when the rows already fill the sheet', () => {
-    expect(fillerRows(84.5, 84)).toBe(0)
-    expect(fillerRows(84.5, 100)).toBe(0)
   })
 })
 

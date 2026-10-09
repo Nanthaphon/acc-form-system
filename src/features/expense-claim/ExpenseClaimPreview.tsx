@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, fillerRows, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -129,7 +129,6 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
       {pages.map((page, pageIdx) => {
         const rowIdxs = page.rows
         // Pad each sheet's table to a full height so every sheet looks identical.
-        const emptyRowCount = fillerRows(bodyMm, page.usedMm)
 
         return (
           <div key={pageIdx} className="doc-page bg-white p-6 text-xs">
@@ -243,13 +242,8 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                     ))}
                   </tr>
                 ))}
-                {Array.from({ length: emptyRowCount }).map((_, i) => (
-                  <tr key={`empty-${i}`}>
-                    {Array.from({ length: totalCols }).map((__, j) => (
-                      <td key={j} className="border border-black px-1 py-0.5">&nbsp;</td>
-                    ))}
-                  </tr>
-                ))}
+                {/* No blank rows ruled under the last one: the table ends where
+                    the document does, and the space goes to whoever needs it. */}
                 {/* แถวรวม — ยอดรวมทั้งหมด แสดงเหมือนกันทุกแผ่น (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
                 {hasNumericCols && (
                   <tr className="font-bold">
