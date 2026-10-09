@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { Calendar } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Calendar as CalendarIcon } from 'lucide-react'
+import Calendar from './Calendar'
 
 // Text-based date field that ALWAYS shows dd/mm/yyyy (ค.ศ), regardless of the
 // browser locale. Stores/emits the value as ISO "yyyy-mm-dd" like a native
-// <input type="date">. Clicking anywhere in the field opens the native picker,
-// and the date can still be typed in.
+// <input type="date">. Clicking anywhere in the field opens the calendar, and
+// the date can still be typed in.
 
 function isoToDisplay(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '')
@@ -25,19 +27,53 @@ function displayToIso(s: string): string | null {
   return `${m[3]}-${m[2]}-${m[1]}`
 }
 
+const CALENDAR_W = 300
+const CALENDAR_H = 360
+
 interface Props { value: string; onChange: (iso: string) => void; className?: string }
 
 export default function DateInput({ value, onChange, className }: Props) {
   const [text, setText] = useState(isoToDisplay(value))
-  const dateRef = useRef<HTMLInputElement>(null)
+  const [open, setOpen] = useState(false)
+  const [at, setAt] = useState({ top: 0, left: 0 })
+  const wrap = useRef<HTMLDivElement>(null)
+  const field = useRef<HTMLInputElement>(null)
+
   // Keep the display in sync when the stored value changes elsewhere.
   useEffect(() => { setText(isoToDisplay(value)) }, [value])
 
-  // showPicker throws where it is unsupported or blocked (e.g. a cross-origin
-  // frame); typing still works there, so it is fine to ignore.
-  function openPicker() {
-    try { dateRef.current?.showPicker?.() } catch { /* type the date instead */ }
-  }
+  // The calendar hangs from the document body, so a field inside a table that
+  // scrolls sideways — or near the window's edge — still shows it whole.
+  useLayoutEffect(() => {
+    if (!open) return
+    const place = () => {
+      const r = field.current?.getBoundingClientRect()
+      if (!r) return
+      const below = window.innerHeight - r.bottom
+      const top = below < CALENDAR_H && r.top > below ? r.top - CALENDAR_H - 4 : r.bottom + 4
+      setAt({
+        top: Math.max(4, top),
+        left: Math.min(Math.max(4, r.left), window.innerWidth - CALENDAR_W - 4),
+      })
+    }
+    place()
+    window.addEventListener('scroll', place, true)
+    window.addEventListener('resize', place)
+    return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place) }
+  }, [open])
+
+  // Clicking away or pressing Escape closes it.
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (!wrap.current?.contains(t) && !document.getElementById('date-popover')?.contains(t)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [open])
 
   function handleText(raw: string) {
     const s = autoSlash(raw)
@@ -47,9 +83,17 @@ export default function DateInput({ value, onChange, className }: Props) {
     if (iso) onChange(iso)
   }
 
+  function pick(iso: string) {
+    onChange(iso)
+    setText(isoToDisplay(iso))
+    setOpen(false)
+    field.current?.focus()
+  }
+
   return (
-    <div className="relative">
+    <div ref={wrap} className="relative">
       <input
+        ref={field}
         type="text"
         inputMode="numeric"
         placeholder="dd/mm/yyyy"
@@ -57,26 +101,30 @@ export default function DateInput({ value, onChange, className }: Props) {
         className={`${className ?? ''} pr-6`}
         value={text}
         onChange={e => handleText(e.target.value)}
-        onClick={openPicker}
+        onClick={() => setOpen(true)}
       />
       <button
         type="button"
         tabIndex={-1}
         title="เลือกวันที่"
-        onClick={openPicker}
+        aria-label="เลือกวันที่"
+        aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
         className="absolute inset-y-0 right-1 flex items-center text-stone-400 hover:text-stone-600"
       >
-        <Calendar size={13} />
+        <CalendarIcon size={13} />
       </button>
-      <input
-        ref={dateRef}
-        type="date"
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
-        tabIndex={-1}
-        aria-hidden
-      />
+      {open && createPortal(
+        <div id="date-popover" style={{ top: at.top, left: at.left }} className="fixed z-[200]">
+          <Calendar
+            value={value}
+            onPick={pick}
+            onClear={() => { onChange(''); setText(''); setOpen(false) }}
+            onClose={() => setOpen(false)}
+          />
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }
