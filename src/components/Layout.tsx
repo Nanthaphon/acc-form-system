@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import {
-  BookOpen, FileText, History, Inbox, KeyRound, ListChecks, LogOut,
+  BookOpen, FileText, History, Inbox, KeyRound, ListChecks, LogOut, Megaphone,
   PanelLeftClose, PanelLeftOpen, Printer, Tags, User, Users,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
@@ -10,6 +10,7 @@ import { logout } from '../data/auth'
 import { usePendingSignCount } from '../shared/usePendingSignCount'
 import { roleLabel } from '../shared/roles'
 import NavCountBadge from './NavCountBadge'
+import { useUnreadAnnouncement } from '../shared/useUnreadAnnouncement'
 
 // Collapsing is a per-person habit, so it is remembered in this browser.
 const COLLAPSED_KEY = 'sidebar:collapsed'
@@ -22,11 +23,14 @@ const navLinkClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean 
   }`
 const iconBtn = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-clay-200 transition-colors hover:bg-white/[.08] hover:text-white'
 
-interface NavItem { to: string; icon: LucideIcon; label: string; end?: boolean; count?: number }
+interface NavItem { to: string; icon: LucideIcon; label: string; end?: boolean; count?: number; dot?: boolean }
 
 export default function Layout() {
   const { profile } = useAuth()
   const toSign = usePendingSignCount(profile?.uid)
+  // A change nobody has read yet is marked, rather than counted: there is
+  // one thing to go and look at, not a number of them.
+  const unreadNews = useUnreadAnnouncement()
   const isAdmin = profile?.role === 'admin'
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(COLLAPSED_KEY) === '1' } catch { return false }
@@ -48,9 +52,10 @@ export default function Layout() {
     ] : []),
     { to: '/profile', icon: User, label: 'ข้อมูลของฉัน' },
     { to: '/manual', icon: BookOpen, label: 'คู่มือการใช้งาน' },
+    { to: '/announcements', icon: Megaphone, label: 'ประกาศ', dot: unreadNews },
   ]
 
-  const navRow = ({ to, icon: Icon, label, end, count }: NavItem) => (
+  const navRow = ({ to, icon: Icon, label, end, count, dot }: NavItem) => (
     <NavLink key={to} to={to} end={end} className={navLinkClass(collapsed)} title={collapsed ? label : undefined}>
       {({ isActive }) => (
         <>
@@ -61,6 +66,12 @@ export default function Layout() {
               <span className="absolute -right-2.5 -top-2">
                 <NavCountBadge count={count} active={isActive} label={`รอเซ็น ${count} ฉบับ`} />
               </span>
+            )}
+            {dot && (
+              <span
+                aria-label="มีประกาศใหม่"
+                className={`absolute -right-1 -top-0.5 h-2 w-2 rounded-full ring-2 ${isActive ? 'bg-white ring-clay-600' : 'bg-ochre-500 ring-clay-900'}`}
+              />
             )}
           </span>
           {!collapsed && (

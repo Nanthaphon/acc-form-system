@@ -26,6 +26,7 @@ import SignInboxPage from './pages/SignInboxPage'
 import AccessGroupsPage from './pages/admin/AccessGroupsPage'
 import FieldOptionsPage from './pages/admin/FieldOptionsPage'
 import ManualPage from './pages/ManualPage'
+import AnnouncementsPage from './pages/AnnouncementsPage'
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
       { path: 'sign', element: <SignInboxPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'manual', element: <ManualPage /> },
+      { path: 'announcements', element: <AnnouncementsPage /> },
       { path: 'change-password', element: <ChangePasswordPage /> },
       { path: 'admin/employees', element: <RequireAdmin><EmployeeListPage /></RequireAdmin> },
       { path: 'admin/employees/new', element: <RequireAdmin><AddEmployeePage /></RequireAdmin> },

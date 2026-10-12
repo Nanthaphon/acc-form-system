@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UserProfile } from '../types/schema'
+import { markAnnouncementsSeen } from '../shared/announcements'
 
 const { useAuth } = vi.hoisted(() => ({ useAuth: vi.fn() }))
 vi.mock('../auth/AuthProvider', () => ({ useAuth }))
@@ -40,5 +41,26 @@ describe('manual menu', () => {
   it('everyone gets the manual in the sidebar', () => {
     show('employee')
     expect(screen.getByRole('link', { name: /คู่มือการใช้งาน/ })).toHaveAttribute('href', '/manual')
+  })
+})
+
+describe('announcements menu', () => {
+  beforeEach(() => { try { localStorage.clear() } catch { /* blocked */ } })
+
+  it('everyone gets the announcements in the sidebar', () => {
+    show('employee')
+    expect(screen.getByRole('link', { name: /ประกาศ/ })).toHaveAttribute('href', '/announcements')
+  })
+
+  // The dot is how someone knows to look; without it an announcement is only
+  // found by chance.
+  it('marks the menu while there is something unread, and stops once it is read', () => {
+    show('employee')
+    expect(screen.getByLabelText('มีประกาศใหม่')).toBeInTheDocument()
+    cleanup()
+
+    markAnnouncementsSeen()
+    show('employee')
+    expect(screen.queryByLabelText('มีประกาศใหม่')).not.toBeInTheDocument()
   })
 })
