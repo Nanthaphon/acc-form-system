@@ -184,40 +184,34 @@ export interface SheetParts {
   signatureRows?: number
   noteLines?: number       // the notes, including their heading
 }
-// `scale` is the document's chosen text size (1 = ปกติ). Each figure below is
-// what was measured on a real sheet at ปกติ, plus the part of it that is text
-// — stretched or shrunk by that size. The rest of each figure is margins,
-// padding, ruled lines and the logo, which stay put however large the text is.
-export function sheetOverheadMm(p: SheetParts, scale = 1): number {
-  const grown = (mm: number, textMm: number) => mm + textMm * (scale - 1)
+export function sheetOverheadMm(p: SheetParts): number {
   const paragraphs = (p.introLines ?? 0) + (p.bodyLines ?? 0)
-  return grown(HEADER_BAND_MM, 7)
-    + (p.categoryRows ? CATEGORY_BLOCK_MM + p.categoryRows * grown(CATEGORY_ROW_MM, 4.75) : 0)
-    + (p.showRequester ? grown(REQUESTER_MM, 4.5) : 0)
-    + (p.headerFields ?? 0) * grown(HEADER_FIELD_MM, 4.5)
+  return HEADER_BAND_MM
+    + (p.categoryRows ? CATEGORY_BLOCK_MM + p.categoryRows * CATEGORY_ROW_MM : 0)
+    + (p.showRequester ? REQUESTER_MM : 0)
+    + (p.headerFields ?? 0) * HEADER_FIELD_MM
     + (p.introLines ? PARAGRAPH_BLOCK_MM : 0) + (p.bodyLines ? PARAGRAPH_BLOCK_MM : 0)
-    + paragraphs * TEXT_LINE_MM * scale
-    + (p.headLines ?? 1) * TABLE_LINE_MM * scale + grown(THEAD_PADDING_MM, 1)
-    + grown(TOTALS_ROW_MM, 5.3)
-    + (p.taxLines ? TAX_BLOCK_MM + p.taxLines * TAX_LINE_MM * scale : 0)
-    + (p.showAmountWords ? grown(BAHT_BOX_MM, 4.5) : 0)
-    + (p.signatureRows ?? 0) * grown(SIGNATURE_ROW_MM, 11)
-    + (p.noteLines ? grown(NOTES_BLOCK_MM, 4) + p.noteLines * NOTE_LINE_MM * scale : 0)
+    + paragraphs * TEXT_LINE_MM
+    + (p.headLines ?? 1) * TABLE_LINE_MM + THEAD_PADDING_MM
+    + TOTALS_ROW_MM
+    + (p.taxLines ? TAX_BLOCK_MM + p.taxLines * TAX_LINE_MM : 0)
+    + (p.showAmountWords ? BAHT_BOX_MM : 0)
+    + (p.signatureRows ?? 0) * SIGNATURE_ROW_MM
+    + (p.noteLines ? NOTES_BLOCK_MM + p.noteLines * NOTE_LINE_MM : 0)
     + SAFETY_MM
 }
 
 // How many millimetres of table rows a sheet of this form can hold. Never less
 // than one row, so a form with a great deal around the table still prints one.
-export function printBodyMm(p: SheetParts, scale = 1): number {
-  return Math.max(rowHeightMm(1, scale), PRINT_SHEET_MM - sheetOverheadMm(p, scale))
+export function printBodyMm(p: SheetParts): number {
+  return Math.max(rowHeightMm(1), PRINT_SHEET_MM - sheetOverheadMm(p))
 }
 
-// What a row costs on paper. Every row pays once for its own padding — which is
-// the same at any text size — and then per line of wrapped text; a row left
-// blank is shorter than one with text in it, which is why a sheet cannot simply
-// be budgeted in lines.
-export function rowHeightMm(lines: number, scale = 1): number {
-  return ROW_BASE_MM + Math.max(1, lines) * TABLE_LINE_MM * scale
+// What a row costs on paper. Every row pays once for its own padding and then
+// per line of wrapped text; a row left blank is shorter than one with text in
+// it, which is why a sheet cannot simply be budgeted in lines.
+export function rowHeightMm(lines: number): number {
+  return ROW_BASE_MM + Math.max(1, lines) * TABLE_LINE_MM
 }
 
 // At the printed 10px size a Thai letter takes about 2.1mm, and each cell keeps
@@ -241,11 +235,9 @@ function textWidth(text: string): number {
   return w
 }
 
-// How many printed lines a row needs: its tallest cell decides. The column is
-// as wide as it ever was — it is the letters that grow or shrink with the
-// document's chosen size, so fewer or more of them fit on a line.
-export function rowLines(widthsMm: number[], texts: string[], scale = 1): number {
-  const charMm = THAI_CHAR_MM * scale
+// How many printed lines a row needs: its tallest cell decides.
+export function rowLines(widthsMm: number[], texts: string[]): number {
+  const charMm = THAI_CHAR_MM
   let lines = 1
   texts.forEach((text, i) => {
     if (!text) return
@@ -332,7 +324,10 @@ export function fillColumnPercents(seqMm: number, cols: FormColumn[]): string[] 
 // Width below which the table scrolls instead of squeezing its columns out of
 // use. Only the readable minimum counts — a wide setting belongs on paper, not
 // in a table someone has to type into.
-export function tableMinWidth(cols: FormColumn[]): number {
+// `scale` is the size of the text in the boxes (1 = ปกติ): larger text needs
+// more room before it is cut off — a date in particular, which must show
+// dd/mm/yyyy whole. The number and the bin button are icons and stay as they are.
+export function tableMinWidth(cols: FormColumn[], scale = 1): number {
   return SEQ_COL_PX + ACTION_COL_PX
-    + cols.reduce((sum, c) => sum + (c.type === 'date' ? DATE_COL_MIN_PX : COL_MIN_PX), 0)
+    + cols.reduce((sum, c) => sum + (c.type === 'date' ? DATE_COL_MIN_PX : COL_MIN_PX) * scale, 0)
 }

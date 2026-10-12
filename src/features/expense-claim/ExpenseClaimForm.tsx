@@ -11,7 +11,7 @@ import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
 import type { TemplateField } from '../../shared/bodyTemplate'
 import { BLANK_LIMITS, blankWidth } from './blankSizing'
 import GrowTextarea from '../../components/GrowTextarea'
-import { textSizeOf, textSizeStyles, TEXT_SIZES } from '../../shared/textSize'
+import { textSizeOf, textSizeScale, textSizeStyles, TEXT_SIZES } from '../../shared/textSize'
 
 interface Props {
   header: ExpenseHeader
@@ -28,14 +28,14 @@ interface Props {
   showSeq?: boolean           // show the ลำดับ column (default true)
 }
 
-// Larger or smaller text, in the table being filled in and in the document it
-// prints as. It is the document's own setting, saved with it.
+// Larger or smaller text in the boxes being typed into — this form's own
+// setting, saved with it. The document it prints as is untouched.
 function TextSizePicker({ value, onChange }: { value: DocTextSize; onChange: (v: DocTextSize) => void }) {
   return (
     <span
       role="radiogroup"
       aria-label="ขนาดตัวอักษร"
-      title="ขนาดตัวอักษรในตารางและในเอกสารที่พิมพ์ออกมา — เล็กลงเพื่อใส่รายการได้มากขึ้นต่อแผ่น"
+      title="ขนาดตัวอักษรในช่องกรอกของฟอร์มนี้ — ไม่มีผลกับเอกสารที่พิมพ์ออกมา"
       className="inline-flex items-center gap-1"
     >
       <ALargeSmall size={15} className="mr-0.5 shrink-0 text-stone-400" aria-hidden />
@@ -136,7 +136,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
   const titles = sectionTitles({ requesterTitle, itemsTitle })
   const textSize = textSizeOf(header.textSize)
-  const { cell: cellText, head: headText } = textSizeStyles(textSize)
+  const cellText = textSizeStyles(textSize)
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
   // Paragraphs that have blanks to fill (plain paragraphs need no input).
   const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
@@ -273,15 +273,15 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className={`w-full table-fixed border-separate border-spacing-0 ${cellText} leading-[1.9]`} style={{ minWidth: `${tableMinWidth(vcols)}px` }}>
+              <table className={`w-full table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`} style={{ minWidth: `${tableMinWidth(vcols, textSizeScale(textSize))}px` }}>
                 <thead>
                   <tr>
-                    {showSeq && <th className={`w-8 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center ${cellText} font-medium text-stone-500`}>#</th>}
+                    {showSeq && <th className={`w-8 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
                     {vcols.map((col, ci) => (
                       <th
                         key={col.key}
                         style={{ width: colPercents[ci] }}
-                        className={`whitespace-pre-line break-words border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 ${headText} font-medium text-stone-600 ${
+                        className={`whitespace-pre-line break-words border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
                       >
@@ -290,7 +290,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       </th>
                     ))}
                     {tickCols.map(t => (
-                      <th key={t.key} className={`w-[72px] whitespace-pre-line border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center ${headText} font-medium text-stone-600`}>
+                      <th key={t.key} className={`w-[72px] whitespace-pre-line border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-stone-600`}>
                         {t.label}
                       </th>
                     ))}

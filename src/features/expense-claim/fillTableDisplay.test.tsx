@@ -64,30 +64,29 @@ describe('the text size', () => {
   })
 })
 
-describe('the document itself follows the chosen size', () => {
-  const sheet = (textSize?: DocTextSize) => {
-    const { container } = render(
-      <ExpenseClaimPreview
-        company={null}
-        header={{ ...header, textSize }}
-        items={[{ detail: 'ค่าเดินทาง', amount: 500 }]}
-        docNumber="GAC-001"
-        settings={{ ...EXPENSE_CLAIM_DEFAULTS, columns: cols }}
-      />,
-    )
-    return container.querySelector('.doc-page') as HTMLElement
-  }
-
-  it('prints at its usual size when nothing was chosen', () => {
-    expect(sheet().style.fontSize).toBe('12px')
+describe('it changes the boxes being typed into and nothing else', () => {
+  it('leaves the column headings alone', () => {
+    show(vi.fn(), items, { ...header, textSize: 'large' })
+    const heading = screen.getByText('รายละเอียด')
+    expect(heading.className).toContain('text-[11px]')
+    expect(heading.className).not.toContain('text-sm')
   })
 
-  it('prints smaller at เล็ก and larger at ใหญ่', () => {
-    expect(parseFloat(sheet('small').style.fontSize)).toBeLessThan(12)
-    expect(parseFloat(sheet('large').style.fontSize)).toBeGreaterThan(12)
-  })
-
-  it('sizes the table from the sheet, so it grows with it', () => {
-    expect(sheet('large').querySelector('table')?.className).toContain('text-[0.833em]')
+  it('leaves the printed document as the form lays it out, at any size', () => {
+    const sheet = (textSize?: DocTextSize) => {
+      const { container } = render(
+        <ExpenseClaimPreview
+          company={null}
+          header={{ ...header, textSize }}
+          items={[{ detail: 'ค่าเดินทาง', amount: 500 }]}
+          docNumber="GAC-001"
+          settings={{ ...EXPENSE_CLAIM_DEFAULTS, columns: cols }}
+        />,
+      )
+      const page = container.querySelector('.doc-page') as HTMLElement
+      return { page: page.className, table: page.querySelector('table')?.className }
+    }
+    expect(sheet('small')).toEqual(sheet())
+    expect(sheet('large')).toEqual(sheet())
   })
 })

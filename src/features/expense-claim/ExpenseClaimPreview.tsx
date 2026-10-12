@@ -7,7 +7,6 @@ import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
 import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyTemplate'
-import { docScale, DOC_BASE_PX } from '../../shared/textSize'
 
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
 
@@ -58,11 +57,6 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
 export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures }: Props) {
   const cols = settings.columns
   const vcols = visibleColumns(cols)
-  // The text size chosen while the document was filled in: it belongs to the
-  // document, so the sheet an approver reads and prints is the one laid out
-  // for them. Everything on the sheet is sized from it, the room left for rows
-  // included — larger text means fewer rows to a sheet, smaller text more.
-  const scale = docScale(header.textSize)
   const computed = items.map(r => computeRow(cols, r))
   // Print a figure only once the row holds one: a row left empty stays empty,
   // the way it would on the paper form, instead of printing 0.00 everywhere.
@@ -112,25 +106,25 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     col.type === 'date' ? formatIsoDate(row[col.key] as string)
       : isTextCol(col.type) ? String(row[col.key] ?? '')
       : cellMoney(row, col)
-  const lineCounts = computed.map(r => rowLines(widthWeights, vcols.map(c => printed(r, c)), scale))
+  const lineCounts = computed.map(r => rowLines(widthWeights, vcols.map(c => printed(r, c))))
   // What is left of the sheet once the rest of this particular form has taken
   // its share: a form with two paragraphs, six signature blocks and ten notes
   // has far less room for rows than a bare one, and gets what it actually has.
   const paragraphLines = (text?: string | null) =>
-    text?.trim() ? rowLines([PRINT_TABLE_MM], [text], scale) : 0
+    text?.trim() ? rowLines([PRINT_TABLE_MM], [text]) : 0
   const bodyMm = printBodyMm({
     categoryRows: Math.ceil(settings.categories.filter(Boolean).length / 2),
     showRequester: settings.showRequester !== false,
     headerFields: (settings.headerFields ?? []).length,
     introLines: paragraphLines(settings.introText),
     bodyLines: paragraphLines(settings.bodyText),
-    headLines: rowLines([...widthWeights, ...tickCols.map(() => TICK_MM)], [...vcols.map(c => c.label), ...tickCols.map(t => t.label)], scale),
+    headLines: rowLines([...widthWeights, ...tickCols.map(() => TICK_MM)], [...vcols.map(c => c.label), ...tickCols.map(t => t.label)]),
     taxLines: hasTax ? 2 + (header.vat ? 1 : 0) + (header.whtRate ? 1 : 0) + (header.retentionRate ? 1 : 0) : 0,
     showAmountWords: hasNumericCols && settings.showAmountWords !== false,
     signatureRows: sigRows.length,
     noteLines: notes.length ? notes.length + 1 : 0,
-  }, scale)
-  const pages = paginateRows(lineCounts.map(l => rowHeightMm(l, scale)), bodyMm)
+  })
+  const pages = paginateRows(lineCounts.map(rowHeightMm), bodyMm)
   const totalPages = pages.length
 
   return (
@@ -140,21 +134,21 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
         // Pad each sheet's table to a full height so every sheet looks identical.
 
         return (
-          <div key={pageIdx} className="doc-page bg-white p-6" style={{ fontSize: `${DOC_BASE_PX * scale}px` }}>
+          <div key={pageIdx} className="doc-page bg-white p-6 text-xs">
             {/* Header band */}
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">
                 {company?.logo
                   ? <img src={company.logo} alt="logo" className="h-10 w-10 shrink-0 object-contain" />
-                  : <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-black text-center text-[0.75em] leading-tight">
+                  : <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-black text-center text-[9px] leading-tight">
                       LOGO
                     </div>}
                 <div>
-                  <div className="text-[1.167em] font-bold">{company?.headerName || 'GLOBE SYNDICATE (THAILAND) CO.,LTD.'}</div>
+                  <div className="text-sm font-bold">{company?.headerName || 'GLOBE SYNDICATE (THAILAND) CO.,LTD.'}</div>
                   <div className="font-bold">{company?.address || DEFAULT_ADDRESS}</div>
                 </div>
               </div>
-              <div className="shrink-0 border border-black px-3 py-2 text-center text-[1.167em] font-bold">
+              <div className="shrink-0 border border-black px-3 py-2 text-center text-sm font-bold">
                 {settings.title}
               </div>
             </div>
@@ -213,7 +207,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             )}
 
             {/* ตาราง */}
-            <table className="mt-3 w-full table-fixed border-collapse border border-black text-[0.833em]">
+            <table className="mt-3 w-full table-fixed border-collapse border border-black text-[10px]">
               <thead>
                 <tr>
                   {withSeq && <th style={{ width: pct(SEQ_WEIGHT) }} className="border border-black px-1 py-1">ลำดับ</th>}
@@ -270,7 +264,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
             {/* VAT / หัก ณ ที่จ่าย / ยอดสุทธิ */}
             {hasTax && (
-              <div className="mt-2 ml-auto w-56 text-[0.833em]">
+              <div className="mt-2 ml-auto w-56 text-[10px]">
                 <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
                 {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>{money(tax.vatAmount)}</span></div>}
                 {!!header.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>-{money(tax.whtAmount)}</span></div>}
@@ -301,7 +295,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
             {/* หมายเหตุ — ซ่อนทั้งบล็อกเมื่อไม่มีหมายเหตุ */}
             {notes.length > 0 && (
-              <div className="mt-6 text-[0.75em]">
+              <div className="mt-6 text-[9px]">
                 <div className="font-bold">หมายเหตุ:</div>
                 {notes.map((note, i) => (
                   <div key={i}>{note}</div>

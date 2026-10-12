@@ -175,38 +175,4 @@ describe('printLineBudget', () => {
     expect(printBodyMm(crowded)).toBe(rowHeightMm(1))
     expect(paginateRows([rowHeightMm(1)], printBodyMm(crowded))).toHaveLength(1)
   })
-
-  describe('at the size the document chose', () => {
-    const SMALL = 0.85, LARGE = 1.15
-
-    it('leaves a sheet exactly as it was at ปกติ', () => {
-      expect(sheetOverheadMm(gac69005, 1)).toBe(sheetOverheadMm(gac69005))
-      expect(rowHeightMm(2, 1)).toBe(rowHeightMm(2))
-      expect(rowLines([40], ['รายละเอียดการเดินทาง'], 1)).toBe(rowLines([40], ['รายละเอียดการเดินทาง']))
-    })
-
-    it('spends less of the sheet on everything but the rows at เล็ก, more at ใหญ่', () => {
-      expect(sheetOverheadMm(gac69005, SMALL)).toBeLessThan(sheetOverheadMm(gac69005))
-      expect(sheetOverheadMm(gac69005, LARGE)).toBeGreaterThan(sheetOverheadMm(gac69005))
-    })
-
-    it('fits more rows on a sheet at เล็ก and fewer at ใหญ่', () => {
-      const fits = (scale: number) =>
-        paginateRows(Array(40).fill(rowHeightMm(1, scale)), printBodyMm(gac69005, scale))[0].rows.length
-      expect(fits(SMALL)).toBeGreaterThan(fits(1))
-      expect(fits(LARGE)).toBeLessThan(fits(1))
-    })
-
-    it('still keeps the whole sheet within A4 at either size', () => {
-      for (const scale of [SMALL, LARGE]) {
-        expect(sheetOverheadMm(gac69005, scale) + printBodyMm(gac69005, scale)).toBeLessThanOrEqual(PRINT_SHEET_MM)
-      }
-    })
-
-    it('wraps a detail sooner at ใหญ่ and later at เล็ก — the column is the same width', () => {
-      const detail = ['ค่าผลิตสติ๊กเกอร์ไดคัทตามแบบสำหรับติดตั้งงานผนังบูธ']
-      expect(rowLines([40], detail, LARGE)).toBeGreaterThanOrEqual(rowLines([40], detail))
-      expect(rowLines([40], detail, SMALL)).toBeLessThanOrEqual(rowLines([40], detail))
-    })
-  })
 })
