@@ -168,6 +168,23 @@ export default function FormSettingsPage() {
 
   // ----- columns -----
   function setColumns(cols: FormColumn[]) { setSettings(s => ({ ...s, columns: cols })) }
+  // Widths that add up to more than the page still print correctly — every
+  // column is scaled down together, so only the proportions between them
+  // decide the sheet. This rewrites the numbers to the millimetres they
+  // actually print at: the same document, with widths that say what they are.
+  function fitWidthsToPage() {
+    const total = setWidthMm
+    if (total <= PRINT_TABLE_MM || total <= 0) return
+    const fit = (mm: number) => Math.max(1, Math.round(mm * PRINT_TABLE_MM / total))
+    const seq = showSeq ? fit(seqColumnWidth(settings)) : settings.seqWidth
+    const cols = settings.columns.map(c => (c.hidden || !c.width ? c : { ...c, width: fit(c.width) }))
+    // Rounding leaves a millimetre or two over or short; the widest column
+    // takes it, where it shows least.
+    const after = (showSeq ? seq ?? 0 : 0) + cols.filter(c => !c.hidden).reduce((sum, c) => sum + (c.width ?? 0), 0)
+    const widest = cols.reduce<FormColumn | null>((w, c) => (!c.hidden && c.width && (!w || c.width > (w.width ?? 0)) ? c : w), null)
+    if (widest && after !== PRINT_TABLE_MM) widest.width = Math.max(1, (widest.width ?? 0) + PRINT_TABLE_MM - after)
+    setSettings(s => ({ ...s, seqWidth: seq, columns: cols }))
+  }
   function patchColumn(idx: number, patch: Partial<FormColumn>) {
     setColumns(settings.columns.map((c, i) => i === idx ? { ...c, ...patch } : c))
   }
@@ -488,11 +505,21 @@ export default function FormSettingsPage() {
       </Section>
 
       <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE} · กว้างรวม ${Math.round(setWidthMm)}/${PRINT_TABLE_MM} มม.`} defaultOpen>
-        <p className={`mb-3 text-xs ${overPage ? 'text-brick-600' : 'text-stone-500'}`}>
+        {/* Over the page is not a fault: the sheet always comes out full width
+            because every column is scaled down together. Only the numbers stop
+            meaning millimetres, which the admin can put right in one click. */}
+        <p className="mb-3 text-xs text-stone-500">
           {overPage
-            ? `ความกว้างที่กำหนดรวม ${Math.round(setWidthMm)} มม. เกินพื้นที่ตารางบน A4 (${PRINT_TABLE_MM} มม.) ตอนพิมพ์ระบบจะย่อทุกคอลัมน์ลงตามสัดส่วนให้พอดีหน้า`
+            ? `ตัวเลขเหล่านี้คือมิลลิเมตรบนกระดาษ A4 (พื้นที่ตาราง ${PRINT_TABLE_MM} มม.) ตอนนี้รวมกันได้ ${Math.round(setWidthMm)} มม. `
+              + `เอกสารที่พิมพ์ออกมายังพอดีหน้าเสมอ เพราะระบบย่อทุกคอลัมน์ลงพร้อมกัน (×${(PRINT_TABLE_MM / setWidthMm).toFixed(2)}) `
+              + 'สิ่งที่มีผลจริงจึงเป็นสัดส่วนระหว่างคอลัมน์ ไม่ใช่ตัวเลขเอง'
             : `ความกว้างเป็นมิลลิเมตรบนกระดาษ A4 (พื้นที่ตาราง ${PRINT_TABLE_MM} มม.) · คอลัมน์ที่เว้นว่างไว้จะแบ่งที่เหลือเท่าๆ กัน`}
         </p>
+        {overPage && (
+          <button className={`${btnDashedSm} mb-3`} onClick={fitWidthsToPage}>
+            เขียนตัวเลขใหม่ให้รวมได้ {PRINT_TABLE_MM} มม. (เอกสารพิมพ์ออกมาเหมือนเดิม)
+          </button>
+        )}
         <p className={`mb-3 text-xs ${brokenCount > 0 ? 'text-brick-600' : 'text-stone-500'}`}>
           {docTotalCol
             ? `ยอดรวมของเอกสารมาจากคอลัมน์ "${docTotalCol.label || docTotalCol.key}"${markedTotal ? '' : ' — ยังไม่ได้เลือกไว้ ระบบจึงใช้คอลัมน์ตัวเลขสุดท้าย ติ๊ก “ยอดรวม” ที่คอลัมน์ที่ต้องการได้'}`
