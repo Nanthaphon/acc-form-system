@@ -53,6 +53,24 @@ function sampleRow(cols: FormColumn[]): ExpenseRow {
   return r
 }
 
+// What a setting is called on this screen, so one the database cannot store
+// yet can be named rather than reported as a column of a table nobody sees.
+const SETTING_NAMES: Record<string, string> = {
+  showSeq: 'การติ๊กแสดง/ไม่แสดงคอลัมน์ลำดับ',
+  seqWidth: 'ความกว้างคอลัมน์ลำดับ',
+  columns: 'คอลัมน์ตาราง',
+  signatureBlocks: 'ช่องลายเซ็น',
+  headerFields: 'ช่องเพิ่มเติมเหนือตาราง',
+  introText: 'ข้อความเหนือตาราง',
+  bodyText: 'ข้อความใต้ตาราง',
+  showRequester: 'ส่วนข้อมูลผู้เบิก',
+  showAmountWords: 'กล่องจำนวนเงินเป็นตัวหนังสือ',
+  requesterTitle: 'หัวข้อส่วนผู้เบิก',
+  itemsTitle: 'หัวข้อส่วนรายการ',
+  active: 'สถานะเปิด/ปิดฟอร์ม',
+}
+const settingName = (column: string): string => SETTING_NAMES[column] ?? column
+
 // A settings card that folds away. The summary line says what is inside, so the
 // page reads as a short list of what this form has and only the part being
 // edited needs to be open. Interactive controls belong in the body, never in
@@ -298,10 +316,23 @@ export default function FormSettingsPage() {
       })
       // Until the database is updated it can hold only one group per form.
       const firstGroupOnly = skipped.includes('accessGroups') && selectedGroups.length > 1
-      uiAlert(
-        firstGroupOnly ? 'ตอนนี้ฐานข้อมูลเก็บกลุ่มได้กลุ่มเดียว จึงบันทึกเฉพาะกลุ่มแรก — เมื่ออัปเดตฐานข้อมูลแล้วจะเลือกได้หลายกลุ่ม' : 'บันทึกฟอร์มแล้ว',
-        { tone: 'success', title: firstGroupOnly ? 'บันทึกแล้ว' : undefined },
-      )
+      // Anything else the database has no column for was dropped on the way.
+      // Saying "บันทึกฟอร์มแล้ว" anyway is how a setting could be ticked, saved
+      // and found untouched the next time the form was opened.
+      const unsaved = skipped.filter(c => c !== 'accessGroups').map(settingName)
+      if (unsaved.length) {
+        uiAlert(
+          `บันทึกฟอร์มแล้ว แต่ยังเก็บค่านี้ไม่ได้: ${unsaved.join(' · ')}\n`
+          + 'ฐานข้อมูลยังไม่มีช่องสำหรับเก็บ — ค่าที่ตั้งไว้จะกลับไปเป็นค่าเดิมเมื่อเปิดฟอร์มนี้อีกครั้ง '
+          + 'แจ้งผู้ดูแลระบบให้รันสคริปต์อัปเดตฐานข้อมูลในโฟลเดอร์ supabase ก่อน แล้วบันทึกใหม่อีกครั้ง',
+          { title: 'บันทึกแล้ว แต่บางค่ายังไม่ถูกเก็บ' },
+        )
+      } else {
+        uiAlert(
+          firstGroupOnly ? 'ตอนนี้ฐานข้อมูลเก็บกลุ่มได้กลุ่มเดียว จึงบันทึกเฉพาะกลุ่มแรก — เมื่ออัปเดตฐานข้อมูลแล้วจะเลือกได้หลายกลุ่ม' : 'บันทึกฟอร์มแล้ว',
+          { tone: 'success', title: firstGroupOnly ? 'บันทึกแล้ว' : undefined },
+        )
+      }
       if (firstGroupOnly) setAccessGroups(selectedGroups.slice(0, 1))
     } catch (e) {
       uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })

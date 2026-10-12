@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import FormSettingsPage from './FormSettingsPage'
-import { getFormSettings } from '../../data/formSettings'
+import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import type { FormSettings } from '../../types/schema'
 
 const settings = {
@@ -28,6 +28,12 @@ vi.mock('../../data/companies', () => ({
   updateCompanyLogo: vi.fn(),
 }))
 vi.mock('../../data/accessGroups', () => ({ listAccessGroups: vi.fn(() => Promise.resolve([])) }))
+const uiAlert = vi.fn(() => Promise.resolve(true))
+vi.mock('../../components/dialog/dialogService', () => ({
+  uiAlert: (...args: unknown[]) => uiAlert(...(args as [])),
+  uiConfirm: vi.fn(() => Promise.resolve(true)),
+  uiPrompt: vi.fn(() => Promise.resolve('')),
+}))
 
 const show = () => render(<MemoryRouter><FormSettingsPage /></MemoryRouter>)
 // Every section is a <details>; the one being edited is open, the rest are folded.
@@ -80,6 +86,28 @@ describe('FormSettingsPage', () => {
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
     const types = screen.getAllByTitle('ชนิดข้อมูล') as HTMLSelectElement[]
     expect(types.map(t => t.value)).toEqual(['date', 'text', 'number', 'text'])
+  })
+
+  // The ลำดับ tick was saved, the database had no column for it, and the page
+  // still said "บันทึกฟอร์มแล้ว" — so the setting came back on, with no clue why.
+  it('says plainly when the database could not store a setting', async () => {
+    vi.mocked(updateFormSettings).mockResolvedValueOnce(['showSeq'])
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกฟอร์ม/ }))
+    await waitFor(() => expect(uiAlert).toHaveBeenCalled())
+    const [message, opts] = uiAlert.mock.calls.at(-1) as unknown as [string, { tone?: string }]
+    expect(message).toContain('คอลัมน์ลำดับ')
+    expect(message).toContain('จะกลับไปเป็นค่าเดิม')
+    expect(opts?.tone).not.toBe('success')
+  })
+
+  it('says it saved when everything was stored', async () => {
+    vi.mocked(updateFormSettings).mockResolvedValueOnce([])
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกฟอร์ม/ }))
+    await waitFor(() => expect(uiAlert).toHaveBeenCalledWith('บันทึกฟอร์มแล้ว', expect.objectContaining({ tone: 'success' })))
   })
 
   it('lets a heading of two lines be read whole — the box grows with it', async () => {
