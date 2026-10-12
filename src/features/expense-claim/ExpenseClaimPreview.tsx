@@ -7,6 +7,7 @@ import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
 import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyTemplate'
+import { FEATURES } from '../../shared/features'
 
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
 
@@ -66,10 +67,12 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     return filled ? money(Number(raw) || 0) : ' '
   }
   const columnTotals = computeColumnTotals(cols, items)
-  const bases = taxBases(cols, items, { vat: header.vatScope, wht: header.whtScope })
-  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate, bases,
-    { vat: header.vatOnNet, whtRate: header.whtOnNetRate })
-  const taxedAgain = !!header.vatOnNet || !!header.whtOnNetRate
+  // Held back for now — see shared/features and the note in the form.
+  const scopes = FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope } : {}
+  const onNet = FEATURES.taxOnNet ? { vat: header.vatOnNet, whtRate: header.whtOnNetRate } : undefined
+  const bases = taxBases(cols, items, scopes)
+  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate, bases, onNet)
+  const taxedAgain = !!onNet?.vat || !!onNet?.whtRate
   // A tax charged line by line prints what it was worked out from, so the sheet
   // can be checked against its own ticks without adding them up by hand.
   const chargedOn = (byRow: boolean, base: number, key: string) =>
@@ -77,8 +80,8 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   // A tax charged on chosen lines prints its ticks, so the sheet itself shows
   // which lines were taxed; one charged on everything needs no column.
   const tickCols = [
-    ...(header.vat && header.vatScope === 'rows' ? [{ key: ROW_VAT_KEY, label: 'VAT\n7%' }] : []),
-    ...(header.whtRate && header.whtScope === 'rows' ? [{ key: ROW_WHT_KEY, label: 'หัก ณ\nที่จ่าย' }] : []),
+    ...(header.vat && scopes.vat === 'rows' ? [{ key: ROW_VAT_KEY, label: 'VAT\n7%' }] : []),
+    ...(header.whtRate && scopes.wht === 'rows' ? [{ key: ROW_WHT_KEY, label: 'หัก ณ\nที่จ่าย' }] : []),
   ]
   const TICK_MM = 11
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
@@ -127,7 +130,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     headLines: rowLines([...widthWeights, ...tickCols.map(() => TICK_MM)], [...vcols.map(c => c.label), ...tickCols.map(t => t.label)]),
     taxLines: hasTax
       ? 2 + (header.vat ? 1 : 0) + (header.whtRate ? 1 : 0) + (header.retentionRate ? 1 : 0)
-        + (taxedAgain ? 1 + (header.vatOnNet ? 1 : 0) + (header.whtOnNetRate ? 1 : 0) : 0)
+        + (taxedAgain ? 1 + (onNet?.vat ? 1 : 0) + (onNet?.whtRate ? 1 : 0) : 0)
       : 0,
     showAmountWords: hasNumericCols && settings.showAmountWords !== false,
     signatureRows: sigRows.length,
@@ -275,14 +278,14 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             {hasTax && (
               <div className="mt-2 ml-auto w-56 text-[10px]">
                 <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
-                {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(header.vatScope === 'rows', bases.vat, ROW_VAT_KEY)}</span><span>{money(tax.vatAmount)}</span></div>}
-                {!!header.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%{chargedOn(header.whtScope === 'rows', bases.wht, ROW_WHT_KEY)}</span><span>-{money(tax.whtAmount)}</span></div>}
+                {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(scopes.vat === 'rows', bases.vat, ROW_VAT_KEY)}</span><span>{money(tax.vatAmount)}</span></div>}
+                {!!header.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%{chargedOn(scopes.wht === 'rows', bases.wht, ROW_WHT_KEY)}</span><span>-{money(tax.whtAmount)}</span></div>}
                 {!!header.retentionRate && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>-{money(tax.retentionAmount)}</span></div>}
                 {taxedAgain && (
                   <>
                     <div className="flex justify-between border-t border-black"><span>ยอดหลังภาษีชั้นแรก</span><span>{money(tax.netAfterTax)}</span></div>
-                    {!!header.vatOnNet && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7% (จากยอดสุทธิ)</span><span>{money(tax.vatOnNetAmount)}</span></div>}
-                    {!!header.whtOnNetRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtOnNetRate}% (จากยอดสุทธิ)</span><span>-{money(tax.whtOnNetAmount)}</span></div>}
+                    {!!onNet?.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7% (จากยอดสุทธิ)</span><span>{money(tax.vatOnNetAmount)}</span></div>}
+                    {!!onNet?.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {onNet.whtRate}% (จากยอดสุทธิ)</span><span>-{money(tax.whtOnNetAmount)}</span></div>}
                   </>
                 )}
                 <div className="flex justify-between border-t border-black font-bold"><span>ยอดสุทธิ</span><span>{money(tax.netTotal)}</span></div>

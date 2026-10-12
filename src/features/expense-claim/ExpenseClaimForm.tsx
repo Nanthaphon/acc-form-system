@@ -10,6 +10,7 @@ import DateInput from '../../components/DateInput'
 import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
 import type { TemplateField } from '../../shared/bodyTemplate'
 import { BLANK_LIMITS, blankWidth } from './blankSizing'
+import { FEATURES } from '../../shared/features'
 import GrowTextarea from '../../components/GrowTextarea'
 import { textSizeOf, textSizeScale, textSizeStyles, TEXT_SIZES } from '../../shared/textSize'
 
@@ -149,14 +150,17 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const total = grandTotal(cols, items)
   // Each tax is charged either on the whole document or on chosen lines, and
   // the two are decided separately: VAT on everything, withholding on two rows.
-  const vatByRow = !!header.vat && header.vatScope === 'rows'
-  const whtByRow = !!header.whtRate && header.whtScope === 'rows'
-  const bases = taxBases(cols, items, { vat: header.vatScope, wht: header.whtScope })
-  const tax = taxSummary(total, header.vat, header.whtRate, header.retentionRate, bases,
-    { vat: header.vatOnNet, whtRate: header.whtOnNetRate })
+  // Both are held back for now (shared/features): until they are let out,
+  // every tax is charged on the whole document, the way it always was.
+  const scopes = FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope } : {}
+  const onNet = FEATURES.taxOnNet ? { vat: header.vatOnNet, whtRate: header.whtOnNetRate } : undefined
+  const vatByRow = !!header.vat && scopes.vat === 'rows'
+  const whtByRow = !!header.whtRate && scopes.wht === 'rows'
+  const bases = taxBases(cols, items, scopes)
+  const tax = taxSummary(total, header.vat, header.whtRate, header.retentionRate, bases, onNet)
   // Whether this document is taxed a second time, on what it comes to rather
   // than on its items.
-  const taxedAgain = !!header.vatOnNet || !!header.whtOnNetRate
+  const taxedAgain = !!onNet?.vat || !!onNet?.whtRate
   // Picking lines but ticking none would quietly come to nothing.
   const vatNoRows = vatByRow && bases.vat === 0
   const whtNoRows = whtByRow && bases.wht === 0
@@ -401,7 +405,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               <input type="checkbox" checked={!!header.vat} onChange={e => onHeaderChange({ ...header, vat: e.target.checked })} />
               ภาษีมูลค่าเพิ่ม (VAT) 7%
             </label>
-            {header.vat && <ScopePicker value={header.vatScope} onChange={v => setScope('vatScope', v)} label="ขอบเขต VAT" />}
+            {FEATURES.taxPerRow && header.vat && <ScopePicker value={header.vatScope} onChange={v => setScope('vatScope', v)} label="ขอบเขต VAT" />}
             <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
@@ -471,13 +475,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       %
                     </span>
                   )}
-                  <ScopePicker value={header.whtScope} onChange={v => setScope('whtScope', v)} label="ขอบเขตหัก ณ ที่จ่าย" />
+                  {FEATURES.taxPerRow && <ScopePicker value={header.whtScope} onChange={v => setScope('whtScope', v)} label="ขอบเขตหัก ณ ที่จ่าย" />}
                 </>
               )}
             </div>
           </div>
 
-          {anyTax && (
+          {FEATURES.taxOnNet && anyTax && (
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-stone-100 pt-3 text-sm text-stone-600">
               <span className="text-xs font-medium text-stone-500" title="คิดภาษีอีกชั้นจากยอดสุทธิ ไม่ใช่จากยอดรายการ — สำหรับเอกสารที่นำยอดที่คิดภาษีแล้วไปคิดภาษีต่อทั้งก้อน">
                 คิดซ้ำจากยอดสุทธิอีกชั้น

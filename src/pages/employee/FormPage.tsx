@@ -8,6 +8,7 @@ import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import { computeColumnTotals, grandTotal, taxBases, taxSummary } from '../../features/expense-claim/calc'
+import { FEATURES } from '../../shared/features'
 import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
@@ -46,9 +47,10 @@ export default function FormPage() {
 
   function buildTotals(): ExpenseTotals {
     const subtotal = grandTotal(settings.columns, items)
+    // The saved totals follow what is actually charged — see shared/features.
     const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate,
-      taxBases(settings.columns, items, { vat: header.vatScope, wht: header.whtScope }),
-      { vat: header.vatOnNet, whtRate: header.whtOnNetRate })
+      taxBases(settings.columns, items, FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope } : {}),
+      FEATURES.taxOnNet ? { vat: header.vatOnNet, whtRate: header.whtOnNetRate } : undefined)
     return {
       columnTotals: computeColumnTotals(settings.columns, items),
       grandTotal: subtotal,

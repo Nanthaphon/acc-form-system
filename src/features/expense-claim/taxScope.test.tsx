@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
 import { taxBases, taxSummary, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
 import type { ExpenseHeader, ExpenseRow, FormColumn, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import { FEATURES } from '../../shared/features'
 
 const cols: FormColumn[] = [
   { key: 'detail', label: 'รายละเอียด', type: 'text' },
@@ -22,6 +23,10 @@ const items = [
   row(1000),                                   // a hotel bill: neither
   row(500, { [ROW_VAT_KEY]: 1, [ROW_WHT_KEY]: 1 }),
 ]
+
+// Held back from the system for now, so the tests let it out for themselves.
+beforeEach(() => { FEATURES.taxPerRow = true })
+afterEach(() => { FEATURES.taxPerRow = false })
 
 describe('what each tax is charged on', () => {
   it('charges everything by default — the way every document worked before', () => {

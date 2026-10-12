@@ -1,10 +1,11 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
 import { taxSummary } from './calc'
 import type { ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import { FEATURES } from '../../shared/features'
 
 const cols: FormColumn[] = [
   { key: 'detail', label: 'รายละเอียด', type: 'text' },
@@ -18,6 +19,10 @@ const header: ExpenseHeader = {
 
 // The document in the report: 1,000 with VAT is 1,070, and that 1,070 is
 // charged VAT again.
+// Held back from the system for now, so the tests let it out for themselves.
+beforeEach(() => { FEATURES.taxOnNet = true })
+afterEach(() => { FEATURES.taxOnNet = false })
+
 describe('a second round of tax, charged on the net', () => {
   it('charges the net, not the items', () => {
     const t = taxSummary(1000, true, 0, 0, undefined, { vat: true })
