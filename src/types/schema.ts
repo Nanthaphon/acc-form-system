@@ -221,7 +221,8 @@ export interface ExpenseHeader {
   whtRate?: number             // withholding tax rate: 0 | 3 | 5
   whtScope?: TaxScope
   retentionRate?: number       // ค่าประกันงาน held back (%), deducted like withholding
-  textSize?: DocTextSize       // how large this document's text prints (default ปกติ)
+  textSize?: DocTextSize       // how large the boxes being filled in are (default ปกติ)
+  showRowNet?: boolean         // add a สุทธิ column: what each line comes to after its own taxes
   fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
 

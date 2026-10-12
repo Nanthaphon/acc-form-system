@@ -108,8 +108,9 @@ describe('choosing it on the document', () => {
 
   it('the summary tells which way each tax was charged', () => {
     show({ ...taxed, whtScope: 'rows' })
-    expect(screen.getByText('ภาษีมูลค่าเพิ่ม 7%')).toBeInTheDocument()                    // everything
-    expect(screen.getByText('หัก ณ ที่จ่าย 3% (เฉพาะรายการที่ติ๊ก)')).toBeInTheDocument()   // chosen lines
+    expect(screen.getByText('ภาษีมูลค่าเพิ่ม 7%')).toBeInTheDocument()            // everything
+    // chosen lines — and what they add up to, so the figure can be checked
+    expect(screen.getByText(/^หัก ณ ที่จ่าย 3% \(จาก [\d,.]+ · \d+ รายการ\)$/)).toBeInTheDocument()
     expect(screen.getByText('+805.00')).toBeInTheDocument()
     expect(screen.getByText('−255.00')).toBeInTheDocument()
   })

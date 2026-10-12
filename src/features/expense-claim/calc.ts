@@ -124,6 +124,32 @@ export function taxBases(
   }
 }
 
+// How many lines a per-row tax is charged on — so the summary can say what a
+// figure was worked out from rather than only that some lines were ticked.
+export function tickedRowCount(rows: ExpenseRow[], key: string): number {
+  return rows.filter(r => isRowTicked(r, key)).length
+}
+
+// What one line comes to once the taxes charged on it are applied: the figure
+// that line is really worth. A tax charged on the whole document applies to
+// every line; one charged line by line only to the lines ticked for it.
+// Rounded per line, so the column adds up the way it reads.
+export function rowNet(
+  columns: FormColumn[], row: ExpenseRow,
+  tax: { vat?: boolean; vatScope?: TaxScope; whtRate?: number; retentionRate?: number; whtScope?: TaxScope },
+): number {
+  const totalCol = totalColumn(columns)
+  if (!totalCol) return 0
+  const amount = Number(computeRow(columns, row)[totalCol.key]) || 0
+  const charged = (on: boolean, scope: TaxScope | undefined, key: string) =>
+    on && (scope === 'rows' ? isRowTicked(row, key) : true)
+  const vat = charged(!!tax.vat, tax.vatScope, ROW_VAT_KEY) ? round2(amount * 0.07) : 0
+  const wht = charged(!!tax.whtRate, tax.whtScope, ROW_WHT_KEY) ? round2(amount * (tax.whtRate ?? 0) / 100) : 0
+  // ค่าประกันงาน is held on the whole document, so every line carries its share.
+  const retention = tax.retentionRate ? round2(amount * tax.retentionRate / 100) : 0
+  return round2(amount + vat - wht - retention)
+}
+
 // VAT (7%), withholding tax and ค่าประกันงาน are all computed on the items
 // subtotal (pre-VAT), the standard Thai basis — or, on a form that charges them
 // per row, on just the rows ticked for each (`bases`).

@@ -3,7 +3,7 @@ import { ALargeSmall, Plus, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { DocTextSize, ExpenseHeader, ExpenseRow, FormColumn, HeaderField, TaxScope } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, ROW_VAT_KEY, ROW_WHT_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, rowNet, taxBases, taxSummary, tickedRowCount, visibleColumns, fillColumnPercents, tableMinWidth, ROW_VAT_KEY, ROW_WHT_KEY, TICK, UNTICK } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
@@ -156,6 +156,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   // Picking lines but ticking none would quietly come to nothing.
   const vatNoRows = vatByRow && bases.vat === 0
   const whtNoRows = whtByRow && bases.wht === 0
+  // A tax charged line by line says what it was worked out from, so the figure
+  // can be checked against the ticks without adding anything up by hand.
+  const chargedOn = (byRow: boolean, base: number, key: string) =>
+    byRow ? ` (จาก ${fmt(base)} · ${tickedRowCount(items, key)} รายการ)` : ''
+  const anyTax = !!header.vat || !!header.whtRate || !!header.retentionRate
+  const showNet = anyTax && !!header.showRowNet
   const tickCols: { key: string; label: string }[] = [
     ...(vatByRow ? [{ key: ROW_VAT_KEY, label: 'VAT 7%' }] : []),
     ...(whtByRow ? [{ key: ROW_WHT_KEY, label: 'หัก ณ ที่จ่าย' }] : []),
@@ -294,6 +300,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         {t.label}
                       </th>
                     ))}
+                    {showNet && <th className="w-[96px] border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-right text-[11px] font-medium text-stone-600">สุทธิ</th>}
                     <th className="w-9 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5"></th>
                   </tr>
                 </thead>
@@ -350,6 +357,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                           />
                         </td>
                       ))}
+                      {showNet && (
+                        <td className="border-b border-stone-100 p-1">
+                          <div className="truncate px-1 text-right font-medium text-stone-900">
+                            {rowHasNumbers(cols, row) ? fmt(rowNet(cols, row, header)) : ''}
+                          </div>
+                        </td>
+                      )}
                       <td className="border-b border-stone-100 p-2 text-center">
                         <ActionIconButton
                           label="ลบรายการ"
@@ -369,6 +383,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       </td>
                     ))}
                     {tickCols.map(t => <td key={t.key} className="border-t border-stone-200"></td>)}
+                    {showNet && <td className="border-t border-stone-200 px-2.5 py-2.5 text-right font-semibold text-stone-900">{fmt(tax.netTotal)}</td>}
                     <td className="border-t border-stone-200"></td>
                   </tr>
                 </tbody>
@@ -468,10 +483,21 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
             </div>
           </div>
 
+          {anyTax && (
+            <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-sm text-stone-600" title="แสดงยอดของแต่ละรายการหลังคิดภาษีของรายการนั้น ทั้งในหน้ากรอกและในเอกสารที่พิมพ์">
+              <input
+                type="checkbox"
+                checked={showNet}
+                onChange={e => onHeaderChange({ ...header, showRowNet: e.target.checked })}
+              />
+              แสดงยอดสุทธิรายรายการ
+            </label>
+          )}
+
           <div className="space-y-1 border-t border-stone-200 pt-3 text-sm">
             <div className="flex justify-between text-stone-600"><span>ยอดรวม (ก่อนภาษี)</span><span>{fmt(tax.subtotal)}</span></div>
-            {header.vat && <div className="flex justify-between text-stone-600"><span>ภาษีมูลค่าเพิ่ม 7%{vatByRow && ' (เฉพาะรายการที่ติ๊ก)'}</span><span>+{fmt(tax.vatAmount)}</span></div>}
-            {!!header.whtRate && <div className="flex justify-between text-brick-600"><span>หัก ณ ที่จ่าย {header.whtRate}%{whtByRow && ' (เฉพาะรายการที่ติ๊ก)'}</span><span>−{fmt(tax.whtAmount)}</span></div>}
+            {header.vat && <div className="flex justify-between text-stone-600"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(vatByRow, bases.vat, ROW_VAT_KEY)}</span><span>+{fmt(tax.vatAmount)}</span></div>}
+            {!!header.whtRate && <div className="flex justify-between text-brick-600"><span>หัก ณ ที่จ่าย {header.whtRate}%{chargedOn(whtByRow, bases.wht, ROW_WHT_KEY)}</span><span>−{fmt(tax.whtAmount)}</span></div>}
             {(vatNoRows || whtNoRows) && (
               <div className="text-xs text-ochre-700">
                 ยังไม่ได้ติ๊กรายการที่คิด{vatNoRows ? ' VAT' : ''}{vatNoRows && whtNoRows ? ' และ' : ''}{whtNoRows ? ' หัก ณ ที่จ่าย' : ''} — ติ๊กในตารางด้านบน

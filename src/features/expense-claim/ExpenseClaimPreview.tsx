@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, visibleColumns, printWidthsMm, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, rowNet, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -66,8 +66,12 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     return filled ? money(Number(raw) || 0) : ' '
   }
   const columnTotals = computeColumnTotals(cols, items)
-  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate,
-    taxBases(cols, items, { vat: header.vatScope, wht: header.whtScope }))
+  const bases = taxBases(cols, items, { vat: header.vatScope, wht: header.whtScope })
+  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate, bases)
+  // A tax charged line by line prints what it was worked out from, so the sheet
+  // can be checked against its own ticks without adding them up by hand.
+  const chargedOn = (byRow: boolean, base: number, key: string) =>
+    byRow ? ` (ฐาน ${money(base)} · ${tickedRowCount(items, key)} รายการ)` : ''
   // A tax charged on chosen lines prints its ticks, so the sheet itself shows
   // which lines were taxed; one charged on everything needs no column.
   const tickCols = [
@@ -76,14 +80,18 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   ]
   const TICK_MM = 11
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
+  // What each line comes to once its own taxes are applied — printed beside the
+  // line so the sheet shows the working, not only the figure at the foot.
+  const NET_MM = 20
+  const showNet = hasTax && !!header.showRowNet
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const withSeq = showSeqColumn(settings)
-  const totalCols = vcols.length + (withSeq ? 1 : 0) + tickCols.length // + the ลำดับ column, + the tax ticks
+  const totalCols = vcols.length + (withSeq ? 1 : 0) + tickCols.length + (showNet ? 1 : 0) // + the ลำดับ column, the tax ticks, the net
 
   // Widths are millimetres on the sheet (printWidthsMm) rendered as percentages,
   // so the table fills the frame exactly whatever the paper size.
-  const mm = printWidthsMm(withSeq ? seqColumnWidth(settings) : 0, vcols.map(c => c.width), PRINT_TABLE_MM - tickCols.length * TICK_MM)
+  const mm = printWidthsMm(withSeq ? seqColumnWidth(settings) : 0, vcols.map(c => c.width), PRINT_TABLE_MM - tickCols.length * TICK_MM - (showNet ? NET_MM : 0))
   const SEQ_WEIGHT = mm.seq
   const widthWeights = mm.cols
   const pct = (w: number) => `${((w / PRINT_TABLE_MM) * 100).toFixed(3)}%`
@@ -118,7 +126,10 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     headerFields: (settings.headerFields ?? []).length,
     introLines: paragraphLines(settings.introText),
     bodyLines: paragraphLines(settings.bodyText),
-    headLines: rowLines([...widthWeights, ...tickCols.map(() => TICK_MM)], [...vcols.map(c => c.label), ...tickCols.map(t => t.label)]),
+    headLines: rowLines(
+      [...widthWeights, ...tickCols.map(() => TICK_MM), ...(showNet ? [NET_MM] : [])],
+      [...vcols.map(c => c.label), ...tickCols.map(t => t.label), ...(showNet ? ['สุทธิ'] : [])],
+    ),
     taxLines: hasTax ? 2 + (header.vat ? 1 : 0) + (header.whtRate ? 1 : 0) + (header.retentionRate ? 1 : 0) : 0,
     showAmountWords: hasNumericCols && settings.showAmountWords !== false,
     signatureRows: sigRows.length,
@@ -223,6 +234,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                   {tickCols.map(t => (
                     <th key={t.key} style={{ width: pct(TICK_MM) }} className="whitespace-pre-line border border-black px-1 py-1 leading-[2]">{t.label}</th>
                   ))}
+                  {showNet && <th style={{ width: pct(NET_MM) }} className="border border-black px-1 py-1 leading-[2]">สุทธิ</th>}
                 </tr>
               </thead>
               <tbody>
@@ -243,6 +255,11 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                         {isRowTicked(items[i], t.key) ? '☑' : ''}
                       </td>
                     ))}
+                    {showNet && (
+                      <td className="border border-black px-1 py-0.5 text-right leading-[2]">
+                        {rowHasNumbers(cols, items[i]) ? money(rowNet(cols, items[i], header)) : ' '}
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {/* No blank rows ruled under the last one: the table ends where
@@ -257,6 +274,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                       </td>
                     ))}
                     {tickCols.map(t => <td key={t.key} className="border border-black px-1 py-1"></td>)}
+                    {showNet && <td className="border border-black px-1 py-1 text-right">{money(tax.netTotal)}</td>}
                   </tr>
                 )}
               </tbody>
@@ -266,8 +284,8 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             {hasTax && (
               <div className="mt-2 ml-auto w-56 text-[10px]">
                 <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
-                {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>{money(tax.vatAmount)}</span></div>}
-                {!!header.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>-{money(tax.whtAmount)}</span></div>}
+                {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(header.vatScope === 'rows', bases.vat, ROW_VAT_KEY)}</span><span>{money(tax.vatAmount)}</span></div>}
+                {!!header.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%{chargedOn(header.whtScope === 'rows', bases.wht, ROW_WHT_KEY)}</span><span>-{money(tax.whtAmount)}</span></div>}
                 {!!header.retentionRate && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>-{money(tax.retentionAmount)}</span></div>}
                 <div className="flex justify-between border-t border-black font-bold"><span>ยอดสุทธิ</span><span>{money(tax.netTotal)}</span></div>
               </div>
