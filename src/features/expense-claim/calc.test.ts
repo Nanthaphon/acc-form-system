@@ -44,13 +44,13 @@ describe('round2', () => {
 
 describe('taxSummary', () => {
   it('VAT 7% + หัก ณ ที่จ่าย 3% จากยอดก่อนภาษี', () => {
-    expect(taxSummary(10000, true, 3)).toEqual({ subtotal: 10000, vatAmount: 700, whtAmount: 300, retentionAmount: 0, netTotal: 10400 })
+    expect(taxSummary(10000, true, 3)).toMatchObject({ subtotal: 10000, vatAmount: 700, whtAmount: 300, retentionAmount: 0, netAfterTax: 10400, netTotal: 10400 })
   })
   it('หัก ณ ที่จ่าย 5% อย่างเดียว', () => {
-    expect(taxSummary(10000, false, 5)).toEqual({ subtotal: 10000, vatAmount: 0, whtAmount: 500, retentionAmount: 0, netTotal: 9500 })
+    expect(taxSummary(10000, false, 5)).toMatchObject({ subtotal: 10000, vatAmount: 0, whtAmount: 500, retentionAmount: 0, netTotal: 9500 })
   })
   it('ไม่ติ๊กอะไร = ยอดสุทธิเท่ายอดรวม', () => {
-    expect(taxSummary(10000)).toEqual({ subtotal: 10000, vatAmount: 0, whtAmount: 0, retentionAmount: 0, netTotal: 10000 })
+    expect(taxSummary(10000)).toMatchObject({ subtotal: 10000, vatAmount: 0, whtAmount: 0, retentionAmount: 0, netTotal: 10000 })
   })
 })
 

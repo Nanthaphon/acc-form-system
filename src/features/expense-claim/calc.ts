@@ -130,41 +130,34 @@ export function tickedRowCount(rows: ExpenseRow[], key: string): number {
   return rows.filter(r => isRowTicked(r, key)).length
 }
 
-// What one line comes to once the taxes charged on it are applied: the figure
-// that line is really worth. A tax charged on the whole document applies to
-// every line; one charged line by line only to the lines ticked for it.
-// Rounded per line, so the column adds up the way it reads.
-export function rowNet(
-  columns: FormColumn[], row: ExpenseRow,
-  tax: { vat?: boolean; vatScope?: TaxScope; whtRate?: number; retentionRate?: number; whtScope?: TaxScope },
-): number {
-  const totalCol = totalColumn(columns)
-  if (!totalCol) return 0
-  const amount = Number(computeRow(columns, row)[totalCol.key]) || 0
-  const charged = (on: boolean, scope: TaxScope | undefined, key: string) =>
-    on && (scope === 'rows' ? isRowTicked(row, key) : true)
-  const vat = charged(!!tax.vat, tax.vatScope, ROW_VAT_KEY) ? round2(amount * 0.07) : 0
-  const wht = charged(!!tax.whtRate, tax.whtScope, ROW_WHT_KEY) ? round2(amount * (tax.whtRate ?? 0) / 100) : 0
-  // ค่าประกันงาน is held on the whole document, so every line carries its share.
-  const retention = tax.retentionRate ? round2(amount * tax.retentionRate / 100) : 0
-  return round2(amount + vat - wht - retention)
-}
-
 // VAT (7%), withholding tax and ค่าประกันงาน are all computed on the items
 // subtotal (pre-VAT), the standard Thai basis — or, on a form that charges them
 // per row, on just the rows ticked for each (`bases`).
 // Net = subtotal + VAT − withholding − retention.
-export interface TaxResult { subtotal: number; vatAmount: number; whtAmount: number; retentionAmount: number; netTotal: number }
+export interface TaxResult {
+  subtotal: number; vatAmount: number; whtAmount: number; retentionAmount: number
+  netAfterTax: number        // what the items come to once their own taxes are applied
+  vatOnNetAmount: number; whtOnNetAmount: number   // a second round, charged on that
+  netTotal: number
+}
 export function taxSummary(
   subtotal: number, vat?: boolean, whtRate?: number, retentionRate?: number,
   bases?: { vat: number; wht: number },
+  onNet?: { vat?: boolean; whtRate?: number },
 ): TaxResult {
   const vatAmount = vat ? round2((bases?.vat ?? subtotal) * 0.07) : 0
   const whtAmount = whtRate ? round2((bases?.wht ?? subtotal) * whtRate / 100) : 0
   // ค่าประกันงาน (retention) is held back on the pre-VAT amount, like withholding.
   const retentionAmount = retentionRate ? round2(subtotal * retentionRate / 100) : 0
-  const netTotal = round2(subtotal + vatAmount - whtAmount - retentionAmount)
-  return { subtotal, vatAmount, whtAmount, retentionAmount, netTotal }
+  const netAfterTax = round2(subtotal + vatAmount - whtAmount - retentionAmount)
+  // A second round, charged on that figure instead of on the items — for a
+  // document that passes on what has already been taxed once and is taxed
+  // again as a whole. No document has it unless it asks for it, so this is 0
+  // and the net is the figure it has always been.
+  const vatOnNetAmount = onNet?.vat ? round2(netAfterTax * 0.07) : 0
+  const whtOnNetAmount = onNet?.whtRate ? round2(netAfterTax * onNet.whtRate / 100) : 0
+  const netTotal = round2(netAfterTax + vatOnNetAmount - whtOnNetAmount)
+  return { subtotal, vatAmount, whtAmount, retentionAmount, netAfterTax, vatOnNetAmount, whtOnNetAmount, netTotal }
 }
 
 // ----- Printed pagination -----

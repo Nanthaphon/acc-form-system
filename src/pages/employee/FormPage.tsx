@@ -46,7 +46,9 @@ export default function FormPage() {
 
   function buildTotals(): ExpenseTotals {
     const subtotal = grandTotal(settings.columns, items)
-    const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate, taxBases(settings.columns, items, { vat: header.vatScope, wht: header.whtScope }))
+    const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate,
+      taxBases(settings.columns, items, { vat: header.vatScope, wht: header.whtScope }),
+      { vat: header.vatOnNet, whtRate: header.whtOnNetRate })
     return {
       columnTotals: computeColumnTotals(settings.columns, items),
       grandTotal: subtotal,

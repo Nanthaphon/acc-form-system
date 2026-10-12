@@ -221,8 +221,11 @@ export interface ExpenseHeader {
   whtRate?: number             // withholding tax rate: 0 | 3 | 5
   whtScope?: TaxScope
   retentionRate?: number       // ค่าประกันงาน held back (%), deducted like withholding
+  // A second round of tax, charged on the net rather than on the items —
+  // for a document that is taxed again as a whole (see taxSummary).
+  vatOnNet?: boolean           // add 7% VAT to the net
+  whtOnNetRate?: number        // withhold this % of the net
   textSize?: DocTextSize       // how large the boxes being filled in are (default ปกติ)
-  showRowNet?: boolean         // add a สุทธิ column: what each line comes to after its own taxes
   fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
 
