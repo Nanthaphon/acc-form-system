@@ -198,7 +198,7 @@ export default function ImportCsvPage() {
                   </span>
                 )}
               </p>
-              <div className="overflow-x-auto rounded-lg border border-stone-100">
+              <div className="scroll-slim overflow-x-auto rounded-lg border border-stone-100">
                 <table className="w-full text-sm">
                   <thead className="bg-stone-50 text-stone-600">
                     <tr>{['รหัส', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'บริษัท', 'สิทธิ์'].map(h => <th key={h} className="whitespace-nowrap px-3 py-2 text-left font-medium">{h}</th>)}</tr>

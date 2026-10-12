@@ -278,7 +278,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="scroll-slim overflow-x-auto">
               <table className={`w-full table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`} style={{ minWidth: `${tableMinWidth(vcols, textSizeScale(textSize))}px` }}>
                 <thead>
                   <tr>

@@ -83,3 +83,49 @@ input[type='number'] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* The bar under a table that is wider than the screen. The browser's own is a
+   grey trough with arrow buttons at each end, which on a page of soft cards
+   reads as part of the window rather than part of the table. This one is a
+   slim rounded handle on no trough at all, a little darker under the pointer,
+   and it keeps the sideways scroll inside the table instead of swiping the
+   whole page back. */
+.scroll-slim {
+  overscroll-behavior-x: contain;
+}
+/* Firefox only: Chrome ignores every ::-webkit-scrollbar rule below as soon as
+   it sees scrollbar-width, and its own thin bar still carries arrow buttons. */
+@supports (-moz-orient: inline) {
+  .scroll-slim {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(168 162 158 / 0.5) transparent;   /* stone-400 */
+  }
+}
+.scroll-slim::-webkit-scrollbar {
+  height: 14px;
+  width: 14px;
+}
+.scroll-slim::-webkit-scrollbar-track,
+.scroll-slim::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.scroll-slim::-webkit-scrollbar-button {
+  display: none;            /* the arrows at either end */
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background-color: rgb(168 162 158 / 0.55);
+  border: 4px solid transparent;    /* padding: the handle itself is 6px */
+  background-clip: content-box;
+  border-radius: 999px;
+  transition: background-color 150ms ease;
+}
+.scroll-slim:hover::-webkit-scrollbar-thumb {
+  /* thicker and darker as soon as the pointer is anywhere over the table, so
+     it is easy to find and easy to catch */
+  background-color: rgb(120 113 108 / 0.6);    /* stone-500 */
+  border-width: 3px;
+}
+.scroll-slim::-webkit-scrollbar-thumb:hover,
+.scroll-slim::-webkit-scrollbar-thumb:active {
+  background-color: rgb(43 103 119 / 0.8);     /* clay-600, the colour of whatever is in use */
+}

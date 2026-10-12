@@ -420,7 +420,7 @@ export default function FormSettingsPage() {
       </div>
 
       {showPreview && (
-        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-stone-50 p-4">
+        <div className="scroll-slim overflow-x-auto rounded-xl border border-stone-200 bg-stone-50 p-4">
           <ExpenseClaimPreview company={previewCompany} header={previewHeader} items={previewItems} docNumber={settings.formCode || 'GAC6709-003'} settings={settings} />
         </div>
       )}
@@ -527,7 +527,7 @@ export default function FormSettingsPage() {
           {brokenCount > 0 && ` · มีสูตรที่อ้างคอลัมน์ไม่ครบ ${brokenCount} คอลัมน์`}
         </p>
         {/* What the table will look like — the quickest way to check the result. */}
-        <div className="overflow-x-auto rounded-lg border border-stone-200">
+        <div className="scroll-slim overflow-x-auto rounded-lg border border-stone-200">
           <table className="w-full text-left text-[11px]">
             <thead>
               <tr className={ui.thead}>
