@@ -66,13 +66,13 @@ describe('choosing it on the document', () => {
   }
   const taxed = { ...base, vat: true, whtRate: 3 }
 
-  it('offers the choice once a tax is switched on, and starts on ทุกรายการ', () => {
+  it('offers the choice once a tax is switched on, and starts on ทั้งเอกสาร', () => {
     show(taxed)
     const vat = screen.getByRole('radiogroup', { name: 'ขอบเขต VAT' })
-    expect(within(vat).getByRole('radio', { name: 'ทุกรายการ' })).toBeChecked()
-    expect(within(vat).getByRole('radio', { name: 'เลือกรายการ' })).not.toBeChecked()
+    expect(within(vat).getByRole('radio', { name: 'ทั้งเอกสาร' })).toBeChecked()
+    expect(within(vat).getByRole('radio', { name: 'บางรายการ' })).not.toBeChecked()
     const wht = screen.getByRole('radiogroup', { name: 'ขอบเขตหัก ณ ที่จ่าย' })
-    expect(within(wht).getByRole('radio', { name: 'ทุกรายการ' })).toBeChecked()
+    expect(within(wht).getByRole('radio', { name: 'ทั้งเอกสาร' })).toBeChecked()
   })
 
   it('offers no choice for a tax that is off', () => {
@@ -80,10 +80,10 @@ describe('choosing it on the document', () => {
     expect(screen.queryByRole('radiogroup', { name: 'ขอบเขต VAT' })).not.toBeInTheDocument()
   })
 
-  it('picking เลือกรายการ records it on the document', () => {
+  it('picking บางรายการ records it on the document', () => {
     const { onHeaderChange } = show(taxed)
     const vat = screen.getByRole('radiogroup', { name: 'ขอบเขต VAT' })
-    fireEvent.click(within(vat).getByRole('radio', { name: 'เลือกรายการ' }))
+    fireEvent.click(within(vat).getByRole('radio', { name: 'บางรายการ' }))
     expect(onHeaderChange.mock.calls[0][0].vatScope).toBe('rows')
   })
 
@@ -106,7 +106,7 @@ describe('choosing it on the document', () => {
   it('says so when lines are to be picked but none are ticked', () => {
     render(<ExpenseClaimForm header={{ ...taxed, vatScope: 'rows' }} items={[row(5000)]} columns={cols}
       onHeaderChange={() => {}} onItemsChange={() => {}} />)
-    expect(screen.getByText(/ยังไม่ได้ติ๊กรายการที่คิด/)).toBeInTheDocument()
+    expect(screen.getByText(/ยังไม่ได้เลือกรายการ/)).toBeInTheDocument()
   })
 
   it('the summary tells which way each tax was charged', () => {

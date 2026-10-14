@@ -1,16 +1,16 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { ALargeSmall, Plus, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
-import type { DocTextSize, ExpenseHeader, ExpenseRow, FormColumn, HeaderField, TaxScope } from '../../types/schema'
+import type { DocTextSize, ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, tickedRowCount, visibleColumns, fillColumnPercents, tableMinWidth, whtLines, rowWhtRate, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, TICK, UNTICK } from './calc'
-import { bahtText } from '../../shared/bahttext'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, WHT_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
 import type { TemplateField } from '../../shared/bodyTemplate'
 import { BLANK_LIMITS, blankWidth } from './blankSizing'
 import { FEATURES } from '../../shared/features'
+import TaxPanel from './TaxPanel'
 import GrowTextarea from '../../components/GrowTextarea'
 import { textSizeOf, textSizeScale, textSizeStyles, TEXT_SIZES } from '../../shared/textSize'
 
@@ -58,33 +58,7 @@ function TextSizePicker({ value, onChange }: { value: DocTextSize; onChange: (v:
   )
 }
 
-// Whether a tax is charged on everything or only on the lines ticked for it.
-function ScopePicker({ value, onChange, label }: { value?: TaxScope; onChange: (v: TaxScope) => void; label: string }) {
-  const scope: TaxScope = value === 'rows' ? 'rows' : 'all'
-  return (
-    <span role="radiogroup" aria-label={label} className="inline-flex overflow-hidden rounded-lg border border-stone-200 bg-white text-xs">
-      {([['all', 'ทุกรายการ'], ['rows', 'เลือกรายการ']] as const).map(([v, text]) => (
-        <button
-          key={v}
-          type="button"
-          role="radio"
-          aria-checked={scope === v}
-          onClick={() => onChange(v)}
-          className={`px-2.5 py-1 transition-colors ${scope === v ? 'bg-clay-600 font-medium text-white' : 'text-stone-500 hover:bg-stone-50'}`}
-        >
-          {text}
-        </button>
-      ))}
-    </span>
-  )
-}
-
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
-const STANDARD_WHT = 3 // % — the default หัก ณ ที่จ่าย rate
-// The rates a line can be withheld at without typing one: transport 1%,
-// advertising 2%, services 3%, rent 5%.
-const WHT_PRESETS = [1, 2, 3, 5]
-const STANDARD_RETENTION = 5 // % — the usual ค่าประกันงาน held back
 
 const cardClass = 'rounded-xl border border-stone-200 bg-white p-6'
 const cardTitleClass = 'mb-4 text-[15px] font-semibold text-stone-900'
@@ -164,26 +138,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   // Whether this document is taxed a second time, on what it comes to rather
   // than on its items.
   const taxedAgain = !!onNet?.vat || !!onNet?.whtRate
-  // Picking lines but ticking none would quietly come to nothing.
-  const vatNoRows = vatByRow && bases.vat === 0
-  const whtNoRows = whtByRow && bases.wht === 0
-  // A tax charged line by line says what it was worked out from, so the figure
-  // can be checked against the ticks without adding anything up by hand.
-  const chargedOn = (byRow: boolean, base: number, key: string) =>
-    byRow ? ` (จาก ${fmt(base)} · ${tickedRowCount(items, key)} รายการ)` : ''
-  const anyTax = !!header.vat || !!header.whtRate || !!header.retentionRate
   // VAT picked line by line is a tick (it is always 7%); withholding is a rate
   // per line, so its column holds a choice instead of a tick.
   const tickCols: { key: string; label: string; rate?: boolean }[] = [
     ...(vatByRow ? [{ key: ROW_VAT_KEY, label: 'VAT 7%' }] : []),
     ...(whtByRow ? [{ key: ROW_WHT_KEY, label: 'หัก ณ ที่จ่าย', rate: true }] : []),
   ]
-  // Withholding stays switched on by its rate, which also stands for older
-  // ticked lines — so picking lines must not leave it at 0.
-  const setScope = (k: 'vatScope' | 'whtScope', v: TaxScope) => {
-    setWhtOther(null)
-    onHeaderChange({ ...header, [k]: v, ...(k === 'whtScope' ? { whtRate: header.whtRate || STANDARD_WHT } : {}) })
-  }
   // Lines where อื่นๆ was picked and the rate is still being typed.
   const [otherRateRows, setOtherRateRows] = useState<Set<number>>(new Set())
   const setRowRate = (i: number, rate: number) => {
@@ -193,13 +153,6 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const rateChoice = (i: number, rate: number): string =>
     otherRateRows.has(i) || (rate > 0 && !WHT_PRESETS.includes(rate)) ? 'other' : String(rate)
 
-  // หัก ณ ที่จ่าย: 3% is the standard rate; "อื่นๆ" lets the user type any rate.
-  // `whtOther` holds the typed text while that option is picked — it may be
-  // empty or half-typed, which the numeric header.whtRate can't represent.
-  const [whtOther, setWhtOther] = useState<string | null>(null)
-  const whtIsOther = whtOther !== null || (!!header.whtRate && header.whtRate !== STANDARD_WHT)
-  const whtOn = !!header.whtRate || whtOther !== null
-  const setWht = (rate: number) => onHeaderChange({ ...header, whtRate: rate })
   const categoryOptions = categories ?? CATEGORIES
 
   function setCell(rowIdx: number, key: string, value: string | number) {
@@ -321,7 +274,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       </th>
                     ))}
                     {tickCols.map(t => (
-                      <th key={t.key} className={`w-[72px] whitespace-pre-line border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-stone-600`}>
+                      <th key={t.key} className={`w-[72px] whitespace-pre-line border-b border-clay-100 bg-clay-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-clay-700`}>
                         {t.label}
                       </th>
                     ))}
@@ -374,7 +327,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       {tickCols.map(t => {
                         if (!t.rate) {
                           return (
-                            <td key={t.key} className="border-b border-stone-100 p-1 text-center">
+                            <td key={t.key} className="border-b border-stone-100 bg-clay-50/40 p-1 text-center">
                               <input
                                 type="checkbox"
                                 aria-label={`${t.label} รายการที่ ${i + 1}`}
@@ -388,7 +341,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         const rate = rowWhtRate(row) ?? (header.whtRate || 0)
                         const choice = rateChoice(i, rate)
                         return (
-                          <td key={t.key} className="border-b border-stone-100 p-1 text-center">
+                          <td key={t.key} className="border-b border-stone-100 bg-clay-50/40 p-1 text-center">
                             <div className="flex flex-col items-center gap-1">
                               <select
                                 aria-label={`${t.label} รายการที่ ${i + 1}`}
@@ -451,7 +404,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         {idx === 0 ? 'รวม' : isTextCol(col.type) ? '' : fmt(columnTotals[col.key] ?? 0)}
                       </td>
                     ))}
-                    {tickCols.map(t => <td key={t.key} className="border-t border-stone-200"></td>)}
+                    {tickCols.map(t => <td key={t.key} className="border-t border-stone-200 bg-clay-50/40"></td>)}
                     <td className="border-t border-stone-200"></td>
                   </tr>
                 </tbody>
@@ -467,172 +420,10 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
         )}
       </div>
 
-      {/* Summary + tax options */}
+      {/* Taxes and the total — see TaxPanel */}
       {hasColumns && (
-        <div className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-5">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-700">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input type="checkbox" checked={!!header.vat} onChange={e => onHeaderChange({ ...header, vat: e.target.checked })} />
-              ภาษีมูลค่าเพิ่ม (VAT) 7%
-            </label>
-            {FEATURES.taxPerRow && header.vat && <ScopePicker value={header.vatScope} onChange={v => setScope('vatScope', v)} label="ขอบเขต VAT" />}
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={!!header.retentionRate}
-                onChange={e => onHeaderChange({ ...header, retentionRate: e.target.checked ? STANDARD_RETENTION : 0 })}
-              />
-              ค่าประกันงาน
-            </label>
-            {!!header.retentionRate && (
-              <span className="flex items-center gap-1">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  max={100}
-                  step="0.01"
-                  aria-label="อัตราค่าประกันงาน (%)"
-                  className="w-20 rounded-md border border-stone-200 bg-white px-2 py-1 text-right text-sm focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
-                  value={header.retentionRate}
-                  onChange={e => {
-                    const n = Number(e.target.value)
-                    onHeaderChange({ ...header, retentionRate: Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0 })
-                  }}
-                />
-                %
-              </span>
-            )}
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={whtOn}
-                  onChange={e => { setWhtOther(null); setWht(e.target.checked ? STANDARD_WHT : 0) }}
-                />
-                หัก ณ ที่จ่าย
-              </label>
-              {whtOn && (
-                <>
-                  {!whtByRow && <>
-                  <label className="flex cursor-pointer items-center gap-1">
-                    <input type="radio" name="whtRate" checked={!whtIsOther} onChange={() => { setWhtOther(null); setWht(STANDARD_WHT) }} />
-                    {STANDARD_WHT}%
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-1">
-                    <input type="radio" name="whtRate" checked={whtIsOther} onChange={() => { setWhtOther(''); setWht(0) }} />
-                    อื่นๆ
-                  </label>
-                  {whtIsOther && (
-                    <span className="flex items-center gap-1">
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        min={0}
-                        max={100}
-                        step="0.01"
-                        autoFocus={whtOther === ''}
-                        placeholder="เช่น 1"
-                        aria-label="อัตราหัก ณ ที่จ่าย (%)"
-                        className="w-20 rounded-md border border-stone-200 bg-white px-2 py-1 text-right text-sm focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
-                        value={whtOther ?? String(header.whtRate ?? '')}
-                        onChange={e => {
-                          const v = e.target.value
-                          setWhtOther(v)
-                          const n = Number(v)
-                          setWht(v.trim() !== '' && Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0)
-                        }}
-                      />
-                      %
-                    </span>
-                  )}
-                  </>}
-                  {whtByRow && <span className="text-xs text-stone-500">เลือกอัตราในตารางแต่ละรายการ</span>}
-                  {FEATURES.taxPerRow && <ScopePicker value={header.whtScope} onChange={v => setScope('whtScope', v)} label="ขอบเขตหัก ณ ที่จ่าย" />}
-                </>
-              )}
-            </div>
-          </div>
-
-          {FEATURES.taxOnNet && anyTax && (
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-stone-100 pt-3 text-sm text-stone-600">
-              <span className="text-xs font-medium text-stone-500" title="คิดภาษีอีกชั้นจากยอดสุทธิ ไม่ใช่จากยอดรายการ — สำหรับเอกสารที่นำยอดที่คิดภาษีแล้วไปคิดภาษีต่อทั้งก้อน">
-                คิดซ้ำจากยอดสุทธิอีกชั้น
-              </span>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={!!header.vatOnNet}
-                  onChange={e => onHeaderChange({ ...header, vatOnNet: e.target.checked })}
-                />
-                VAT 7%
-              </label>
-              <label className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={!!header.whtOnNetRate}
-                  onChange={e => onHeaderChange({ ...header, whtOnNetRate: e.target.checked ? 3 : 0 })}
-                />
-                หัก ณ ที่จ่าย
-              </label>
-              {!!header.whtOnNetRate && (
-                <span className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    max={100}
-                    step="0.01"
-                    aria-label="อัตราหัก ณ ที่จ่ายจากยอดสุทธิ (%)"
-                    className="w-20 rounded-md border border-stone-200 bg-white px-2 py-1 text-right text-sm focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
-                    value={header.whtOnNetRate}
-                    onChange={e => {
-                      const n = Number(e.target.value)
-                      onHeaderChange({ ...header, whtOnNetRate: Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0 })
-                    }}
-                  />
-                  %
-                </span>
-              )}
-            </div>
-          )}
-
-          <div className="space-y-1 border-t border-stone-200 pt-3 text-sm">
-            <div className="flex justify-between text-stone-600"><span>ยอดรวม (ก่อนภาษี)</span><span>{fmt(tax.subtotal)}</span></div>
-            {header.vat && <div className="flex justify-between text-stone-600"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(vatByRow, bases.vat, ROW_VAT_KEY)}</span><span>+{fmt(tax.vatAmount)}</span></div>}
-            {!!header.whtRate && !whtByRow && <div className="flex justify-between text-brick-600"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>−{fmt(tax.whtAmount)}</span></div>}
-            {!!header.whtRate && whtByRow && whtLines(bases, header.whtRate).map(l => (
-              <div key={l.rate} className="flex justify-between text-brick-600"><span>หัก ณ ที่จ่าย {l.rate}% (จาก {fmt(l.base)} · {l.count} รายการ)</span><span>−{fmt(l.amount)}</span></div>
-            ))}
-            {(vatNoRows || whtNoRows) && (
-              <div className="text-xs text-ochre-700">
-                ยังไม่ได้ติ๊กรายการที่คิด{vatNoRows ? ' VAT' : ''}{vatNoRows && whtNoRows ? ' และ' : ''}{whtNoRows ? ' หัก ณ ที่จ่าย' : ''} — เลือกในตารางด้านบน
-              </div>
-            )}
-            {!!header.retentionRate && <div className="flex justify-between text-brick-600"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>−{fmt(tax.retentionAmount)}</span></div>}
-            {taxedAgain && (
-              <>
-                <div className="flex justify-between border-t border-stone-200 pt-2 font-medium text-stone-700">
-                  <span>ยอดหลังภาษีชั้นแรก</span><span>{fmt(tax.netAfterTax)}</span>
-                </div>
-                {!!header.vatOnNet && (
-                  <div className="flex justify-between text-stone-600">
-                    <span>ภาษีมูลค่าเพิ่ม 7% (จากยอด {fmt(tax.netAfterTax)})</span><span>+{fmt(tax.vatOnNetAmount)}</span>
-                  </div>
-                )}
-                {!!header.whtOnNetRate && (
-                  <div className="flex justify-between text-brick-600">
-                    <span>หัก ณ ที่จ่าย {header.whtOnNetRate}% (จากยอด {fmt(tax.netAfterTax)})</span><span>−{fmt(tax.whtOnNetAmount)}</span>
-                  </div>
-                )}
-              </>
-            )}
-            <div className="flex justify-between border-t border-stone-200 pt-2 text-base font-semibold text-stone-900">
-              <span>ยอดสุทธิ</span><span>{fmt(tax.netTotal)} บาท</span>
-            </div>
-            <div className="text-xs text-stone-500">{`(${bahtText(tax.netTotal)})`}</div>
-          </div>
-        </div>
+        <TaxPanel header={header} onHeaderChange={onHeaderChange} items={items} onItemsChange={onItemsChange}
+          cols={cols} tax={tax} bases={bases} taxedAgain={taxedAgain} />
       )}
     </div>
   )

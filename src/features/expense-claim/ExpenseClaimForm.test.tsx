@@ -32,7 +32,7 @@ describe('ExpenseClaimForm', () => {
       />,
     )
     expect(screen.getByText('ภาษีมูลค่าเพิ่ม 7%')).toBeInTheDocument()
-    expect(screen.getByText('หัก ณ ที่จ่าย 3%')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' })).toHaveValue('3')
   })
 
   it('ช่องกรอกในข้อความ {{…}} บันทึกค่าลง header.fields', () => {

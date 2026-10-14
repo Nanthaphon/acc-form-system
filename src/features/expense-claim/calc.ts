@@ -114,6 +114,12 @@ export const UNTICK = ''
 // key of its own — the old tick was stored as 1, which would read as 1%.
 export const ROW_WHT_RATE_KEY = 'tax:whtRate'
 
+// The default หัก ณ ที่จ่าย rate, and the rates offered without typing one —
+// transport 1%, advertising 2%, services 3%, rent 5%. The document's rate and
+// each line's choose from the same list.
+export const STANDARD_WHT = 3
+export const WHT_PRESETS = [1, 2, 3, 5]
+
 /** The rate a line is withheld at: its own, or `null` for a line ticked before
  *  lines had rates (it takes the document's), or 0 for a line not withheld. */
 export function rowWhtRate(row: ExpenseRow): number | null {
