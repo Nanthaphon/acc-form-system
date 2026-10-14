@@ -6,8 +6,9 @@
 // the forms in find out about it there.
 export const FEATURES = {
   // Charging VAT / หัก ณ ที่จ่าย on chosen lines instead of the whole document
-  // (the ทุกรายการ / เลือกรายการ choice and the tick columns it prints).
-  taxPerRow: false,
+  // (the ทุกรายการ / เลือกรายการ choice: a VAT tick per line, and a withholding
+  // rate per line). Live since 2026-10-14.
+  taxPerRow: true,
   // A second round of tax, charged on what the document comes to rather than
   // on its items (คิดซ้ำจากยอดสุทธิอีกชั้น).
   taxOnNet: false,

@@ -3,7 +3,7 @@ import { ALargeSmall, Plus, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { DocTextSize, ExpenseHeader, ExpenseRow, FormColumn, HeaderField, TaxScope } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, tickedRowCount, visibleColumns, fillColumnPercents, tableMinWidth, ROW_VAT_KEY, ROW_WHT_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, tickedRowCount, visibleColumns, fillColumnPercents, tableMinWidth, whtLines, rowWhtRate, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, TICK, UNTICK } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
@@ -81,6 +81,9 @@ function ScopePicker({ value, onChange, label }: { value?: TaxScope; onChange: (
 
 const CATEGORIES = ['ค่าไมล์เลทและค่าใช้จ่ายเดินทาง', 'ค่าใช้จ่ายต่างๆ', 'ค่าล่วงเวลา', 'ค่าเบี้ยเลี้ยง']
 const STANDARD_WHT = 3 // % — the default หัก ณ ที่จ่าย rate
+// The rates a line can be withheld at without typing one: transport 1%,
+// advertising 2%, services 3%, rent 5%.
+const WHT_PRESETS = [1, 2, 3, 5]
 const STANDARD_RETENTION = 5 // % — the usual ค่าประกันงาน held back
 
 const cardClass = 'rounded-xl border border-stone-200 bg-white p-6'
@@ -169,11 +172,26 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const chargedOn = (byRow: boolean, base: number, key: string) =>
     byRow ? ` (จาก ${fmt(base)} · ${tickedRowCount(items, key)} รายการ)` : ''
   const anyTax = !!header.vat || !!header.whtRate || !!header.retentionRate
-  const tickCols: { key: string; label: string }[] = [
+  // VAT picked line by line is a tick (it is always 7%); withholding is a rate
+  // per line, so its column holds a choice instead of a tick.
+  const tickCols: { key: string; label: string; rate?: boolean }[] = [
     ...(vatByRow ? [{ key: ROW_VAT_KEY, label: 'VAT 7%' }] : []),
-    ...(whtByRow ? [{ key: ROW_WHT_KEY, label: 'หัก ณ ที่จ่าย' }] : []),
+    ...(whtByRow ? [{ key: ROW_WHT_KEY, label: 'หัก ณ ที่จ่าย', rate: true }] : []),
   ]
-  const setScope = (k: 'vatScope' | 'whtScope', v: TaxScope) => onHeaderChange({ ...header, [k]: v })
+  // Withholding stays switched on by its rate, which also stands for older
+  // ticked lines — so picking lines must not leave it at 0.
+  const setScope = (k: 'vatScope' | 'whtScope', v: TaxScope) => {
+    setWhtOther(null)
+    onHeaderChange({ ...header, [k]: v, ...(k === 'whtScope' ? { whtRate: header.whtRate || STANDARD_WHT } : {}) })
+  }
+  // Lines where อื่นๆ was picked and the rate is still being typed.
+  const [otherRateRows, setOtherRateRows] = useState<Set<number>>(new Set())
+  const setRowRate = (i: number, rate: number) => {
+    const next = items.map((r, x) => x === i ? { ...r, [ROW_WHT_RATE_KEY]: rate, [ROW_WHT_KEY]: UNTICK } : r)
+    onItemsChange(next)
+  }
+  const rateChoice = (i: number, rate: number): string =>
+    otherRateRows.has(i) || (rate > 0 && !WHT_PRESETS.includes(rate)) ? 'other' : String(rate)
 
   // หัก ณ ที่จ่าย: 3% is the standard rate; "อื่นๆ" lets the user type any rate.
   // `whtOther` holds the typed text while that option is picked — it may be
@@ -353,16 +371,68 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                           )}
                         </td>
                       ))}
-                      {tickCols.map(t => (
-                        <td key={t.key} className="border-b border-stone-100 p-1 text-center">
-                          <input
-                            type="checkbox"
-                            aria-label={`${t.label} รายการที่ ${i + 1}`}
-                            checked={isRowTicked(row, t.key)}
-                            onChange={e => setCell(i, t.key, e.target.checked ? TICK : UNTICK)}
-                          />
-                        </td>
-                      ))}
+                      {tickCols.map(t => {
+                        if (!t.rate) {
+                          return (
+                            <td key={t.key} className="border-b border-stone-100 p-1 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`${t.label} รายการที่ ${i + 1}`}
+                                checked={isRowTicked(row, t.key)}
+                                onChange={e => setCell(i, t.key, e.target.checked ? TICK : UNTICK)}
+                              />
+                            </td>
+                          )
+                        }
+                        // An older ticked line shows the document's rate, which is what it is withheld at.
+                        const rate = rowWhtRate(row) ?? (header.whtRate || 0)
+                        const choice = rateChoice(i, rate)
+                        return (
+                          <td key={t.key} className="border-b border-stone-100 p-1 text-center">
+                            <div className="flex flex-col items-center gap-1">
+                              <select
+                                aria-label={`${t.label} รายการที่ ${i + 1}`}
+                                className={`w-full rounded-md border border-stone-200 bg-white px-1 py-1 text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 ${rate > 0 ? 'font-medium text-stone-900' : 'text-stone-400'}`}
+                                value={choice}
+                                onChange={e => {
+                                  const v = e.target.value
+                                  setOtherRateRows(prev => {
+                                    const next = new Set(prev)
+                                    if (v === 'other') next.add(i)
+                                    else next.delete(i)
+                                    return next
+                                  })
+                                  if (v !== 'other') setRowRate(i, Number(v))
+                                }}
+                              >
+                                <option value="0">ไม่หัก</option>
+                                {WHT_PRESETS.map(r => <option key={r} value={String(r)}>{r}%</option>)}
+                                <option value="other">อื่นๆ</option>
+                              </select>
+                              {choice === 'other' && (
+                                <span className="flex items-center gap-0.5 text-xs text-stone-500">
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    min={0}
+                                    max={100}
+                                    step="0.01"
+                                    autoFocus={rate === 0}
+                                    aria-label={`อัตราหัก ณ ที่จ่าย รายการที่ ${i + 1} (%)`}
+                                    className="w-12 rounded-md border border-stone-200 bg-white px-1 py-0.5 text-right text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
+                                    value={rate > 0 ? rate : ''}
+                                    onChange={e => {
+                                      const n = Number(e.target.value)
+                                      setRowRate(i, Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0)
+                                    }}
+                                  />
+                                  %
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        )
+                      })}
                       <td className="border-b border-stone-100 p-2 text-center">
                         <ActionIconButton
                           label="ลบรายการ"
@@ -444,6 +514,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               </label>
               {whtOn && (
                 <>
+                  {!whtByRow && <>
                   <label className="flex cursor-pointer items-center gap-1">
                     <input type="radio" name="whtRate" checked={!whtIsOther} onChange={() => { setWhtOther(null); setWht(STANDARD_WHT) }} />
                     {STANDARD_WHT}%
@@ -475,6 +546,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       %
                     </span>
                   )}
+                  </>}
+                  {whtByRow && <span className="text-xs text-stone-500">เลือกอัตราในตารางแต่ละรายการ</span>}
                   {FEATURES.taxPerRow && <ScopePicker value={header.whtScope} onChange={v => setScope('whtScope', v)} label="ขอบเขตหัก ณ ที่จ่าย" />}
                 </>
               )}
@@ -527,10 +600,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
           <div className="space-y-1 border-t border-stone-200 pt-3 text-sm">
             <div className="flex justify-between text-stone-600"><span>ยอดรวม (ก่อนภาษี)</span><span>{fmt(tax.subtotal)}</span></div>
             {header.vat && <div className="flex justify-between text-stone-600"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(vatByRow, bases.vat, ROW_VAT_KEY)}</span><span>+{fmt(tax.vatAmount)}</span></div>}
-            {!!header.whtRate && <div className="flex justify-between text-brick-600"><span>หัก ณ ที่จ่าย {header.whtRate}%{chargedOn(whtByRow, bases.wht, ROW_WHT_KEY)}</span><span>−{fmt(tax.whtAmount)}</span></div>}
+            {!!header.whtRate && !whtByRow && <div className="flex justify-between text-brick-600"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>−{fmt(tax.whtAmount)}</span></div>}
+            {!!header.whtRate && whtByRow && whtLines(bases, header.whtRate).map(l => (
+              <div key={l.rate} className="flex justify-between text-brick-600"><span>หัก ณ ที่จ่าย {l.rate}% (จาก {fmt(l.base)} · {l.count} รายการ)</span><span>−{fmt(l.amount)}</span></div>
+            ))}
             {(vatNoRows || whtNoRows) && (
               <div className="text-xs text-ochre-700">
-                ยังไม่ได้ติ๊กรายการที่คิด{vatNoRows ? ' VAT' : ''}{vatNoRows && whtNoRows ? ' และ' : ''}{whtNoRows ? ' หัก ณ ที่จ่าย' : ''} — ติ๊กในตารางด้านบน
+                ยังไม่ได้ติ๊กรายการที่คิด{vatNoRows ? ' VAT' : ''}{vatNoRows && whtNoRows ? ' และ' : ''}{whtNoRows ? ' หัก ณ ที่จ่าย' : ''} — เลือกในตารางด้านบน
               </div>
             )}
             {!!header.retentionRate && <div className="flex justify-between text-brick-600"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>−{fmt(tax.retentionAmount)}</span></div>}

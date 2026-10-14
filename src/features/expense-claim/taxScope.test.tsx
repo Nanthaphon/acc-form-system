@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
 import { taxBases, taxSummary, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
 import type { ExpenseHeader, ExpenseRow, FormColumn, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
-import { FEATURES } from '../../shared/features'
 
 const cols: FormColumn[] = [
   { key: 'detail', label: 'รายละเอียด', type: 'text' },
@@ -24,9 +23,6 @@ const items = [
   row(500, { [ROW_VAT_KEY]: 1, [ROW_WHT_KEY]: 1 }),
 ]
 
-// Held back from the system for now, so the tests let it out for themselves.
-beforeEach(() => { FEATURES.taxPerRow = true })
-afterEach(() => { FEATURES.taxPerRow = false })
 
 describe('what each tax is charged on', () => {
   it('charges everything by default — the way every document worked before', () => {
@@ -38,7 +34,7 @@ describe('what each tax is charged on', () => {
 
   it('charges only the ticked lines when the document says so', () => {
     const bases = taxBases(cols, items, { vat: 'rows', wht: 'rows' })
-    expect(bases).toEqual({ vat: 2500, wht: 8500 })
+    expect(bases).toMatchObject({ vat: 2500, wht: 8500 })
     const tax = taxSummary(11500, true, 3, 0, bases)
     expect(tax.subtotal).toBe(11500)   // every row still counts toward the total
     expect(tax.vatAmount).toBe(175)    // 7% of 2,500
@@ -47,13 +43,13 @@ describe('what each tax is charged on', () => {
   })
 
   it('decides the two separately: VAT on everything, withholding on chosen lines', () => {
-    expect(taxBases(cols, items, { wht: 'rows' })).toEqual({ vat: 11500, wht: 8500 })
+    expect(taxBases(cols, items, { wht: 'rows' })).toMatchObject({ vat: 11500, wht: 8500 })
     expect(taxBases(cols, items, { vat: 'rows' })).toEqual({ vat: 2500, wht: 11500 })
   })
 
   it('nothing ticked means nothing charged, even with the rate on', () => {
     const bases = taxBases(cols, [row(5000)], { vat: 'rows', wht: 'rows' })
-    expect(bases).toEqual({ vat: 0, wht: 0 })
+    expect(bases).toMatchObject({ vat: 0, wht: 0 })
     expect(taxSummary(5000, true, 3, 0, bases)).toMatchObject({ vatAmount: 0, whtAmount: 0, netTotal: 5000 })
   })
 
@@ -91,9 +87,11 @@ describe('choosing it on the document', () => {
     expect(onHeaderChange.mock.calls[0][0].vatScope).toBe('rows')
   })
 
-  it('a tick column appears only for the tax charged by line', () => {
+  // Withholding picked by line is a rate per line (whtRatePerRow.test); a line
+  // ticked before that shows the document's rate.
+  it('a column appears only for the tax charged by line', () => {
     show({ ...taxed, whtScope: 'rows' })
-    expect(screen.getByRole('checkbox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' })).toBeChecked()
+    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' })).toHaveValue('3')
     expect(screen.queryByRole('checkbox', { name: /^VAT 7% รายการ/ })).not.toBeInTheDocument()
   })
 
@@ -131,7 +129,8 @@ describe('the printed document', () => {
     expect(heads.slice(-2)).toEqual(['VAT\n7%', 'หัก ณ\nที่จ่าย'])
     const marks = [...container.querySelectorAll('tbody tr')].slice(0, 4)
       .map(tr => [...tr.children].slice(-2).map(td => td.textContent).join('|'))
-    expect(marks).toEqual(['|☑', '☑|', '|', '☑|☑'])
+    // VAT prints a tick; withholding prints the rate each line is withheld at.
+    expect(marks).toEqual(['|3%', '☑|', '|', '☑|3%'])
   })
 
   it('prints one column when only one tax is charged by line', () => {

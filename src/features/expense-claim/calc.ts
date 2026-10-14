@@ -108,20 +108,74 @@ export function isRowTicked(row: ExpenseRow, key: string): boolean {
 export const TICK = 1
 export const UNTICK = ''
 
+// Withholding picked line by line is charged at each line's own rate: one
+// document can pay transport (1%), advertising (2%), services (3%) and rent
+// (5%), and the 50 ทวิ certificate is issued per kind. The rate lives under a
+// key of its own — the old tick was stored as 1, which would read as 1%.
+export const ROW_WHT_RATE_KEY = 'tax:whtRate'
+
+/** The rate a line is withheld at: its own, or `null` for a line ticked before
+ *  lines had rates (it takes the document's), or 0 for a line not withheld. */
+export function rowWhtRate(row: ExpenseRow): number | null {
+  const own = Number(row[ROW_WHT_RATE_KEY])
+  if (Number.isFinite(own) && own > 0) return own
+  return isRowTicked(row, ROW_WHT_KEY) ? null : 0
+}
+
+/** Withheld lines grouped by rate; `rate: null` holds older ticked lines. */
+export interface WhtGroup { rate: number | null; base: number; count: number }
+
+export interface TaxBases {
+  vat: number
+  wht: number
+  /** Only when withholding is picked line by line. */
+  whtGroups?: WhtGroup[]
+}
+
 // What VAT and withholding are each worked out on, given how this document
-// charges them. 'all' is the whole subtotal; 'rows' is the ticked lines.
+// charges them. 'all' is the whole subtotal; 'rows' is the picked lines.
 export function taxBases(
   columns: FormColumn[], rows: ExpenseRow[], scopes: { vat?: TaxScope; wht?: TaxScope },
-): { vat: number; wht: number } {
+): TaxBases {
   const everything = grandTotal(columns, rows)
   const totalCol = totalColumn(columns)
-  const ticked = (key: string) => !totalCol ? 0 : round2(rows
-    .filter(r => isRowTicked(r, key))
-    .reduce((s, r) => s + (Number(computeRow(columns, r)[totalCol.key]) || 0), 0))
+  const lineTotal = (r: ExpenseRow) => !totalCol ? 0 : Number(computeRow(columns, r)[totalCol.key]) || 0
+  const ticked = (key: string) => round2(rows.filter(r => isRowTicked(r, key)).reduce((s, r) => s + lineTotal(r), 0))
+
+  if (scopes.wht !== 'rows') {
+    return { vat: scopes.vat === 'rows' ? ticked(ROW_VAT_KEY) : everything, wht: everything }
+  }
+  const groups = new Map<number | null, WhtGroup>()
+  for (const r of rows) {
+    const rate = rowWhtRate(r)
+    if (rate === 0) continue
+    const g = groups.get(rate) ?? { rate, base: 0, count: 0 }
+    g.base = round2(g.base + lineTotal(r)); g.count++
+    groups.set(rate, g)
+  }
+  const whtGroups = [...groups.values()]
   return {
     vat: scopes.vat === 'rows' ? ticked(ROW_VAT_KEY) : everything,
-    wht: scopes.wht === 'rows' ? ticked(ROW_WHT_KEY) : everything,
+    wht: round2(whtGroups.reduce((s, g) => s + g.base, 0)),
+    whtGroups,
   }
+}
+
+/** One line of the summary per rate, lowest first, each worked out and
+ *  rounded on its own — the way each 50 ทวิ is. Older ticked lines take the
+ *  document's rate and join any lines given that rate. */
+export function whtLines(bases: TaxBases, documentRate?: number): { rate: number; base: number; count: number; amount: number }[] {
+  const merged = new Map<number, { rate: number; base: number; count: number }>()
+  for (const g of bases.whtGroups ?? []) {
+    const rate = g.rate ?? documentRate ?? 0
+    if (!rate) continue
+    const m = merged.get(rate) ?? { rate, base: 0, count: 0 }
+    m.base = round2(m.base + g.base); m.count += g.count
+    merged.set(rate, m)
+  }
+  return [...merged.values()]
+    .sort((a, b) => a.rate - b.rate)
+    .map(m => ({ ...m, amount: round2(m.base * m.rate / 100) }))
 }
 
 // How many lines a per-row tax is charged on — so the summary can say what a
@@ -142,11 +196,16 @@ export interface TaxResult {
 }
 export function taxSummary(
   subtotal: number, vat?: boolean, whtRate?: number, retentionRate?: number,
-  bases?: { vat: number; wht: number },
+  bases?: TaxBases,
   onNet?: { vat?: boolean; whtRate?: number },
 ): TaxResult {
   const vatAmount = vat ? round2((bases?.vat ?? subtotal) * 0.07) : 0
-  const whtAmount = whtRate ? round2((bases?.wht ?? subtotal) * whtRate / 100) : 0
+  // whtRate is also the switch: withholding off means nothing is withheld,
+  // whatever rates the lines carry. Picked line by line, it is the sum of
+  // each rate's own figure, as the summary lists them.
+  const whtAmount = !whtRate ? 0
+    : bases?.whtGroups ? round2(whtLines(bases, whtRate).reduce((s, l) => s + l.amount, 0))
+    : round2((bases?.wht ?? subtotal) * whtRate / 100)
   // ค่าประกันงาน (retention) is held back on the pre-VAT amount, like withholding.
   const retentionAmount = retentionRate ? round2(subtotal * retentionRate / 100) : 0
   const netAfterTax = round2(subtotal + vatAmount - whtAmount - retentionAmount)

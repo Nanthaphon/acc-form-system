@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, whtLines, rowWhtRate, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -84,6 +84,12 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     ...(header.whtRate && scopes.wht === 'rows' ? [{ key: ROW_WHT_KEY, label: 'หัก ณ\nที่จ่าย' }] : []),
   ]
   const TICK_MM = 11
+  // A line's withholding prints as its rate, so the sheet shows what each line
+  // was withheld at; an older ticked line prints the document's rate.
+  const rateMark = (r: typeof items[number]) => {
+    const rate = rowWhtRate(r) ?? (header.whtRate || 0)
+    return rate > 0 ? `${rate}%` : ''
+  }
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
@@ -129,7 +135,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     bodyLines: paragraphLines(settings.bodyText),
     headLines: rowLines([...widthWeights, ...tickCols.map(() => TICK_MM)], [...vcols.map(c => c.label), ...tickCols.map(t => t.label)]),
     taxLines: hasTax
-      ? 2 + (header.vat ? 1 : 0) + (header.whtRate ? 1 : 0) + (header.retentionRate ? 1 : 0)
+      // Withholding picked line by line prints a line per rate.
+      ? 2 + (header.vat ? 1 : 0) + (header.retentionRate ? 1 : 0)
+        + (!header.whtRate ? 0 : scopes.wht === 'rows' ? Math.max(1, whtLines(bases, header.whtRate).length) : 1)
         + (taxedAgain ? 1 + (onNet?.vat ? 1 : 0) + (onNet?.whtRate ? 1 : 0) : 0)
       : 0,
     showAmountWords: hasNumericCols && settings.showAmountWords !== false,
@@ -252,7 +260,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                     ))}
                     {tickCols.map(t => (
                       <td key={t.key} className="border border-black px-1 py-0.5 text-center leading-[2]">
-                        {isRowTicked(items[i], t.key) ? '☑' : ''}
+                        {t.key === ROW_WHT_KEY ? rateMark(items[i]) : isRowTicked(items[i], t.key) ? '☑' : ''}
                       </td>
                     ))}
                   </tr>
@@ -279,7 +287,10 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               <div className="mt-2 ml-auto w-56 text-[10px]">
                 <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
                 {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(scopes.vat === 'rows', bases.vat, ROW_VAT_KEY)}</span><span>{money(tax.vatAmount)}</span></div>}
-                {!!header.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%{chargedOn(scopes.wht === 'rows', bases.wht, ROW_WHT_KEY)}</span><span>-{money(tax.whtAmount)}</span></div>}
+                {!!header.whtRate && scopes.wht !== 'rows' && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>-{money(tax.whtAmount)}</span></div>}
+                {!!header.whtRate && scopes.wht === 'rows' && whtLines(bases, header.whtRate).map(l => (
+                  <div key={l.rate} className="flex justify-between"><span>หัก ณ ที่จ่าย {l.rate}% (ฐาน {money(l.base)} · {l.count} รายการ)</span><span>-{money(l.amount)}</span></div>
+                ))}
                 {!!header.retentionRate && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>-{money(tax.retentionAmount)}</span></div>}
                 {taxedAgain && (
                   <>
