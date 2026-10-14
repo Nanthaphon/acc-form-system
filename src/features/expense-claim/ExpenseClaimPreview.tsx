@@ -8,6 +8,7 @@ import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
 import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyTemplate'
 import { FEATURES } from '../../shared/features'
+import { textSizeScale } from '../../shared/textSize'
 
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
 
@@ -111,7 +112,12 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     col.type === 'date' ? formatIsoDate(row[col.key] as string)
       : isTextCol(col.type) ? String(row[col.key] ?? '')
       : cellMoney(row, col)
-  const lineCounts = computed.map(r => rowLines(widthWeights, vcols.map(c => printed(r, c))))
+  // What was typed into the table prints at the size chosen for it (see
+  // shared/textSize) — the printed 10px stretched or shrunk in the same
+  // proportion as the screen's 12px. Everything else on the sheet stays put.
+  const cellScale = textSizeScale(header.textSize)
+  const cellFont = cellScale === 1 ? undefined : { fontSize: `${(10 * cellScale).toFixed(2)}px` }
+  const lineCounts = computed.map(r => rowLines(widthWeights, vcols.map(c => printed(r, c)), cellScale))
   // What is left of the sheet once the rest of this particular form has taken
   // its share: a form with two paragraphs, six signature blocks and ten notes
   // has far less room for rows than a bare one, and gets what it actually has.
@@ -134,7 +140,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     signatureRows: sigRows.length,
     noteLines: notes.length ? notes.length + 1 : 0,
   })
-  const pages = paginateRows(lineCounts.map(rowHeightMm), bodyMm)
+  const pages = paginateRows(lineCounts.map(n => rowHeightMm(n, cellScale)), bodyMm)
   const totalPages = pages.length
 
   return (
@@ -235,9 +241,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
               <tbody>
                 {rowIdxs.map(i => (
                   <tr key={i}>
-                    {withSeq && <td className="border border-black px-1 py-0.5 text-center">{i + 1}</td>}
+                    {withSeq && <td style={cellFont} className="border border-black px-1 py-0.5 text-center">{i + 1}</td>}
                     {vcols.map(col => (
-                      <td key={col.key} className={`break-words border border-black px-1 py-0.5 leading-[2] ${isTextCol(col.type) ? '' : 'text-right'}`}>
+                      <td key={col.key} style={cellFont} className={`break-words border border-black px-1 py-0.5 leading-[2] ${isTextCol(col.type) ? '' : 'text-right'}`}>
                         {col.type === 'date'
                           ? formatIsoDate(computed[i][col.key] as string)
                           : isTextCol(col.type)

@@ -294,8 +294,10 @@ export function printBodyMm(p: SheetParts): number {
 // What a row costs on paper. Every row pays once for its own padding and then
 // per line of wrapped text; a row left blank is shorter than one with text in
 // it, which is why a sheet cannot simply be budgeted in lines.
-export function rowHeightMm(lines: number): number {
-  return ROW_BASE_MM + Math.max(1, lines) * TABLE_LINE_MM
+// `scale` is the document's text size against the usual one (1 = the printed
+// 10px). It sizes the lines of text in a row; the row's own padding stays put.
+export function rowHeightMm(lines: number, scale = 1): number {
+  return ROW_BASE_MM + Math.max(1, lines) * TABLE_LINE_MM * scale
 }
 
 // At the printed 10px size a Thai letter takes about 2.1mm, and each cell keeps
@@ -320,8 +322,10 @@ function textWidth(text: string): number {
 }
 
 // How many printed lines a row needs: its tallest cell decides.
-export function rowLines(widthsMm: number[], texts: string[]): number {
-  const charMm = THAI_CHAR_MM
+// `scale` as for rowHeightMm: the column is as wide as ever, but larger letters
+// fit fewer to a line.
+export function rowLines(widthsMm: number[], texts: string[], scale = 1): number {
+  const charMm = THAI_CHAR_MM * scale
   let lines = 1
   texts.forEach((text, i) => {
     if (!text) return

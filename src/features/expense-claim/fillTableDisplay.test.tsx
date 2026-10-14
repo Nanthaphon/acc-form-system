@@ -96,30 +96,53 @@ describe('the text size', () => {
   })
 })
 
-describe('it changes the boxes being typed into and nothing else', () => {
-  it('leaves the column headings alone', () => {
+describe('it changes what was typed into the table, and nothing else', () => {
+  it('leaves the column headings on screen alone', () => {
     show(vi.fn(), items, { ...header, textSize: 'large' })
     const heading = screen.getByText('รายละเอียด')
     expect(heading.className).toContain('text-[11px]')
     expect(heading.className).not.toContain('text-sm')
   })
 
-  it('leaves the printed document as the form lays it out, at any size', () => {
-    const sheet = (textSize?: DocTextSize | number) => {
-      const { container } = render(
-        <ExpenseClaimPreview
-          company={null}
-          header={{ ...header, textSize }}
-          items={[{ detail: 'ค่าเดินทาง', amount: 500 }]}
-          docNumber="GAC-001"
-          settings={{ ...EXPENSE_CLAIM_DEFAULTS, columns: cols }}
-        />,
-      )
-      const page = container.querySelector('.doc-page') as HTMLElement
-      return { page: page.className, table: page.querySelector('table')?.className }
-    }
-    expect(sheet('small')).toEqual(sheet())
-    expect(sheet('large')).toEqual(sheet())
-    expect(sheet(20)).toEqual(sheet())
+  const sheet = (textSize?: DocTextSize | number, rows: ExpenseRow[] = [{ detail: 'ค่าเดินทาง', amount: 500 }]) => render(
+    <ExpenseClaimPreview
+      company={null}
+      header={{ ...header, textSize }}
+      items={rows}
+      docNumber="GAC-001"
+      settings={{ ...EXPENSE_CLAIM_DEFAULTS, columns: cols }}
+    />,
+  ).container
+
+  // The printed table is 10px where the screen is 12px, so it follows the
+  // same proportion: 16px on screen is 13.33px on paper.
+  it('prints the filled-in cells at the chosen size', () => {
+    const page = sheet(16)
+    const cells = [...page.querySelectorAll('tbody tr:first-child td')]
+    expect(cells.map(td => (td as HTMLElement).style.fontSize)).toEqual(['13.33px', '13.33px', '13.33px'])
+  })
+
+  it('leaves the rest of the sheet as the form lays it out', () => {
+    const page = sheet(20)
+    expect([...page.querySelectorAll('thead th')].every(th => !(th as HTMLElement).style.fontSize)).toBe(true)
+    const totals = [...page.querySelectorAll('tbody tr')].find(tr => tr.textContent?.includes('รวมทั้งสิ้น'))!
+    expect([...totals.querySelectorAll('td')].every(td => !(td as HTMLElement).style.fontSize)).toBe(true)
+    cleanup()
+    const before = sheet()
+    expect(before.querySelector('.doc-page')!.className).toBe(sheet(20).querySelector('.doc-page')!.className)
+  })
+
+  it('prints a document at the usual size exactly as it always printed', () => {
+    const page = sheet()
+    expect([...page.querySelectorAll('tbody td')].every(td => !(td as HTMLElement).style.fontSize)).toBe(true)
+  })
+
+  // Bigger text needs taller rows, so fewer of them fit on a sheet — or the
+  // sheet would run off the bottom of the A4.
+  it('fits fewer rows to a sheet the larger the text', () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ detail: `รายการที่ ${i + 1}`, amount: 100 }))
+    const sheets = (size?: number) => { const n = sheet(size, many).querySelectorAll('.doc-page').length; cleanup(); return n }
+    expect(sheets(20)).toBeGreaterThan(sheets())
+    expect(sheets(10)).toBeLessThanOrEqual(sheets())
   })
 })
