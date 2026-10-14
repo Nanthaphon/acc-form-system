@@ -122,23 +122,15 @@ describe('choosing it on the document', () => {
 describe('the printed document', () => {
   const taxed = { ...base, vat: true, whtRate: 3 }
 
-  it('prints a tick column for each tax charged by line, marking those rows', () => {
+  // Which lines were taxed is chosen on screen and kept with the document;
+  // the printed sheet keeps only its own columns.
+  it('prints no tax column even when the taxes are charged by line', () => {
     const { container } = render(<ExpenseClaimPreview company={null} header={{ ...taxed, vatScope: 'rows', whtScope: 'rows' }}
       items={items} docNumber="X" settings={settings} />)
     const heads = [...container.querySelectorAll('thead th')].map(th => th.textContent)
-    expect(heads.slice(-2)).toEqual(['VAT\n7%', 'หัก ณ\nที่จ่าย'])
-    const marks = [...container.querySelectorAll('tbody tr')].slice(0, 4)
-      .map(tr => [...tr.children].slice(-2).map(td => td.textContent).join('|'))
-    // VAT prints a tick; withholding prints the rate each line is withheld at.
-    expect(marks).toEqual(['|3%', '☑|', '|', '☑|3%'])
-  })
-
-  it('prints one column when only one tax is charged by line', () => {
-    const { container } = render(<ExpenseClaimPreview company={null} header={{ ...taxed, whtScope: 'rows' }}
-      items={items} docNumber="X" settings={settings} />)
-    const heads = [...container.querySelectorAll('thead th')].map(th => th.textContent)
-    expect(heads).toContain('หัก ณ\nที่จ่าย')
     expect(heads).not.toContain('VAT\n7%')
+    expect(heads).not.toContain('หัก ณ\nที่จ่าย')
+    expect(container.textContent).not.toContain('☑')
   })
 
   it('prints no tick column when both are charged on everything', () => {

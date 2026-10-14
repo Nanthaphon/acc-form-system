@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, whtLines, rowWhtRate, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_WHT_KEY } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -77,28 +77,18 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   // can be checked against its own ticks without adding them up by hand.
   const chargedOn = (byRow: boolean, base: number, key: string) =>
     byRow ? ` (ฐาน ${money(base)} · ${tickedRowCount(items, key)} รายการ)` : ''
-  // A tax charged on chosen lines prints its ticks, so the sheet itself shows
-  // which lines were taxed; one charged on everything needs no column.
-  const tickCols = [
-    ...(header.vat && scopes.vat === 'rows' ? [{ key: ROW_VAT_KEY, label: 'VAT\n7%' }] : []),
-    ...(header.whtRate && scopes.wht === 'rows' ? [{ key: ROW_WHT_KEY, label: 'หัก ณ\nที่จ่าย' }] : []),
-  ]
-  const TICK_MM = 11
-  // A line's withholding prints as its rate, so the sheet shows what each line
-  // was withheld at; an older ticked line prints the document's rate.
-  const rateMark = (r: typeof items[number]) => {
-    const rate = rowWhtRate(r) ?? (header.whtRate || 0)
-    return rate > 0 ? `${rate}%` : ''
-  }
+  // Which lines a tax was charged on is chosen on the fill-in screen and kept
+  // with the document, but not printed: the sheet keeps its own columns, and
+  // the summary says what each tax was worked out from and on how many lines.
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
   const bahtWords = bahtText(tax.netTotal)
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const withSeq = showSeqColumn(settings)
-  const totalCols = vcols.length + (withSeq ? 1 : 0) + tickCols.length // + the ลำดับ column, + the tax ticks
+  const totalCols = vcols.length + (withSeq ? 1 : 0) // + the ลำดับ column
 
   // Widths are millimetres on the sheet (printWidthsMm) rendered as percentages,
   // so the table fills the frame exactly whatever the paper size.
-  const mm = printWidthsMm(withSeq ? seqColumnWidth(settings) : 0, vcols.map(c => c.width), PRINT_TABLE_MM - tickCols.length * TICK_MM)
+  const mm = printWidthsMm(withSeq ? seqColumnWidth(settings) : 0, vcols.map(c => c.width), PRINT_TABLE_MM)
   const SEQ_WEIGHT = mm.seq
   const widthWeights = mm.cols
   const pct = (w: number) => `${((w / PRINT_TABLE_MM) * 100).toFixed(3)}%`
@@ -133,7 +123,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     headerFields: (settings.headerFields ?? []).length,
     introLines: paragraphLines(settings.introText),
     bodyLines: paragraphLines(settings.bodyText),
-    headLines: rowLines([...widthWeights, ...tickCols.map(() => TICK_MM)], [...vcols.map(c => c.label), ...tickCols.map(t => t.label)]),
+    headLines: rowLines(widthWeights, vcols.map(c => c.label)),
     taxLines: hasTax
       // Withholding picked line by line prints a line per rate.
       ? 2 + (header.vat ? 1 : 0) + (header.retentionRate ? 1 : 0)
@@ -240,9 +230,6 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                       {col.label}
                     </th>
                   ))}
-                  {tickCols.map(t => (
-                    <th key={t.key} style={{ width: pct(TICK_MM) }} className="whitespace-pre-line border border-black px-1 py-1 leading-[2]">{t.label}</th>
-                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -258,11 +245,6 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                           : cellMoney(computed[i], col)}
                       </td>
                     ))}
-                    {tickCols.map(t => (
-                      <td key={t.key} className="border border-black px-1 py-0.5 text-center leading-[2]">
-                        {t.key === ROW_WHT_KEY ? rateMark(items[i]) : isRowTicked(items[i], t.key) ? '☑' : ''}
-                      </td>
-                    ))}
                   </tr>
                 ))}
                 {/* No blank rows ruled under the last one: the table ends where
@@ -276,7 +258,6 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                         {isTextCol(col.type) ? '' : money(columnTotals[col.key] ?? 0)}
                       </td>
                     ))}
-                    {tickCols.map(t => <td key={t.key} className="border border-black px-1 py-1"></td>)}
                   </tr>
                 )}
               </tbody>

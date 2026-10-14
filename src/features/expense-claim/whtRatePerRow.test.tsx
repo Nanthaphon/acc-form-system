@@ -122,10 +122,13 @@ describe('on the fill-in screen', () => {
 })
 
 describe('on the printed sheet', () => {
-  it('prints each line\'s rate in the withholding column', () => {
+  // The rates are chosen on screen and kept with the document; the sheet keeps
+  // only its own columns, and the summary below says what each rate came to.
+  it('prints no withholding column', () => {
     const { container } = render(<ExpenseClaimPreview company={null} header={byLine} items={items} docNumber="X" settings={settings} />)
-    const rates = [...container.querySelectorAll('tbody tr')].slice(0, 4).map(tr => tr.lastElementChild!.textContent)
-    expect(rates).toEqual(['1%', '3%', '3%', ''])
+    const heads = [...container.querySelectorAll('thead th')].map(th => th.textContent)
+    expect(heads).not.toContain('หัก ณ\nที่จ่าย')
+    expect(container.querySelector('tbody')!.textContent).not.toMatch(/\d%/)
   })
 
   it('prints one summary line per rate', () => {
