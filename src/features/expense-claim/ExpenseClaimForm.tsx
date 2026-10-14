@@ -1,9 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { ALargeSmall, Plus, Trash2 } from 'lucide-react'
+import { ALargeSmall, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
-import type { DocTextSize, ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
+import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, WHT_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
@@ -12,7 +12,7 @@ import { BLANK_LIMITS, blankWidth } from './blankSizing'
 import { FEATURES } from '../../shared/features'
 import TaxPanel from './TaxPanel'
 import GrowTextarea from '../../components/GrowTextarea'
-import { textSizeOf, textSizeScale, textSizeStyles, TEXT_SIZES } from '../../shared/textSize'
+import { textPx, textSizeScale, DEFAULT_TEXT_PX, MAX_TEXT_PX, MIN_TEXT_PX } from '../../shared/textSize'
 
 interface Props {
   header: ExpenseHeader
@@ -31,29 +31,49 @@ interface Props {
 
 // Larger or smaller text in the boxes being typed into — this form's own
 // setting, saved with it. The document it prints as is untouched.
-function TextSizePicker({ value, onChange }: { value: DocTextSize; onChange: (v: DocTextSize) => void }) {
+const STEP_BTN = 'inline-flex h-7 w-7 items-center justify-center text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent'
+
+function TextSizePicker({ value, onChange }: { value: number; onChange: (px: number) => void }) {
+  // What is being typed, while it is typed: "16" passes through "1", so the
+  // size is taken — and kept within 10–20 — only once the typing is done.
+  const [draft, setDraft] = useState<string | null>(null)
+  const commit = () => {
+    if (draft === null) return
+    const n = Number(draft)
+    setDraft(null)
+    if (draft.trim() !== '' && Number.isFinite(n)) onChange(textPx(n))
+  }
   return (
-    <span
-      role="radiogroup"
-      aria-label="ขนาดตัวอักษร"
-      title="ขนาดตัวอักษรในช่องกรอกของฟอร์มนี้ — ไม่มีผลกับเอกสารที่พิมพ์ออกมา"
-      className="inline-flex items-center gap-1"
-    >
-      <ALargeSmall size={15} className="mr-0.5 shrink-0 text-stone-400" aria-hidden />
-      <span className="inline-flex overflow-hidden rounded-lg border border-stone-200 bg-white text-xs">
-        {TEXT_SIZES.map(s => (
-          <button
-            key={s.value}
-            type="button"
-            role="radio"
-            aria-checked={value === s.value}
-            onClick={() => onChange(s.value)}
-            className={`px-2.5 py-1 transition-colors ${value === s.value ? 'bg-clay-600 font-medium text-white' : 'text-stone-500 hover:bg-stone-50'}`}
-          >
-            {s.label}
-          </button>
-        ))}
+    <span className="inline-flex items-center gap-1.5" title="ขนาดตัวอักษรในช่องกรอกของฟอร์มนี้ — ไม่มีผลกับเอกสารที่พิมพ์ออกมา">
+      <ALargeSmall size={15} className="shrink-0 text-stone-400" aria-hidden />
+      <span className="text-xs text-stone-500">ขนาดตัวอักษร</span>
+      <span className="inline-flex items-center overflow-hidden rounded-lg border border-stone-200 bg-white">
+        <button type="button" aria-label="ลดขนาดตัวอักษร" disabled={value <= MIN_TEXT_PX} onClick={() => onChange(value - 1)} className={STEP_BTN}>
+          <Minus size={14} />
+        </button>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={MIN_TEXT_PX}
+          max={MAX_TEXT_PX}
+          aria-label="ขนาดตัวอักษร (px)"
+          value={draft ?? String(value)}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit() } }}
+          className="h-7 w-9 border-x border-stone-200 text-center text-xs tabular-nums text-stone-900 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        <button type="button" aria-label="เพิ่มขนาดตัวอักษร" disabled={value >= MAX_TEXT_PX} onClick={() => onChange(value + 1)} className={STEP_BTN}>
+          <Plus size={14} />
+        </button>
       </span>
+      <span className="text-xs text-stone-400">px</span>
+      {value !== DEFAULT_TEXT_PX && (
+        <button type="button" aria-label="กลับเป็นขนาดปกติ" title={`กลับเป็น ${DEFAULT_TEXT_PX} px`} onClick={() => onChange(DEFAULT_TEXT_PX)}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700">
+          <RotateCcw size={14} />
+        </button>
+      )}
     </span>
   )
 }
@@ -113,8 +133,9 @@ function fmt(n: number): string {
 export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle, showSeq = true }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
   const titles = sectionTitles({ requesterTitle, itemsTitle })
-  const textSize = textSizeOf(header.textSize)
-  const cellText = textSizeStyles(textSize)
+  const textSize = textPx(header.textSize)
+  // The cells being typed into take the document's size; nothing else does.
+  const cellFont = { fontSize: `${textSize}px` }
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
   // Paragraphs that have blanks to fill (plain paragraphs need no input).
   const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
@@ -257,7 +278,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
         ) : (
           <>
             <div className="scroll-slim overflow-x-auto">
-              <table className={`w-full table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`} style={{ minWidth: `${tableMinWidth(vcols, textSizeScale(textSize))}px` }}>
+              <table className={`w-full table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`} style={{ minWidth: `${tableMinWidth(vcols, textSizeScale(textSize), tickCols.length)}px` }}>
                 <thead>
                   <tr>
                     {showSeq && <th className={`w-8 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
@@ -274,11 +295,11 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       </th>
                     ))}
                     {tickCols.map(t => (
-                      <th key={t.key} className={`w-[72px] whitespace-pre-line border-b border-clay-100 bg-clay-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-clay-700`}>
+                      <th key={t.key} style={{ width: TICK_COL_PX }} className={`whitespace-pre-line border-b border-clay-100 bg-clay-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-clay-700`}>
                         {t.label}
                       </th>
                     ))}
-                    <th className="w-9 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5"></th>
+                    <th style={{ width: ACTION_COL_PX }} className="border-b border-stone-200 bg-stone-50 px-1 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -293,7 +314,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                             </div>
                           ) : col.type === 'date' ? (
                             <DateInput
-                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 ${cellText} focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              style={cellFont}
                               value={row[col.key] as string}
                               onChange={v => setCell(i, col.key, v)}
                             />
@@ -301,13 +323,15 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                             <input
                               type="number"
                               placeholder="0"
-                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-right ${cellText} placeholder:text-stone-300 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-right placeholder:text-stone-300 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              style={cellFont}
                               value={(row[col.key] ?? '') as string | number}
                               onChange={e => setCell(i, col.key, e.target.value === '' ? '' : Number(e.target.value))}
                             />
                           ) : col.type === 'select' ? (
                             <select
-                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 ${cellText} focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              style={cellFont}
                               value={row[col.key] as string}
                               onChange={e => setCell(i, col.key, e.target.value)}
                             >
@@ -316,7 +340,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                             </select>
                           ) : (
                             <GrowTextarea
-                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 ${cellText} leading-snug focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 leading-snug focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              style={cellFont}
                               aria-label={`${col.label.replace(/\s+/g, ' ')} รายการที่ ${i + 1}`}
                               value={(row[col.key] ?? '') as string}
                               onChange={v => setCell(i, col.key, v)}
@@ -386,7 +411,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                           </td>
                         )
                       })}
-                      <td className="border-b border-stone-100 p-2 text-center">
+                      <td className="border-b border-stone-100 px-1 py-1.5 text-center">
                         <ActionIconButton
                           label="ลบรายการ"
                           tone="red"

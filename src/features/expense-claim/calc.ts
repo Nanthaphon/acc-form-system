@@ -394,7 +394,11 @@ export function printWidthsMm(
 export const DATE_COL_MIN_PX = 118  // fits "dd/mm/yyyy" plus the calendar button
 const COL_MIN_PX = 80       // any other column, when the form sets no width
 const SEQ_COL_PX = 32      // the "#" column (w-8)
-const ACTION_COL_PX = 36   // the delete-row column (w-9)
+// The delete-row column: the 32px button and 16px around it. At 36px the
+// button overflowed its own cell and was cut off at the edge of the table.
+export const ACTION_COL_PX = 48
+// A column a tax is picked in on the fill-in table (a VAT tick, a withholding rate).
+export const TICK_COL_PX = 72
 
 // The fill-in table shows the columns in the proportions the sheet will print
 // them in — as percentages, so the table fills whatever width the screen gives
@@ -411,7 +415,7 @@ export function fillColumnPercents(seqMm: number, cols: FormColumn[]): string[] 
 // `scale` is the size of the text in the boxes (1 = ปกติ): larger text needs
 // more room before it is cut off — a date in particular, which must show
 // dd/mm/yyyy whole. The number and the bin button are icons and stay as they are.
-export function tableMinWidth(cols: FormColumn[], scale = 1): number {
-  return SEQ_COL_PX + ACTION_COL_PX
+export function tableMinWidth(cols: FormColumn[], scale = 1, tickCols = 0): number {
+  return SEQ_COL_PX + ACTION_COL_PX + tickCols * TICK_COL_PX
     + cols.reduce((sum, c) => sum + (c.type === 'date' ? DATE_COL_MIN_PX : COL_MIN_PX) * scale, 0)
 }

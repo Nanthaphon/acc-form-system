@@ -225,7 +225,9 @@ export interface ExpenseHeader {
   // for a document that is taxed again as a whole (see taxSummary).
   vatOnNet?: boolean           // add 7% VAT to the net
   whtOnNetRate?: number        // withhold this % of the net
-  textSize?: DocTextSize       // how large the boxes being filled in are (default ปกติ)
+  // How large the boxes being filled in are: pixels (10–20, default 12), or one
+  // of the named sizes a document saved before sizes could be typed carries.
+  textSize?: number | DocTextSize
   fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
 

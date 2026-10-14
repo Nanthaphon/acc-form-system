@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useRef } from 'react'
-import type { MutableRefObject } from 'react'
+import type { CSSProperties, MutableRefObject } from 'react'
 
 // A field that grows as the text does, instead of scrolling it out of sight.
 // Used wherever something typed is often longer than the box it is typed into
@@ -12,6 +12,7 @@ interface Props {
   'aria-label'?: string
   placeholder?: string
   title?: string
+  style?: CSSProperties
   // For a caller that also needs the element itself (to place the cursor, say).
   inputRef?: MutableRefObject<HTMLTextAreaElement | null>
 }

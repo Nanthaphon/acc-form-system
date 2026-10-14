@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { FormColumn } from '../../types/schema'
-import { fillColumnPercents, tableMinWidth, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm } from './calc'
+import { fillColumnPercents, tableMinWidth, ACTION_COL_PX, TICK_COL_PX, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm } from './calc'
 
 const col = (type: FormColumn['type'], width?: number): FormColumn =>
   ({ key: `k${width ?? 'x'}${type}`, label: 'l', type, width })
@@ -36,13 +36,23 @@ describe('fillColumnPercents', () => {
 describe('tableMinWidth', () => {
   // Only what a person needs to read and type counts — a wide setting is for paper.
   it('reserves a readable minimum per column, plus the # and delete columns', () => {
-    expect(tableMinWidth([col('text'), col('number', 300)])).toBe(32 + 36 + 80 + 80)
+    expect(tableMinWidth([col('text'), col('number', 300)])).toBe(32 + 48 + 80 + 80)
   })
   it('gives a date column room for dd/mm/yyyy', () => {
-    expect(tableMinWidth([col('date')])).toBe(32 + 36 + DATE_COL_MIN_PX)
+    expect(tableMinWidth([col('date')])).toBe(32 + 48 + DATE_COL_MIN_PX)
   })
   it('is just the fixed columns when a form has none of its own', () => {
-    expect(tableMinWidth([])).toBe(68)
+    expect(tableMinWidth([])).toBe(80)
+  })
+  // The delete button is 32px with room round it; at 36px it spilled out of
+  // its cell and was cut off at the edge of the table.
+  it('gives the delete column room for its button', () => {
+    expect(ACTION_COL_PX).toBeGreaterThanOrEqual(48)
+  })
+  // Columns a tax is picked in take their width too, or the rest are squeezed
+  // until the last column falls off the edge.
+  it('counts the columns a tax is picked in', () => {
+    expect(tableMinWidth([col('text')], 1, 2)).toBe(32 + 48 + 80 + 2 * TICK_COL_PX)
   })
 })
 

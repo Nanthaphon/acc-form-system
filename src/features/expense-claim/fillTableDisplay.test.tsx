@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
 import type { DocTextSize, ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
@@ -39,28 +39,60 @@ describe('a text cell grows with its text', () => {
 })
 
 describe('the text size', () => {
-  it('offers เล็ก / ปกติ / ใหญ่, starting at ปกติ', () => {
+  const size = () => screen.getByRole('spinbutton', { name: 'ขนาดตัวอักษร (px)' }) as HTMLInputElement
+
+  it('is a number of pixels, starting at 12', () => {
     show()
-    expect(screen.getByRole('radiogroup', { name: 'ขนาดตัวอักษร' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'ปกติ' })).toBeChecked()
-    expect(screen.getByRole('radio', { name: 'ใหญ่' })).not.toBeChecked()
+    expect(size().value).toBe('12')
   })
 
-  it('belongs to the document, so it is saved with it', () => {
+  it('steps up and down one pixel at a time, saved with the document', () => {
+    const { onHeaderChange } = show(vi.fn(), items, { ...header, textSize: 15 })
+    fireEvent.click(screen.getByRole('button', { name: 'เพิ่มขนาดตัวอักษร' }))
+    expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ textSize: 16 }))
+    fireEvent.click(screen.getByRole('button', { name: 'ลดขนาดตัวอักษร' }))
+    expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ textSize: 14 }))
+  })
+
+  it('stops at 10 and at 20', () => {
+    show(vi.fn(), items, { ...header, textSize: 20 })
+    expect(screen.getByRole('button', { name: 'เพิ่มขนาดตัวอักษร' })).toBeDisabled()
+    cleanup()
+    show(vi.fn(), items, { ...header, textSize: 10 })
+    expect(screen.getByRole('button', { name: 'ลดขนาดตัวอักษร' })).toBeDisabled()
+  })
+
+  // Typed digit by digit, so "16" passes through "1": the size is only
+  // taken, and kept within 10–20, once the typing is done.
+  it('takes a typed size once typing is done, kept within 10–20', () => {
     const { onHeaderChange } = show()
-    fireEvent.click(screen.getByRole('radio', { name: 'ใหญ่' }))
-    expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ textSize: 'large' }))
+    fireEvent.change(size(), { target: { value: '1' } })
+    expect(onHeaderChange).not.toHaveBeenCalled()
+    fireEvent.change(size(), { target: { value: '30' } })
+    fireEvent.blur(size())
+    expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ textSize: 20 }))
   })
 
-  it('changes the size of the cells being filled in', () => {
-    show(vi.fn(), items, { ...header, textSize: 'large' })
-    expect(screen.getByLabelText('รายละเอียด รายการที่ 1').className).toContain('text-sm')
+  it('makes the cells being filled in that size', () => {
+    show(vi.fn(), items, { ...header, textSize: 16 })
+    expect(screen.getByLabelText('รายละเอียด รายการที่ 1')).toHaveStyle({ fontSize: '16px' })
   })
 
-  it('reads a document saved before the choice existed as ปกติ', () => {
-    show(vi.fn(), items, { ...header, textSize: undefined })
-    expect(screen.getByRole('radio', { name: 'ปกติ' })).toBeChecked()
-    expect(screen.getByLabelText('รายละเอียด รายการที่ 1').className).toContain('text-xs')
+  it('reads the older เล็ก / ปกติ / ใหญ่ as 11 / 12 / 14', () => {
+    for (const [old, px] of [['small', '11'], ['normal', '12'], ['large', '14'], [undefined, '12']] as const) {
+      show(vi.fn(), items, { ...header, textSize: old })
+      expect(size().value).toBe(px)
+      cleanup()
+    }
+  })
+
+  it('offers a way back to 12 only once it has moved', () => {
+    show()
+    expect(screen.queryByRole('button', { name: 'กลับเป็นขนาดปกติ' })).not.toBeInTheDocument()
+    cleanup()
+    const { onHeaderChange } = show(vi.fn(), items, { ...header, textSize: 17 })
+    fireEvent.click(screen.getByRole('button', { name: 'กลับเป็นขนาดปกติ' }))
+    expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ textSize: 12 }))
   })
 })
 
@@ -73,7 +105,7 @@ describe('it changes the boxes being typed into and nothing else', () => {
   })
 
   it('leaves the printed document as the form lays it out, at any size', () => {
-    const sheet = (textSize?: DocTextSize) => {
+    const sheet = (textSize?: DocTextSize | number) => {
       const { container } = render(
         <ExpenseClaimPreview
           company={null}
@@ -88,5 +120,6 @@ describe('it changes the boxes being typed into and nothing else', () => {
     }
     expect(sheet('small')).toEqual(sheet())
     expect(sheet('large')).toEqual(sheet())
+    expect(sheet(20)).toEqual(sheet())
   })
 })

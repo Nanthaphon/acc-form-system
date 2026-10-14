@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Calendar as CalendarIcon } from 'lucide-react'
@@ -30,9 +31,9 @@ function displayToIso(s: string): string | null {
 const CALENDAR_W = 300
 const CALENDAR_H = 360
 
-interface Props { value: string; onChange: (iso: string) => void; className?: string }
+interface Props { value: string; onChange: (iso: string) => void; className?: string; style?: CSSProperties }
 
-export default function DateInput({ value, onChange, className }: Props) {
+export default function DateInput({ value, onChange, className, style }: Props) {
   const [text, setText] = useState(isoToDisplay(value))
   const [open, setOpen] = useState(false)
   const [at, setAt] = useState({ top: 0, left: 0 })
@@ -99,6 +100,7 @@ export default function DateInput({ value, onChange, className }: Props) {
         placeholder="dd/mm/yyyy"
         maxLength={10}
         className={`${className ?? ''} pr-6`}
+        style={style}
         value={text}
         onChange={e => handleText(e.target.value)}
         onClick={() => setOpen(true)}
