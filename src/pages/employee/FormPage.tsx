@@ -87,8 +87,13 @@ export default function FormPage() {
   useEffect(() => { if (header.companyId) getCompany(header.companyId).then(setCompany) }, [header.companyId])
   useEffect(() => { listCompanies().then(setCompanies) }, [])
 
-  async function save() {
+  // Saving and printing are one button: people printed a filled-in form and
+  // walked away believing it was in the system, when nothing had been saved.
+  // The document is saved first and printed only once it is; a signed one
+  // can no longer change, so it is just printed.
+  async function saveAndPrint() {
     if (saving) return // a double click must not create two documents
+    if (locked) { await print(savedId, false); return }
     const totals = buildTotals()
     // Require a total > 0 only for forms that actually have amount columns.
     const hasNumericCol = settings.columns.some(c => c.type === 'number' || c.type === 'calc')
@@ -101,12 +106,15 @@ export default function FormPage() {
       return
     }
     setSaving(true)
-    try { await persist(totals) } finally { setSaving(false) }
+    let subId: string | null
+    try { subId = await persist(totals) } finally { setSaving(false) }
+    if (subId) await print(subId, true)
   }
 
   // Save the document first (a new one needs its id before files can be stored
   // under it), then upload new attachments, record the list, drop removed files.
-  async function persist(totals: ExpenseTotals) {
+  // Gives back the document's id once all of it is stored, or null.
+  async function persist(totals: ExpenseTotals): Promise<string | null> {
     const editor = { uid: profile!.uid, name: `${profile!.firstName ?? ''} ${profile!.lastName ?? ''}`.trim() }
     let subId = savedId
     try {
@@ -124,7 +132,7 @@ export default function FormPage() {
       setVersionRefresh(n => n + 1)
     } catch (e) {
       uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })
-      return
+      return null
     }
 
     if (subId && (pendingFiles.length || removedAtts.length)) {
@@ -137,26 +145,35 @@ export default function FormPage() {
         setAttachments(next); setPendingFiles([]); setRemovedAtts([])
       } catch {
         await deleteAttachmentFiles(uploaded.map(a => a.path)) // keep storage in step with the saved list
-        uiAlert('บันทึกเอกสารแล้ว แต่อัปโหลดไฟล์แนบไม่สำเร็จ — กด “บันทึก” อีกครั้งเพื่อลองใหม่', { title: 'แนบไฟล์ไม่สำเร็จ' })
-        return
+        uiAlert('บันทึกเอกสารแล้ว แต่อัปโหลดไฟล์แนบไม่สำเร็จ — กด “บันทึกและพิมพ์” อีกครั้งเพื่อลองใหม่', { title: 'แนบไฟล์ไม่สำเร็จ' })
+        return null
       }
     }
-    uiAlert('บันทึกแล้ว — ส่งให้เซ็นได้ที่หน้าประวัติ', { tone: 'success' })
+    return subId
   }
 
   function handleRestore(v: SubmissionVersion) {
     setHeader(v.header); setItems(v.items); setShowPreview(false)
-    uiAlert(`ดึงเนื้อหาเวอร์ชัน ${v.version} กลับมาแล้ว — ตรวจสอบแล้วกด "บันทึก" เพื่อสร้างเป็นเวอร์ชันใหม่`)
+    uiAlert(`ดึงเนื้อหาเวอร์ชัน ${v.version} กลับมาแล้ว — ตรวจสอบแล้วกด "บันทึกและพิมพ์" เพื่อสร้างเป็นเวอร์ชันใหม่`)
   }
 
   // Paper and PDF come from the same place: the browser prints what
   // ExpenseClaimPreview lays out, and its "Save as PDF" destination writes
   // that very page to a file. There used to be a second renderer just for
   // the PDF, and it drifted from the printed page every time either changed.
-  async function print() {
-    if (savedId) await incrementPrint(savedId)
-    window.print()
+  // A document saved a moment ago has only just been given its number, so the
+  // print waits for the page to show it (the effect below) — otherwise the
+  // paper would read "(ยังไม่บันทึก)".
+  const [printRequest, setPrintRequest] = useState<{ saved: boolean } | null>(null)
+  async function print(subId: string | null, saved: boolean) {
+    if (subId) { try { await incrementPrint(subId) } catch { /* the count is not worth losing the print over */ } }
+    setPrintRequest({ saved })
   }
+  useEffect(() => {
+    if (!printRequest) return
+    window.print()
+    if (printRequest.saved) uiAlert('บันทึกแล้ว — ส่งให้เซ็นได้ที่หน้าประวัติ', { tone: 'success' })
+  }, [printRequest])
 
   // Signed documents are locked in the database (protect_signed_content), so
   // the page says so up front instead of only failing at save time.
@@ -230,17 +247,13 @@ export default function FormPage() {
       <div className="no-print mt-4 flex flex-wrap items-center gap-2.5">
         <button
           className={ui.btnPrimary}
-          onClick={save}
-          disabled={saving || locked}
-          title={locked ? 'เอกสารมีลายเซ็นแล้ว แก้ไขไม่ได้' : undefined}
+          onClick={saveAndPrint}
+          disabled={saving}
+          title={locked ? 'เอกสารมีลายเซ็นแล้ว แก้ไขไม่ได้ — พิมพ์ได้อย่างเดียว' : undefined}
         >
-          {saving ? <><Spinner size={16} /> กำลังบันทึก...</> : <><Save size={16} /> บันทึก</>}
-        </button>
-        <button
-          className={ui.btnSecondary}
-          onClick={print}
-        >
-          <Printer size={16} /> พิมพ์ / บันทึก PDF
+          {saving ? <><Spinner size={16} /> กำลังบันทึก...</>
+            : locked ? <><Printer size={16} /> พิมพ์ / บันทึก PDF</>
+            : <><Save size={16} /> บันทึกและพิมพ์</>}
         </button>
         <button
           className={ui.btnGhost}
@@ -249,7 +262,7 @@ export default function FormPage() {
           ไปหน้าประวัติ
         </button>
         <span className="w-full text-xs text-stone-400 sm:w-auto">
-          ต้องการไฟล์ PDF: กดปุ่มนี้แล้วเลือกปลายทางเป็น “Save as PDF”
+          {locked ? '' : 'บันทึกเข้าระบบก่อน แล้วเปิดหน้าพิมพ์ · '}ต้องการไฟล์ PDF: เลือกปลายทางเป็น “Save as PDF”
         </span>
       </div>
       {savedId && (

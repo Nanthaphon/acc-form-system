@@ -55,7 +55,7 @@ export default function AttachmentsField({ saved, pending = [], readOnly, onAdd,
       </div>
       {!readOnly && (
         <p className="mb-4 text-xs text-stone-500">
-          แนบได้สูงสุด {MAX_ATTACHMENTS} ไฟล์ · ไฟล์ละไม่เกิน {formatBytes(MAX_ATTACHMENT_BYTES)} · รวมไม่เกิน {formatBytes(MAX_ATTACHMENTS_TOTAL_BYTES)} · ไฟล์จะอัปโหลดเมื่อกด “บันทึก”
+          แนบได้สูงสุด {MAX_ATTACHMENTS} ไฟล์ · ไฟล์ละไม่เกิน {formatBytes(MAX_ATTACHMENT_BYTES)} · รวมไม่เกิน {formatBytes(MAX_ATTACHMENTS_TOTAL_BYTES)} · ไฟล์จะอัปโหลดเมื่อกด “บันทึกและพิมพ์”
         </p>
       )}
 
