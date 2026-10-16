@@ -3,7 +3,7 @@ import { ALargeSmall, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
@@ -150,7 +150,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   // the two are decided separately: VAT on everything, withholding on two rows.
   // Both are held back for now (shared/features): until they are let out,
   // every tax is charged on the whole document, the way it always was.
-  const scopes = FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope } : {}
+  const scopes = FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope, ret: header.retentionScope } : {}
   const onNet = FEATURES.taxOnNet ? { vat: header.vatOnNet, whtRate: header.whtOnNetRate } : undefined
   const vatByRow = !!header.vat && scopes.vat === 'rows'
   const whtByRow = !!header.whtRate && scopes.wht === 'rows'
@@ -164,6 +164,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const tickCols: { key: string; label: string; rate?: boolean }[] = [
     ...(vatByRow ? [{ key: ROW_VAT_KEY, label: 'VAT 7%' }] : []),
     ...(whtByRow ? [{ key: ROW_WHT_KEY, label: 'หัก ณ ที่จ่าย', rate: true }] : []),
+    ...(!!header.retentionRate && scopes.ret === 'rows' ? [{ key: ROW_RET_KEY, label: 'ประกันงาน' }] : []),
   ]
   // Lines where อื่นๆ was picked and the rate is still being typed.
   const [otherRateRows, setOtherRateRows] = useState<Set<number>>(new Set())

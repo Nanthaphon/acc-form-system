@@ -26,7 +26,7 @@ const items = [
 
 describe('what each tax is charged on', () => {
   it('charges everything by default — the way every document worked before', () => {
-    expect(taxBases(cols, items, {})).toEqual({ vat: 11500, wht: 11500 })
+    expect(taxBases(cols, items, {})).toMatchObject({ vat: 11500, wht: 11500 })
     const tax = taxSummary(11500, true, 3, 0, taxBases(cols, items, {}))
     expect(tax.vatAmount).toBe(805)    // 7% of the whole 11,500
     expect(tax.whtAmount).toBe(345)
@@ -44,7 +44,7 @@ describe('what each tax is charged on', () => {
 
   it('decides the two separately: VAT on everything, withholding on chosen lines', () => {
     expect(taxBases(cols, items, { wht: 'rows' })).toMatchObject({ vat: 11500, wht: 8500 })
-    expect(taxBases(cols, items, { vat: 'rows' })).toEqual({ vat: 2500, wht: 11500 })
+    expect(taxBases(cols, items, { vat: 'rows' })).toMatchObject({ vat: 2500, wht: 11500 })
   })
 
   it('nothing ticked means nothing charged, even with the rate on', () => {

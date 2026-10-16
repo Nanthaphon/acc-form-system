@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_RET_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -69,7 +69,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   }
   const columnTotals = computeColumnTotals(cols, items)
   // Held back for now — see shared/features and the note in the form.
-  const scopes = FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope } : {}
+  const scopes = FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope, ret: header.retentionScope } : {}
   const onNet = FEATURES.taxOnNet ? { vat: header.vatOnNet, whtRate: header.whtOnNetRate } : undefined
   const bases = taxBases(cols, items, scopes)
   const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate, bases, onNet)
@@ -278,7 +278,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                 {!!header.whtRate && scopes.wht === 'rows' && whtLines(bases, header.whtRate).map(l => (
                   <div key={l.rate} className="flex justify-between"><span>หัก ณ ที่จ่าย {l.rate}% (ฐาน {money(l.base)} · {l.count} รายการ)</span><span>-{money(l.amount)}</span></div>
                 ))}
-                {!!header.retentionRate && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>-{money(tax.retentionAmount)}</span></div>}
+                {!!header.retentionRate && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน{chargedOn(scopes.ret === 'rows', bases.ret ?? 0, ROW_RET_KEY)}</span><span>-{money(tax.retentionAmount)}</span></div>}
                 {taxedAgain && (
                   <>
                     <div className="flex justify-between border-t border-black"><span>ยอดหลังภาษีชั้นแรก</span><span>{money(tax.netAfterTax)}</span></div>

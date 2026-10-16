@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ExpenseHeader, ExpenseRow, FormColumn, TaxScope } from '../../types/schema'
-import { rowHasNumbers, tickedRowCount, whtLines, ROW_VAT_KEY, STANDARD_WHT, TICK, WHT_PRESETS } from './calc'
+import { rowHasNumbers, tickedRowCount, whtLines, ROW_RET_KEY, ROW_VAT_KEY, STANDARD_WHT, TICK, WHT_PRESETS } from './calc'
 import type { TaxBases, TaxResult } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as fmt } from '../../shared/money'
@@ -92,15 +92,32 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
 
   // Withholding stays switched on by its rate, which also stands for lines
   // ticked before each line had a rate of its own — so it must not fall to 0.
-  const setScope = (k: 'vatScope' | 'whtScope', v: TaxScope) => {
+  const setScope = (k: 'vatScope' | 'whtScope' | 'retentionScope', v: TaxScope) => {
     setWhtOther(null)
     onHeaderChange({ ...header, [k]: v, ...(k === 'whtScope' ? { whtRate: header.whtRate || STANDARD_WHT } : {}) })
   }
 
+  const retByRow = FEATURES.taxPerRow && !!header.retentionRate && header.retentionScope === 'rows'
+
   const lines = items.filter(r => rowHasNumbers(cols, r)).length
-  const vatPicked = tickedRowCount(items, ROW_VAT_KEY)
   const withheld = whtLines(bases, header.whtRate)
   const whtPicked = withheld.reduce((n, l) => n + l.count, 0)
+
+  // Under a tax picked by tick: where the ticks go, how many there are, and a
+  // way to tick every line at once — or a warning while there are none.
+  const pickHint = (column: string, key: string) => {
+    const picked = tickedRowCount(items, key)
+    if (picked === 0) return <span className="text-ochre-700">ยังไม่ได้เลือกรายการ — ติ๊กในคอลัมน์ "{column}" ของตาราง</span>
+    return (
+      <span className="text-clay-700">
+        ↑ ติ๊กในคอลัมน์ "{column}" ของตาราง · เลือกแล้ว {picked} จาก {lines} รายการ
+        {picked < items.length && (
+          <> · <button type="button" className="underline underline-offset-2 hover:text-clay-900"
+            onClick={() => onItemsChange(items.map(r => ({ ...r, [key]: TICK })))}>เลือกทั้งหมด</button></>
+        )}
+      </span>
+    )
+  }
 
   return (
     <div className="rounded-xl border border-stone-200 bg-stone-50 px-5 py-2">
@@ -109,17 +126,7 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
         on={!!header.vat}
         onToggle={on => onHeaderChange({ ...header, vat: on })}
         amount={<span className="text-stone-700">+{fmt(tax.vatAmount)}</span>}
-        below={vatByRow && (vatPicked === 0
-          ? <span className="text-ochre-700">ยังไม่ได้เลือกรายการ — ติ๊กในคอลัมน์ "VAT 7%" ของตาราง</span>
-          : (
-            <span className="text-clay-700">
-              ↑ ติ๊กในคอลัมน์ "VAT 7%" ของตาราง · เลือกแล้ว {vatPicked} จาก {lines} รายการ
-              {vatPicked < items.length && (
-                <> · <button type="button" className="underline underline-offset-2 hover:text-clay-900"
-                  onClick={() => onItemsChange(items.map(r => ({ ...r, [ROW_VAT_KEY]: TICK })))}>เลือกทั้งหมด</button></>
-              )}
-            </span>
-          ))}
+        below={vatByRow && pickHint('VAT 7%', ROW_VAT_KEY)}
       >
         {FEATURES.taxPerRow && <ScopePicker value={header.vatScope} onChange={v => setScope('vatScope', v)} label="ขอบเขต VAT" />}
       </TaxRow>
@@ -194,6 +201,7 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
         on={!!header.retentionRate}
         onToggle={on => onHeaderChange({ ...header, retentionRate: on ? STANDARD_RETENTION : 0 })}
         amount={<span className="text-brick-600">−{fmt(tax.retentionAmount)}</span>}
+        below={retByRow && pickHint('ประกันงาน', ROW_RET_KEY)}
       >
         <span className="flex items-center gap-1 text-sm text-stone-500">
           <input
@@ -210,8 +218,9 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
               onHeaderChange({ ...header, retentionRate: Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0 })
             }}
           />
-          % ของยอดก่อนภาษี
+          {retByRow ? '% ของรายการที่เลือก' : '% ของยอดก่อนภาษี'}
         </span>
+        {FEATURES.taxPerRow && <ScopePicker value={header.retentionScope} onChange={v => setScope('retentionScope', v)} label="ขอบเขตค่าประกันงาน" />}
       </TaxRow>
 
       {FEATURES.taxOnNet && (!!header.vat || whtOn || !!header.retentionRate) && (

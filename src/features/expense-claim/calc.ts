@@ -102,6 +102,8 @@ export function bahtTextForRows(columns: FormColumn[], rows: ExpenseRow[]): stri
 // a column key is generated as col1, col2, … and never holds a colon.
 export const ROW_VAT_KEY = 'tax:vat'
 export const ROW_WHT_KEY = 'tax:wht'
+// ค่าประกันงาน picked line by line: a tick, at the document's one rate.
+export const ROW_RET_KEY = 'tax:ret'
 export function isRowTicked(row: ExpenseRow, key: string): boolean {
   return row[key] === 1 || row[key] === '1'
 }
@@ -134,6 +136,8 @@ export interface WhtGroup { rate: number | null; base: number; count: number }
 export interface TaxBases {
   vat: number
   wht: number
+  /** What ค่าประกันงาน is held back on; the whole subtotal when absent. */
+  ret?: number
   /** Only when withholding is picked line by line. */
   whtGroups?: WhtGroup[]
 }
@@ -141,15 +145,16 @@ export interface TaxBases {
 // What VAT and withholding are each worked out on, given how this document
 // charges them. 'all' is the whole subtotal; 'rows' is the picked lines.
 export function taxBases(
-  columns: FormColumn[], rows: ExpenseRow[], scopes: { vat?: TaxScope; wht?: TaxScope },
+  columns: FormColumn[], rows: ExpenseRow[], scopes: { vat?: TaxScope; wht?: TaxScope; ret?: TaxScope },
 ): TaxBases {
   const everything = grandTotal(columns, rows)
   const totalCol = totalColumn(columns)
   const lineTotal = (r: ExpenseRow) => !totalCol ? 0 : Number(computeRow(columns, r)[totalCol.key]) || 0
   const ticked = (key: string) => round2(rows.filter(r => isRowTicked(r, key)).reduce((s, r) => s + lineTotal(r), 0))
 
+  const ret = scopes.ret === 'rows' ? ticked(ROW_RET_KEY) : everything
   if (scopes.wht !== 'rows') {
-    return { vat: scopes.vat === 'rows' ? ticked(ROW_VAT_KEY) : everything, wht: everything }
+    return { vat: scopes.vat === 'rows' ? ticked(ROW_VAT_KEY) : everything, wht: everything, ret }
   }
   const groups = new Map<number | null, WhtGroup>()
   for (const r of rows) {
@@ -164,6 +169,7 @@ export function taxBases(
     vat: scopes.vat === 'rows' ? ticked(ROW_VAT_KEY) : everything,
     wht: round2(whtGroups.reduce((s, g) => s + g.base, 0)),
     whtGroups,
+    ret,
   }
 }
 
@@ -213,7 +219,7 @@ export function taxSummary(
     : bases?.whtGroups ? round2(whtLines(bases, whtRate).reduce((s, l) => s + l.amount, 0))
     : round2((bases?.wht ?? subtotal) * whtRate / 100)
   // ค่าประกันงาน (retention) is held back on the pre-VAT amount, like withholding.
-  const retentionAmount = retentionRate ? round2(subtotal * retentionRate / 100) : 0
+  const retentionAmount = retentionRate ? round2((bases?.ret ?? subtotal) * retentionRate / 100) : 0
   const netAfterTax = round2(subtotal + vatAmount - whtAmount - retentionAmount)
   // A second round, charged on that figure instead of on the items — for a
   // document that passes on what has already been taxed once and is taxed

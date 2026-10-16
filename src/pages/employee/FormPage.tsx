@@ -49,7 +49,7 @@ export default function FormPage() {
     const subtotal = grandTotal(settings.columns, items)
     // The saved totals follow what is actually charged — see shared/features.
     const tax = taxSummary(subtotal, header.vat, header.whtRate, header.retentionRate,
-      taxBases(settings.columns, items, FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope } : {}),
+      taxBases(settings.columns, items, FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope, ret: header.retentionScope } : {}),
       FEATURES.taxOnNet ? { vat: header.vatOnNet, whtRate: header.whtOnNetRate } : undefined)
     return {
       columnTotals: computeColumnTotals(settings.columns, items),

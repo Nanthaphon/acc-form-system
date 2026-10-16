@@ -221,6 +221,7 @@ export interface ExpenseHeader {
   whtRate?: number             // withholding tax rate: 0 | 3 | 5
   whtScope?: TaxScope
   retentionRate?: number       // ค่าประกันงาน held back (%), deducted like withholding
+  retentionScope?: TaxScope    // on everything (default) or only the ticked lines
   // A second round of tax, charged on the net rather than on the items —
   // for a document that is taxed again as a whole (see taxSummary).
   vatOnNet?: boolean           // add 7% VAT to the net
