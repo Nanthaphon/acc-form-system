@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY, ROW_RET_KEY } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -131,8 +131,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     bodyLines: paragraphLines(settings.bodyText),
     headLines: rowLines(widthWeights, vcols.map(c => c.label)),
     taxLines: hasTax
-      // Withholding picked line by line prints a line per rate.
-      ? 2 + (header.vat ? 1 : 0) + (header.retentionRate ? 1 : 0)
+      // Withholding and ค่าประกันงาน picked line by line print a line per rate.
+      ? 2 + (header.vat ? 1 : 0)
+        + (!header.retentionRate ? 0 : scopes.ret === 'rows' ? Math.max(1, retLines(bases).length) : 1)
         + (!header.whtRate ? 0 : scopes.wht === 'rows' ? Math.max(1, whtLines(bases, header.whtRate).length) : 1)
         + (taxedAgain ? 1 + (onNet?.vat ? 1 : 0) + (onNet?.whtRate ? 1 : 0) : 0)
       : 0,
@@ -278,7 +279,10 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                 {!!header.whtRate && scopes.wht === 'rows' && whtLines(bases, header.whtRate).map(l => (
                   <div key={l.rate} className="flex justify-between"><span>หัก ณ ที่จ่าย {l.rate}% (ฐาน {money(l.base)} · {l.count} รายการ)</span><span>-{money(l.amount)}</span></div>
                 ))}
-                {!!header.retentionRate && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน{chargedOn(scopes.ret === 'rows', bases.ret ?? 0, ROW_RET_KEY)}</span><span>-{money(tax.retentionAmount)}</span></div>}
+                {!!header.retentionRate && scopes.ret !== 'rows' && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>-{money(tax.retentionAmount)}</span></div>}
+                {!!header.retentionRate && scopes.ret === 'rows' && retLines(bases).map(l => (
+                  <div key={l.rate} className="flex justify-between"><span>หัก {l.rate}% ค่าประกันงาน (ฐาน {money(l.base)} · {l.count} รายการ)</span><span>-{money(l.amount)}</span></div>
+                ))}
                 {taxedAgain && (
                   <>
                     <div className="flex justify-between border-t border-black"><span>ยอดหลังภาษีชั้นแรก</span><span>{money(tax.netAfterTax)}</span></div>

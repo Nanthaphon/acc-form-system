@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ExpenseHeader, ExpenseRow, FormColumn, TaxScope } from '../../types/schema'
-import { rowHasNumbers, tickedRowCount, whtLines, ROW_RET_KEY, ROW_VAT_KEY, STANDARD_WHT, TICK, WHT_PRESETS } from './calc'
-import type { TaxBases, TaxResult } from './calc'
+import { retLines, rowHasNumbers, tickedRowCount, whtLines, ROW_VAT_KEY, STANDARD_WHT, TICK, WHT_PRESETS } from './calc'
+import type { RateLine, TaxBases, TaxResult } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as fmt } from '../../shared/money'
 import { FEATURES } from '../../shared/features'
@@ -100,8 +100,22 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
   const retByRow = FEATURES.taxPerRow && !!header.retentionRate && header.retentionScope === 'rows'
 
   const lines = items.filter(r => rowHasNumbers(cols, r)).length
-  const withheld = whtLines(bases, header.whtRate)
-  const whtPicked = withheld.reduce((n, l) => n + l.count, 0)
+
+  // Under a tax whose rate is chosen line by line: a line per rate, with what
+  // it was worked out on — or a warning while no line has a rate.
+  const byRateHint = (name: string, column: string, rateLines: RateLine[]) => rateLines.length === 0
+    ? <span className="text-ochre-700">ยังไม่ได้เลือกรายการ — เลือกอัตราในคอลัมน์ "{column}" ของตาราง</span>
+    : (
+      <div className="space-y-0.5">
+        {rateLines.map(l => (
+          <div key={l.rate} className="flex justify-between text-stone-600">
+            <span>{name} {l.rate}% (จาก {fmt(l.base)} · {l.count} รายการ)</span>
+            {/* One rate is the row's own amount already; several are each shown. */}
+            {rateLines.length > 1 && <span className="tabular-nums text-brick-600">−{fmt(l.amount)}</span>}
+          </div>
+        ))}
+      </div>
+    )
 
   // Under a tax picked by tick: where the ticks go, how many there are, and a
   // way to tick every line at once — or a warning while there are none.
@@ -136,19 +150,7 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
         on={whtOn}
         onToggle={on => { setWhtOther(null); onHeaderChange({ ...header, whtRate: on ? STANDARD_WHT : 0 }) }}
         amount={<span className="text-brick-600">−{fmt(tax.whtAmount)}</span>}
-        below={whtByRow && (whtPicked === 0
-          ? <span className="text-ochre-700">ยังไม่ได้เลือกรายการ — เลือกอัตราในคอลัมน์ "หัก ณ ที่จ่าย" ของตาราง</span>
-          : (
-            <div className="space-y-0.5">
-              {withheld.map(l => (
-                <div key={l.rate} className="flex justify-between text-stone-600">
-                  <span>หัก ณ ที่จ่าย {l.rate}% (จาก {fmt(l.base)} · {l.count} รายการ)</span>
-                  {/* One rate is the row's own amount already; several are each shown. */}
-                  {withheld.length > 1 && <span className="tabular-nums text-brick-600">−{fmt(l.amount)}</span>}
-                </div>
-              ))}
-            </div>
-          ))}
+        below={whtByRow && byRateHint('หัก ณ ที่จ่าย', 'หัก ณ ที่จ่าย', whtLines(bases, header.whtRate))}
       >
         {whtByRow ? (
           <span className="text-xs text-stone-500">อัตราเลือกในตาราง</span>
@@ -201,25 +203,29 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
         on={!!header.retentionRate}
         onToggle={on => onHeaderChange({ ...header, retentionRate: on ? STANDARD_RETENTION : 0 })}
         amount={<span className="text-brick-600">−{fmt(tax.retentionAmount)}</span>}
-        below={retByRow && pickHint('ประกันงาน', ROW_RET_KEY)}
+        below={retByRow && byRateHint('ค่าประกันงาน', 'ประกันงาน', retLines(bases))}
       >
-        <span className="flex items-center gap-1 text-sm text-stone-500">
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={100}
-            step="0.01"
-            aria-label="อัตราค่าประกันงาน (%)"
-            className={NUMBER_BOX}
-            value={header.retentionRate}
-            onChange={e => {
-              const n = Number(e.target.value)
-              onHeaderChange({ ...header, retentionRate: Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0 })
-            }}
-          />
-          {retByRow ? '% ของรายการที่เลือก' : '% ของยอดก่อนภาษี'}
-        </span>
+        {retByRow ? (
+          <span className="text-xs text-stone-500">อัตราเลือกในตาราง</span>
+        ) : (
+          <span className="flex items-center gap-1 text-sm text-stone-500">
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={100}
+              step="0.01"
+              aria-label="อัตราค่าประกันงาน (%)"
+              className={NUMBER_BOX}
+              value={header.retentionRate}
+              onChange={e => {
+                const n = Number(e.target.value)
+                onHeaderChange({ ...header, retentionRate: Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0 })
+              }}
+            />
+            % ของยอดก่อนภาษี
+          </span>
+        )}
         {FEATURES.taxPerRow && <ScopePicker value={header.retentionScope} onChange={v => setScope('retentionScope', v)} label="ขอบเขตค่าประกันงาน" />}
       </TaxRow>
 

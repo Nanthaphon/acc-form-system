@@ -3,7 +3,7 @@ import { ALargeSmall, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
@@ -159,21 +159,22 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   // Whether this document is taxed a second time, on what it comes to rather
   // than on its items.
   const taxedAgain = !!onNet?.vat || !!onNet?.whtRate
-  // VAT picked line by line is a tick (it is always 7%); withholding is a rate
-  // per line, so its column holds a choice instead of a tick.
-  const tickCols: { key: string; label: string; rate?: boolean }[] = [
+  // VAT picked line by line is a tick (it is always 7%); withholding and
+  // ค่าประกันงาน are a rate per line, so their columns hold a choice instead.
+  const tickCols: { key: string; label: string; rate?: 'wht' | 'ret' }[] = [
     ...(vatByRow ? [{ key: ROW_VAT_KEY, label: 'VAT 7%' }] : []),
-    ...(whtByRow ? [{ key: ROW_WHT_KEY, label: 'หัก ณ ที่จ่าย', rate: true }] : []),
-    ...(!!header.retentionRate && scopes.ret === 'rows' ? [{ key: ROW_RET_KEY, label: 'ประกันงาน' }] : []),
+    ...(whtByRow ? [{ key: ROW_WHT_KEY, label: 'หัก ณ ที่จ่าย', rate: 'wht' as const }] : []),
+    ...(!!header.retentionRate && scopes.ret === 'rows' ? [{ key: ROW_RET_RATE_KEY, label: 'ประกันงาน', rate: 'ret' as const }] : []),
   ]
-  // Lines where อื่นๆ was picked and the rate is still being typed.
-  const [otherRateRows, setOtherRateRows] = useState<Set<number>>(new Set())
-  const setRowRate = (i: number, rate: number) => {
-    const next = items.map((r, x) => x === i ? { ...r, [ROW_WHT_RATE_KEY]: rate, [ROW_WHT_KEY]: UNTICK } : r)
-    onItemsChange(next)
+  // Lines where อื่นๆ was picked and the rate is still being typed, as "wht:3".
+  const [otherRateRows, setOtherRateRows] = useState<Set<string>>(new Set())
+  const setRowRate = (kind: 'wht' | 'ret', i: number, rate: number) => {
+    const set: ExpenseRow = kind === 'wht' ?{ [ROW_WHT_RATE_KEY]: rate, [ROW_WHT_KEY]: UNTICK } : { [ROW_RET_RATE_KEY]: rate }
+    onItemsChange(items.map((r, x) => x === i ? { ...r, ...set } : r))
   }
-  const rateChoice = (i: number, rate: number): string =>
-    otherRateRows.has(i) || (rate > 0 && !WHT_PRESETS.includes(rate)) ? 'other' : String(rate)
+  const ratePresets = (kind: 'wht' | 'ret') => kind === 'wht' ? WHT_PRESETS : RET_PRESETS
+  const rateChoice = (kind: 'wht' | 'ret', i: number, rate: number): string =>
+    otherRateRows.has(`${kind}:${i}`) || (rate > 0 && !ratePresets(kind).includes(rate)) ? 'other' : String(rate)
 
   const categoryOptions = categories ?? CATEGORIES
 
@@ -364,8 +365,9 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                           )
                         }
                         // An older ticked line shows the document's rate, which is what it is withheld at.
-                        const rate = rowWhtRate(row) ?? (header.whtRate || 0)
-                        const choice = rateChoice(i, rate)
+                        const kind = t.rate
+                        const rate = kind === 'wht' ? rowWhtRate(row) ?? (header.whtRate || 0) : rowRetRate(row)
+                        const choice = rateChoice(kind, i, rate)
                         return (
                           <td key={t.key} className="border-b border-stone-100 bg-clay-50/40 p-1 text-center">
                             <div className="flex flex-col items-center gap-1">
@@ -377,15 +379,15 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                                   const v = e.target.value
                                   setOtherRateRows(prev => {
                                     const next = new Set(prev)
-                                    if (v === 'other') next.add(i)
-                                    else next.delete(i)
+                                    if (v === 'other') next.add(`${kind}:${i}`)
+                                    else next.delete(`${kind}:${i}`)
                                     return next
                                   })
-                                  if (v !== 'other') setRowRate(i, Number(v))
+                                  if (v !== 'other') setRowRate(kind, i, Number(v))
                                 }}
                               >
                                 <option value="0">ไม่หัก</option>
-                                {WHT_PRESETS.map(r => <option key={r} value={String(r)}>{r}%</option>)}
+                                {ratePresets(kind).map(r => <option key={r} value={String(r)}>{r}%</option>)}
                                 <option value="other">อื่นๆ</option>
                               </select>
                               {choice === 'other' && (
@@ -397,12 +399,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                                     max={100}
                                     step="0.01"
                                     autoFocus={rate === 0}
-                                    aria-label={`อัตราหัก ณ ที่จ่าย รายการที่ ${i + 1} (%)`}
+                                    aria-label={`อัตรา${t.label} รายการที่ ${i + 1} (%)`}
                                     className="w-12 rounded-md border border-stone-200 bg-white px-1 py-0.5 text-right text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100"
                                     value={rate > 0 ? rate : ''}
                                     onChange={e => {
                                       const n = Number(e.target.value)
-                                      setRowRate(i, Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0)
+                                      setRowRate(kind, i, Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0)
                                     }}
                                   />
                                   %

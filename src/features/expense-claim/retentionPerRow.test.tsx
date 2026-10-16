@@ -2,13 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
-import { taxBases, taxSummary, ROW_RET_KEY } from './calc'
+import { retLines, taxBases, taxSummary, ROW_RET_RATE_KEY } from './calc'
 import type { ExpenseHeader, ExpenseRow, FormColumn, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 
 // ค่าประกันงาน is held back on the work, not on everything a document pays
-// for: the contractor's lines carry it, the materials and the hotel do not.
-// Lines are ticked, and the document's one rate applies to the ticked ones.
+// for: the contractor's lines carry it, the materials and the hotel do not —
+// and, like withholding, each line held back takes a rate of its own.
 
 const cols: FormColumn[] = [
   { key: 'detail', label: 'รายละเอียด', type: 'text' },
@@ -17,24 +17,28 @@ const cols: FormColumn[] = [
 const settings: FormSettings = { ...EXPENSE_CLAIM_DEFAULTS, columns: cols }
 const base: ExpenseHeader = { subject: '', categories: [], companyId: 'globe', firstName: '', lastName: '', position: '', job: '' }
 const items: ExpenseRow[] = [
-  { detail: 'ค่าแรงติดตั้ง', amount: 6000, [ROW_RET_KEY]: 1 },
+  { detail: 'ค่าแรงติดตั้ง', amount: 6000, [ROW_RET_RATE_KEY]: 5 },
   { detail: 'ค่าวัสดุ', amount: 3000 },
-  { detail: 'ค่าแรงรื้อถอน', amount: 1000, [ROW_RET_KEY]: 1 },
+  { detail: 'ค่าแรงรื้อถอน', amount: 1000, [ROW_RET_RATE_KEY]: 10 },
 ]
 const byLine: ExpenseHeader = { ...base, retentionRate: 5, retentionScope: 'rows' }
 
 describe('ค่าประกันงาน on chosen lines', () => {
-  it('is held back on the ticked lines only', () => {
+  it('is held back on each line at its own rate', () => {
     const bases = taxBases(cols, items, { ret: 'rows' })
     expect(bases.ret).toBe(7000)
-    expect(taxSummary(10000, false, 0, 5, bases).retentionAmount).toBe(350)   // 5% of 7,000
+    expect(retLines(bases)).toEqual([
+      { rate: 5, base: 6000, count: 1, amount: 300 },
+      { rate: 10, base: 1000, count: 1, amount: 100 },
+    ])
+    expect(taxSummary(10000, false, 0, 5, bases).retentionAmount).toBe(400)
   })
 
   it('is held back on everything, as before, unless the document says otherwise', () => {
     expect(taxSummary(10000, false, 0, 5, taxBases(cols, items, {})).retentionAmount).toBe(500)
   })
 
-  it('holds back nothing when no line is ticked', () => {
+  it('holds back nothing when no line has a rate', () => {
     const bases = taxBases(cols, [{ detail: 'a', amount: 1000 }], { ret: 'rows' })
     expect(taxSummary(1000, false, 0, 5, bases).retentionAmount).toBe(0)
   })
@@ -56,32 +60,41 @@ describe('on the fill-in screen', () => {
     expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ retentionScope: 'rows' }))
   })
 
-  it('gives every line a tick, and records it', () => {
+  it('gives every line a rate to choose, and records it', () => {
     const { onItemsChange } = show(byLine)
-    expect(screen.getByRole('checkbox', { name: 'ประกันงาน รายการที่ 1' })).toBeChecked()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'ประกันงาน รายการที่ 2' }))
-    expect(onItemsChange.mock.calls[0][0][1][ROW_RET_KEY]).toBe(1)
+    expect(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 1' })).toHaveValue('5')
+    expect(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' })).toHaveValue('0')
+    fireEvent.change(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' }), { target: { value: '10' } })
+    expect(onItemsChange.mock.calls[0][0][1][ROW_RET_RATE_KEY]).toBe(10)
   })
 
-  it('says how many lines are picked, picks them all at once, and shows the amount in its row', () => {
+  it('takes a rate typed under อื่นๆ', () => {
     const { onItemsChange } = show(byLine)
-    expect(within(row()).getByText(/ติ๊กในคอลัมน์ "ประกันงาน" ของตาราง · เลือกแล้ว 2 จาก 3 รายการ/)).toBeInTheDocument()
-    expect(within(row()).getByText('−350.00')).toBeInTheDocument()
-    fireEvent.click(within(row()).getByRole('button', { name: 'เลือกทั้งหมด' }))
-    expect(onItemsChange.mock.calls[0][0].map((r: ExpenseRow) => r[ROW_RET_KEY])).toEqual([1, 1, 1])
+    fireEvent.change(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' }), { target: { value: 'other' } })
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'อัตราประกันงาน รายการที่ 2 (%)' }), { target: { value: '2.5' } })
+    expect(onItemsChange.mock.calls.at(-1)![0][1][ROW_RET_RATE_KEY]).toBe(2.5)
   })
 
-  it('warns while no line is picked', () => {
+  it('shows each rate and what it comes to, in its row', () => {
+    show(byLine)
+    expect(within(row()).getByText('อัตราเลือกในตาราง')).toBeInTheDocument()
+    expect(within(row()).getByText('ค่าประกันงาน 5% (จาก 6,000.00 · 1 รายการ)')).toBeInTheDocument()
+    expect(within(row()).getByText('ค่าประกันงาน 10% (จาก 1,000.00 · 1 รายการ)')).toBeInTheDocument()
+    expect(within(row()).getByText('−400.00')).toBeInTheDocument()
+  })
+
+  it('warns while no line has a rate', () => {
     show(byLine, [{ detail: 'a', amount: 1000 }])
-    expect(within(row()).getByText(/ยังไม่ได้เลือกรายการ/)).toBeInTheDocument()
+    expect(within(row()).getByText(/ยังไม่ได้เลือกรายการ — เลือกอัตราในคอลัมน์ "ประกันงาน"/)).toBeInTheDocument()
   })
 })
 
 describe('on the printed sheet', () => {
-  it('says what it was held back from, and prints no tick column', () => {
+  it('prints a line per rate, and no rate column', () => {
     const { container } = render(<ExpenseClaimPreview company={null} header={byLine} items={items} docNumber="X" settings={settings} />)
-    expect(within(container).getByText('หัก 5% ค่าประกันงาน (ฐาน 7,000.00 · 2 รายการ)')).toBeInTheDocument()
+    expect(within(container).getByText('หัก 5% ค่าประกันงาน (ฐาน 6,000.00 · 1 รายการ)')).toBeInTheDocument()
+    expect(within(container).getByText('หัก 10% ค่าประกันงาน (ฐาน 1,000.00 · 1 รายการ)')).toBeInTheDocument()
     expect([...container.querySelectorAll('thead th')].map(th => th.textContent)).toEqual(['ลำดับ', 'รายละเอียด', 'จำนวนเงิน'])
-    expect(within(container).getByText('9,650.00')).toBeInTheDocument()
+    expect(within(container).getByText('9,600.00')).toBeInTheDocument()
   })
 })
