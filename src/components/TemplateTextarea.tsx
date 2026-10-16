@@ -1,9 +1,9 @@
 import { useRef } from 'react'
 import GrowTextarea from './GrowTextarea'
-import { CalendarDays, CircleHelp, Hash, TextCursorInput, WandSparkles } from 'lucide-react'
+import { CalendarDays, CircleHelp, Hash, SquareChevronDown, TextCursorInput, WandSparkles } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { uiPrompt } from './dialog/dialogService'
-import { countDottedBlanks, dotsToTokens, makeToken } from '../shared/bodyTemplate'
+import { uiAlert, uiPrompt } from './dialog/dialogService'
+import { countDottedBlanks, dotsToTokens, makeToken, splitOptions } from '../shared/bodyTemplate'
 import type { TemplateFieldType } from '../shared/bodyTemplate'
 
 interface Props {
@@ -16,9 +16,14 @@ const INSERTS: { type: TemplateFieldType; label: string; icon: LucideIcon }[] = 
   { type: 'text', label: 'ข้อความ', icon: TextCursorInput },
   { type: 'date', label: 'วันที่', icon: CalendarDays },
   { type: 'number', label: 'ตัวเลข', icon: Hash },
+  { type: 'select', label: 'ตัวเลือก', icon: SquareChevronDown },
 ]
 const toolBtn = 'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-stone-600 hover:bg-stone-100 hover:text-clay-600'
 const HELP = 'พิมพ์ {{ชื่อช่อง}} ในข้อความเพื่อเว้นช่องให้ผู้กรอกใส่ข้อมูลในระบบ · ถ้าไม่กรอก จะพิมพ์ออกเป็น ........ ให้เขียนด้วยมือ'
+  + ' · ช่องตัวเลือกเขียนแบบ {{ชื่อช่อง:เลือก=ตัวเลือก1|ตัวเลือก2}} แก้ตัวเลือกได้ในข้อความโดยตรง'
+const PLACEHOLDER: Record<TemplateFieldType, string> = {
+  text: 'เช่น ได้รับเงินจาก', date: 'เช่น ตั้งแต่วันที่', number: 'เช่น จำนวนเงิน', select: 'เช่น วิธีชำระเงิน',
+}
 
 // Paragraph editor for a form's intro/body text with fill-in blanks: a slim
 // toolbar inserts {{ชื่อช่อง}} tokens at the cursor, and old dotted blanks can
@@ -33,10 +38,22 @@ export default function TemplateTextarea({ value, onChange, placeholder }: Props
     const end = ref.current?.selectionEnd ?? value.length
     const name = await uiPrompt('ตั้งชื่อช่อง — ผู้กรอกฟอร์มจะเห็นชื่อนี้ในช่องกรอก', {
       title: `แทรกช่อง${label}`,
-      placeholder: type === 'date' ? 'เช่น ตั้งแต่วันที่' : type === 'number' ? 'เช่น จำนวนเงิน' : 'เช่น ได้รับเงินจาก',
-      confirmText: 'แทรก',
+      placeholder: PLACEHOLDER[type],
+      confirmText: type === 'select' ? 'ถัดไป' : 'แทรก',
     })
-    const token = makeToken(name ?? '', type)
+    if (!name?.trim()) return
+    let options: string[] = []
+    if (type === 'select') {
+      const typed = await uiPrompt('ใส่ตัวเลือกให้ผู้กรอกเลือก คั่นแต่ละตัวด้วยเครื่องหมายจุลภาค ( , )', {
+        title: `ตัวเลือกของช่อง "${name.trim()}"`,
+        placeholder: 'เช่น เงินสด, โอนเงิน, เช็ค',
+        confirmText: 'แทรก',
+      })
+      if (typed === null) return
+      options = splitOptions(typed)
+      if (!options.length) { uiAlert('ยังไม่ได้ใส่ตัวเลือก — ช่องตัวเลือกต้องมีอย่างน้อย 1 ตัวเลือก', { title: 'แทรกช่องไม่ได้' }); return }
+    }
+    const token = makeToken(name, type, options)
     if (!token) return
     onChange(value.slice(0, start) + token + value.slice(end))
     requestAnimationFrame(() => {

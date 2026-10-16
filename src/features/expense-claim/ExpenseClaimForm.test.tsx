@@ -57,6 +57,29 @@ describe('ExpenseClaimForm', () => {
     expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ fields: { 'tpl:ผู้จ่าย': 'สมชาย' } }))
   })
 
+  it('ช่องตัวเลือกในข้อความเป็น dropdown ให้เลือก และบันทึกค่าที่เลือก', () => {
+    const onHeaderChange = vi.fn()
+    const show = (fields?: Record<string, string>) => render(
+      <ExpenseClaimForm
+        header={{ ...header, fields }}
+        items={[emptyRow(EXPENSE_CLAIM_DEFAULT_COLUMNS)]}
+        columns={EXPENSE_CLAIM_DEFAULT_COLUMNS}
+        onHeaderChange={onHeaderChange}
+        onItemsChange={() => {}}
+        bodyText="ชำระโดย {{วิธีชำระ:เลือก=เงินสด|โอนเงิน}}"
+      />,
+    )
+    const { unmount } = show()
+    const pick = screen.getByRole('combobox', { name: 'วิธีชำระ' })
+    expect([...pick.querySelectorAll('option')].map(o => o.textContent)).toEqual(['— วิธีชำระ —', 'เงินสด', 'โอนเงิน'])
+    fireEvent.change(pick, { target: { value: 'โอนเงิน' } })
+    expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ fields: { 'tpl:วิธีชำระ': 'โอนเงิน' } }))
+    unmount()
+    // A choice since taken off the list stays on the document that has it.
+    show({ 'tpl:วิธีชำระ': 'เช็ค' })
+    expect(screen.getByRole('combobox', { name: 'วิธีชำระ' })).toHaveValue('เช็ค')
+  })
+
   it('ไม่แสดงการ์ดข้อความ ถ้าข้อความไม่มีช่องกรอก', () => {
     render(
       <ExpenseClaimForm

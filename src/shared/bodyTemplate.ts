@@ -5,21 +5,46 @@ import { formatMoney } from './money'
 // The admin writes {{ชื่อช่อง}} where the person filling the form types a value;
 // {{ชื่อช่อง:วันที่}} / {{ชื่อช่อง:ตัวเลข}} make it a date / number field. A blank
 // left empty prints as a dotted line, so it can still be written in by hand.
+// {{ชื่อช่อง:เลือก=เงินสด|โอนเงิน|เช็ค}} is a dropdown of those choices.
 // Values live in header.fields under `tpl:<label>` — the same label used twice
 // is one field.
 
-export type TemplateFieldType = 'text' | 'date' | 'number'
-export interface TemplateField { key: string; label: string; type: TemplateFieldType }
+export type TemplateFieldType = 'text' | 'date' | 'number' | 'select'
+export interface TemplateField { key: string; label: string; type: TemplateFieldType; options?: string[] }
 export type TemplatePart = { kind: 'text'; text: string } | { kind: 'field'; field: TemplateField }
 
 export const TEMPLATE_KEY_PREFIX = 'tpl:'
 const TYPE_WORDS: Record<string, TemplateFieldType> = { 'วันที่': 'date', date: 'date', 'ตัวเลข': 'number', number: 'number' }
-const TYPE_SUFFIX: Record<TemplateFieldType, string> = { text: '', date: ':วันที่', number: ':ตัวเลข' }
+const TYPE_SUFFIX: Record<TemplateFieldType, string> = { text: '', date: ':วันที่', number: ':ตัวเลข', select: ':เลือก=' }
 const TOKEN = /\{\{([^{}]*)\}\}/g
+// "name:เลือก=a|b|c" — the choices may themselves hold a colon (10:00|13:00).
+const SELECT = /^(.*):\s*(?:เลือก|select)\s*=(.*)$/is
+const OPTION_SEP = '|'
 // A run of 4+ dots (or 2+ "…") — how blanks were typed before fields existed.
 const DOTS = /[.…]{4,}|…{2,}/g
 
+// The choices of a dropdown, cleaned: no braces or separators inside one, no
+// empty or repeated ones.
+export function cleanOptions(options: string[]): string[] {
+  const out: string[] = []
+  for (const o of options) {
+    const c = o.replace(/[{}|]/g, '').trim()
+    if (c && !out.includes(c)) out.push(c)
+  }
+  return out
+}
+
 function parseToken(inner: string): TemplateField | null {
+  const select = SELECT.exec(inner)
+  if (select) {
+    const label = select[1].trim()
+    const options = cleanOptions(select[2].split(OPTION_SEP))
+    if (!label) return null
+    // With nothing to choose from it is an ordinary blank.
+    return options.length
+      ? { key: TEMPLATE_KEY_PREFIX + label, label, type: 'select', options }
+      : { key: TEMPLATE_KEY_PREFIX + label, label, type: 'text' }
+  }
   let label = inner
   let type: TemplateFieldType = 'text'
   const i = inner.lastIndexOf(':')
@@ -77,10 +102,19 @@ export function blankFor(field: TemplateField): string {
   return field.type === 'text' ? '.'.repeat(40) : '.'.repeat(24)
 }
 
-// The token for a field, or '' if the name is empty once { } : are removed.
-export function makeToken(label: string, type: TemplateFieldType = 'text'): string {
+// The token for a field, or '' if the name is empty once { } : are removed —
+// or, for a dropdown, if there is nothing to choose from.
+export function makeToken(label: string, type: TemplateFieldType = 'text', options: string[] = []): string {
   const clean = label.replace(/[{}:]/g, '').trim()
-  return clean ? `{{${clean}${TYPE_SUFFIX[type]}}}` : ''
+  if (!clean) return ''
+  if (type !== 'select') return `{{${clean}${TYPE_SUFFIX[type]}}}`
+  const choices = cleanOptions(options)
+  return choices.length ? `{{${clean}${TYPE_SUFFIX.select}${choices.join(OPTION_SEP)}}}` : ''
+}
+
+// Choices as an admin types them into one box: separated by commas or new lines.
+export function splitOptions(typed: string): string[] {
+  return cleanOptions(typed.split(/[,\n|]/))
 }
 
 export function countDottedBlanks(text: string): number {

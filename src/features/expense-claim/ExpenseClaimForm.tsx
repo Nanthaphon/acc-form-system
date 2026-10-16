@@ -108,6 +108,26 @@ function BlankInput({ field, value, onChange }: { field: TemplateField; value: s
       </span>
     )
   }
+  if (field.type === 'select') {
+    // A choice the admin has since taken off the list stays on this document.
+    const options = field.options ?? []
+    const choices = value && !options.includes(value) ? [...options, value] : options
+    return (
+      <span className="mx-1 inline-block max-w-full align-middle leading-normal">
+        <select
+          aria-label={field.label}
+          title={field.label}
+          style={{ minWidth: limits.min, maxWidth: limits.max }}
+          className={`${value ? blankClass : blankClass.replace('text-stone-900', 'text-stone-400')} max-w-full cursor-pointer text-center`}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+        >
+          <option value="">— {field.label} —</option>
+          {choices.map(o => <option key={o} value={o} className="text-stone-900">{o}</option>)}
+        </select>
+      </span>
+    )
+  }
   const number = field.type === 'number'
   return (
     <span className="relative mx-1 inline-block max-w-full align-middle leading-normal">

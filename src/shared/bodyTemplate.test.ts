@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blankFor, countDottedBlanks, dotsToTokens, formatTemplateValue, makeToken, parseTemplate, templateFields } from './bodyTemplate'
+import { blankFor, countDottedBlanks, dotsToTokens, formatTemplateValue, makeToken, parseTemplate, splitOptions, templateFields } from './bodyTemplate'
 
 describe('parseTemplate', () => {
   it('splits text and fields, keeping the text around them', () => {
@@ -69,6 +69,38 @@ describe('makeToken', () => {
     expect(makeToken('เริ่ม', 'date')).toBe('{{เริ่ม:วันที่}}')
     expect(makeToken(' ยอด{x}:1 ', 'number')).toBe('{{ยอดx1:ตัวเลข}}')
     expect(makeToken(' {:} ')).toBe('')
+  })
+})
+
+describe('dropdown blanks', () => {
+  it('reads the choices after เลือก= (or select=)', () => {
+    const [p] = parseTemplate('{{วิธีชำระ:เลือก=เงินสด|โอนเงิน|เช็ค}}')
+    expect(p).toEqual({ kind: 'field', field: { key: 'tpl:วิธีชำระ', label: 'วิธีชำระ', type: 'select', options: ['เงินสด', 'โอนเงิน', 'เช็ค'] } })
+    const [q] = parseTemplate('{{x: select = a | b }}')
+    expect(q).toMatchObject({ field: { label: 'x', type: 'select', options: ['a', 'b'] } })
+  })
+
+  it('lets a choice hold a colon, and drops empty or repeated ones', () => {
+    const [p] = parseTemplate('{{รอบ:เลือก=10:00|| 13:00 |10:00}}')
+    expect(p).toMatchObject({ field: { label: 'รอบ', type: 'select', options: ['10:00', '13:00'] } })
+  })
+
+  it('is an ordinary blank when there is nothing to choose from', () => {
+    const [p] = parseTemplate('{{วิธีชำระ:เลือก=}}')
+    expect(p).toMatchObject({ field: { label: 'วิธีชำระ', type: 'text' } })
+  })
+
+  it('builds the token from choices typed with commas or new lines', () => {
+    expect(splitOptions('เงินสด, โอนเงิน,\nเช็ค,,')).toEqual(['เงินสด', 'โอนเงิน', 'เช็ค'])
+    expect(makeToken('วิธี:ชำระ', 'select', ['เงินสด', 'a|b', '{x}'])).toBe('{{วิธีชำระ:เลือก=เงินสด|ab|x}}')
+    expect(makeToken('วิธีชำระ', 'select', [' '])).toBe('')
+  })
+
+  it('prints the choice made, or dots to circle by hand', () => {
+    const f = { key: 'tpl:a', label: 'a', type: 'select' as const, options: ['เงินสด'] }
+    expect(formatTemplateValue(f, 'เงินสด')).toBe('เงินสด')
+    expect(formatTemplateValue(f, '')).toBe('')
+    expect(blankFor(f)).toMatch(/^\.{10,}$/)
   })
 })
 
