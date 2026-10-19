@@ -18,7 +18,8 @@ import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
 import SignNowModal from '../../components/SignNowModal'
 import StatusBadge from '../../components/StatusBadge'
-import ActionIconButton from '../../components/ActionIconButton'
+import { ActionGroup, ActionGroupItem, PrimaryAction, PrimarySlot, RowMenu, RowMenuSlot } from '../../components/RowActions'
+import type { RowMenuItem } from '../../components/RowActions'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
@@ -124,32 +125,34 @@ export default function HistoryPage() {
             </tr>
           </thead>
           <tbody className={ui.tbody}>
-            {filtered.map(r => (
-              <tr key={r.id} className={ui.tr}>
-                {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
-                <td className="whitespace-nowrap px-4 py-2">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {isSigned(r) && !onlyOwnerSigns(r)
-                      ? <ActionIconButton showLabel label="ดูเอกสาร · มีลายเซ็นแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
-                      : <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />}
-                    <ActionIconButton showLabel label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
-                    <ActionIconButton showLabel label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
-                    {canSignNow() && (
-                      <ActionIconButton showLabel label="เซ็นเอกสารนี้ด้วยตัวเอง หรือลบลายเซ็นที่เซ็นผิด" short="เซ็น" onClick={() => setSignNow(r)} tone="green" icon={<Signature size={16} />} />
-                    )}
-                    {canSend(r) && (
-                      <ActionIconButton showLabel label="ส่งให้คนอื่นเซ็น" short="ส่งให้เซ็น" onClick={() => setSignModal(r)} tone="blue" icon={<Send size={16} />} />
-                    )}
-                    {subStatus(r) === 'pending' && (
-                      <ActionIconButton showLabel label="ยกเลิกการส่งให้เซ็น" short="ยกเลิก" onClick={() => onCancelSign(r)} tone="amber" icon={<RotateCcw size={16} />} />
-                    )}
-                    {(isUnsigned(r) || onlyOwnerSigns(r)) && (
-                      <ActionIconButton showLabel label="ลบเอกสาร" short="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filtered.map(r => {
+              // The rare and the destructive wait behind ⋯.
+              const more: RowMenuItem[] = [
+                ...(canSignNow() ? [{ label: 'เซ็นเอง / ลบลายเซ็น', icon: <Signature size={16} />, onClick: () => setSignNow(r) }] : []),
+                ...(subStatus(r) === 'pending' ? [{ label: 'ยกเลิกการส่งให้เซ็น', icon: <RotateCcw size={16} />, onClick: () => onCancelSign(r) }] : []),
+                ...(isUnsigned(r) || onlyOwnerSigns(r) ? [{ label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDelete(r), danger: true }] : []),
+              ]
+              return (
+                <tr key={r.id} className={ui.tr}>
+                  {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
+                  <td className="whitespace-nowrap px-4 py-2">
+                    <div className="flex items-center justify-end gap-2">
+                      <ActionGroup>
+                        {isSigned(r) && !onlyOwnerSigns(r)
+                          ? <ActionGroupItem label="ดูเอกสาร · มีลายเซ็นแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={15} />} />
+                          : <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
+                        <ActionGroupItem label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
+                        <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
+                      </ActionGroup>
+                      {canSend(r)
+                        ? <PrimaryAction label="ส่งให้คนอื่นเซ็น" short="ส่งให้เซ็น" onClick={() => setSignModal(r)} icon={<Send size={15} />} />
+                        : <PrimarySlot />}
+                      {more.length ? <RowMenu items={more} label={`ตัวเลือกเพิ่มเติม ${r.docNumber}`} /> : <RowMenuSlot />}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={shown.length + 1} className={ui.emptyCell}>
