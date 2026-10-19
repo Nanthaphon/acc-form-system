@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Submission, DocSignature } from '../types/schema'
 import { canRequestSignatures, DEFAULT_SIGNATURE_BLOCKS } from '../types/schema'
-import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature, isSigned, onlyOwnerSigns } from './submissions'
+import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature, isSigned, onlyOwnerSigns, hasUnsignedLine } from './submissions'
 
 function sub(signatures?: DocSignature[]): Submission {
   return {
@@ -39,6 +39,21 @@ describe('subStatus', () => {
 
   it('is เซ็นครบ once every assigned block is signed', () => {
     expect(subStatus(sub([sig('signed')]))).toBe('signed')
+  })
+})
+
+describe('hasUnsignedLine', () => {
+  const blocks = [{ id: 'requester', label: 'ผู้จัดทำเอกสาร' }, { id: 'head', label: 'หัวหน้าแผนก' }]
+  const own: DocSignature = { blockId: 'requester', blockLabel: 'ผู้จัดทำเอกสาร', assignedUid: 'uid-1', assignedName: 'ผู้เบิก', status: 'signed' }
+
+  it('still has the head\'s line to send after the requester signed as they saved', () => {
+    expect(subStatus(sub([own]))).toBe('signed')
+    expect(hasUnsignedLine(sub([own]), blocks)).toBe(true)
+  })
+
+  it('counts a line someone was asked to sign as not yet signed, and is done once every line is', () => {
+    expect(hasUnsignedLine(sub([own, sig('pending')]), blocks)).toBe(true)
+    expect(hasUnsignedLine(sub([own, sig('signed')]), blocks)).toBe(false)
   })
 })
 

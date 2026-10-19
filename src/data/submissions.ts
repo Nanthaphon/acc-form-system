@@ -195,6 +195,14 @@ export function onlyOwnerSigns(s: Pick<SubmissionSummary, 'signatures' | 'create
   return sigs.length > 0 && sigs.every(x => x.assignedUid === s.createdBy)
 }
 
+// Whether some line of the form is still unsigned — so the document can go out
+// to someone for it. Not the status: a document the requester signed as it was
+// saved reads "signed", yet the head's line is still empty.
+export function hasUnsignedLine(s: Pick<SubmissionSummary, 'signatures'>, blocks: SignatureBlock[]): boolean {
+  const signed = new Set((s.signatures ?? []).filter(x => x.status === 'signed').map(x => x.blockId))
+  return blocks.some(b => !signed.has(b.id))
+}
+
 // Document status from its signature assignments alone. Sending for signatures
 // is optional, so a document nobody was asked to sign is simply saved — called
 // "บันทึกแล้ว", not "เสร็จสิ้น", which read as if nothing more was to be done.

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Copy, Eye, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, onlyOwnerSigns, listSigners, cancelSigning } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -51,9 +51,10 @@ export default function HistoryPage() {
   const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
   const filtered = applyFilters(rows, filters, { formGroup, formName })
   // A doc can be sent for signing if its form has someone besides the requester
-  // to sign, and it isn't fully signed yet.
+  // to sign, and some line is still unsigned — including one the requester
+  // signed as they saved it, whose head's line is still empty.
   const canSend = (r: SubmissionSummary) =>
-    !!formOf(r.formType) && canRequestSignatures(formOf(r.formType)) && subStatus(r) !== 'signed'
+    !!formOf(r.formType) && canRequestSignatures(formOf(r.formType)) && hasUnsignedLine(r, formSignatureBlocks(formOf(r.formType)))
   // Admins sign their own document on the spot, without sending it to anyone
   // first — and take a signature back off again when they signed the wrong
   // line. Always offered, including on a form with a single signature line
