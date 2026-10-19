@@ -1,19 +1,19 @@
-import { uiAlert } from '../../components/dialog/dialogService'
+import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, Pencil, Printer, Save } from 'lucide-react'
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { Eye, LockOpen, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
-import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment } from '../../types/schema'
-import { emptyRow, EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
+import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment, SubmissionSummary } from '../../types/schema'
+import { emptyRow, EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks } from '../../types/schema'
 import { computeColumnTotals, grandTotal, taxBases, taxSummary } from '../../features/expense-claim/calc'
 import { FEATURES } from '../../shared/features'
 import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { createSubmission, updateSubmission, getSubmission, incrementPrint, isSigned } from '../../data/submissions'
+import { createSubmission, updateSubmission, getSubmission, incrementPrint, isSigned, signBlockAsSelf, cancelSigning, unsignDocument } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
 import { uploadAttachments, deleteAttachmentFiles, saveAttachmentList } from '../../data/attachments'
@@ -38,6 +38,8 @@ export default function FormPage() {
   const [pendingFiles, setPendingFiles] = useState<File[]>([])     // picked; uploaded on save
   const [removedAtts, setRemovedAtts] = useState<Attachment[]>([]) // deleted from storage on save
   const [saving, setSaving] = useState(false)
+  const [ownerUid, setOwnerUid] = useState<string | null>(null) // null: a new document, which is mine
+  const [signMine, setSignMine] = useState(true)
   const [header, setHeader] = useState<ExpenseHeader>({
     subject: 'ขออนุมัติเบิกค่าใช้จ่าย', categories: [], companyId: profile?.companyId ?? '',
     firstName: profile?.firstName ?? '', lastName: profile?.lastName ?? '',
@@ -67,7 +69,7 @@ export default function FormPage() {
     getSubmission(id).then(s => {
       if (!s) return
       setHeader(s.header); setItems(s.items); setDocNumber(s.docNumber); setSavedId(s.id)
-      setSigs(s.signatures ?? [])
+      setSigs(s.signatures ?? []); setOwnerUid(s.createdBy)
       setAttachments(s.attachments ?? [])
       getFormSettings(s.formType).then(setSettings)
     })
@@ -106,9 +108,53 @@ export default function FormPage() {
       return
     }
     setSaving(true)
-    let subId: string | null
-    try { subId = await persist(totals) } finally { setSaving(false) }
-    if (subId) await print(subId, true)
+    try {
+      const subId = await persist(totals)
+      if (!subId || !(await stampMySignature(subId))) return
+      await print(subId, true)
+    } finally { setSaving(false) }
+  }
+
+  // Most documents are signed by the requester in the system and by everyone
+  // else in pen on the printed sheet. So the requester's own line is signed
+  // with the signature they uploaded as the document is saved, and the paper
+  // leaves the printer already carrying it — no trip to the history page to
+  // send the document to themselves first.
+  const me = { uid: profile?.uid ?? '', name: `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() }
+  const isMine = !ownerUid || ownerUid === profile?.uid
+  const requesterBlock = formSignatureBlocks(settings)[0]
+  const stampsMySignature = signMine && isMine && !!requesterBlock && !!profile?.signatureImage
+  async function stampMySignature(subId: string): Promise<boolean> {
+    if (!stampsMySignature) return true
+    try {
+      const fresh = await getSubmission(subId)
+      const signedAlready = (fresh?.signatures ?? []).some(x => x.blockId === requesterBlock.id && x.status === 'signed')
+      if (!signedAlready) await signBlockAsSelf({ id: subId, signatures: fresh?.signatures } as SubmissionSummary, requesterBlock, me)
+      setSigs((await getSubmission(subId))?.signatures ?? [])
+      return true
+    } catch (e) {
+      uiAlert(`บันทึกเอกสารแล้ว แต่ใส่ลายเซ็นไม่สำเร็จ (${dbErrorMessage(e)}) — กด “บันทึกและพิมพ์” อีกครั้งเพื่อลองใหม่`, { title: 'ใส่ลายเซ็นไม่สำเร็จ' })
+      return false
+    }
+  }
+
+  // A signature locks the content (protect_signed_content). When every
+  // signature on it is the requester's own, they take it off right here to
+  // correct the document, and "บันทึกและพิมพ์" puts it back on.
+  async function unlockToEdit() {
+    if (!savedId) return
+    if (!(await uiConfirm('ลายเซ็นของคุณจะถูกเอาออกจากเอกสาร เพื่อให้แก้ไขได้ — แก้เสร็จแล้วกด “บันทึกและพิมพ์” ระบบจะใส่ลายเซ็นให้ใหม่', {
+      title: 'แก้ไขเอกสารนี้?', confirmText: 'เอาลายเซ็นออกและแก้ไข',
+    }))) return
+    try {
+      // Nobody else is on it: clear it back to a plain saved document rather
+      // than leave a line waiting on the requester.
+      if (sigs.every(x => x.assignedUid === profile?.uid)) await cancelSigning(savedId)
+      else for (const s of sigs.filter(x => x.status === 'signed')) await unsignDocument(savedId, s.blockId)
+      setSigs((await getSubmission(savedId))?.signatures ?? [])
+    } catch (e) {
+      uiAlert(dbErrorMessage(e), { title: 'เอาลายเซ็นออกไม่สำเร็จ' })
+    }
   }
 
   // Save the document first (a new one needs its id before files can be stored
@@ -172,12 +218,13 @@ export default function FormPage() {
   useEffect(() => {
     if (!printRequest) return
     window.print()
-    if (printRequest.saved) uiAlert('บันทึกแล้ว — ส่งให้เซ็นได้ที่หน้าประวัติ', { tone: 'success' })
+    if (printRequest.saved) uiAlert('บันทึกแล้ว — ดูเอกสารทั้งหมดได้ที่หน้าประวัติ', { tone: 'success' })
   }, [printRequest])
 
   // Signed documents are locked in the database (protect_signed_content), so
   // the page says so up front instead of only failing at save time.
   const locked = isSigned({ signatures: sigs } as never)
+  const canUnlock = locked && isMine && sigs.filter(x => x.status === 'signed').every(x => x.assignedUid === profile?.uid)
   const isAdmin = profile?.role === 'admin'
 
   // A closed form (maintenance) is not accessible to employees via direct URL.
@@ -194,11 +241,18 @@ export default function FormPage() {
   return (
     <div>
       <div className="no-print space-y-4">
-        {locked && (
+        {locked && (canUnlock ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
+            <span className="min-w-0 flex-1">เอกสารนี้มีลายเซ็นของคุณแล้ว จึงล็อกเนื้อหาไว้ — ถ้าต้องแก้ ให้เอาลายเซ็นออกก่อน</span>
+            <button type="button" onClick={unlockToEdit} className={ui.btnSecondary}>
+              <LockOpen size={16} /> แก้ไขเอกสาร
+            </button>
+          </div>
+        ) : (
           <div className="rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
             เอกสารนี้มีลายเซ็นแล้ว จึงแก้ไขเนื้อหาไม่ได้ — ถ้าต้องแก้ ให้ลบลายเซ็นออกก่อนที่หน้าประวัติ
           </div>
-        )}
+        ))}
         <PageHeader
           onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
           title={settings.name || settings.title}
@@ -244,6 +298,22 @@ export default function FormPage() {
       <div className={showPreview ? '' : 'hidden print:block'}>
         <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sigs} />
       </div>
+      {!locked && isMine && requesterBlock && (
+        <div className="no-print mt-4">
+          {profile?.signatureImage ? (
+            <label className="inline-flex cursor-pointer flex-wrap items-center gap-2 text-sm text-stone-700">
+              <input type="checkbox" checked={signMine} onChange={e => setSignMine(e.target.checked)} />
+              ใส่ลายเซ็นของฉันในช่อง “{requesterBlock.label}”
+              <img src={profile.signatureImage} alt="ลายเซ็นของฉัน" className="h-7 rounded border border-stone-200 bg-white px-1" />
+              <span className="text-xs text-stone-400">ช่องอื่นเว้นไว้เซ็นบนกระดาษ</span>
+            </label>
+          ) : (
+            <div className="rounded-lg bg-ochre-50 px-4 py-2.5 text-sm text-ochre-700">
+              ยังไม่ได้อัปโหลดลายเซ็น — <Link to="/profile" className="font-medium underline">อัปโหลดที่หน้าข้อมูลของฉัน</Link> แล้วเอกสารจะพิมพ์ออกมาพร้อมลายเซ็นของคุณในช่อง “{requesterBlock.label}”
+            </div>
+          )}
+        </div>
+      )}
       <div className="no-print mt-4 flex flex-wrap items-center gap-2.5">
         <button
           className={ui.btnPrimary}

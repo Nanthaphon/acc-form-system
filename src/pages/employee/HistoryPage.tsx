@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Copy, Eye, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, listSigners, cancelSigning } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, onlyOwnerSigns, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -83,15 +83,20 @@ export default function HistoryPage() {
 
   async function onDelete(r: SubmissionSummary) {
     if (!(await uiConfirm(`ลบถาวร ยกเลิกไม่ได้`, { title: `ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
-    try { await deleteSubmission(r.id); load() }
+    try {
+      // A signed document cannot be deleted; the requester's own signature,
+      // the only one on it, comes off first.
+      if (onlyOwnerSigns(r)) await cancelSigning(r.id)
+      await deleteSubmission(r.id); load()
+    }
     catch { uiAlert('ลบเอกสารไม่สำเร็จ') }
   }
 
   async function onCancelSign(r: SubmissionSummary) {
     const signed = (r.signatures ?? []).filter(x => x.status === 'signed').length
     const msg = signed > 0
-      ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับไปสถานะ "เสร็จสิ้น"`
-      : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับไปสถานะ "เสร็จสิ้น"`
+      ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับไปสถานะ "บันทึกแล้ว"`
+      : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับไปสถานะ "บันทึกแล้ว"`
     if (!(await uiConfirm(msg, { tone: 'danger', confirmText: 'ยกเลิกส่งเซ็น' }))) return
     try { await cancelSigning(r.id); load() }
     catch (e: any) { uiAlert('ยกเลิกไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
@@ -123,7 +128,7 @@ export default function HistoryPage() {
                 {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
                 <td className="whitespace-nowrap px-4 py-2">
                   <div className="flex items-center justify-end gap-1.5">
-                    {isSigned(r)
+                    {isSigned(r) && !onlyOwnerSigns(r)
                       ? <ActionIconButton showLabel label="ดูเอกสาร · มีลายเซ็นแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
                       : <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />}
                     <ActionIconButton showLabel label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
@@ -137,7 +142,7 @@ export default function HistoryPage() {
                     {subStatus(r) === 'pending' && (
                       <ActionIconButton showLabel label="ยกเลิกการส่งให้เซ็น" short="ยกเลิก" onClick={() => onCancelSign(r)} tone="amber" icon={<RotateCcw size={16} />} />
                     )}
-                    {isUnsigned(r) && (
+                    {(isUnsigned(r) || onlyOwnerSigns(r)) && (
                       <ActionIconButton showLabel label="ลบเอกสาร" short="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
                     )}
                   </div>

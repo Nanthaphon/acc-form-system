@@ -186,18 +186,28 @@ export function isUnsigned(s: SubmissionSummary): boolean {
   return (s.signatures ?? []).length === 0
 }
 
+// True when the requester is the only person on the document — their own line,
+// stamped as they saved it, with everyone else signing in pen. Nobody else is
+// waiting on it or has put their name to it, so the requester may still take
+// their signature off to correct the document, or delete it.
+export function onlyOwnerSigns(s: Pick<SubmissionSummary, 'signatures' | 'createdBy'>): boolean {
+  const sigs = s.signatures ?? []
+  return sigs.length > 0 && sigs.every(x => x.assignedUid === s.createdBy)
+}
+
 // Document status from its signature assignments alone. Sending for signatures
-// is optional, so a document nobody was asked to sign is simply finished.
-//   none          -> เสร็จสิ้น
+// is optional, so a document nobody was asked to sign is simply saved — called
+// "บันทึกแล้ว", not "เสร็จสิ้น", which read as if nothing more was to be done.
+//   none          -> บันทึกแล้ว
 //   some pending  -> รอลายเซ็น
-//   all signed    -> เซ็นครบ
+//   all signed    -> เซ็นครบ (ผู้เบิกเซ็นแล้ว when the requester is the only one)
 export function subStatus(s: SubmissionSummary): SubmissionStatus {
   const sigs = s.signatures ?? []
   if (sigs.length === 0) return 'done'
   return sigs.every(x => x.status === 'signed') ? 'signed' : 'pending'
 }
 const STATUS_META: Record<SubmissionStatus, { label: string; className: string }> = {
-  done: { label: 'เสร็จสิ้น', className: 'bg-clay-50 text-clay-700' },
+  done: { label: 'บันทึกแล้ว', className: 'bg-clay-50 text-clay-700' },
   pending: { label: 'รอลายเซ็น', className: 'bg-ochre-50 text-ochre-700' },
   signed: { label: 'เซ็นครบ', className: 'bg-olive-50 text-olive-700' },
 }
@@ -212,6 +222,9 @@ export function signProgress(s: SubmissionSummary): { signed: number; total: num
 export function statusLabel(s: SubmissionSummary): string {
   const st = subStatus(s)
   if (st === 'pending') { const p = signProgress(s); return `รอลายเซ็น (${p.signed}/${p.total})` }
+  // Signed by the requester alone: the other lines are signed on paper, so
+  // "เซ็นครบ" would claim more than the system knows.
+  if (st === 'signed' && onlyOwnerSigns(s)) return 'ผู้เบิกเซ็นแล้ว'
   return statusMeta(st).label
 }
 

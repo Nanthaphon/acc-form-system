@@ -19,6 +19,17 @@ interface Props {
   onDone: () => void              // reload the list after sending
 }
 
+// Who this person last picked for a signature line (by its label: หัวหน้าแผนก
+// is the same head across forms), so sending to the usual approver is one
+// click rather than a search every time. Kept in this browser only.
+const lastSignerKey = (uid: string, label: string) => `signer:last:${uid}:${label}`
+function readLastSigner(uid: string, label: string): string {
+  try { return localStorage.getItem(lastSignerKey(uid, label)) ?? '' } catch { return '' }
+}
+function rememberSigner(uid: string, label: string, signerUid: string) {
+  try { localStorage.setItem(lastSignerKey(uid, label), signerUid) } catch { /* storage can be blocked */ }
+}
+
 // Pick who signs each of the form's signature blocks, then send for signing.
 // The first block is the requester (self) — it auto-signs if they have a saved
 // signature. Any block left without a signer stays blank for a wet signature.
@@ -28,7 +39,13 @@ export default function AssignSignersModal({ submission, settings, signers, curr
   const isSelf = (id: string) => id === requesterBlockId
   const sigs = submission.signatures ?? []
   const sigFor = (id: string) => sigs.find(x => x.blockId === id)
-  const [assign, setAssign] = useState<Record<string, string>>(Object.fromEntries(sigs.map(x => [x.blockId, x.assignedUid])))
+  const [assign, setAssign] = useState<Record<string, string>>(() => {
+    const remembered = Object.fromEntries(allBlocks
+      .filter(b => !isSelf(b.id))
+      .map(b => [b.id, readLastSigner(currentUid, b.label)])
+      .filter(([, uid]) => uid && signers.some(s => s.uid === uid)))
+    return { ...remembered, ...Object.fromEntries(sigs.map(x => [x.blockId, x.assignedUid])) }
+  })
   const [busy, setBusy] = useState(false)
   const signerName = (uid: string) => signers.find(s => s.uid === uid)?.name ?? ''
 
@@ -50,6 +67,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
     setBusy(true)
     try {
       await assignSigners(submission.id, [...assignments, ...strays])
+      for (const b of allBlocks) if (!isSelf(b.id) && assign[b.id]) rememberSigner(currentUid, b.label, assign[b.id])
       if (currentSignature) {
         for (const b of pending.filter(b => isSelf(b.id))) { try { await signDocument(submission.id, b.id) } catch { /* leave pending */ } }
       }
@@ -72,7 +90,12 @@ export default function AssignSignersModal({ submission, settings, signers, curr
           <div className="rounded-lg bg-stone-50 px-4 py-6 text-center text-sm text-stone-500">ฟอร์มนี้ไม่มีช่องให้ผู้อื่นเซ็น</div>
         ) : (
           <>
-            <p className={`${ui.hint} mb-4`}>เลือกคนที่จะให้เซ็นแต่ละช่อง (ช่องผู้เบิก = ตัวคุณเอง) · ช่องที่ไม่เลือกจะเว้นว่างไว้เซ็นบนกระดาษ</p>
+            <p className={`${ui.hint} mb-4`}>เลือกคนที่จะเซ็นออนไลน์ในแต่ละช่อง · ช่องที่ไม่เลือกใคร จะเว้นว่างไว้เซ็นด้วยปากกาบนกระดาษ · ระบบจำคนที่คุณเลือกครั้งล่าสุดไว้ให้</p>
+            {!currentSignature && (
+              <div className="mb-4 rounded-lg bg-ochre-50 px-3 py-2 text-sm text-ochre-700">
+                คุณยังไม่ได้อัปโหลดลายเซ็น ช่องของคุณจึงยังไม่ถูกเซ็น — อัปโหลดได้ที่หน้าข้อมูลของฉัน
+              </div>
+            )}
             <div className="divide-y divide-stone-100 rounded-lg border border-stone-200">
               {allBlocks.map(b => {
                 const sig = sigFor(b.id)
@@ -91,7 +114,8 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                           onChange={uid => setAssign({ ...assign, [b.id]: uid })}
                           signers={signers}
                         />
-                        {sig?.status === 'pending' && <Badge tone="amber">รอเซ็น</Badge>}
+                        {sig?.status === 'pending' ? <Badge tone="amber">รอเซ็น</Badge>
+                          : !assign[b.id] && <span className="text-xs text-stone-400">ไม่เลือก = เซ็นบนกระดาษ</span>}
                       </>
                     )}
                   </div>

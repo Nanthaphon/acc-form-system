@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import FormPage from './FormPage'
-import { createSubmission, getSubmission, incrementPrint, updateSubmission } from '../../data/submissions'
+import { cancelSigning, createSubmission, getSubmission, incrementPrint, signBlockAsSelf, updateSubmission } from '../../data/submissions'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import type { Submission } from '../../types/schema'
 
@@ -10,9 +10,9 @@ import type { Submission } from '../../types/schema'
 // walked away, believing it was in the system — nothing had been saved, and
 // the document was nowhere to be found afterwards.
 
-vi.mock('../../auth/AuthProvider', () => ({
-  useAuth: () => ({ profile: { uid: 'u1', employeeId: '1010154', firstName: 'ธนัตถ์', lastName: 'นัยพินิจ', position: 'HR', companyId: 'globe', role: 'employee' } }),
-}))
+const baseProfile = { uid: 'u1', employeeId: '1010154', firstName: 'ธนัตถ์', lastName: 'นัยพินิจ', position: 'HR', companyId: 'globe', role: 'employee' }
+let profile: typeof baseProfile & { signatureImage?: string } = baseProfile
+vi.mock('../../auth/AuthProvider', () => ({ useAuth: () => ({ profile }) }))
 const settings = { ...EXPENSE_CLAIM_DEFAULTS, columns: [
   { key: 'detail', label: 'รายละเอียด', type: 'text' as const },
   { key: 'amount', label: 'จำนวนเงิน', type: 'number' as const, isTotal: true },
@@ -23,12 +23,15 @@ vi.mock('../../data/attachments', async importOriginal => ({
   ...await importOriginal<object>(), uploadAttachments: vi.fn(), deleteAttachmentFiles: vi.fn(), saveAttachmentList: vi.fn(),
 }))
 vi.mock('../../components/VersionHistory', () => ({ default: () => null }))
-vi.mock('../../data/submissions', () => ({
+vi.mock('../../data/submissions', async importOriginal => ({
+  ...await importOriginal<object>(),
   createSubmission: vi.fn(() => Promise.resolve({ id: 'new1', docNumber: 'EX-0001' })),
   updateSubmission: vi.fn(() => Promise.resolve()),
   getSubmission: vi.fn(),
   incrementPrint: vi.fn(() => Promise.resolve()),
-  isSigned: (s: { signatures?: { signedAt?: number }[] }) => (s.signatures ?? []).some(x => x.signedAt),
+  signBlockAsSelf: vi.fn(() => Promise.resolve()),
+  cancelSigning: vi.fn(() => Promise.resolve()),
+  unsignDocument: vi.fn(() => Promise.resolve()),
 }))
 const uiAlert = vi.fn((..._args: unknown[]) => Promise.resolve(true))
 vi.mock('../../components/dialog/dialogService', () => ({
@@ -40,6 +43,7 @@ const print = vi.fn()
 beforeEach(() => {
   vi.clearAllMocks()
   window.print = print
+  profile = baseProfile
 })
 
 const openNew = () => render(
@@ -111,9 +115,69 @@ describe('one button saves, then prints', () => {
   })
 
   it('a signed document cannot be changed, so the button only prints it', async () => {
-    openSaved({ signatures: [{ blockId: 'maker', signedAt: 1 }] } as Partial<Submission>)
+    openSaved({ createdBy: 'u1', signatures: [{ blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'หัวหน้า', status: 'signed', signedAt: 1 }] })
     fireEvent.click(await screen.findByRole('button', { name: /พิมพ์/ }))
     await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
     expect(updateSubmission).not.toHaveBeenCalled()
+    // someone else signed it: no way round that from here
+    expect(screen.queryByRole('button', { name: /แก้ไขเอกสาร/ })).not.toBeInTheDocument()
+  })
+})
+
+// Most documents are signed by the requester in the system and by everyone
+// else in pen, so the requester's own line is signed as the document is saved.
+describe('the requester\'s own signature goes on as it is saved', () => {
+  const withSignature = () => { profile = { ...baseProfile, signatureImage: 'data:image/png;base64,AAAA' } }
+  const requester = EXPENSE_CLAIM_DEFAULTS.signatureBlocks?.[0] ?? { id: 'requester', label: 'ผู้จัดทำเอกสาร' }
+
+  it('is offered, ticked, once a signature has been uploaded', async () => {
+    withSignature()
+    openNew()
+    expect(await screen.findByRole('checkbox', { name: /ใส่ลายเซ็นของฉันในช่อง/ })).toBeChecked()
+  })
+
+  it('signs the requester line after saving and before printing', async () => {
+    withSignature()
+    vi.mocked(getSubmission).mockResolvedValue({ id: 'new1', signatures: [] } as unknown as Submission)
+    openNew()
+    await fillAmount()
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+    await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+    expect(signBlockAsSelf).toHaveBeenCalledWith(expect.objectContaining({ id: 'new1' }), expect.objectContaining({ id: requester.id }), { uid: 'u1', name: 'ธนัตถ์ นัยพินิจ' })
+    expect(vi.mocked(signBlockAsSelf).mock.invocationCallOrder[0]).toBeLessThan(print.mock.invocationCallOrder[0])
+  })
+
+  it('leaves it off when unticked', async () => {
+    withSignature()
+    openNew()
+    fireEvent.click(await screen.findByRole('checkbox', { name: /ใส่ลายเซ็นของฉันในช่อง/ }))
+    await fillAmount()
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+    await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+    expect(signBlockAsSelf).not.toHaveBeenCalled()
+  })
+
+  it('says how to get it when no signature has been uploaded', async () => {
+    openNew()
+    expect(await screen.findByText(/ยังไม่ได้อัปโหลดลายเซ็น/)).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /ใส่ลายเซ็นของฉันในช่อง/ })).not.toBeInTheDocument()
+  })
+
+  it('prints nothing when the signature could not be put on', async () => {
+    withSignature()
+    vi.mocked(getSubmission).mockResolvedValue({ id: 'new1', signatures: [] } as unknown as Submission)
+    vi.mocked(signBlockAsSelf).mockRejectedValueOnce(new Error('no signature uploaded'))
+    openNew()
+    await fillAmount()
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+    await waitFor(() => expect(uiAlert).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ title: 'ใส่ลายเซ็นไม่สำเร็จ' })))
+    expect(print).not.toHaveBeenCalled()
+  })
+
+  it('a document signed only by its requester can be unlocked from the form to correct it', async () => {
+    withSignature()
+    openSaved({ createdBy: 'u1', signatures: [{ blockId: requester.id, blockLabel: requester.label, assignedUid: 'u1', assignedName: 'ธนัตถ์ นัยพินิจ', status: 'signed', signedAt: 1 }] })
+    fireEvent.click(await screen.findByRole('button', { name: /แก้ไขเอกสาร/ }))
+    await waitFor(() => expect(cancelSigning).toHaveBeenCalledWith('s1'))
   })
 })

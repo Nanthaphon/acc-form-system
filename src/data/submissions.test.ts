@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Submission, DocSignature } from '../types/schema'
 import { canRequestSignatures, DEFAULT_SIGNATURE_BLOCKS } from '../types/schema'
-import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature, isSigned } from './submissions'
+import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature, isSigned, onlyOwnerSigns } from './submissions'
 
 function sub(signatures?: DocSignature[]): Submission {
   return {
@@ -16,10 +16,19 @@ const sig = (status: 'pending' | 'signed'): DocSignature =>
   ({ blockId: 'head', blockLabel: 'หัวหน้าแผนก', assignedUid: 'uid-2', assignedName: 'หัวหน้า', status })
 
 describe('subStatus', () => {
-  it('is เสร็จสิ้น when nobody was asked to sign — sending is optional', () => {
+  it('is บันทึกแล้ว when nobody was asked to sign — sending is optional', () => {
     expect(subStatus(sub())).toBe('done')
     expect(subStatus(sub([]))).toBe('done')
-    expect(statusMeta('done').label).toBe('เสร็จสิ้น')
+    expect(statusMeta('done').label).toBe('บันทึกแล้ว')
+  })
+
+  it('says the requester signed, not เซ็นครบ, when they are the only one on it', () => {
+    const own: DocSignature = { blockId: 'requester', blockLabel: 'ผู้จัดทำเอกสาร', assignedUid: 'uid-1', assignedName: 'ผู้เบิก', status: 'signed' }
+    expect(statusLabel(sub([own]))).toBe('ผู้เบิกเซ็นแล้ว')
+    expect(onlyOwnerSigns(sub([own]))).toBe(true)
+    expect(statusLabel(sub([own, sig('signed')]))).toBe('เซ็นครบ')
+    expect(onlyOwnerSigns(sub([own, sig('pending')]))).toBe(false)
+    expect(onlyOwnerSigns(sub([]))).toBe(false)
   })
 
   it('reports progress while signatures are outstanding', () => {
