@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Copy, Eye, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
+import { Copy, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
@@ -145,10 +145,12 @@ export default function HistoryPage() {
                   <td className="whitespace-nowrap px-4 py-2">
                     <div className="flex items-center justify-end gap-2">
                       <ActionGroup>
-                        {isSigned(r) && !onlyOwnerSigns(r)
-                          ? <ActionGroupItem label="ดูเอกสาร · มีลายเซ็นแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={15} />} />
-                          : <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
-                        <ActionGroupItem label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
+                        {/* A document others have signed cannot be edited; viewing it is
+                            what พิมพ์ opens anyway, so it gets no button of its own. */}
+                        {!(isSigned(r) && !onlyOwnerSigns(r)) && (
+                          <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />
+                        )}
+                        <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
                         <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
                       </ActionGroup>
                       {primary
