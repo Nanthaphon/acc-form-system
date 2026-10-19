@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useState } from 'react'
-import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, LockOpen, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
@@ -18,6 +18,7 @@ import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
 import { uploadAttachments, deleteAttachmentFiles, saveAttachmentList } from '../../data/attachments'
 import AttachmentsField from '../../components/AttachmentsField'
+import OwnSignatureToggle from '../../components/OwnSignatureToggle'
 import { Spinner } from '../../components/Spinner'
 
 export default function FormPage() {
@@ -300,18 +301,7 @@ export default function FormPage() {
       </div>
       {!locked && isMine && requesterBlock && (
         <div className="no-print mt-4">
-          {profile?.signatureImage ? (
-            <label className="inline-flex cursor-pointer flex-wrap items-center gap-2 text-sm text-stone-700">
-              <input type="checkbox" checked={signMine} onChange={e => setSignMine(e.target.checked)} />
-              ใส่ลายเซ็นของฉันในช่อง “{requesterBlock.label}”
-              <img src={profile.signatureImage} alt="ลายเซ็นของฉัน" className="h-7 rounded border border-stone-200 bg-white px-1" />
-              <span className="text-xs text-stone-400">ช่องอื่นเว้นไว้เซ็นบนกระดาษ</span>
-            </label>
-          ) : (
-            <div className="rounded-lg bg-ochre-50 px-4 py-2.5 text-sm text-ochre-700">
-              ยังไม่ได้อัปโหลดลายเซ็น — <Link to="/profile" className="font-medium underline">อัปโหลดที่หน้าข้อมูลของฉัน</Link> แล้วเอกสารจะพิมพ์ออกมาพร้อมลายเซ็นของคุณในช่อง “{requesterBlock.label}”
-            </div>
-          )}
+          <OwnSignatureToggle signature={profile?.signatureImage} blockLabel={requesterBlock.label} on={signMine} onChange={setSignMine} />
         </div>
       )}
       <div className="no-print mt-4 flex flex-wrap items-center gap-2.5">

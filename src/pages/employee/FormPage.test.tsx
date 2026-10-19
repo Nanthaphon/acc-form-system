@@ -159,7 +159,8 @@ describe('the requester\'s own signature goes on as it is saved', () => {
 
   it('says how to get it when no signature has been uploaded', async () => {
     openNew()
-    expect(await screen.findByText(/ยังไม่ได้อัปโหลดลายเซ็น/)).toBeInTheDocument()
+    expect(await screen.findByText('ยังไม่มีลายเซ็นในระบบ')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /อัปโหลดลายเซ็น/ })).toHaveAttribute('href', '/profile')
     expect(screen.queryByRole('checkbox', { name: /ใส่ลายเซ็นของฉันในช่อง/ })).not.toBeInTheDocument()
   })
 
