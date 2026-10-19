@@ -9,7 +9,7 @@ import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
 import { listGroups } from '../../data/formGroups'
 import type { SubmissionSummary, FormSettings, FormGroup } from '../../types/schema'
-import { formSignatureBlocks, canRequestSignatures } from '../../types/schema'
+import { formSignatureBlocks } from '../../types/schema'
 import { formatDate } from '../../shared/date'
 import { formatMoney } from '../../shared/money'
 import type { Filters } from '../../shared/submissionFilter'
@@ -51,16 +51,21 @@ export default function HistoryPage() {
   const formName = (ft: string) => { const f = formOf(ft); return f?.name || f?.title || '—' }
   const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
   const filtered = applyFilters(rows, filters, { formGroup, formName })
-  // A doc can be sent for signing if its form has someone besides the requester
-  // to sign, and some line is still unsigned — including one the requester
-  // signed as they saved it, whose head's line is still empty.
-  const canSend = (r: SubmissionSummary) =>
-    !!formOf(r.formType) && canRequestSignatures(formOf(r.formType)) && hasUnsignedLine(r, formSignatureBlocks(formOf(r.formType)))
+  // "เซ็น / ส่งเซ็น" — sign your own line, take your signature back off, or
+  // send the other lines out. Worth opening while some line is unsigned, or
+  // while the requester's own signature is the only one (and can come off).
+  const blocksOf = (r: SubmissionSummary) => formSignatureBlocks(formOf(r.formType))
+  const canSignOrSend = (r: SubmissionSummary) =>
+    !!formOf(r.formType) && (hasUnsignedLine(r, blocksOf(r)) || onlyOwnerSigns(r))
+  // The highlighted button only where the document is still waiting on
+  // something. A document others have signed in full may keep a line for pen —
+  // sending that one out too is offered behind ⋯ instead.
+  const signingIsNext = (r: SubmissionSummary) =>
+    hasUnsignedLine(r, blocksOf(r)) && (subStatus(r) !== 'signed' || onlyOwnerSigns(r))
   // Admins sign their own document on the spot, without sending it to anyone
   // first — and take a signature back off again when they signed the wrong
-  // line. Always offered, including on a form with a single signature line
-  // (which canSend() deliberately leaves out) and on a fully signed document
-  // (which is exactly when a mistake needs undoing).
+  // line. Always offered, including on a fully signed document (which is
+  // exactly when a mistake needs undoing).
   const isAdmin = profile?.role === 'admin'
   const canSignNow = () => isAdmin
 
@@ -127,7 +132,9 @@ export default function HistoryPage() {
           <tbody className={ui.tbody}>
             {filtered.map(r => {
               // The rare and the destructive wait behind ⋯.
+              const primary = signingIsNext(r)
               const more: RowMenuItem[] = [
+                ...(!primary && canSignOrSend(r) ? [{ label: 'เซ็น / ส่งเซ็นเพิ่ม', icon: <Send size={16} />, onClick: () => setSignModal(r) }] : []),
                 ...(canSignNow() ? [{ label: 'เซ็นเอง / ลบลายเซ็น', icon: <Signature size={16} />, onClick: () => setSignNow(r) }] : []),
                 ...(subStatus(r) === 'pending' ? [{ label: 'ยกเลิกการส่งให้เซ็น', icon: <RotateCcw size={16} />, onClick: () => onCancelSign(r) }] : []),
                 ...(isUnsigned(r) || onlyOwnerSigns(r) ? [{ label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDelete(r), danger: true }] : []),
@@ -144,8 +151,8 @@ export default function HistoryPage() {
                         <ActionGroupItem label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
                         <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
                       </ActionGroup>
-                      {canSend(r)
-                        ? <PrimaryAction label="ส่งให้คนอื่นเซ็น" short="ส่งให้เซ็น" onClick={() => setSignModal(r)} icon={<Send size={15} />} />
+                      {primary
+                        ? <PrimaryAction label="เซ็นเอง หรือส่งให้คนอื่นเซ็น" short="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Signature size={15} />} />
                         : <PrimarySlot />}
                       {more.length ? <RowMenu items={more} label={`ตัวเลือกเพิ่มเติม ${r.docNumber}`} /> : <RowMenuSlot />}
                     </div>

@@ -6,10 +6,12 @@ interface Props {
   onChange: (uid: string) => void
   signers: Signer[]
   className?: string
+  emptyLabel?: string   // an option at the top of the list that picks nobody
+  ariaLabel?: string
 }
 
 // A searchable signer picker: type to filter, click to select.
-export default function SignerSelect({ value, onChange, signers, className }: Props) {
+export default function SignerSelect({ value, onChange, signers, className, emptyLabel, ariaLabel }: Props) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const ref = useRef<HTMLDivElement>(null)
@@ -27,6 +29,7 @@ export default function SignerSelect({ value, onChange, signers, className }: Pr
     <div ref={ref} className="relative">
       <input
         className={className}
+        aria-label={ariaLabel}
         placeholder="พิมพ์ค้นหาผู้เซ็น…"
         value={open ? q : (selected?.name ?? '')}
         onFocus={() => { setOpen(true); setQ('') }}
@@ -34,6 +37,15 @@ export default function SignerSelect({ value, onChange, signers, className }: Pr
       />
       {open && (
         <div className="absolute z-20 mt-1 max-h-56 w-full min-w-[220px] overflow-auto rounded-lg border border-stone-200 bg-white shadow-lg">
+          {emptyLabel && !q.trim() && (
+            <button
+              type="button"
+              className={`block w-full border-b border-stone-100 px-3 py-2 text-left text-sm text-stone-500 hover:bg-stone-50 ${!value ? 'bg-stone-50 font-medium' : ''}`}
+              onClick={() => { onChange(''); setOpen(false); setQ('') }}
+            >
+              {emptyLabel}
+            </button>
+          )}
           {matches.length === 0 && <div className="px-3 py-2 text-sm text-stone-400">ไม่พบผู้เซ็น</div>}
           {matches.map(s => (
             <button

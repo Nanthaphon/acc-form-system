@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { PenLine, Upload } from 'lucide-react'
 
@@ -5,12 +6,23 @@ import { PenLine, Upload } from 'lucide-react'
 // document as it is saved. A card rather than a bare checkbox: the signature
 // sits on a signing line the way it will on paper, and the card says what
 // happens either way — so leaving it off is a choice, not an oversight.
-export default function OwnSignatureToggle({ signature, blockLabel, on, onChange }: {
+// What the card says, on and off. The fill-in screen's wording by default;
+// the signing dialog also has an existing signature to keep or take off.
+export interface OwnSignatureTexts { on: string; onHint: ReactNode; off: string; offHint: ReactNode }
+
+export default function OwnSignatureToggle({ signature, blockLabel, on, onChange, texts }: {
   signature?: string | null
   blockLabel: string
   on: boolean
   onChange: (on: boolean) => void
+  texts?: OwnSignatureTexts
 }) {
+  const t: OwnSignatureTexts = texts ?? {
+    on: 'ลงลายเซ็นของฉันในเอกสาร',
+    onHint: <>ใส่ในช่อง “{blockLabel}” ตอนกดบันทึก · ช่องอื่นเว้นไว้เซ็นด้วยปากกา</>,
+    off: 'ไม่ใส่ลายเซ็นของฉัน',
+    offHint: <>ช่อง “{blockLabel}” จะเว้นว่างไว้เซ็นบนกระดาษ</>,
+  }
   if (!signature) {
     return (
       <div className="flex max-w-2xl flex-wrap items-center gap-4 rounded-xl border border-dashed border-ochre-200 bg-ochre-50/60 p-3 pr-4">
@@ -55,13 +67,9 @@ export default function OwnSignatureToggle({ signature, blockLabel, on, onChange
       </div>
       <div className="min-w-0 flex-1">
         <div className={`text-sm font-medium ${on ? 'text-stone-900' : 'text-stone-500'}`}>
-          {on ? 'ลงลายเซ็นของฉันในเอกสาร' : 'ไม่ใส่ลายเซ็นของฉัน'}
+          {on ? t.on : t.off}
         </div>
-        <div className="mt-0.5 text-xs text-stone-500">
-          {on
-            ? <>ใส่ในช่อง “{blockLabel}” ตอนกดบันทึก · ช่องอื่นเว้นไว้เซ็นด้วยปากกา</>
-            : <>ช่อง “{blockLabel}” จะเว้นว่างไว้เซ็นบนกระดาษ</>}
-        </div>
+        <div className="mt-0.5 text-xs text-stone-500">{on ? t.onHint : t.offHint}</div>
       </div>
       {/* Drawn switch; the real control is the checkbox above (keyboard, screen readers). */}
       <span

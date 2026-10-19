@@ -1,12 +1,16 @@
 import { uiAlert } from './dialog/dialogService'
 import { useState } from 'react'
-import { PenLine, X } from 'lucide-react'
+import { CheckCircle2, Clock3, PenLine, Send, Signature, X } from 'lucide-react'
 import type { SubmissionSummary, FormSettings, DocSignature } from '../types/schema'
 import { formSignatureBlocks } from '../types/schema'
-import { assignSigners, signDocument } from '../data/submissions'
+import { assignSigners, signDocument, unsignDocument } from '../data/submissions'
 import type { Signer } from '../data/submissions'
+import { dbErrorMessage } from '../shared/dbError'
+import { formatDateTime } from '../shared/date'
 import SignerSelect from './SignerSelect'
-import { Badge, ui } from './ui'
+import OwnSignatureToggle from './OwnSignatureToggle'
+import { Spinner } from './Spinner'
+import { ui } from './ui'
 
 interface Props {
   submission: SubmissionSummary
@@ -30,106 +34,187 @@ function rememberSigner(uid: string, label: string, signerUid: string) {
   try { localStorage.setItem(lastSignerKey(uid, label), signerUid) } catch { /* storage can be blocked */ }
 }
 
-// Pick who signs each of the form's signature blocks, then send for signing.
-// The first block is the requester (self) — it auto-signs if they have a saved
-// signature. Any block left without a signer stays blank for a wet signature.
+function Step({ n, title, hint }: { n: number; title: string; hint: string }) {
+  return (
+    <div className="mb-3 flex items-start gap-3">
+      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-600 text-xs font-semibold text-white">{n}</span>
+      <div>
+        <div className="text-sm font-semibold text-stone-900">{title}</div>
+        <div className="text-xs text-stone-500">{hint}</div>
+      </div>
+    </div>
+  )
+}
+
+// One place for everything about a document's signatures: the requester signs
+// their own line (or takes their signature back off), and picks who signs the
+// other lines online — any line left without anyone is signed in pen on paper.
+// Nothing happens until the one button at the bottom, which says what it will do.
 export default function AssignSignersModal({ submission, settings, signers, currentUid, currentName, currentSignature, onClose, onDone }: Props) {
   const allBlocks = formSignatureBlocks(settings)
-  const requesterBlockId = allBlocks[0]?.id
-  const isSelf = (id: string) => id === requesterBlockId
+  const ownBlock = allBlocks[0]
+  const others = allBlocks.slice(1)
   const sigs = submission.signatures ?? []
   const sigFor = (id: string) => sigs.find(x => x.blockId === id)
+  const ownSig = ownBlock ? sigFor(ownBlock.id) : undefined
+  const ownSigned = ownSig?.status === 'signed'
+
+  // The requester's line starts as it is: signed stays signed; unsigned starts
+  // ticked when there is a signature to put on it — that is what most people
+  // open this for.
+  const [signMine, setSignMine] = useState(ownSigned || !!currentSignature)
   const [assign, setAssign] = useState<Record<string, string>>(() => {
-    const remembered = Object.fromEntries(allBlocks
-      .filter(b => !isSelf(b.id))
+    const remembered = Object.fromEntries(others
       .map(b => [b.id, readLastSigner(currentUid, b.label)])
       .filter(([, uid]) => uid && signers.some(s => s.uid === uid)))
-    return { ...remembered, ...Object.fromEntries(sigs.map(x => [x.blockId, x.assignedUid])) }
+    return { ...remembered, ...Object.fromEntries(sigs.filter(x => x.status === 'pending').map(x => [x.blockId, x.assignedUid])) }
   })
   const [busy, setBusy] = useState(false)
   const signerName = (uid: string) => signers.find(s => s.uid === uid)?.name ?? ''
 
-  async function send() {
-    const pending = allBlocks.filter(b => sigFor(b.id)?.status !== 'signed')
-    // Not required to fill every block — unselected blocks are left blank for a
-    // wet signature (print & sign on paper). Only assign blocks that have a signer.
-    const assignments: DocSignature[] = pending
-      .filter(b => isSelf(b.id) || assign[b.id])
-      .map(b => {
-        const uid = isSelf(b.id) ? currentUid : assign[b.id]
-        return { blockId: b.id, blockLabel: b.label, assignedUid: uid, assignedName: isSelf(b.id) ? currentName : signerName(uid), status: 'pending' as const }
-      })
-    // Blocks the form no longer lists are not in `allBlocks`, and assign_signers
-    // keeps only already-signed entries — resend their pending assignments or the
-    // people waiting on them are dropped without a word.
-    const listed = new Set(allBlocks.map(b => b.id))
-    const strays = sigs.filter(x => x.status === 'pending' && !listed.has(x.blockId))
+  // What the button will do.
+  const willSign = !!ownBlock && signMine && !ownSigned && !!currentSignature
+  const willUnsign = !!ownBlock && !signMine && ownSigned
+  const open = others.filter(b => sigFor(b.id)?.status !== 'signed')
+  const newSends = open.filter(b => assign[b.id] && sigFor(b.id)?.assignedUid !== assign[b.id]).length
+  const recalled = open.filter(b => sigFor(b.id)?.status === 'pending' && !assign[b.id]).length
+  // A line waiting on the requester from before, now left unticked.
+  const dropOwnPending = ownSig?.status === 'pending' && !signMine
+  const changed = willSign || willUnsign || dropOwnPending || newSends > 0 || recalled > 0
+  const action = willSign && newSends ? `เซ็นและส่งให้ ${newSends} คน`
+    : willSign ? 'เซ็นเอกสาร'
+    : newSends && !willUnsign && !recalled ? `ส่งให้ ${newSends} คนเซ็น`
+    : willUnsign && !newSends && !recalled ? 'เอาลายเซ็นออก'
+    : 'บันทึก'
+
+  async function confirm() {
+    if (!changed || busy) return
     setBusy(true)
     try {
+      // Taking the signature off leaves the line waiting on the requester; the
+      // assignment below, which no longer lists it, then clears it.
+      if (willUnsign) await unsignDocument(submission.id, ownBlock.id)
+      const assignments: DocSignature[] = [
+        ...(willSign || (ownSig?.status === 'pending' && signMine)
+          ? [{ blockId: ownBlock.id, blockLabel: ownBlock.label, assignedUid: currentUid, assignedName: currentName, status: 'pending' as const }]
+          : []),
+        ...open.filter(b => assign[b.id]).map(b => ({
+          blockId: b.id, blockLabel: b.label, assignedUid: assign[b.id], assignedName: signerName(assign[b.id]), status: 'pending' as const,
+        })),
+      ]
+      // Lines the form no longer lists are not in `allBlocks`, and assign_signers
+      // keeps only already-signed entries — resend their pending assignments or
+      // the people waiting on them are dropped without a word.
+      const listed = new Set(allBlocks.map(b => b.id))
+      const strays = sigs.filter(x => x.status === 'pending' && !listed.has(x.blockId))
       await assignSigners(submission.id, [...assignments, ...strays])
-      for (const b of allBlocks) if (!isSelf(b.id) && assign[b.id]) rememberSigner(currentUid, b.label, assign[b.id])
-      if (currentSignature) {
-        for (const b of pending.filter(b => isSelf(b.id))) { try { await signDocument(submission.id, b.id) } catch { /* leave pending */ } }
-      }
-      uiAlert('ส่งให้เซ็นแล้ว — ผู้ถูกเลือกจะเห็นในเมนู "ฟอร์มเอกสารรอเซ็น"', { tone: 'success' })
+      if (willSign) await signDocument(submission.id, ownBlock.id)
+      for (const b of open) if (assign[b.id]) rememberSigner(currentUid, b.label, assign[b.id])
+      uiAlert(
+        newSends ? 'เรียบร้อย — คนที่เลือกจะเห็นเอกสารในเมนู "ฟอร์มเอกสารรอเซ็น"' : willSign ? 'เซ็นเอกสารแล้ว' : 'บันทึกแล้ว',
+        { tone: 'success' },
+      )
       onDone(); onClose()
-    } catch (e: any) {
-      uiAlert('ส่งให้เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด'))
+    } catch (e) {
+      uiAlert(dbErrorMessage(e), { title: 'ทำรายการไม่สำเร็จ' })
     } finally { setBusy(false) }
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-xl border border-stone-200 bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><PenLine size={18} /></div>
-          <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-stone-900">ส่งให้เซ็น — {submission.docNumber}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"><X size={18} /></button>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`เซ็น / ส่งเซ็น ${submission.docNumber}`}
+        className="w-full max-w-2xl overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 border-b border-stone-100 px-6 py-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-clay-50 text-clay-600"><Signature size={20} /></div>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-semibold text-stone-900">เซ็น / ส่งเซ็น</h2>
+            <div className="truncate text-xs text-stone-500">
+              <span className="font-mono">{submission.docNumber}</span>
+              {(settings.name || settings.title) && <> · {settings.name || settings.title}</>}
+            </div>
+          </div>
+          <button onClick={onClose} aria-label="ปิด" className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"><X size={18} /></button>
         </div>
-        {allBlocks.length <= 1 ? (
-          <div className="rounded-lg bg-stone-50 px-4 py-6 text-center text-sm text-stone-500">ฟอร์มนี้ไม่มีช่องให้ผู้อื่นเซ็น</div>
-        ) : (
-          <>
-            <p className={`${ui.hint} mb-4`}>เลือกคนที่จะเซ็นออนไลน์ในแต่ละช่อง · ช่องที่ไม่เลือกใคร จะเว้นว่างไว้เซ็นด้วยปากกาบนกระดาษ · ระบบจำคนที่คุณเลือกครั้งล่าสุดไว้ให้</p>
-            {!currentSignature && (
-              <div className="mb-4 rounded-lg bg-ochre-50 px-3 py-2 text-sm text-ochre-700">
-                คุณยังไม่ได้อัปโหลดลายเซ็น ช่องของคุณจึงยังไม่ถูกเซ็น — อัปโหลดได้ที่หน้าข้อมูลของฉัน
+
+        <div className="space-y-6 px-6 py-5">
+          {ownBlock && (
+            <section>
+              <Step n={1} title="ลายเซ็นของคุณ" hint={`ช่อง “${ownBlock.label}” ของเอกสาร`} />
+              <OwnSignatureToggle
+                signature={ownSigned ? (ownSig?.signatureImage ?? currentSignature) : currentSignature}
+                blockLabel={ownBlock.label}
+                on={signMine}
+                onChange={setSignMine}
+                texts={ownSigned ? {
+                  on: 'เซ็นแล้ว',
+                  onHint: <>ช่อง “{ownBlock.label}” · เซ็นเมื่อ {formatDateTime(ownSig?.signedAt)}</>,
+                  off: 'จะเอาลายเซ็นออก',
+                  offHint: <>ช่อง “{ownBlock.label}” จะกลับเป็นช่องว่างเมื่อกดบันทึก</>,
+                } : {
+                  on: 'ลงลายเซ็นของฉัน',
+                  onHint: <>ใส่ในช่อง “{ownBlock.label}” เมื่อกดปุ่มด้านล่าง</>,
+                  off: 'ไม่ใส่ลายเซ็นของฉัน',
+                  offHint: <>ช่อง “{ownBlock.label}” จะเว้นว่างไว้เซ็นบนกระดาษ</>,
+                }}
+              />
+            </section>
+          )}
+
+          {others.length > 0 && (
+            <section>
+              <Step n={ownBlock ? 2 : 1} title="ให้คนอื่นเซ็นออนไลน์" hint="เลือกคนเซ็นในแต่ละช่อง · ไม่เลือกใคร = เว้นไว้เซ็นด้วยปากกาบนกระดาษ · ระบบจำคนที่เลือกครั้งก่อนไว้ให้" />
+              <div className="divide-y divide-stone-100 rounded-xl border border-stone-200">
+                {others.map(b => {
+                  const sig = sigFor(b.id)
+                  const picked = assign[b.id] ?? ''
+                  return (
+                    <div key={b.id} className="flex min-h-[60px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                      <span className="w-32 shrink-0 text-sm font-medium text-stone-700">{b.label}</span>
+                      {sig?.status === 'signed' ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-olive-50 px-3 py-1 text-xs font-medium text-olive-700">
+                          <CheckCircle2 size={14} /> เซ็นแล้วโดย {sig.assignedName} · {formatDateTime(sig.signedAt)}
+                        </span>
+                      ) : (
+                        <>
+                          <div className="min-w-0 flex-1">
+                            <SignerSelect
+                              className={`${ui.inputSm} w-full max-w-xs`}
+                              ariaLabel={`ผู้เซ็นช่อง ${b.label}`}
+                              value={picked}
+                              onChange={uid => setAssign({ ...assign, [b.id]: uid })}
+                              signers={signers}
+                              emptyLabel="— ไม่ส่งใคร (เซ็นบนกระดาษ) —"
+                            />
+                          </div>
+                          {sig?.status === 'pending' && sig.assignedUid === picked ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-ochre-50 px-2.5 py-1 text-xs font-medium text-ochre-700"><Clock3 size={13} /> รอเซ็น</span>
+                          ) : picked ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-clay-50 px-2.5 py-1 text-xs font-medium text-clay-700"><Send size={13} /> จะส่งให้เซ็น</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500"><PenLine size={13} /> เซ็นบนกระดาษ</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-            )}
-            <div className="divide-y divide-stone-100 rounded-lg border border-stone-200">
-              {allBlocks.map(b => {
-                const sig = sigFor(b.id)
-                return (
-                  <div key={b.id} className="flex min-h-[52px] flex-wrap items-center gap-2 px-3 py-2">
-                    <span className="w-32 shrink-0 text-sm font-medium text-stone-700">{b.label}</span>
-                    {sig?.status === 'signed' ? (
-                      <Badge tone="green">✔ เซ็นแล้วโดย {sig.assignedName}</Badge>
-                    ) : isSelf(b.id) ? (
-                      <span className="text-sm text-stone-700">ตัวเอง (คุณ){sig?.status === 'pending' ? ' · รอเซ็น' : ''}</span>
-                    ) : (
-                      <>
-                        <SignerSelect
-                          className={`${ui.inputSm} w-56`}
-                          value={assign[b.id] ?? ''}
-                          onChange={uid => setAssign({ ...assign, [b.id]: uid })}
-                          signers={signers}
-                        />
-                        {sig?.status === 'pending' ? <Badge tone="amber">รอเซ็น</Badge>
-                          : !assign[b.id] && <span className="text-xs text-stone-400">ไม่เลือก = เซ็นบนกระดาษ</span>}
-                      </>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={onClose} className={ui.btnSecondary}>ยกเลิก</button>
-              <button onClick={send} disabled={busy} className={ui.btnPrimary}>
-                <PenLine size={16} /> ส่งให้เซ็น
-              </button>
-            </div>
-          </>
-        )}
+            </section>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-stone-100 bg-stone-50/60 px-6 py-4">
+          {!changed && <span className="mr-auto text-xs text-stone-400">ยังไม่มีอะไรเปลี่ยน</span>}
+          <button onClick={onClose} className={ui.btnSecondary}>ยกเลิก</button>
+          <button onClick={confirm} disabled={!changed || busy} className={`${ui.btnPrimary} disabled:opacity-50`}>
+            {busy ? <><Spinner size={16} /> กำลังทำรายการ...</> : <>{willSign ? <Signature size={16} /> : <Send size={16} />} {action}</>}
+          </button>
+        </div>
       </div>
     </div>
   )
