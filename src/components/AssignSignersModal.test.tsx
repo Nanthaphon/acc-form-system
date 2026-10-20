@@ -31,7 +31,7 @@ const pickHead = () => {
   fireEvent.click(screen.getByRole('button', { name: 'ไกรธัช จิระกรธนัน' }))
 }
 
-beforeEach(() => { vi.clearAllMocks(); localStorage.clear() })
+beforeEach(() => { vi.clearAllMocks() })
 
 describe('เซ็น / ส่งเซ็น', () => {
   it('signs my line and sends the head\'s in one go, saying so on the button', async () => {
@@ -72,8 +72,9 @@ describe('เซ็น / ส่งเซ็น', () => {
     expect(vi.mocked(assignSigners).mock.calls[0][1]).toEqual([])
   })
 
-  it('marks an unpicked line for pen, and remembers who was picked for next time', async () => {
+  it('starts every other line with nobody — for pen — even after sending one out before', async () => {
     const first = show([mine('signed')])
+    expect(screen.getByRole('textbox', { name: 'ผู้เซ็นช่อง ผู้ตรวจสอบ' })).toHaveValue('')
     expect(screen.getByText('เซ็นบนกระดาษ')).toBeInTheDocument()
     pickHead()
     expect(screen.getByText('จะส่งให้เซ็น')).toBeInTheDocument()
@@ -81,7 +82,13 @@ describe('เซ็น / ส่งเซ็น', () => {
     await waitFor(() => expect(assignSigners).toHaveBeenCalled())
     first.unmount()
     show()
+    expect(screen.getByRole('textbox', { name: 'ผู้เซ็นช่อง ผู้ตรวจสอบ' })).toHaveValue('')
+  })
+
+  it('keeps a line already waiting on someone as it is', () => {
+    show([mine('signed'), { blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'ไกรธัช จิระกรธนัน', status: 'pending' }])
     expect(screen.getByRole('textbox', { name: 'ผู้เซ็นช่อง ผู้ตรวจสอบ' })).toHaveValue('ไกรธัช จิระกรธนัน')
+    expect(screen.getByText('รอเซ็น')).toBeInTheDocument()
   })
 
   it('offers to upload a signature when there is none, and can still send', async () => {
