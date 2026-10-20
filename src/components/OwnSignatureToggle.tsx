@@ -10,12 +10,13 @@ import { PenLine, Upload } from 'lucide-react'
 // the signing dialog also has an existing signature to keep or take off.
 export interface OwnSignatureTexts { on: string; onHint: ReactNode; off: string; offHint: ReactNode }
 
-export default function OwnSignatureToggle({ signature, blockLabel, on, onChange, texts }: {
+export default function OwnSignatureToggle({ signature, blockLabel, on, onChange, texts, fullWidth }: {
   signature?: string | null
   blockLabel: string
   on: boolean
   onChange: (on: boolean) => void
   texts?: OwnSignatureTexts
+  fullWidth?: boolean   // fill the space it is given (a dialog) rather than keep to a form-width card
 }) {
   const t: OwnSignatureTexts = texts ?? {
     on: 'ลงลายเซ็นของฉันในเอกสาร',
@@ -25,7 +26,7 @@ export default function OwnSignatureToggle({ signature, blockLabel, on, onChange
   }
   if (!signature) {
     return (
-      <div className="flex max-w-2xl flex-wrap items-center gap-4 rounded-xl border border-dashed border-ochre-200 bg-ochre-50/60 p-3 pr-4">
+      <div className={`flex ${fullWidth ? '' : 'max-w-2xl'} flex-wrap items-center gap-4 rounded-xl border border-dashed border-ochre-200 bg-ochre-50/60 p-3 pr-4`}>
         <div className="flex h-14 w-36 shrink-0 items-center justify-center rounded-lg border border-dashed border-stone-300 bg-white text-stone-300">
           <PenLine size={20} />
         </div>
@@ -45,7 +46,7 @@ export default function OwnSignatureToggle({ signature, blockLabel, on, onChange
 
   return (
     <label
-      className={`flex max-w-2xl cursor-pointer items-center gap-4 rounded-xl border p-3 pr-4 transition-colors ${
+      className={`flex ${fullWidth ? '' : 'max-w-2xl'} cursor-pointer items-center gap-4 rounded-xl border p-3 pr-4 transition-colors ${
         on ? 'border-clay-300 bg-clay-50/70 shadow-sm' : 'border-stone-200 bg-white hover:border-stone-300'
       }`}
     >
