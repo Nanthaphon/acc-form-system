@@ -10,6 +10,10 @@ interface Props {
   ariaLabel?: string
 }
 
+// Names in dictionary order: Thai ก–ฮ first (a leading เ แ โ ใ ไ sorts under
+// its consonant, as in a Thai dictionary), then English A–Z.
+const byThaiName = new Intl.Collator('th')
+
 // A searchable signer picker: type to filter, click to select.
 export default function SignerSelect({ value, onChange, signers, className, emptyLabel, ariaLabel }: Props) {
   const [open, setOpen] = useState(false)
@@ -23,7 +27,9 @@ export default function SignerSelect({ value, onChange, signers, className, empt
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
-  const matches = signers.filter(s => s.name.toLowerCase().includes(q.trim().toLowerCase()))
+  const matches = signers
+    .filter(s => s.name.toLowerCase().includes(q.trim().toLowerCase()))
+    .sort((a, b) => byThaiName.compare(a.name, b.name))
 
   return (
     <div ref={ref} className="relative">
