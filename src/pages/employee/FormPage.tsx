@@ -226,6 +226,17 @@ export default function FormPage() {
   // the page says so up front instead of only failing at save time.
   const locked = isSigned({ signatures: sigs } as never)
   const canUnlock = locked && isMine && sigs.filter(x => x.status === 'signed').every(x => x.assignedUid === profile?.uid)
+  // The sheet shows the signature the requester has chosen to put on before it
+  // is actually there — "บันทึกและพิมพ์" signs it, today. Never on a locked
+  // document: that button only prints it, and the paper would carry a
+  // signature the system does not have.
+  const previewMine = stampsMySignature && !locked && !sigs.some(x => x.blockId === requesterBlock.id && x.status === 'signed')
+  const sheetSigs: DocSignature[] = previewMine
+    ? [...sigs.filter(x => x.blockId !== requesterBlock.id), {
+      blockId: requesterBlock.id, blockLabel: requesterBlock.label, assignedUid: me.uid, assignedName: me.name,
+      status: 'signed', signatureImage: profile?.signatureImage ?? undefined, signedAt: Date.now(),
+    }]
+    : sigs
   const isAdmin = profile?.role === 'admin'
 
   // A closed form (maintenance) is not accessible to employees via direct URL.
@@ -297,7 +308,7 @@ export default function FormPage() {
         )}
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
-        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sigs} />
+        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sheetSigs} />
       </div>
       {!locked && isMine && requesterBlock && (
         <div className="no-print mt-4">

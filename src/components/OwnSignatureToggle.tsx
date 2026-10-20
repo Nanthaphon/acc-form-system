@@ -8,7 +8,7 @@ import { PenLine, Upload } from 'lucide-react'
 // happens either way — so leaving it off is a choice, not an oversight.
 // What the card says, on and off. The fill-in screen's wording by default;
 // the signing dialog also has an existing signature to keep or take off.
-export interface OwnSignatureTexts { on: string; onHint: ReactNode; off: string; offHint: ReactNode }
+export interface OwnSignatureTexts { on: string; onHint?: ReactNode; off: string; offHint?: ReactNode }
 
 export default function OwnSignatureToggle({ signature, blockLabel, on, onChange, texts, fullWidth }: {
   signature?: string | null
@@ -18,12 +18,10 @@ export default function OwnSignatureToggle({ signature, blockLabel, on, onChange
   texts?: OwnSignatureTexts
   fullWidth?: boolean   // fill the space it is given (a dialog) rather than keep to a form-width card
 }) {
-  const t: OwnSignatureTexts = texts ?? {
-    on: 'ลงลายเซ็นของฉันในเอกสาร',
-    onHint: <>ใส่ในช่อง “{blockLabel}” ตอนกดบันทึก · ช่องอื่นเว้นไว้เซ็นด้วยปากกา</>,
-    off: 'ไม่ใส่ลายเซ็นของฉัน',
-    offHint: <>ช่อง “{blockLabel}” จะเว้นว่างไว้เซ็นบนกระดาษ</>,
-  }
+  // The fill-in screen says no more than this: the sheet beside it shows
+  // where the signature goes.
+  const t: OwnSignatureTexts = texts ?? { on: 'ลายเซ็นของฉันในเอกสาร', off: 'ไม่ใส่ลายเซ็นของฉัน' }
+  const hint = on ? t.onHint : t.offHint
   if (!signature) {
     return (
       <div className={`flex ${fullWidth ? '' : 'max-w-2xl'} flex-wrap items-center gap-4 rounded-xl border border-dashed border-ochre-200 bg-ochre-50/60 p-3 pr-4`}>
@@ -70,7 +68,7 @@ export default function OwnSignatureToggle({ signature, blockLabel, on, onChange
         <div className={`text-sm font-medium ${on ? 'text-stone-900' : 'text-stone-500'}`}>
           {on ? t.on : t.off}
         </div>
-        <div className="mt-0.5 text-xs text-stone-500">{on ? t.onHint : t.offHint}</div>
+        {hint && <div className="mt-0.5 text-xs text-stone-500">{hint}</div>}
       </div>
       {/* Drawn switch; the real control is the checkbox above (keyboard, screen readers). */}
       <span

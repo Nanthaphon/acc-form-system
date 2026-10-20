@@ -147,6 +147,23 @@ describe('the requester\'s own signature goes on as it is saved', () => {
     expect(vi.mocked(signBlockAsSelf).mock.invocationCallOrder[0]).toBeLessThan(print.mock.invocationCallOrder[0])
   })
 
+  it('shows it on the sheet before saving, and takes it off the sheet when unticked', async () => {
+    withSignature()
+    openNew()
+    const toggle = await screen.findByRole('checkbox', { name: /ใส่ลายเซ็นของฉันในช่อง/ })
+    expect(screen.getByAltText('ลายเซ็น')).toHaveAttribute('src', 'data:image/png;base64,AAAA')
+    expect(screen.getAllByText(/\(ธนัตถ์ นัยพินิจ\)/).length).toBeGreaterThan(0)
+    fireEvent.click(toggle)
+    expect(screen.queryByAltText('ลายเซ็น')).not.toBeInTheDocument()
+  })
+
+  it('never shows it on a sheet that can only be printed', async () => {
+    withSignature()
+    openSaved({ createdBy: 'u1', signatures: [{ blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'หัวหน้า', status: 'signed', signedAt: 1, signatureImage: 'data:boss' }] })
+    await screen.findByRole('button', { name: /พิมพ์/ })
+    expect(screen.getAllByAltText('ลายเซ็น').map(i => i.getAttribute('src'))).toEqual(['data:boss'])
+  })
+
   it('leaves it off when unticked', async () => {
     withSignature()
     openNew()
