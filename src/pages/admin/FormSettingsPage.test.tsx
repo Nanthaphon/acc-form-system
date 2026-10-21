@@ -121,6 +121,47 @@ describe('FormSettingsPage', () => {
     expect(saved.columns[0].width).toBeCloseTo(38, 6)
   })
 
+  it('refuses a width that takes the table past 100%, in red, and keeps the last good one', async () => {
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+    const first = screen.getByLabelText('ความกว้างคอลัมน์ 1 (%)') as HTMLInputElement
+    // ลำดับ 10mm (5.3%) is taken: 94.7% is what is left for this column
+    fireEvent.change(first, { target: { value: '80' } })
+    expect(first).not.toHaveAttribute('aria-invalid')
+    fireEvent.change(first, { target: { value: '95' } })
+    expect(first).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่ได้ไม่เกิน 94.7%')
+    fireEvent.blur(first)
+    expect(first.value).toBe('80')
+    expect(first).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('marks a form saved over 100% before the rule, lets it come down, and will not save it until it does', async () => {
+    vi.mocked(getFormSettings).mockResolvedValueOnce({
+      ...settings, showSeq: false,
+      columns: [
+        { key: 'date', label: 'วัน เดือน ปี', type: 'date' as const, width: 90 },
+        { key: 'detail', label: 'รายละเอียด', type: 'text' as const, width: 180 },
+        { key: 'amount', label: 'จำนวนเงิน', type: 'number' as const, width: 110 },
+      ],
+    } as unknown as FormSettings)
+    show()
+    await waitFor(() => expect(screen.getByText(/ความกว้างรวม 200% เกิน 100%/)).toBeInTheDocument())
+    const detail = screen.getByLabelText('ความกว้างคอลัมน์ 2 (%)')
+    expect(detail).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกฟอร์ม/ }))
+    expect(uiAlert).toHaveBeenCalledWith(expect.stringContaining('เกิน 100%'), expect.objectContaining({ title: 'บันทึกไม่ได้' }))
+    expect(updateFormSettings).not.toHaveBeenCalled()
+    // coming down is taken even while still over (47.4 + 10 + 57.9 = 115.3)…
+    fireEvent.change(detail, { target: { value: '10' } })
+    expect((detail as HTMLInputElement).value).toBe('10')
+    expect(screen.getByText(/ความกว้างรวม 115.3% เกิน 100%/)).toBeInTheDocument()
+    // …and once under 100% (47.4 + 10 + 30) nothing is red
+    fireEvent.change(screen.getByLabelText('ความกว้างคอลัมน์ 3 (%)'), { target: { value: '30' } })
+    expect(screen.queryByText(/เกิน 100%/)).not.toBeInTheDocument()
+    expect(detail).not.toHaveAttribute('aria-invalid')
+  })
+
   it('says how much of the 100% the widths take', async () => {
     show()
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())

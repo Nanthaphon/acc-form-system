@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'luci
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, showSeqColumn, isTextCol } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { mmToPct, totalColumn } from '../../features/expense-claim/calc'
+import { mmToPct, totalColumn, PRINT_TABLE_MM } from '../../features/expense-claim/calc'
 import PercentWidthInput from '../../components/PercentWidthInput'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
@@ -302,6 +302,10 @@ export default function FormSettingsPage() {
     // Saving what is on screen before the form arrived would write the built-in
     // defaults over the real configuration.
     if (!loaded) { uiAlert('ยังโหลดฟอร์มนี้ไม่สำเร็จ — รีเฟรชหน้าก่อนบันทึก', { title: 'บันทึกไม่ได้' }); return }
+    if (widthsOver) {
+      uiAlert(`ความกว้างคอลัมน์รวม ${mmToPct(setWidthMm)}% เกิน 100% — ลดช่องที่เป็นสีแดงให้รวมไม่เกิน 100% ก่อนบันทึก`, { title: 'บันทึกไม่ได้' })
+      return
+    }
     setSaving(true)
     try {
       const skipped = await updateFormSettings({
@@ -366,6 +370,11 @@ export default function FormSettingsPage() {
   // out, so the admin needs to see how much of the 100% is spoken for.
   const setWidthMm = (showSeq ? seqColumnWidth(settings) : 0)
     + columns.filter(c => !c.hidden).reduce((sum, c) => sum + (c.width ?? 0), 0)
+  // The widths may not add up to more than the table. Each box is told what is
+  // left for it — 100% less every other width that counts — and a form saved
+  // over it before the rule is marked until it is brought down.
+  const widthsOver = setWidthMm > PRINT_TABLE_MM + 0.2
+  const roomPct = (ownMm: number) => ((PRINT_TABLE_MM - (setWidthMm - ownMm)) * 100) / PRINT_TABLE_MM
   const docTotalCol = totalColumn(columns)
   const markedTotal = columns.some(c => c.isTotal && !isTextCol(c.type))
   const brokenCount = columns.filter(c => brokenOperands(c).length > 0).length
@@ -489,6 +498,9 @@ export default function FormSettingsPage() {
       </Section>
 
       <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE} · กว้างรวม ${mmToPct(setWidthMm)}%/100%`} defaultOpen>
+        {widthsOver && (
+          <p role="alert" className="mb-2 text-xs font-medium text-brick-600">ความกว้างรวม {mmToPct(setWidthMm)}% เกิน 100% — ลดช่องที่เป็นสีแดงให้รวมไม่เกิน 100%</p>
+        )}
         <p className={`mb-3 text-xs ${brokenCount > 0 ? 'text-brick-600' : 'text-stone-500'}`}>
           {docTotalCol
             ? `ยอดรวมของเอกสารมาจากคอลัมน์ "${docTotalCol.label || docTotalCol.key}"${markedTotal ? '' : ' — ยังไม่ได้เลือกไว้ ระบบจึงใช้คอลัมน์ตัวเลขสุดท้าย ติ๊ก “ยอดรวม” ที่คอลัมน์ที่ต้องการได้'}`
@@ -532,6 +544,8 @@ export default function FormSettingsPage() {
               disabled={!showSeq}
               placeholder={String(mmToPct(SEQ_COLUMN_WIDTH))}
               mm={settings.seqWidth}
+              maxPct={roomPct(showSeq ? seqColumnWidth(settings) : 0)}
+              over={widthsOver}
               onChange={mm => setField('seqWidth', mm)}
               className={`${ui.inputSm} w-[88px]`}
             />
@@ -570,6 +584,8 @@ export default function FormSettingsPage() {
                       ariaLabel={`ความกว้างคอลัมน์ ${i + 1} (%)`}
                       placeholder="อัตโนมัติ"
                       mm={col.width}
+                      maxPct={roomPct(col.hidden ? 0 : col.width ?? 0)}
+                      over={widthsOver && !col.hidden}
                       onChange={mm => patchColumn(i, { width: mm })}
                       className={`${ui.inputSm} w-[88px]`}
                     />
