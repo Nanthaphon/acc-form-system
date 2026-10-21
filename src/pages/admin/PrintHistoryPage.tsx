@@ -93,7 +93,7 @@ export default function PrintHistoryPage() {
         subtitle={`ทั้งหมด ${rows.length} รายการ`}
       />
       <div className="mb-4">
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} employees={employees} resultCount={filtered.length} />
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees} resultCount={filtered.length} />
       </div>
       <div className="mb-3 flex justify-end">
         <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />

@@ -153,7 +153,7 @@ export default function EmployeeDetailPage() {
             <FileText size={16} className="text-stone-400" /> เอกสารที่พิมพ์ ({subs.length})
           </h2>
           <div className="mb-4">
-            <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} resultCount={filtered.length} />
+            <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} formGroup={formGroup} resultCount={filtered.length} />
           </div>
           <div className={ui.tableWrap}>
             <table className={ui.table}>

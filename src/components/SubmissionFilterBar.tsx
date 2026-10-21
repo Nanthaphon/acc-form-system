@@ -13,13 +13,28 @@ interface Props {
   onChange: (f: Filters) => void
   forms: FormSettings[]
   groups?: FormGroup[]        // when provided, show a folder filter
+  formGroup?: (formType: string) => string | undefined   // a form's folder, as the page reckons it
   employees?: UserProfile[]   // when provided, show an employee filter
   resultCount: number
 }
 
-export default function SubmissionFilterBar({ value, onChange, forms, groups, employees, resultCount }: Props) {
+export default function SubmissionFilterBar({ value, onChange, forms, groups, formGroup, employees, resultCount }: Props) {
   const cls = ui.inputSm
   const set = (patch: Partial<Filters>) => onChange({ ...value, ...patch })
+  // A folder picked narrows the forms to its own. Forms of the same name live
+  // in more than one folder, so with no folder picked a repeated name says
+  // which folder it is from.
+  const folderOf = (f: FormSettings) => formGroup?.(f.formType) ?? f.groupId
+  const formChoices = value.groupId ? forms.filter(f => folderOf(f) === value.groupId) : forms
+  const nameOf = (f: FormSettings) => f.name || f.title
+  const repeated = new Set(formChoices.map(nameOf).filter((n, i, all) => all.indexOf(n) !== i))
+  const folderName = (id?: string) => groups?.find(g => g.id === id)?.name
+  const formLabel = (f: FormSettings) =>
+    repeated.has(nameOf(f)) && folderName(folderOf(f)) ? `${nameOf(f)} (${folderName(folderOf(f))})` : nameOf(f)
+  const pickFolder = (groupId: string) => {
+    const keepForm = !value.formType || !groupId || forms.some(f => f.formType === value.formType && folderOf(f) === groupId)
+    set({ groupId, ...(keepForm ? {} : { formType: '' }) })
+  }
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative">
@@ -32,14 +47,14 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, em
         />
       </div>
       {groups && groups.length > 0 && (
-        <select className={cls} value={value.groupId} onChange={e => set({ groupId: e.target.value })}>
+        <select className={cls} aria-label="โฟลเดอร์" value={value.groupId} onChange={e => pickFolder(e.target.value)}>
           <option value="">— ทุกโฟลเดอร์ —</option>
           {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
       )}
-      <select className={cls} value={value.formType} onChange={e => set({ formType: e.target.value })}>
+      <select className={cls} aria-label="ฟอร์ม" value={value.formType} onChange={e => set({ formType: e.target.value })}>
         <option value="">— ฟอร์มทั้งหมด —</option>
-        {forms.map(f => <option key={f.formType} value={f.formType}>{f.name || f.title}</option>)}
+        {formChoices.map(f => <option key={f.formType} value={f.formType}>{formLabel(f)}</option>)}
       </select>
       <select className={cls} value={value.status} onChange={e => set({ status: e.target.value })}>
         <option value="">— สถานะทั้งหมด —</option>

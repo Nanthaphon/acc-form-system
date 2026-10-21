@@ -13,7 +13,7 @@ import { formSignatureBlocks } from '../../types/schema'
 import { formatDate } from '../../shared/date'
 import { formatMoney } from '../../shared/money'
 import type { Filters } from '../../shared/submissionFilter'
-import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
+import { emptyFilters, applyFilters, filterChoices } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
 import SignNowModal from '../../components/SignNowModal'
@@ -51,6 +51,11 @@ export default function HistoryPage() {
   const formName = (ft: string) => { const f = formOf(ft); return f?.name || f?.title || '—' }
   const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
   const filtered = applyFilters(rows, filters, { formGroup, formName })
+  // The filter offers only the folders and forms this person may use (and any
+  // their own documents were made on).
+  const choices = filterChoices(forms, groups, {
+    accessGroup: profile?.accessGroup, isAdmin: profile?.role === 'admin', usedFormTypes: rows.map(r => r.formType),
+  })
   // "เซ็น / ส่งเซ็น" — sign your own line, take your signature back off, or
   // send the other lines out. Worth opening while some line is unsigned, or
   // while the requester's own signature is the only one (and can come off).
@@ -116,7 +121,7 @@ export default function HistoryPage() {
         subtitle={`ทั้งหมด ${rows.length} รายการ`}
       />
       <div className="mb-4">
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} resultCount={filtered.length} />
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={choices.forms} groups={choices.groups} formGroup={formGroup} resultCount={filtered.length} />
       </div>
       <div className="mb-3 flex justify-end">
         <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />

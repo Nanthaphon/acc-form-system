@@ -1,5 +1,24 @@
-import type { SubmissionSummary } from '../types/schema'
+import type { FormGroup, FormSettings, SubmissionSummary } from '../types/schema'
+import { canSeeForm, isActive } from '../types/schema'
 import { subStatus } from '../data/submissions'
+
+// The folders and forms a filter offers someone: those they may use — the
+// rule of the folder screen (DashboardPage): their access group, the form
+// open, its folder open — plus any form their own documents were made on, so
+// a document whose form was later closed to them can still be found.
+export function filterChoices(
+  forms: FormSettings[], groups: FormGroup[],
+  viewer: { accessGroup?: string; isAdmin: boolean; usedFormTypes?: string[] },
+): { forms: FormSettings[]; groups: FormGroup[] } {
+  if (viewer.isAdmin) return { forms, groups }
+  const folderOf = (f: FormSettings) => f.groupId ?? groups[0]?.id
+  const openFolders = new Set(groups.filter(isActive).map(g => g.id))
+  const used = new Set(viewer.usedFormTypes ?? [])
+  const shown = forms.filter(f => used.has(f.formType)
+    || (canSeeForm(f, viewer.accessGroup, false) && isActive(f) && openFolders.has(folderOf(f) ?? '')))
+  const withForms = new Set(shown.map(folderOf))
+  return { forms: shown, groups: groups.filter(g => withForms.has(g.id)) }
+}
 
 export interface Filters {
   q: string          // search: doc number / form name
