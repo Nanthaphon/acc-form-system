@@ -5,10 +5,7 @@ import { Spinner } from './Spinner'
 import { uiAlert, uiConfirm } from './dialog/dialogService'
 import { updateProfile } from '../data/users'
 import { dbErrorMessage } from '../shared/dbError'
-
-// A data URL this long is roughly a 300KB image — large enough for a clean
-// signature, small enough to sit inside every document that carries it.
-const MAX_DATA_URL = 400_000
+import { readSignatureFile } from '../shared/signatureFile'
 
 interface Props {
   uid: string
@@ -22,23 +19,15 @@ interface Props {
 export default function SignatureField({ uid, signature, canEdit = true, onChanged }: Props) {
   const [busy, setBusy] = useState(false)
 
-  function pick(file: File | undefined) {
+  async function pick(file: File | undefined) {
     if (!file) return
     setBusy(true)
-    const reader = new FileReader()
-    reader.onload = async () => {
-      const dataUrl = String(reader.result)
-      if (dataUrl.length > MAX_DATA_URL) {
-        uiAlert('ไฟล์ใหญ่เกินไป แนะนำลายเซ็นเล็กกว่า ~300KB')
-        setBusy(false)
-        return
-      }
-      try { await updateProfile(uid, { signatureImage: dataUrl }); await onChanged() }
-      catch (e) { uiAlert(dbErrorMessage(e), { title: 'อัปโหลดลายเซ็นไม่สำเร็จ' }) }
-      finally { setBusy(false) }
-    }
-    reader.onerror = () => { setBusy(false); uiAlert('อ่านไฟล์ไม่สำเร็จ') }
-    reader.readAsDataURL(file)
+    let dataUrl: string
+    try { dataUrl = await readSignatureFile(file) }
+    catch (e) { uiAlert((e as Error).message); setBusy(false); return }
+    try { await updateProfile(uid, { signatureImage: dataUrl }); await onChanged() }
+    catch (e) { uiAlert(dbErrorMessage(e), { title: 'อัปโหลดลายเซ็นไม่สำเร็จ' }) }
+    finally { setBusy(false) }
   }
 
   async function remove() {

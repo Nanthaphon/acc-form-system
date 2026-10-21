@@ -10,6 +10,7 @@ import { formatDateTime } from '../shared/date'
 import SignerSelect from './SignerSelect'
 import OwnSignatureToggle from './OwnSignatureToggle'
 import { Spinner } from './Spinner'
+import { useAuth } from '../auth/AuthProvider'
 import { ui } from './ui'
 
 interface Props {
@@ -40,6 +41,7 @@ function Step({ n, title, hint }: { n: number; title: string; hint: string }) {
 // other lines online — any line left without anyone is signed in pen on paper.
 // Nothing happens until the one button at the bottom, which says what it will do.
 export default function AssignSignersModal({ submission, settings, signers, currentUid, currentName, currentSignature, onClose, onDone }: Props) {
+  const { refresh: refreshProfile } = useAuth()
   const allBlocks = formSignatureBlocks(settings)
   const ownBlock = allBlocks[0]
   const others = allBlocks.slice(1)
@@ -139,6 +141,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                   on={signMine}
                   onChange={setSignMine}
                   fullWidth
+                  upload={{ uid: currentUid, onUploaded: refreshProfile }}
                   texts={ownSigned ? {
                     on: 'เซ็นแล้ว',
                     onHint: <>ช่อง “{ownBlock.label}” · เซ็นเมื่อ {formatDateTime(ownSig?.signedAt)}</>,

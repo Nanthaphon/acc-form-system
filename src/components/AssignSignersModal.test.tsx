@@ -93,7 +93,7 @@ describe('เซ็น / ส่งเซ็น', () => {
 
   it('offers to upload a signature when there is none, and can still send', async () => {
     show([], null)
-    expect(screen.getByRole('link', { name: /อัปโหลดลายเซ็น/ })).toHaveAttribute('href', '/profile')
+    expect(screen.getByLabelText('เลือกไฟล์ลายเซ็น')).toHaveAttribute('type', 'file')
     pickHead()
     fireEvent.click(screen.getByRole('button', { name: /ส่งให้ 1 คนเซ็น/ }))
     await waitFor(() => expect(assignSigners).toHaveBeenCalled())

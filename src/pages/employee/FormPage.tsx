@@ -25,7 +25,7 @@ export default function FormPage() {
   const { id, formType } = useParams()
   const [searchParams] = useSearchParams()
   const cloneId = searchParams.get('clone')
-  const { profile } = useAuth()
+  const { profile, refresh: refreshProfile } = useAuth()
   const nav = useNavigate()
   const [company, setCompany] = useState<Company | null>(null)
   const [companies, setCompanies] = useState<Company[]>([])
@@ -312,7 +312,10 @@ export default function FormPage() {
       </div>
       {!locked && isMine && requesterBlock && (
         <div className="no-print mt-4">
-          <OwnSignatureToggle signature={profile?.signatureImage} blockLabel={requesterBlock.label} on={signMine} onChange={setSignMine} />
+          <OwnSignatureToggle
+            signature={profile?.signatureImage} blockLabel={requesterBlock.label} on={signMine} onChange={setSignMine}
+            upload={profile ? { uid: profile.uid, onUploaded: refreshProfile } : undefined}
+          />
         </div>
       )}
       <div className="no-print mt-4 flex flex-wrap items-center gap-2.5">
