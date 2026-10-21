@@ -114,7 +114,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
           role="dialog"
           aria-modal="true"
           aria-label={`เซ็น / ส่งเซ็น ${submission.docNumber}`}
-          className="w-full max-w-4xl rounded-2xl border border-stone-200 bg-white shadow-2xl"
+          className="w-full max-w-4xl rounded-lg border border-stone-200 bg-white shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
           <div className="flex items-center gap-4 border-b border-stone-100 px-10 py-6">
@@ -197,7 +197,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
             )}
           </div>
   
-          <div className="flex items-center justify-end gap-2 rounded-b-2xl border-t border-stone-100 bg-stone-50/60 px-10 py-5">
+          <div className="flex items-center justify-end gap-2 rounded-b-lg border-t border-stone-100 bg-stone-50/60 px-10 py-5">
             {!changed && <span className="mr-auto text-xs text-stone-400">ยังไม่มีอะไรเปลี่ยน</span>}
             <button onClick={onClose} className={ui.btnSecondary}>ยกเลิก</button>
             <button onClick={confirm} disabled={!changed || busy} className={`${ui.btnPrimary} disabled:opacity-50`}>
