@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'luci
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, showSeqColumn, isTextCol } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { mmToPct, totalColumn, PRINT_TABLE_MM } from '../../features/expense-claim/calc'
+import { mmToPct, printWidthsMm, totalColumn, PRINT_TABLE_MM } from '../../features/expense-claim/calc'
 import PercentWidthInput from '../../components/PercentWidthInput'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
@@ -375,6 +375,14 @@ export default function FormSettingsPage() {
   // over it before the rule is marked until it is brought down.
   const widthsOver = setWidthMm > PRINT_TABLE_MM + 0.2
   const roomPct = (ownMm: number) => ((PRINT_TABLE_MM - (setWidthMm - ownMm)) * 100) / PRINT_TABLE_MM
+  // What is left of the 100%, and what each column left blank will get of it —
+  // the share the sheet actually prints it at.
+  const usedPct = mmToPct(setWidthMm)
+  const leftPct = Math.max(0, Math.round((100 - usedPct) * 10) / 10)
+  const visibleCols = columns.filter(c => !c.hidden)
+  const autoCount = visibleCols.filter(c => !c.width).length
+  const printedMm = printWidthsMm(showSeq ? seqColumnWidth(settings) : 0, visibleCols.map(c => c.width)).cols
+  const autoPct = (col: FormColumn) => { const k = visibleCols.indexOf(col); return k >= 0 && !col.width ? mmToPct(printedMm[k]) : null }
   const docTotalCol = totalColumn(columns)
   const markedTotal = columns.some(c => c.isTotal && !isTextCol(c.type))
   const brokenCount = columns.filter(c => brokenOperands(c).length > 0).length
@@ -497,10 +505,21 @@ export default function FormSettingsPage() {
         </div>
       </Section>
 
-      <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE} · กว้างรวม ${mmToPct(setWidthMm)}%/100%`} defaultOpen>
-        {widthsOver && (
-          <p role="alert" className="mb-2 text-xs font-medium text-brick-600">ความกว้างรวม {mmToPct(setWidthMm)}% เกิน 100% — ลดช่องที่เป็นสีแดงให้รวมไม่เกิน 100%</p>
-        )}
+      <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE} · กว้างรวม ${usedPct}%/100%${widthsOver ? '' : ` · เหลือ ${leftPct}%`}`} defaultOpen>
+        {/* How much of the 100% the widths take, and what is left to give. */}
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div className="h-2 w-48 overflow-hidden rounded-full bg-stone-100" aria-hidden>
+            <div className={`h-full rounded-full ${widthsOver ? 'bg-brick-600' : 'bg-clay-600'}`} style={{ width: `${Math.min(100, usedPct)}%` }} />
+          </div>
+          {widthsOver ? (
+            <p role="alert" className="text-xs font-medium text-brick-600">ความกว้างรวม {usedPct}% เกิน 100% — ลดช่องที่เป็นสีแดงให้รวมไม่เกิน 100%</p>
+          ) : (
+            <p className="text-xs text-stone-600">
+              ใช้ไป {usedPct}% · <span className="font-semibold text-clay-700">เหลือ {leftPct}%</span>
+              {autoCount > 0 && leftPct > 0 && <span className="text-stone-500"> — แบ่งให้คอลัมน์ที่เว้นว่าง {autoCount} คอลัมน์</span>}
+            </p>
+          )}
+        </div>
         <p className={`mb-3 text-xs ${brokenCount > 0 ? 'text-brick-600' : 'text-stone-500'}`}>
           {docTotalCol
             ? `ยอดรวมของเอกสารมาจากคอลัมน์ "${docTotalCol.label || docTotalCol.key}"${markedTotal ? '' : ' — ยังไม่ได้เลือกไว้ ระบบจึงใช้คอลัมน์ตัวเลขสุดท้าย ติ๊ก “ยอดรวม” ที่คอลัมน์ที่ต้องการได้'}`
@@ -547,7 +566,7 @@ export default function FormSettingsPage() {
               maxPct={roomPct(showSeq ? seqColumnWidth(settings) : 0)}
               over={widthsOver}
               onChange={mm => setField('seqWidth', mm)}
-              className={`${ui.inputSm} w-[88px]`}
+              className={`${ui.inputSm} w-[124px]`}
             />
           </label>
           <span className={`${ui.hint} ml-auto`}>
@@ -582,12 +601,12 @@ export default function FormSettingsPage() {
                     กว้าง (%)
                     <PercentWidthInput
                       ariaLabel={`ความกว้างคอลัมน์ ${i + 1} (%)`}
-                      placeholder="อัตโนมัติ"
+                      placeholder={autoPct(col) !== null ? `อัตโนมัติ ${autoPct(col)}%` : 'อัตโนมัติ'}
                       mm={col.width}
                       maxPct={roomPct(col.hidden ? 0 : col.width ?? 0)}
                       over={widthsOver && !col.hidden}
                       onChange={mm => patchColumn(i, { width: mm })}
-                      className={`${ui.inputSm} w-[88px]`}
+                      className={`${ui.inputSm} w-[124px]`}
                     />
                   </label>
                   <label className="flex cursor-pointer select-none items-center gap-1.5 text-sm text-stone-700" title="เอาออกจากเอกสารโดยไม่ต้องลบคอลัมน์">

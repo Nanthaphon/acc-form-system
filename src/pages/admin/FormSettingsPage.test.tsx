@@ -162,6 +162,25 @@ describe('FormSettingsPage', () => {
     expect(detail).not.toHaveAttribute('aria-invalid')
   })
 
+  it('says what is left of the 100%, and what each column left blank will get', async () => {
+    vi.mocked(getFormSettings).mockResolvedValueOnce({
+      ...settings, showSeq: false,
+      columns: [
+        { key: 'date', label: 'วัน เดือน ปี', type: 'date' as const, width: 19 },     // 10%
+        { key: 'detail', label: 'รายละเอียด', type: 'text' as const, width: 47.5 },  // 25%
+        { key: 'job', label: 'Job', type: 'text' as const, width: 38 },              // 20%
+        { key: 'amount', label: 'จำนวนเงิน', type: 'number' as const, width: 38 },   // 20%
+        { key: 'note', label: 'หมายเหตุ', type: 'text' as const },
+      ],
+    } as unknown as FormSettings)
+    show()
+    await waitFor(() => expect(screen.getByText(/ใช้ไป 75%/)).toBeInTheDocument())
+    expect(screen.getByText('เหลือ 25%')).toBeInTheDocument()
+    expect(screen.getByText(/แบ่งให้คอลัมน์ที่เว้นว่าง 1 คอลัมน์/)).toBeInTheDocument()
+    expect(screen.getByLabelText('ความกว้างคอลัมน์ 5 (%)')).toHaveAttribute('placeholder', 'อัตโนมัติ 25%')
+    expect(screen.getByText(/กว้างรวม 75%\/100% · เหลือ 25%/)).toBeInTheDocument()
+  })
+
   it('says how much of the 100% the widths take', async () => {
     show()
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
