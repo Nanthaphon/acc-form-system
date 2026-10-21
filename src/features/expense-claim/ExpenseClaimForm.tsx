@@ -3,7 +3,7 @@ import { ALargeSmall, Link2, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillTableLayout, withDocWidths, resizeColumns, screenPxToMm, PRINT_TABLE_MM, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { AUTO_FIELDS, autoValue, parseTemplate, templateFields } from '../../shared/bodyTemplate'
@@ -28,6 +28,7 @@ interface Props {
   requesterTitle?: string     // section headings, editable per form (see sectionTitles)
   itemsTitle?: string
   showSeq?: boolean           // show the ลำดับ column (default true)
+  seqWidth?: number           // the ลำดับ column's printed width (mm), as the form sets it
 }
 
 // Larger or smaller text in the boxes being typed into — this form's own
@@ -167,18 +168,42 @@ function fmt(n: number): string {
   return formatMoney(n)
 }
 
-export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, companyName, requesterTitle, itemsTitle, showSeq = true }: Props) {
+export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, companyName, requesterTitle, itemsTitle, showSeq = true, seqWidth = SEQ_COLUMN_WIDTH }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
   const titles = sectionTitles({ requesterTitle, itemsTitle })
   const textSize = textPx(header.textSize)
   // The cells being typed into take the document's size; nothing else does.
-  const cellFont = { fontSize: `${textSize}px` }
+  // And the sheet's own typeface: the app's is 2–6% wider, enough to wrap a
+  // long detail at a different word on screen than on paper.
+  const cellFont = { fontSize: `${textSize}px`, fontFamily: "'Sarabun', serif" }
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
   // Paragraphs that have blanks to fill (plain paragraphs need no input).
   const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
-  const vcols = visibleColumns(cols)
-  // Same proportions the sheet will print, so what is typed matches what comes out.
-  const colPercents = fillColumnPercents(showSeq ? SEQ_COLUMN_WIDTH : 0, vcols)
+  // The document's own widths, if its columns were dragged, over the form's.
+  const vcols = withDocWidths(visibleColumns(cols), header.colWidths)
+  // Each column as wide as it prints, so what is typed wraps as it will on paper.
+  const seqMm = showSeq ? seqWidth : 0
+  const layout = fillTableLayout(seqMm, vcols, textSizeScale(textSize))
+
+  // Dragging the edge between two columns: one widens as the other narrows, so
+  // the table stays the width of the sheet, and the sheet prints what is shown.
+  const drag = useRef<{ i: number; x: number; start: number[] } | null>(null)
+  function startResize(e: React.PointerEvent<HTMLSpanElement>, i: number) {
+    e.preventDefault()
+    // The widths as they print, made to fill the sheet exactly beside the
+    // ลำดับ column — a form set wider than the page is scaled the same way.
+    const room = PRINT_TABLE_MM - seqMm
+    const sum = layout.mm.reduce((s, w) => s + w, 0) || 1
+    drag.current = { i, x: e.clientX, start: layout.mm.map(w => w * room / sum) }
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
+  function moveResize(e: React.PointerEvent<HTMLSpanElement>) {
+    const d = drag.current
+    if (!d) return
+    const next = resizeColumns(d.start, d.i, screenPxToMm(e.clientX - d.x))
+    onHeaderChange({ ...header, colWidths: Object.fromEntries(vcols.map((c, k) => [c.key, next[k]])) })
+  }
+  const endResize = () => { drag.current = null }
   const hasColumns = vcols.length > 0
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
@@ -311,7 +336,18 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
       <div className={cardClass}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className={cardTitleClass.replace('mb-4 ', '')}>{titles.items}</h2>
-          <TextSizePicker value={textSize} onChange={v => onHeaderChange({ ...header, textSize: v })} />
+          <div className="flex flex-wrap items-center gap-3">
+            {header.colWidths && (
+              <button
+                type="button"
+                onClick={() => onHeaderChange({ ...header, colWidths: undefined })}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-stone-500 hover:bg-stone-100 hover:text-stone-900"
+              >
+                <RotateCcw size={13} /> คืนความกว้างคอลัมน์ตามฟอร์ม
+              </button>
+            )}
+            <TextSizePicker value={textSize} onChange={v => onHeaderChange({ ...header, textSize: v })} />
+          </div>
         </div>
         {!hasColumns ? (
           <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
@@ -321,20 +357,38 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
         ) : (
           <>
             <div className="scroll-slim overflow-x-auto">
-              <table className={`w-full table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`} style={{ minWidth: `${tableMinWidth(vcols, textSizeScale(textSize), tickCols.length)}px` }}>
+              <table
+                className={`table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`}
+                style={{ width: `${(showSeq ? layout.seq : 0) + layout.cols.reduce((s, w) => s + w, 0) + tickCols.length * TICK_COL_PX + ACTION_COL_PX}px` }}
+              >
                 <thead>
                   <tr>
-                    {showSeq && <th className={`w-8 border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
+                    {showSeq && <th style={{ width: layout.seq }} className={`border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
                     {vcols.map((col, ci) => (
                       <th
                         key={col.key}
-                        style={{ width: colPercents[ci] }}
-                        className={`whitespace-pre-line break-words border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
+                        style={{ width: layout.cols[ci] }}
+                        className={`relative whitespace-pre-line break-words border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
                       >
                         {col.label}
                         {col.type === 'calc' && <span className="ml-1 text-[10px] font-normal text-stone-400">(คำนวณ)</span>}
+                        {ci < vcols.length - 1 && (
+                          <span
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={`ปรับความกว้างคอลัมน์ ${col.label.replace(/\s+/g, ' ')}`}
+                            title="ลากเพื่อปรับความกว้าง"
+                            onPointerDown={e => startResize(e, ci)}
+                            onPointerMove={moveResize}
+                            onPointerUp={endResize}
+                            onPointerCancel={endResize}
+                            className="group absolute -right-1.5 top-0 z-10 flex h-full w-3 cursor-col-resize touch-none justify-center"
+                          >
+                            <span className="h-full w-px bg-stone-200 transition-colors group-hover:w-0.5 group-hover:bg-clay-500" />
+                          </span>
+                        )}
                       </th>
                     ))}
                     {tickCols.map(t => (

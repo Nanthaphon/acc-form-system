@@ -429,7 +429,7 @@ export function printWidthsMm(
 // Print is unaffected: the preview/PDF size columns proportionally from
 // col.width, so the admin's own setting still decides the printed layout.
 export const DATE_COL_MIN_PX = 118  // fits "dd/mm/yyyy" plus the calendar button
-const COL_MIN_PX = 80       // any other column, when the form sets no width
+const COL_MIN_PX = 56       // any other box, so it can still be typed in
 const SEQ_COL_PX = 32      // the "#" column (w-8)
 // The delete-row column: the 32px button and 16px around it. At 36px the
 // button overflowed its own cell and was cut off at the edge of the table.
@@ -437,22 +437,55 @@ export const ACTION_COL_PX = 48
 // A column a tax is picked in on the fill-in table (a VAT tick, a withholding rate).
 export const TICK_COL_PX = 72
 
-// The fill-in table shows the columns in the proportions the sheet will print
-// them in — as percentages, so the table fills whatever width the screen gives
-// it. Millimetres cannot be used directly here: a form whose widths add up to
-// more than a page would otherwise draw a table several screens wide.
-export function fillColumnPercents(seqMm: number, cols: FormColumn[]): string[] {
-  const { cols: mm } = printWidthsMm(seqMm, cols.map(c => c.width))
-  const total = mm.reduce((sum, w) => sum + w, 0) || 1
-  return mm.map(w => `${((w / total) * 100).toFixed(3)}%`)
+// The fill-in table is the sheet's table, drawn at the size it prints: each
+// column as wide as its printed cell, so what is typed wraps at the same word
+// on screen as on paper. The boxes are typed in at 12px against the sheet's
+// 10px, so everything is 1.2× the printed size; the boxes' own padding and
+// border (13px a side, against a printed cell's 4.5px) go on top.
+export const SCREEN_PER_PRINT = 1.2
+const PRINT_CELL_PAD_PX = 4.5   // px-1 and half the 1px rule, each side
+const FILL_CELL_PAD_PX = 13     // the cell's p-1, the box's border and px-2, each side
+
+// A printed width in millimetres as the width of its column on screen.
+export function fillColumnPx(printMm: number): number {
+  return Math.round((printMm * PX_PER_MM - 2 * PRINT_CELL_PAD_PX) * SCREEN_PER_PRINT + 2 * FILL_CELL_PAD_PX)
 }
-// Width below which the table scrolls instead of squeezing its columns out of
-// use. Only the readable minimum counts — a wide setting belongs on paper, not
-// in a table someone has to type into.
-// `scale` is the size of the text in the boxes (1 = ปกติ): larger text needs
-// more room before it is cut off — a date in particular, which must show
-// dd/mm/yyyy whole. The number and the bin button are icons and stay as they are.
-export function tableMinWidth(cols: FormColumn[], scale = 1, tickCols = 0): number {
-  return SEQ_COL_PX + ACTION_COL_PX + tickCols * TICK_COL_PX
-    + cols.reduce((sum, c) => sum + (c.type === 'date' ? DATE_COL_MIN_PX : COL_MIN_PX) * scale, 0)
+// Screen pixels dragged, in printed millimetres.
+export function screenPxToMm(px: number): number {
+  return px / (PX_PER_MM * SCREEN_PER_PRINT)
+}
+
+// The fill-in table's columns, in pixels. A date box must show dd/mm/yyyy
+// whole whatever the paper allows it — the one place the screen is let go
+// wider than the sheet. `scale` is the size of the text in the boxes.
+export function fillTableLayout(seqMm: number, cols: FormColumn[], scale = 1): { seq: number; cols: number[]; mm: number[] } {
+  const mm = printWidthsMm(seqMm, cols.map(c => c.width))
+  return {
+    seq: Math.max(SEQ_COL_PX, fillColumnPx(mm.seq)),
+    cols: mm.cols.map((w, i) => Math.max(fillColumnPx(w), cols[i].type === 'date' ? DATE_COL_MIN_PX * scale : COL_MIN_PX)),
+    mm: mm.cols,
+  }
+}
+
+// A document's own column widths (header.colWidths, printed mm), set by
+// dragging a column's edge on the fill-in table, over the form's.
+export function withDocWidths(cols: FormColumn[], own?: Record<string, number> | null): FormColumn[] {
+  if (!own) return cols
+  return cols.map(c => (own[c.key] > 0 ? { ...c, width: own[c.key] } : c))
+}
+
+// The narrowest a column can be dragged to.
+export const MIN_COL_MM = 12   // room for 50,000.00 at the sheet's size
+
+// Drag the edge between column `i` and the next by `deltaMm`: one gets what the
+// other gives, so the table stays the width of the sheet. `start` is every
+// column's printed width when the drag began; the result is all of them.
+export function resizeColumns(start: number[], i: number, deltaMm: number): number[] {
+  if (i < 0 || i >= start.length - 1) return start
+  const pair = start[i] + start[i + 1]
+  const a = Math.min(pair - MIN_COL_MM, Math.max(MIN_COL_MM, start[i] + deltaMm))
+  const out = [...start]
+  out[i] = Math.round(a * 10) / 10
+  out[i + 1] = Math.round((pair - a) * 10) / 10
+  return out
 }

@@ -6,7 +6,7 @@ import { Eye, LockOpen, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment, SubmissionSummary } from '../../types/schema'
-import { emptyRow, EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks } from '../../types/schema'
+import { emptyRow, EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
 import { computeColumnTotals, grandTotal, taxBases, taxSummary } from '../../features/expense-claim/calc'
 import { FEATURES } from '../../shared/features'
 import { bahtText } from '../../shared/bahttext'
@@ -296,7 +296,7 @@ export default function FormPage() {
             </select>
           </div>
         )}
-        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} companyName={company?.name} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} showSeq={settings.showSeq !== false} />}
+        {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} companyName={company?.name} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} showSeq={settings.showSeq !== false} seqWidth={seqColumnWidth(settings)} />}
         {!showPreview && (
           <AttachmentsField
             saved={attachments}

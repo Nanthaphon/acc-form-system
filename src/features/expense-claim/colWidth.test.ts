@@ -1,58 +1,62 @@
 import { describe, it, expect } from 'vitest'
 import type { FormColumn } from '../../types/schema'
-import { fillColumnPercents, tableMinWidth, ACTION_COL_PX, TICK_COL_PX, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm } from './calc'
+import { fillColumnPx, fillTableLayout, withDocWidths, resizeColumns, screenPxToMm, MIN_COL_MM, PX_PER_MM, SCREEN_PER_PRINT, ACTION_COL_PX, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm } from './calc'
 
 const col = (type: FormColumn['type'], width?: number): FormColumn =>
   ({ key: `k${width ?? 'x'}${type}`, label: 'l', type, width })
-const pct = (s: string) => Number(s.replace('%', ''))
 
-describe('fillColumnPercents', () => {
-  it('splits the row the way the sheet will', () => {
-    // One column left blank takes the slack, so the two fixed ones keep their ratio.
-    const p = fillColumnPercents(10, [col('text', 40), col('text', 20), col('text')]).map(pct)
-    expect(p[0] / p[1]).toBeCloseTo(2, 5) // 40mm reads twice as wide as 20mm
-    expect(p[0] + p[1] + p[2]).toBeCloseTo(100, 2)
-  })
-
-  it('lets the last column take the slack when every width is set', () => {
-    const p = fillColumnPercents(10, [col('text', 40), col('text', 20)]).map(pct)
-    expect(p[1]).toBeGreaterThan(p[0]) // 20mm + everything left over
+// The fill-in table is drawn at the size the sheet prints, so text wraps on
+// screen where it will on paper.
+describe('fillTableLayout', () => {
+  it('draws each column as wide as it prints, at the screen\'s larger text', () => {
+    const { cols, mm } = fillTableLayout(10, [col('text', 60), col('number', 30), col('text')])
+    expect(mm[0]).toBe(60)
+    expect(cols[0]).toBe(fillColumnPx(60))
+    // what holds the text grows by exactly the screen-to-paper ratio
+    expect((cols[0] - cols[1]) / ((60 - 30) * PX_PER_MM)).toBeCloseTo(SCREEN_PER_PRINT, 2)
   })
 
-  it('still fills the row when the widths would overflow the page', () => {
-    // 3 × 200mm is far past A4; on screen it is still three equal columns.
-    const p = fillColumnPercents(10, [col('number', 200), col('number', 200), col('number', 200)]).map(pct)
-    expect(p[0]).toBeCloseTo(p[2], 3)
-    expect(p.reduce((a, b) => a + b, 0)).toBeCloseTo(100, 2)
+  it('takes the width the sheet gives a column left blank', () => {
+    const { mm } = fillTableLayout(10, [col('text', 60), col('text')])
+    expect(mm[1]).toBe(120)   // 190 − 10 − 60
   })
 
-  it('shares the row between the columns left blank', () => {
-    const p = fillColumnPercents(10, [col('text', 100), col('text'), col('text')]).map(pct)
-    expect(p[1]).toBeCloseTo(p[2], 3)
-    expect(p[0]).toBeGreaterThan(p[1])
+  it('draws a form set wider than the page at the size it is scaled to print at', () => {
+    const { mm } = fillTableLayout(0, [col('number', 200), col('number', 200)])
+    expect(mm).toEqual([95, 95])
   })
-})
 
-describe('tableMinWidth', () => {
-  // Only what a person needs to read and type counts — a wide setting is for paper.
-  it('reserves a readable minimum per column, plus the # and delete columns', () => {
-    expect(tableMinWidth([col('text'), col('number', 300)])).toBe(32 + 48 + 80 + 80)
+  it('still gives a date box room for dd/mm/yyyy', () => {
+    expect(fillTableLayout(10, [col('date', 10), col('text')]).cols[0]).toBe(DATE_COL_MIN_PX)
   })
-  it('gives a date column room for dd/mm/yyyy', () => {
-    expect(tableMinWidth([col('date')])).toBe(32 + 48 + DATE_COL_MIN_PX)
-  })
-  it('is just the fixed columns when a form has none of its own', () => {
-    expect(tableMinWidth([])).toBe(80)
-  })
+
   // The delete button is 32px with room round it; at 36px it spilled out of
   // its cell and was cut off at the edge of the table.
   it('gives the delete column room for its button', () => {
     expect(ACTION_COL_PX).toBeGreaterThanOrEqual(48)
   })
-  // Columns a tax is picked in take their width too, or the rest are squeezed
-  // until the last column falls off the edge.
-  it('counts the columns a tax is picked in', () => {
-    expect(tableMinWidth([col('text')], 1, 2)).toBe(32 + 48 + 80 + 2 * TICK_COL_PX)
+})
+
+describe('dragging a column edge', () => {
+  it('widens one column by what the next gives up, so the sheet keeps its width', () => {
+    const out = resizeColumns([40, 60, 90], 0, 15)
+    expect(out).toEqual([55, 45, 90])
+    expect(out.reduce((a, b) => a + b, 0)).toBe(190)
+  })
+
+  it('stops a column at its narrowest either way', () => {
+    expect(resizeColumns([40, 60], 0, 500)).toEqual([100 - MIN_COL_MM, MIN_COL_MM])
+    expect(resizeColumns([40, 60], 0, -500)).toEqual([MIN_COL_MM, 100 - MIN_COL_MM])
+  })
+
+  it('turns screen pixels into printed millimetres', () => {
+    expect(screenPxToMm(PX_PER_MM * SCREEN_PER_PRINT * 10)).toBeCloseTo(10, 6)
+  })
+
+  it('prints a document\'s own widths over the form\'s, and the form\'s where it has none', () => {
+    const cols = [{ ...col('text', 40), key: 'a' }, { ...col('text', 60), key: 'b' }]
+    expect(withDocWidths(cols, { a: 70 }).map(c => c.width)).toEqual([70, 60])
+    expect(withDocWidths(cols, undefined)).toBe(cols)
   })
 })
 

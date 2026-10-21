@@ -229,6 +229,9 @@ export interface ExpenseHeader {
   // How large the boxes being filled in are: pixels (10–20, default 12), or one
   // of the named sizes a document saved before sizes could be typed carries.
   textSize?: number | DocTextSize
+  // This document's own column widths in printed mm (by column key), dragged
+  // on the fill-in table; the form's widths where absent. Printed as set.
+  colWidths?: Record<string, number>
   fields?: Record<string, string>   // values for the form's custom header fields (by field id)
 }
 
