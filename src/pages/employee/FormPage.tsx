@@ -1,8 +1,8 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, LockOpen, Pencil, Printer, Save } from 'lucide-react'
+import { Check, Eye, History, LockOpen, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment, SubmissionSummary } from '../../types/schema'
@@ -20,6 +20,12 @@ import { uploadAttachments, deleteAttachmentFiles, saveAttachmentList } from '..
 import AttachmentsField from '../../components/AttachmentsField'
 import OwnSignatureToggle from '../../components/OwnSignatureToggle'
 import { Spinner } from '../../components/Spinner'
+import { formatDateTime } from '../../shared/date'
+import { clearFormDraft, draftStillCurrent, formDraftKey, readFormDraft, writeFormDraft } from '../../shared/formDraft'
+
+// The form's content as one comparable string — a draft is whatever differs
+// from what the form held when it finished loading.
+const snapshot = (header: ExpenseHeader, items: ExpenseRow[]) => JSON.stringify({ header, items })
 
 export default function FormPage() {
   const { id, formType } = useParams()
@@ -65,6 +71,12 @@ export default function FormPage() {
     }
   }
 
+  // What the form held when it finished loading, and when that was last saved
+  // (0 for a document not saved yet) — what a draft is measured against.
+  const [loaded, setLoaded] = useState<{ header: ExpenseHeader; items: ExpenseRow[]; updatedAt: number } | null>(null)
+  const headerNow = useRef(header)
+  headerNow.current = header
+
   useEffect(() => { // EDIT mode: load existing submission + its form settings
     if (!id) return
     getSubmission(id).then(s => {
@@ -72,21 +84,47 @@ export default function FormPage() {
       setHeader(s.header); setItems(s.items); setDocNumber(s.docNumber); setSavedId(s.id)
       setSigs(s.signatures ?? []); setOwnerUid(s.createdBy)
       setAttachments(s.attachments ?? [])
+      setLoaded({ header: s.header, items: s.items, updatedAt: s.updatedAt ?? 0 })
       getFormSettings(s.formType).then(setSettings)
     })
   }, [id])
   useEffect(() => { // NEW mode: load the form settings for this formType
     if (id || !formType || cloneId) return
-    getFormSettings(formType).then(fs => { setSettings(fs); setItems([emptyRow(fs.columns)]) })
+    getFormSettings(formType).then(fs => {
+      const fresh = [emptyRow(fs.columns)]
+      setSettings(fs); setItems(fresh)
+      setLoaded({ header: headerNow.current, items: fresh, updatedAt: 0 })
+    })
   }, [id, formType, cloneId])
   useEffect(() => { // CLONE mode: prefill from a source doc but stay a NEW (unsaved) doc
     if (id || !cloneId) return
     getSubmission(cloneId).then(s => {
       if (!s) return
       setHeader(s.header); setItems(s.items) // copy content only — new number is assigned on save
+      setLoaded({ header: s.header, items: s.items, updatedAt: 0 })
       getFormSettings(s.formType).then(setSettings)
     })
   }, [id, cloneId])
+
+  // ----- Draft -----
+  // What is typed is kept in this browser as it is typed, so leaving for
+  // another menu does not lose it; coming back puts it back. Keyed by the
+  // document as saved: once a new one is saved it is that document's draft.
+  const draftKey = formDraftKey(profile?.uid ?? '', { id: savedId, cloneId: savedId ? null : cloneId, formType })
+  const baseline = useRef<string | null>(null)       // the content nothing needs keeping beyond
+  const restoreTried = useRef(false)
+  const [restoredAt, setRestoredAt] = useState<number | null>(null)
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null)
+  useEffect(() => {
+    if (!loaded || !draftKey || restoreTried.current) return
+    restoreTried.current = true
+    baseline.current = snapshot(loaded.header, loaded.items)
+    const d = readFormDraft(draftKey)
+    if (!d) return
+    // Saved over since, or nothing in it the form does not already hold: not worth restoring.
+    if (!draftStillCurrent(d, loaded.updatedAt) || snapshot(d.header, d.items) === baseline.current) { clearFormDraft(draftKey); return }
+    setHeader(d.header); setItems(d.items); setRestoredAt(d.savedAt)
+  }, [loaded, draftKey])
   useEffect(() => { if (header.companyId) getCompany(header.companyId).then(setCompany) }, [header.companyId])
   useEffect(() => { listCompanies().then(setCompanies) }, [])
 
@@ -165,15 +203,24 @@ export default function FormPage() {
     const editor = { uid: profile!.uid, name: `${profile!.firstName ?? ''} ${profile!.lastName ?? ''}`.trim() }
     let subId = savedId
     try {
+      // Stored: the draft has done its job. Settled before a new document's id
+      // moves the draft onto that document, so nothing is kept for it twice.
+      const settleDraft = () => {
+        clearFormDraft(draftKey)
+        baseline.current = snapshot(header, items)
+        setRestoredAt(null); setDraftSavedAt(null)
+      }
       if (savedId) {
         const existing = await getSubmission(savedId)
         if (existing) await updateSubmission(savedId, { ...existing, header, items, totals }, editor)
+        settleDraft()
       } else {
         const created = await createSubmission({
           formType: settings.formType, header, items, totals,
           createdBy: profile!.uid, createdByEmployeeId: profile!.employeeId,
         }, settings.formCode || '', editor)
         subId = created.id
+        settleDraft()
         setSavedId(created.id); setDocNumber(created.docNumber)
       }
       setVersionRefresh(n => n + 1)
@@ -226,6 +273,23 @@ export default function FormPage() {
   // the page says so up front instead of only failing at save time.
   const locked = isSigned({ signatures: sigs } as never)
   const canUnlock = locked && isMine && sigs.filter(x => x.status === 'signed').every(x => x.assignedUid === profile?.uid)
+
+  // Keep the draft as it is typed — gone again once it matches what is saved.
+  // A locked document cannot be changed, so it has nothing to keep.
+  useEffect(() => {
+    if (!restoreTried.current || baseline.current === null || locked) return
+    if (snapshot(header, items) === baseline.current) { clearFormDraft(draftKey); setDraftSavedAt(null); return }
+    const now = Date.now()
+    writeFormDraft(draftKey, header, items, now)
+    setDraftSavedAt(now)
+  }, [header, items, draftKey, locked])
+
+  // Back to what the form held when it opened, and the draft thrown away.
+  function discardDraft() {
+    if (!loaded) return
+    clearFormDraft(draftKey)
+    setHeader(loaded.header); setItems(loaded.items); setRestoredAt(null)
+  }
   // The sheet shows the signature the requester has chosen to put on before it
   // is actually there — "บันทึกและพิมพ์" signs it, today. Never on a locked
   // document: that button only prints it, and the paper would carry a
@@ -270,6 +334,15 @@ export default function FormPage() {
           title={settings.name || settings.title}
           subtitle={`เลขที่ ${docNumber}`}
         />
+        {restoredAt && (
+          <div role="status" className="flex flex-wrap items-center gap-3 rounded-lg border border-clay-200 bg-clay-50 px-4 py-2.5 text-sm text-clay-800">
+            <History size={16} className="shrink-0" />
+            <span className="min-w-0 flex-1">กู้คืนข้อมูลที่กรอกค้างไว้เมื่อ {formatDateTime(restoredAt)} — ยังไม่ได้บันทึกเข้าระบบ</span>
+            <button type="button" onClick={discardDraft} className="rounded-md px-2 py-1 text-xs font-medium text-clay-700 underline-offset-2 hover:bg-clay-100 hover:underline">
+              ทิ้งดราฟ
+            </button>
+          </div>
+        )}
         {/* Switching between filling and checking happens all the way down a long
             form, so the button stays put instead of making anyone scroll back up. */}
         <button
@@ -336,6 +409,7 @@ export default function FormPage() {
           ไปหน้าประวัติ
         </button>
         <span className="w-full text-xs text-stone-400 sm:w-auto">
+          {draftSavedAt && <span className="mr-2 inline-flex items-center gap-1 text-olive-700"><Check size={13} /> เก็บดราฟแล้ว {formatDateTime(draftSavedAt).slice(-5)}</span>}
           {locked ? '' : 'บันทึกเข้าระบบก่อน แล้วเปิดหน้าพิมพ์ · '}ต้องการไฟล์ PDF: เลือกปลายทางเป็น “Save as PDF”
         </span>
       </div>

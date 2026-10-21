@@ -44,6 +44,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   window.print = print
   profile = baseProfile
+  localStorage.clear()
 })
 
 const openNew = () => render(
@@ -197,5 +198,70 @@ describe('the requester\'s own signature goes on as it is saved', () => {
     openSaved({ createdBy: 'u1', signatures: [{ blockId: requester.id, blockLabel: requester.label, assignedUid: 'u1', assignedName: 'ธนัตถ์ นัยพินิจ', status: 'signed', signedAt: 1 }] })
     fireEvent.click(await screen.findByRole('button', { name: /แก้ไขเอกสาร/ }))
     await waitFor(() => expect(cancelSigning).toHaveBeenCalledWith('s1'))
+  })
+})
+
+// What is typed is kept in this browser, so leaving for another menu does not
+// lose it: coming back to the form puts it back.
+describe('a draft of what was typed', () => {
+  const draftKey = 'formDraft:v1:u1:new:expense'
+
+  it('is kept as it is typed, and put back on coming back to the form', async () => {
+    const first = openNew()
+    await fillAmount()
+    await waitFor(() => expect(localStorage.getItem(draftKey)).toContain('500'))
+    expect(screen.getByText(/เก็บดราฟแล้ว/)).toBeInTheDocument()
+    first.unmount()                                // off to another menu
+    openNew()
+    expect(await screen.findByText(/กู้คืนข้อมูลที่กรอกค้างไว้/)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('0')).toHaveValue(500)
+  })
+
+  it('keeps nothing for a form left as it opened', async () => {
+    openNew()
+    await screen.findByPlaceholderText('0')
+    expect(localStorage.getItem(draftKey)).toBeNull()
+  })
+
+  it('is gone once the document is saved, and does not follow it as a draft of a new one', async () => {
+    const first = openNew()
+    await fillAmount()
+    await waitFor(() => expect(localStorage.getItem(draftKey)).not.toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+    await waitFor(() => expect(print).toHaveBeenCalled())
+    expect(localStorage.getItem(draftKey)).toBeNull()
+    expect(localStorage.getItem('formDraft:v1:u1:doc:new1')).toBeNull()
+    first.unmount()
+    openNew()
+    await screen.findByPlaceholderText('0')
+    expect(screen.queryByText(/กู้คืนข้อมูลที่กรอกค้างไว้/)).not.toBeInTheDocument()
+  })
+
+  it('can be thrown away, back to the empty form', async () => {
+    const first = openNew()
+    await fillAmount()
+    await waitFor(() => expect(localStorage.getItem(draftKey)).not.toBeNull())
+    first.unmount()
+    openNew()
+    fireEvent.click(await screen.findByRole('button', { name: 'ทิ้งดราฟ' }))
+    expect(screen.getByPlaceholderText('0')).toHaveValue(null)
+    expect(localStorage.getItem(draftKey)).toBeNull()
+  })
+
+  it('of a saved document is put back only if it is newer than the document', async () => {
+    const draft = (savedAt: number) => localStorage.setItem('formDraft:v1:u1:doc:s1', JSON.stringify({
+      header: { subject: '', categories: [], companyId: 'globe', firstName: 'ธนัตถ์', lastName: 'นัยพินิจ', position: 'HR', job: '' },
+      items: [{ detail: 'ค่าเดินทาง (แก้ค้าง)', amount: 900 }], savedAt,
+    }))
+    draft(1000)   // older than the document's last save at 2000: someone saved over it since
+    const first = openSaved({ updatedAt: 2000 } as Partial<Submission>)
+    await screen.findByDisplayValue('ค่าเดินทาง')   // the document as saved
+    expect(screen.queryByText(/กู้คืนข้อมูลที่กรอกค้างไว้/)).not.toBeInTheDocument()
+    expect(localStorage.getItem('formDraft:v1:u1:doc:s1')).toBeNull()
+    first.unmount()
+    draft(3000)   // newer: put back
+    openSaved({ updatedAt: 2000 } as Partial<Submission>)
+    expect(await screen.findByText(/กู้คืนข้อมูลที่กรอกค้างไว้/)).toBeInTheDocument()
+    expect(screen.getByDisplayValue('ค่าเดินทาง (แก้ค้าง)')).toBeInTheDocument()
   })
 })
