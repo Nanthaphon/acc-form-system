@@ -204,6 +204,11 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
     onHeaderChange({ ...header, colWidths: Object.fromEntries(vcols.map((c, k) => [c.key, next[k]])) })
   }
   const endResize = () => { drag.current = null }
+  // The columns are ruled top to bottom, header to total, as on the sheet. The
+  // row rules stay faint; the column rules take the header's shade. The first
+  // column carries the table's left edge.
+  const COL_RULE = 'border-r border-r-stone-200'
+  const firstCol = (ci: number) => !showSeq && ci === 0
   const hasColumns = vcols.length > 0
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
@@ -363,12 +368,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               >
                 <thead>
                   <tr>
-                    {showSeq && <th style={{ width: layout.seq }} className={`border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
+                    {showSeq && <th style={{ width: layout.seq }} className={`border-x border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
                     {vcols.map((col, ci) => (
                       <th
                         key={col.key}
                         style={{ width: layout.cols[ci] }}
-                        className={`relative whitespace-pre-line break-words border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
+                        className={`relative whitespace-pre-line break-words border-b border-r ${firstCol(ci) ? 'border-l' : ''} border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
                       >
@@ -386,13 +391,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                             onPointerCancel={endResize}
                             className="group absolute -right-1.5 top-0 z-10 flex h-full w-3 cursor-col-resize touch-none justify-center"
                           >
-                            <span className="h-full w-px bg-stone-200 transition-colors group-hover:w-0.5 group-hover:bg-clay-500" />
+                            <span className="h-full w-0.5 bg-transparent transition-colors group-hover:bg-clay-500" />
                           </span>
                         )}
                       </th>
                     ))}
                     {tickCols.map(t => (
-                      <th key={t.key} style={{ width: TICK_COL_PX }} className={`whitespace-pre-line border-b border-clay-100 bg-clay-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-clay-700`}>
+                      <th key={t.key} style={{ width: TICK_COL_PX }} className={`whitespace-pre-line border-b border-r border-clay-100 bg-clay-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-clay-700`}>
                         {t.label}
                       </th>
                     ))}
@@ -402,9 +407,9 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                 <tbody>
                   {items.map((row, i) => (
                     <tr key={i} className="hover:bg-stone-50/60">
-                      {showSeq && <td className="border-b border-stone-100 p-2 text-center text-stone-400">{i + 1}</td>}
-                      {vcols.map(col => (
-                        <td key={col.key} className="border-b border-stone-100 p-1">
+                      {showSeq && <td className={`border-b border-stone-100 ${COL_RULE} border-l border-l-stone-200 p-2 text-center text-stone-400`}>{i + 1}</td>}
+                      {vcols.map((col, ci) => (
+                        <td key={col.key} className={`border-b border-stone-100 ${COL_RULE} ${firstCol(ci) ? 'border-l border-l-stone-200' : ''} p-1`}>
                           {col.type === 'calc' ? (
                             <div className="truncate px-1 text-right font-medium text-stone-900">
                               {rowHasNumbers(cols, row) ? fmt(Number(computed[i][col.key]) || 0) : ''}
@@ -449,7 +454,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       {tickCols.map(t => {
                         if (!t.rate) {
                           return (
-                            <td key={t.key} className="border-b border-stone-100 bg-clay-50/40 p-1 text-center">
+                            <td key={t.key} className={`border-b border-stone-100 ${COL_RULE} bg-clay-50/40 p-1 text-center`}>
                               <input
                                 type="checkbox"
                                 aria-label={`${t.label} รายการที่ ${i + 1}`}
@@ -464,7 +469,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         const rate = kind === 'wht' ? rowWhtRate(row) ?? (header.whtRate || 0) : rowRetRate(row)
                         const choice = rateChoice(kind, i, rate)
                         return (
-                          <td key={t.key} className="border-b border-stone-100 bg-clay-50/40 p-1 text-center">
+                          <td key={t.key} className={`border-b border-stone-100 ${COL_RULE} bg-clay-50/40 p-1 text-center`}>
                             <div className="flex flex-col items-center gap-1">
                               <select
                                 aria-label={`${t.label} รายการที่ ${i + 1}`}
@@ -521,13 +526,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                   ))}
                   {/* Totals row */}
                   <tr className="font-semibold text-stone-900">
-                    {showSeq && <td className="border-t border-stone-200 px-2.5 py-2.5"></td>}
+                    {showSeq && <td className="border-x border-t border-stone-200 px-2.5 py-2.5"></td>}
                     {vcols.map((col, idx) => (
-                      <td key={col.key} className={`border-t border-stone-200 px-2.5 py-2.5 ${isTextCol(col.type) ? 'text-left' : 'text-right'}`}>
+                      <td key={col.key} className={`border-r border-t ${firstCol(idx) ? 'border-l' : ''} border-stone-200 px-2.5 py-2.5 ${isTextCol(col.type) ? 'text-left' : 'text-right'}`}>
                         {idx === 0 ? 'รวม' : isTextCol(col.type) ? '' : fmt(columnTotals[col.key] ?? 0)}
                       </td>
                     ))}
-                    {tickCols.map(t => <td key={t.key} className="border-t border-stone-200 bg-clay-50/40"></td>)}
+                    {tickCols.map(t => <td key={t.key} className="border-r border-t border-stone-200 bg-clay-50/40"></td>)}
                     <td className="border-t border-stone-200"></td>
                   </tr>
                 </tbody>
