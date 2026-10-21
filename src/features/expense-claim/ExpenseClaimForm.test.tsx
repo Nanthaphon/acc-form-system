@@ -84,6 +84,28 @@ describe('ExpenseClaimForm', () => {
     expect(screen.getByRole('combobox', { name: 'วิธีชำระ' })).toHaveValue('เช็ค')
   })
 
+  it('ช่องอัตโนมัติแสดงค่าจากเอกสาร ไม่ใช่ช่องให้กรอก', () => {
+    const items = [{ ...emptyRow(EXPENSE_CLAIM_DEFAULT_COLUMNS), workDays: 2, ratePerDay: 500 }]
+    const { rerender } = render(
+      <ExpenseClaimForm header={header} items={items} columns={EXPENSE_CLAIM_DEFAULT_COLUMNS}
+        onHeaderChange={() => {}} onItemsChange={() => {}}
+        companyName="บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด"
+        bodyText="{{ชื่อบริษัท:อัตโนมัติ}} ได้รับเงิน {{ยอดเงิน:อัตโนมัติ}} บาท" />,
+    )
+    const company = screen.getByLabelText('ชื่อบริษัท (อัตโนมัติ)')
+    expect(company).toHaveTextContent('บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด')
+    expect(company.querySelector('input, select')).toBeNull()
+    // 2 วัน × 500 less the 3% the default columns take off: the document's own total
+    expect(screen.getByLabelText('ยอดเงิน (อัตโนมัติ)')).toHaveTextContent('970.00')
+    // no company picked yet: it says where the value will come from
+    rerender(
+      <ExpenseClaimForm header={header} items={items} columns={EXPENSE_CLAIM_DEFAULT_COLUMNS}
+        onHeaderChange={() => {}} onItemsChange={() => {}} companyName={null}
+        bodyText="{{ชื่อบริษัท:อัตโนมัติ}} ได้รับเงิน" />,
+    )
+    expect(screen.getByLabelText('ชื่อบริษัท (อัตโนมัติ)')).toHaveTextContent('มาจากบริษัทที่เลือกด้านบน')
+  })
+
   it('ไม่แสดงการ์ดข้อความ ถ้าข้อความไม่มีช่องกรอก', () => {
     render(
       <ExpenseClaimForm

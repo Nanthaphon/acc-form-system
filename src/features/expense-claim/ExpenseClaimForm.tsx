@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { ALargeSmall, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { ALargeSmall, Link2, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
 import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillColumnPercents, tableMinWidth, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
-import { parseTemplate, templateFields } from '../../shared/bodyTemplate'
+import { AUTO_FIELDS, autoValue, parseTemplate, templateFields } from '../../shared/bodyTemplate'
 import type { TemplateField } from '../../shared/bodyTemplate'
 import { BLANK_LIMITS, blankWidth } from './blankSizing'
 import { FEATURES } from '../../shared/features'
@@ -23,6 +23,7 @@ interface Props {
   categories?: string[]
   headerFields?: HeaderField[]
   introText?: string | null   // form paragraphs — their {{blanks}} are filled in here
+  companyName?: string | null // for an automatic {{ชื่อบริษัท}} in them
   bodyText?: string | null
   requesterTitle?: string     // section headings, editable per form (see sectionTitles)
   itemsTitle?: string
@@ -91,6 +92,22 @@ const blankClass = 'inline-block rounded-md border border-stone-200 bg-white px-
 // well off — only a real measurement is right.
 const mirrorClass = 'pointer-events-none invisible absolute left-0 top-0 whitespace-pre px-2 text-sm leading-normal'
 
+// An automatic field inside a paragraph: what the system fills in, shown where
+// it will print, and not a box to type in — it changes where it comes from.
+function AutoChip({ field, value }: { field: TemplateField; value: string }) {
+  const from = AUTO_FIELDS.find(a => a.source === field.source)?.from ?? ''
+  return (
+    <span
+      title={`เติมอัตโนมัติจาก${from}`}
+      aria-label={`${field.label} (อัตโนมัติ)`}
+      className="mx-1 inline-flex max-w-full items-center gap-1.5 rounded-md border border-dashed border-stone-300 bg-stone-100 px-2 py-1 align-middle text-sm leading-normal text-stone-700"
+    >
+      <Link2 size={13} className="shrink-0 text-stone-400" />
+      {value ? <span className="truncate">{value}</span> : <span className="text-stone-400">{field.label} — มาจาก{from}</span>}
+    </span>
+  )
+}
+
 // One {{blank}} inside a paragraph, sized to sit in the running text and to
 // grow with what is typed into it (see blankSizing).
 function BlankInput({ field, value, onChange }: { field: TemplateField; value: string; onChange: (v: string) => void }) {
@@ -150,7 +167,7 @@ function fmt(n: number): string {
   return formatMoney(n)
 }
 
-export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, requesterTitle, itemsTitle, showSeq = true }: Props) {
+export default function ExpenseClaimForm({ header, items, onHeaderChange, onItemsChange, columns, categories, headerFields, introText, bodyText, companyName, requesterTitle, itemsTitle, showSeq = true }: Props) {
   const cols = columns ?? EXPENSE_CLAIM_DEFAULT_COLUMNS
   const titles = sectionTitles({ requesterTitle, itemsTitle })
   const textSize = textPx(header.textSize)
@@ -176,6 +193,8 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const whtByRow = !!header.whtRate && scopes.wht === 'rows'
   const bases = taxBases(cols, items, scopes)
   const tax = taxSummary(total, header.vat, header.whtRate, header.retentionRate, bases, onNet)
+  // What the paragraphs' automatic fields show — the same figures the sheet prints.
+  const autoValues = { company: companyName, amount: tax.netTotal, requester: `${header.firstName} ${header.lastName}`, position: header.position }
   // Whether this document is taxed a second time, on what it comes to rather
   // than on its items.
   const taxedAgain = !!onNet?.vat || !!onNet?.whtRate
@@ -279,7 +298,9 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               <div key={i} className="whitespace-pre-line rounded-lg bg-stone-50 px-4 py-3 text-sm leading-[2.75] text-stone-700">
                 {parseTemplate(t).map((p, j) => p.kind === 'text'
                   ? <span key={j}>{p.text}</span>
-                  : <BlankInput key={j} field={p.field} value={header.fields?.[p.field.key] ?? ''} onChange={v => setHField(p.field.key, v)} />)}
+                  : p.field.type === 'auto'
+                    ? <AutoChip key={j} field={p.field} value={autoValue(p.field.source, autoValues)} />
+                    : <BlankInput key={j} field={p.field} value={header.fields?.[p.field.key] ?? ''} onChange={v => setHField(p.field.key, v)} />)}
               </div>
             ))}
           </div>

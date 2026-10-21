@@ -6,7 +6,8 @@ import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm,
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
-import { parseTemplate, formatTemplateValue, blankFor } from '../../shared/bodyTemplate'
+import { parseTemplate, formatTemplateValue, blankFor, autoValue } from '../../shared/bodyTemplate'
+import type { AutoValues } from '../../shared/bodyTemplate'
 import { FEATURES } from '../../shared/features'
 import { textSizeScale } from '../../shared/textSize'
 
@@ -23,12 +24,13 @@ const DEFAULT_ADDRESS =
 
 // A form paragraph with its {{blanks}} filled from the document: typed values
 // sit on a dotted line, empty blanks print as dots to be written by hand.
-function FilledText({ text, values, className }: { text: string; values?: Record<string, string>; className: string }) {
+function FilledText({ text, values, auto, className }: { text: string; values?: Record<string, string>; auto: AutoValues; className: string }) {
   return (
     <div className={className}>
       {parseTemplate(text).map((p, i) => {
         if (p.kind === 'text') return <span key={i}>{p.text}</span>
-        const v = formatTemplateValue(p.field, values?.[p.field.key])
+        // Automatic fields print what the document holds; the rest what was typed.
+        const v = p.field.type === 'auto' ? autoValue(p.field.source, auto) : formatTemplateValue(p.field, values?.[p.field.key])
         return v
           ? <span key={i} className="border-b border-dotted border-black px-1">{v}</span>
           : <span key={i}>{blankFor(p.field)}</span>
@@ -83,6 +85,8 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   // the summary says what each tax was worked out from and on how many lines.
   const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
   const bahtWords = bahtText(tax.netTotal)
+  // What the paragraphs' automatic fields print — the same figures as the rest of the sheet.
+  const auto: AutoValues = { company: company?.name, amount: tax.netTotal, requester: `${header.firstName} ${header.lastName}`, position: header.position }
   const notes = (settings.notes ?? []).filter(n => (n ?? '').trim() !== '')
   const withSeq = showSeqColumn(settings)
   const totalCols = vcols.length + (withSeq ? 1 : 0) // + the ลำดับ column
@@ -220,7 +224,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
             {/* ข้อความหัวฟอร์ม (เหนือตาราง) ถ้ามี */}
             {settings.introText?.trim() && (
-              <FilledText className="mt-3 whitespace-pre-line text-justify leading-loose" text={settings.introText} values={header.fields} />
+              <FilledText className="mt-3 whitespace-pre-line text-justify leading-loose" text={settings.introText} values={header.fields} auto={auto} />
             )}
 
             {/* ตาราง */}
@@ -303,7 +307,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
 
             {/* ข้อความรับรอง / คำประกาศ (ถ้ามี) */}
             {settings.bodyText?.trim() && (
-              <FilledText className="mt-4 whitespace-pre-line text-justify leading-loose" text={settings.bodyText} values={header.fields} />
+              <FilledText className="mt-4 whitespace-pre-line text-justify leading-loose" text={settings.bodyText} values={header.fields} auto={auto} />
             )}
 
             {/* Signature blocks — configured per form, laid out in rows of 3 */}

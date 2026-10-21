@@ -47,3 +47,17 @@ describe('TemplateTextarea', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 })
+
+describe('TemplateTextarea — automatic fields', () => {
+  it('inserts one picked from a list, at the cursor, with nothing to type', () => {
+    vi.mocked(uiPrompt).mockClear()
+    const onChange = vi.fn()
+    render(<TemplateTextarea value=" ได้รับเงินจาก" onChange={onChange} />)
+    ;(screen.getByRole('textbox') as HTMLTextAreaElement).setSelectionRange(0, 0)
+    fireEvent.click(screen.getByRole('button', { name: 'แทรกช่องอัตโนมัติ' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /ชื่อบริษัท/ }))
+    expect(onChange).toHaveBeenCalledWith('{{ชื่อบริษัท:อัตโนมัติ}} ได้รับเงินจาก')
+    expect(uiPrompt).not.toHaveBeenCalled()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+})

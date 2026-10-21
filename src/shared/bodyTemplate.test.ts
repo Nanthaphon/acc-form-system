@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blankFor, countDottedBlanks, dotsToTokens, formatTemplateValue, makeToken, parseTemplate, splitOptions, templateFields } from './bodyTemplate'
+import { autoValue, blankFor, countDottedBlanks, dotsToTokens, formatTemplateValue, makeToken, parseTemplate, splitOptions, templateFields } from './bodyTemplate'
 
 describe('parseTemplate', () => {
   it('splits text and fields, keeping the text around them', () => {
@@ -125,5 +125,29 @@ describe('dotsToTokens', () => {
   it('accepts ellipsis characters and ignores a normal "..."', () => {
     expect(dotsToTokens('จาก ……… ครับ...')).toBe('จาก {{จาก}} ครับ...')
     expect(countDottedBlanks('ครับ...')).toBe(0)
+  })
+})
+
+describe('automatic fields', () => {
+  it('reads a name the system can fill, and leaves any other as an ordinary blank', () => {
+    const [p] = parseTemplate('{{ชื่อบริษัท:อัตโนมัติ}}')
+    expect(p).toEqual({ kind: 'field', field: { key: 'auto:company', label: 'ชื่อบริษัท', type: 'auto', source: 'company' } })
+    expect(parseTemplate('{{ยอดเงิน: auto }}')[0]).toMatchObject({ field: { type: 'auto', source: 'amount' } })
+    expect(parseTemplate('{{เลขบัญชี:อัตโนมัติ}}')[0]).toMatchObject({ field: { label: 'เลขบัญชี', type: 'text' } })
+  })
+
+  it('writes the token the toolbar inserts', () => {
+    expect(makeToken('ชื่อบริษัท', 'auto')).toBe('{{ชื่อบริษัท:อัตโนมัติ}}')
+  })
+
+  it('shows what the document holds, and nothing while it holds nothing', () => {
+    const v = { company: 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด', amount: 1500, requester: 'สมชาย ใจดี', position: 'IT' }
+    expect(autoValue('company', v)).toBe('บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด')
+    expect(autoValue('amount', v)).toBe('1,500.00')
+    expect(autoValue('amountText', v)).toBe('หนึ่งพันห้าร้อยบาทถ้วน')
+    expect(autoValue('requester', v)).toBe('สมชาย ใจดี')
+    expect(autoValue('amount', { amount: 0 })).toBe('')
+    expect(autoValue('amountText', { amount: 0 })).toBe('')
+    expect(autoValue('company', { company: null })).toBe('')
   })
 })

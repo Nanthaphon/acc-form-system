@@ -21,6 +21,8 @@ export const BLANK_LIMITS: Record<TemplateFieldType, BlankLimits> = {
   date: { min: 160, max: 160 },
   // A dropdown sizes itself to its longest choice; these only bound it.
   select: { min: 160, max: 420 },
+  // Filled by the system, not typed: as wide as what it shows.
+  auto: { min: 120, max: 520 },
 }
 
 // Width for a blank whose text measures `measured` px. Text wider than the
