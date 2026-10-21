@@ -102,6 +102,31 @@ describe('FormSettingsPage', () => {
     expect(opts?.tone).not.toBe('success')
   })
 
+  // Widths are set as a share of the table — 100% is the whole sheet — and kept
+  // in millimetres for the sheet itself (1% = 1.9mm).
+  it('sets column widths in percent of the table', async () => {
+    vi.mocked(updateFormSettings).mockResolvedValueOnce([])
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+    const first = screen.getByLabelText('ความกว้างคอลัมน์ 1 (%)') as HTMLInputElement
+    expect(first.value).toBe('21.1')                       // the 40mm it was set to
+    fireEvent.change(first, { target: { value: '12.' } })   // a decimal point is not swallowed mid-typing
+    expect(first.value).toBe('12.')
+    fireEvent.change(first, { target: { value: '1a2.5.0' } })   // only digits and one point are kept
+    expect(first.value).toBe('12.50')
+    fireEvent.change(first, { target: { value: '20' } })
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกฟอร์ม/ }))
+    await waitFor(() => expect(updateFormSettings).toHaveBeenCalled())
+    const saved = vi.mocked(updateFormSettings).mock.calls[0][0] as FormSettings
+    expect(saved.columns[0].width).toBeCloseTo(38, 6)
+  })
+
+  it('says how much of the 100% the widths take', async () => {
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+    expect(screen.getByText(/กว้างรวม [\d.]+%\/100%/)).toBeInTheDocument()
+  })
+
   it('says it saved when everything was stored', async () => {
     vi.mocked(updateFormSettings).mockResolvedValueOnce([])
     show()

@@ -7,7 +7,8 @@ import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'luci
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, showSeqColumn, isTextCol } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { PRINT_TABLE_MM, totalColumn } from '../../features/expense-claim/calc'
+import { mmToPct, totalColumn } from '../../features/expense-claim/calc'
+import PercentWidthInput from '../../components/PercentWidthInput'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
@@ -360,8 +361,9 @@ export default function FormSettingsPage() {
   const columns = settings.columns
   const visibleCount = columns.filter(c => !c.hidden).length
   const showSeq = showSeqColumn(settings)
-  // Widths are millimetres on the sheet: what is set is used as typed and only
-  // the leftover is shared out, so the admin needs to see the page budget.
+  // Widths are set as shares of the table (100% = the whole sheet), kept as
+  // millimetres: what is set is used as typed and only the leftover is shared
+  // out, so the admin needs to see how much of the 100% is spoken for.
   const setWidthMm = (showSeq ? seqColumnWidth(settings) : 0)
     + columns.filter(c => !c.hidden).reduce((sum, c) => sum + (c.width ?? 0), 0)
   const docTotalCol = totalColumn(columns)
@@ -486,7 +488,7 @@ export default function FormSettingsPage() {
         </div>
       </Section>
 
-      <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE} · กว้างรวม ${Math.round(setWidthMm)}/${PRINT_TABLE_MM} มม.`} defaultOpen>
+      <Section title="คอลัมน์ตาราง" summary={`${columns.length} คอลัมน์ · แสดง ${visibleCount}/${MAX_VISIBLE} · กว้างรวม ${mmToPct(setWidthMm)}%/100%`} defaultOpen>
         <p className={`mb-3 text-xs ${brokenCount > 0 ? 'text-brick-600' : 'text-stone-500'}`}>
           {docTotalCol
             ? `ยอดรวมของเอกสารมาจากคอลัมน์ "${docTotalCol.label || docTotalCol.key}"${markedTotal ? '' : ' — ยังไม่ได้เลือกไว้ ระบบจึงใช้คอลัมน์ตัวเลขสุดท้าย ติ๊ก “ยอดรวม” ที่คอลัมน์ที่ต้องการได้'}`
@@ -524,14 +526,13 @@ export default function FormSettingsPage() {
             className={`flex items-center gap-1 text-xs text-stone-500 ${showSeq ? '' : 'opacity-40'}`}
             title="กว้างเกินไปจะกินที่คอลัมน์อื่น แคบเกินไปคำว่า “ลำดับ” จะตกบรรทัด"
           >
-            กว้าง (มม.)
-            <input
-              type="number"
-              min={1}
+            กว้าง (%)
+            <PercentWidthInput
+              ariaLabel="ความกว้างคอลัมน์ลำดับ (%)"
               disabled={!showSeq}
-              placeholder={String(SEQ_COLUMN_WIDTH)}
-              value={settings.seqWidth ?? ''}
-              onChange={e => setField('seqWidth', e.target.value ? Number(e.target.value) : undefined)}
+              placeholder={String(mmToPct(SEQ_COLUMN_WIDTH))}
+              mm={settings.seqWidth}
+              onChange={mm => setField('seqWidth', mm)}
               className={`${ui.inputSm} w-[88px]`}
             />
           </label>
@@ -563,13 +564,13 @@ export default function FormSettingsPage() {
                     <option value="select">ตัวเลือก</option>
                     <option value="calc">คำนวณ</option>
                   </select>
-                  <label className="flex items-center gap-1 text-xs text-stone-500" title="ความกว้างบนเอกสาร · เว้นว่าง = อัตโนมัติ">
-                    กว้าง (มม.)
-                    <input
-                      type="number"
+                  <label className="flex items-center gap-1 text-xs text-stone-500" title="ส่วนแบ่งของความกว้างตาราง (ทั้งตาราง = 100%) · เว้นว่าง = แบ่งส่วนที่เหลือให้อัตโนมัติ">
+                    กว้าง (%)
+                    <PercentWidthInput
+                      ariaLabel={`ความกว้างคอลัมน์ ${i + 1} (%)`}
                       placeholder="อัตโนมัติ"
-                      value={col.width ?? ''}
-                      onChange={e => patchColumn(i, { width: e.target.value ? Number(e.target.value) : undefined })}
+                      mm={col.width}
+                      onChange={mm => patchColumn(i, { width: mm })}
                       className={`${ui.inputSm} w-[88px]`}
                     />
                   </label>

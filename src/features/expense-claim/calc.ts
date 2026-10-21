@@ -394,6 +394,15 @@ export function paginateRows(heightsMm: number[], availableMm: number): { rows: 
 export const PRINT_TABLE_MM = 190
 // A column left to share the leftover never collapses below this.
 const AUTO_MIN_MM = 12
+
+// Widths are set as a share of the table — 100% is the sheet's whole table —
+// and kept in millimetres, which is what the sheet and the fill-in table use.
+export function mmToPct(mm: number): number {
+  return Math.round((mm / PRINT_TABLE_MM) * 1000) / 10
+}
+export function pctToMm(pct: number): number {
+  return (pct * PRINT_TABLE_MM) / 100
+}
 export const PX_PER_MM = 96 / 25.4
 
 // What each column actually gets on paper, in millimetres: a width that was set
