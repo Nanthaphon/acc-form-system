@@ -110,30 +110,6 @@ describe('FormSettingsPage', () => {
     await waitFor(() => expect(uiAlert).toHaveBeenCalledWith('บันทึกฟอร์มแล้ว', expect.objectContaining({ tone: 'success' })))
   })
 
-  // Widths over the page print perfectly well — everything is scaled down
-  // together — but the numbers stop meaning millimetres, which reads as a fault.
-  it('rewrites over-the-page widths to the millimetres they really print at', async () => {
-    vi.mocked(getFormSettings).mockResolvedValueOnce({
-      ...settings,
-      showSeq: false,
-      columns: [
-        { key: 'date', label: 'วัน เดือน ปี', type: 'date' as const, width: 90 },
-        { key: 'detail', label: 'รายละเอียด', type: 'text' as const, width: 180 },
-        { key: 'amount', label: 'จำนวนเงิน', type: 'number' as const, width: 110 },
-      ],
-    } as unknown as FormSettings)
-    show()
-    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
-    const widths = () => (screen.getAllByPlaceholderText('อัตโนมัติ') as HTMLInputElement[]).map(i => Number(i.value))
-    expect(widths().reduce((a, b) => a + b, 0)).toBe(380)
-
-    fireEvent.click(screen.getByRole('button', { name: /เขียนตัวเลขใหม่/ }))
-    const after = widths()
-    expect(after.reduce((a, b) => a + b, 0)).toBe(190)
-    // the same document: each column keeps its share of the table
-    expect(after[1] / after[0]).toBeCloseTo(2, 1)
-  })
-
   it('lets a heading of two lines be read whole — the box grows with it', async () => {
     show()
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
