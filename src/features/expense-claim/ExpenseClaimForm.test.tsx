@@ -49,10 +49,13 @@ describe('ExpenseClaimForm', () => {
     )
     expect(screen.getByText('ข้อความในเอกสาร')).toBeInTheDocument()
     // The blanks sit inside a sentence: a placeholder would read as if the
-    // sentence already said something, and the value is centred on its line.
+    // sentence already said something. What is typed starts at the left edge,
+    // like every other field.
     const blank = screen.getByLabelText('ผู้จ่าย')
     expect(blank).not.toHaveAttribute('placeholder')
-    expect(blank).toHaveClass('text-center')
+    expect(blank).toHaveClass('text-left')
+    expect(blank).not.toHaveClass('text-center')
+    expect(screen.getByLabelText('ยอด')).toHaveClass('text-left')
     fireEvent.change(blank, { target: { value: 'สมชาย' } })
     expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ fields: { 'tpl:ผู้จ่าย': 'สมชาย' } }))
   })
@@ -71,6 +74,7 @@ describe('ExpenseClaimForm', () => {
     )
     const { unmount } = show()
     const pick = screen.getByRole('combobox', { name: 'วิธีชำระ' })
+    expect(pick).toHaveClass('text-left')
     expect([...pick.querySelectorAll('option')].map(o => o.textContent)).toEqual(['— วิธีชำระ —', 'เงินสด', 'โอนเงิน'])
     fireEvent.change(pick, { target: { value: 'โอนเงิน' } })
     expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ fields: { 'tpl:วิธีชำระ': 'โอนเงิน' } }))

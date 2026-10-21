@@ -118,7 +118,7 @@ function BlankInput({ field, value, onChange }: { field: TemplateField; value: s
           aria-label={field.label}
           title={field.label}
           style={{ minWidth: limits.min, maxWidth: limits.max }}
-          className={`${value ? blankClass : blankClass.replace('text-stone-900', 'text-stone-400')} max-w-full cursor-pointer text-center`}
+          className={`${value ? blankClass : blankClass.replace('text-stone-900', 'text-stone-400')} max-w-full cursor-pointer text-left`}
           value={value}
           onChange={e => onChange(e.target.value)}
         >
@@ -138,7 +138,7 @@ function BlankInput({ field, value, onChange }: { field: TemplateField; value: s
         title={field.label}
         inputMode={number ? 'decimal' : undefined}
         style={{ width: `${width}px` }}
-        className={`${blankClass} max-w-full text-center ${number ? 'tabular-nums' : ''}`}
+        className={`${blankClass} max-w-full text-left ${number ? 'tabular-nums' : ''}`}
         value={value}
         onChange={e => onChange(e.target.value)}
       />
