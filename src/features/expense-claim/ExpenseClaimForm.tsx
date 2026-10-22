@@ -164,6 +164,9 @@ function BlankInput({ field, value, onChange }: { field: TemplateField; value: s
   )
 }
 
+// How far the fill-in table may be enlarged to fill its card (see ExpenseClaimForm).
+const TABLE_ZOOM_MAX = 1.35   // past this the type outgrows the rest of the page
+
 function fmt(n: number): string {
   return formatMoney(n)
 }
@@ -215,11 +218,25 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   ]
 
   // The table is the sheet's, at the size it prints — so a line typed in a box
-  // breaks where it will on paper — centred in the card. Stretched to fill the
-  // card it broke lines at other words; a narrow screen scrolls instead.
+  // breaks where it will on paper. To fill the card it is then enlarged as a
+  // whole, type and boxes alike (zoom), which keeps every line break; stretching
+  // only the columns broke lines at other words. Never past TABLE_ZOOM_MAX, and
+  // never below its own size: a narrow screen scrolls instead.
   const seqPx = layout.seq
   const colPx = layout.cols
   const tablePx = (showSeq ? seqPx : 0) + colPx.reduce((s, w) => s + w, 0) + tickCols.length * TICK_COL_PX + ACTION_COL_PX
+  const tableBox = useRef<HTMLDivElement>(null)
+  const [boxWidth, setBoxWidth] = useState(0)
+  useLayoutEffect(() => {
+    const el = tableBox.current
+    if (!el) return
+    setBoxWidth(el.clientWidth)
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => setBoxWidth(entry.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [hasColumns])
+  const zoom = boxWidth > 0 ? Math.min(TABLE_ZOOM_MAX, Math.max(1, Math.floor((boxWidth / tablePx) * 1000) / 1000)) : 1
   // Lines where อื่นๆ was picked and the rate is still being typed, as "wht:3".
   const [otherRateRows, setOtherRateRows] = useState<Set<string>>(new Set())
   const setRowRate = (kind: 'wht' | 'ret', i: number, rate: number) => {
@@ -335,10 +352,10 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
           </div>
         ) : (
           <>
-            <div className="scroll-slim overflow-x-auto">
+            <div ref={tableBox} className="scroll-slim overflow-x-auto">
               <table
                 className={`mx-auto table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`}
-                style={{ width: `${tablePx}px` }}
+                style={{ width: `${tablePx}px`, zoom }}
               >
                 <thead>
                   <tr>
@@ -498,7 +515,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
               </table>
             </div>
             {/* Under the table's own left edge, wherever the table sits. */}
-            <div className="mx-auto max-w-full" style={{ width: tablePx }}>
+            <div className="mx-auto max-w-full" style={{ width: tablePx * zoom }}>
               <button
                 className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:border-clay-400 hover:text-clay-600"
                 onClick={() => onItemsChange([...items, emptyRow(cols)])}
