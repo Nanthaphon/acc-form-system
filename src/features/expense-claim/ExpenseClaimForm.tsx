@@ -3,7 +3,7 @@ import { ALargeSmall, Link2, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillTableLayout, withDocWidths, resizeColumns, screenPxToMm, PRINT_TABLE_MM, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxSummary, visibleColumns, fillTableLayout, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { AUTO_FIELDS, autoValue, parseTemplate, templateFields } from '../../shared/bodyTemplate'
@@ -179,31 +179,9 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const setHField = (id: string, v: string) => onHeaderChange({ ...header, fields: { ...(header.fields ?? {}), [id]: v } })
   // Paragraphs that have blanks to fill (plain paragraphs need no input).
   const fillTexts = [introText, bodyText].filter((t): t is string => !!t && templateFields(t).length > 0)
-  // The document's own widths, if its columns were dragged, over the form's.
-  const vcols = withDocWidths(visibleColumns(cols), header.colWidths)
+  const vcols = visibleColumns(cols)
   // Each column as wide as it prints, so what is typed wraps as it will on paper.
-  const seqMm = showSeq ? seqWidth : 0
-  const layout = fillTableLayout(seqMm, vcols, textSizeScale(textSize))
-
-  // Dragging the edge between two columns: one widens as the other narrows, so
-  // the table stays the width of the sheet, and the sheet prints what is shown.
-  const drag = useRef<{ i: number; x: number; start: number[] } | null>(null)
-  function startResize(e: React.PointerEvent<HTMLSpanElement>, i: number) {
-    e.preventDefault()
-    // The widths as they print, made to fill the sheet exactly beside the
-    // ลำดับ column — a form set wider than the page is scaled the same way.
-    const room = PRINT_TABLE_MM - seqMm
-    const sum = layout.mm.reduce((s, w) => s + w, 0) || 1
-    drag.current = { i, x: e.clientX, start: layout.mm.map(w => w * room / sum) }
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-  }
-  function moveResize(e: React.PointerEvent<HTMLSpanElement>) {
-    const d = drag.current
-    if (!d) return
-    const next = resizeColumns(d.start, d.i, screenPxToMm(e.clientX - d.x))
-    onHeaderChange({ ...header, colWidths: Object.fromEntries(vcols.map((c, k) => [c.key, next[k]])) })
-  }
-  const endResize = () => { drag.current = null }
+  const layout = fillTableLayout(showSeq ? seqWidth : 0, vcols, textSizeScale(textSize))
   // The columns are ruled top to bottom, header to total, as on the sheet. The
   // row rules stay faint; the column rules take the header's shade. The first
   // column carries the table's left edge.
@@ -341,18 +319,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
       <div className={cardClass}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className={cardTitleClass.replace('mb-4 ', '')}>{titles.items}</h2>
-          <div className="flex flex-wrap items-center gap-3">
-            {header.colWidths && (
-              <button
-                type="button"
-                onClick={() => onHeaderChange({ ...header, colWidths: undefined })}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-stone-500 hover:bg-stone-100 hover:text-stone-900"
-              >
-                <RotateCcw size={13} /> คืนความกว้างคอลัมน์ตามฟอร์ม
-              </button>
-            )}
-            <TextSizePicker value={textSize} onChange={v => onHeaderChange({ ...header, textSize: v })} />
-          </div>
+          <TextSizePicker value={textSize} onChange={v => onHeaderChange({ ...header, textSize: v })} />
         </div>
         {!hasColumns ? (
           <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 px-4 py-8 text-center text-sm text-stone-500">
@@ -373,27 +340,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       <th
                         key={col.key}
                         style={{ width: layout.cols[ci] }}
-                        className={`relative whitespace-pre-line break-words border-b border-r ${firstCol(ci) ? 'border-l' : ''} border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
+                        className={`whitespace-pre-line break-words border-b border-r ${firstCol(ci) ? 'border-l' : ''} border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
                       >
                         {col.label}
                         {col.type === 'calc' && <span className="ml-1 text-[10px] font-normal text-stone-400">(คำนวณ)</span>}
-                        {ci < vcols.length - 1 && (
-                          <span
-                            role="separator"
-                            aria-orientation="vertical"
-                            aria-label={`ปรับความกว้างคอลัมน์ ${col.label.replace(/\s+/g, ' ')}`}
-                            title="ลากเพื่อปรับความกว้าง"
-                            onPointerDown={e => startResize(e, ci)}
-                            onPointerMove={moveResize}
-                            onPointerUp={endResize}
-                            onPointerCancel={endResize}
-                            className="group absolute -right-1.5 top-0 z-10 flex h-full w-3 cursor-col-resize touch-none justify-center"
-                          >
-                            <span className="h-full w-0.5 bg-transparent transition-colors group-hover:bg-clay-500" />
-                          </span>
-                        )}
                       </th>
                     ))}
                     {tickCols.map(t => (

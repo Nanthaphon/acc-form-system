@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { FormColumn } from '../../types/schema'
-import { fillColumnPx, fillTableLayout, withDocWidths, resizeColumns, screenPxToMm, MIN_COL_MM, PX_PER_MM, SCREEN_PER_PRINT, ACTION_COL_PX, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm } from './calc'
+import { fillColumnPx, fillTableLayout, PX_PER_MM, SCREEN_PER_PRINT, ACTION_COL_PX, DATE_COL_MIN_PX, rowLines, paginateRows, sheetOverheadMm, PRINT_SHEET_MM, printBodyMm, rowHeightMm } from './calc'
 
 const col = (type: FormColumn['type'], width?: number): FormColumn =>
   ({ key: `k${width ?? 'x'}${type}`, label: 'l', type, width })
@@ -34,29 +34,6 @@ describe('fillTableLayout', () => {
   // its cell and was cut off at the edge of the table.
   it('gives the delete column room for its button', () => {
     expect(ACTION_COL_PX).toBeGreaterThanOrEqual(48)
-  })
-})
-
-describe('dragging a column edge', () => {
-  it('widens one column by what the next gives up, so the sheet keeps its width', () => {
-    const out = resizeColumns([40, 60, 90], 0, 15)
-    expect(out).toEqual([55, 45, 90])
-    expect(out.reduce((a, b) => a + b, 0)).toBe(190)
-  })
-
-  it('stops a column at its narrowest either way', () => {
-    expect(resizeColumns([40, 60], 0, 500)).toEqual([100 - MIN_COL_MM, MIN_COL_MM])
-    expect(resizeColumns([40, 60], 0, -500)).toEqual([MIN_COL_MM, 100 - MIN_COL_MM])
-  })
-
-  it('turns screen pixels into printed millimetres', () => {
-    expect(screenPxToMm(PX_PER_MM * SCREEN_PER_PRINT * 10)).toBeCloseTo(10, 6)
-  })
-
-  it('prints a document\'s own widths over the form\'s, and the form\'s where it has none', () => {
-    const cols = [{ ...col('text', 40), key: 'a' }, { ...col('text', 60), key: 'b' }]
-    expect(withDocWidths(cols, { a: 70 }).map(c => c.width)).toEqual([70, 60])
-    expect(withDocWidths(cols, undefined)).toBe(cols)
   })
 })
 

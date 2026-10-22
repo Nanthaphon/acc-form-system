@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, withDocWidths, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -60,8 +60,7 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
 
 export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures }: Props) {
   const cols = settings.columns
-  // The document's own widths, if its columns were dragged on the fill-in table.
-  const vcols = withDocWidths(visibleColumns(cols), header.colWidths)
+  const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
   // Print a figure only once the row holds one: a row left empty stays empty,
   // the way it would on the paper form, instead of printing 0.00 everywhere.

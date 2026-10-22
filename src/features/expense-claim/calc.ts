@@ -459,10 +459,6 @@ const FILL_CELL_PAD_PX = 13     // the cell's p-1, the box's border and px-2, ea
 export function fillColumnPx(printMm: number): number {
   return Math.round((printMm * PX_PER_MM - 2 * PRINT_CELL_PAD_PX) * SCREEN_PER_PRINT + 2 * FILL_CELL_PAD_PX)
 }
-// Screen pixels dragged, in printed millimetres.
-export function screenPxToMm(px: number): number {
-  return px / (PX_PER_MM * SCREEN_PER_PRINT)
-}
 
 // The fill-in table's columns, in pixels. A date box must show dd/mm/yyyy
 // whole whatever the paper allows it — the one place the screen is let go
@@ -476,25 +472,3 @@ export function fillTableLayout(seqMm: number, cols: FormColumn[], scale = 1): {
   }
 }
 
-// A document's own column widths (header.colWidths, printed mm), set by
-// dragging a column's edge on the fill-in table, over the form's.
-export function withDocWidths(cols: FormColumn[], own?: Record<string, number> | null): FormColumn[] {
-  if (!own) return cols
-  return cols.map(c => (own[c.key] > 0 ? { ...c, width: own[c.key] } : c))
-}
-
-// The narrowest a column can be dragged to.
-export const MIN_COL_MM = 12   // room for 50,000.00 at the sheet's size
-
-// Drag the edge between column `i` and the next by `deltaMm`: one gets what the
-// other gives, so the table stays the width of the sheet. `start` is every
-// column's printed width when the drag began; the result is all of them.
-export function resizeColumns(start: number[], i: number, deltaMm: number): number[] {
-  if (i < 0 || i >= start.length - 1) return start
-  const pair = start[i] + start[i + 1]
-  const a = Math.min(pair - MIN_COL_MM, Math.max(MIN_COL_MM, start[i] + deltaMm))
-  const out = [...start]
-  out[i] = Math.round(a * 10) / 10
-  out[i + 1] = Math.round((pair - a) * 10) / 10
-  return out
-}
