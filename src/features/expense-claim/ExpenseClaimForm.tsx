@@ -214,31 +214,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
     ...(!!header.retentionRate && scopes.ret === 'rows' ? [{ key: ROW_RET_RATE_KEY, label: 'ประกันงาน', rate: 'ret' as const }] : []),
   ]
 
-  // The table fills the card: the sheet's columns are stretched alike, so they
-  // keep the sheet's proportions, while the tick and delete columns keep their
-  // size. Never narrower than the sheet — a narrow screen scrolls instead.
-  const tableBox = useRef<HTMLDivElement>(null)
-  const [boxWidth, setBoxWidth] = useState(0)
-  useLayoutEffect(() => {
-    const el = tableBox.current
-    if (!el) return
-    setBoxWidth(el.clientWidth)
-    if (typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(([entry]) => setBoxWidth(entry.contentRect.width))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [hasColumns])
-  const fixedPx = tickCols.length * TICK_COL_PX + ACTION_COL_PX
-  const sheetPx = (showSeq ? layout.seq : 0) + layout.cols.reduce((s, w) => s + w, 0)
-  const stretch = boxWidth > 0 && sheetPx > 0 ? Math.max(1, (boxWidth - fixedPx) / sheetPx) : 1
-  const seqPx = Math.floor(layout.seq * stretch)
-  const colPx = layout.cols.map(w => Math.floor(w * stretch))
-  // Whole pixels leave a few over; the widest column takes them, so the table meets the edge.
-  if (stretch > 1 && colPx.length) {
-    const short = Math.floor(boxWidth) - fixedPx - (showSeq ? seqPx : 0) - colPx.reduce((s, w) => s + w, 0)
-    if (short > 0) colPx[colPx.indexOf(Math.max(...colPx))] += short
-  }
-  const tablePx = (showSeq ? seqPx : 0) + colPx.reduce((s, w) => s + w, 0) + fixedPx
+  // The table is the sheet's, at the size it prints — so a line typed in a box
+  // breaks where it will on paper — centred in the card. Stretched to fill the
+  // card it broke lines at other words; a narrow screen scrolls instead.
+  const seqPx = layout.seq
+  const colPx = layout.cols
+  const tablePx = (showSeq ? seqPx : 0) + colPx.reduce((s, w) => s + w, 0) + tickCols.length * TICK_COL_PX + ACTION_COL_PX
   // Lines where อื่นๆ was picked and the rate is still being typed, as "wht:3".
   const [otherRateRows, setOtherRateRows] = useState<Set<string>>(new Set())
   const setRowRate = (kind: 'wht' | 'ret', i: number, rate: number) => {
@@ -354,9 +335,9 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
           </div>
         ) : (
           <>
-            <div ref={tableBox} className="scroll-slim overflow-x-auto">
+            <div className="scroll-slim overflow-x-auto">
               <table
-                className={`table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`}
+                className={`mx-auto table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`}
                 style={{ width: `${tablePx}px` }}
               >
                 <thead>
@@ -516,12 +497,15 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                 </tbody>
               </table>
             </div>
-            <button
-              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:border-clay-400 hover:text-clay-600"
-              onClick={() => onItemsChange([...items, emptyRow(cols)])}
-            >
-              <Plus size={16} /> เพิ่มรายการ
-            </button>
+            {/* Under the table's own left edge, wherever the table sits. */}
+            <div className="mx-auto max-w-full" style={{ width: tablePx }}>
+              <button
+                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:border-clay-400 hover:text-clay-600"
+                onClick={() => onItemsChange([...items, emptyRow(cols)])}
+              >
+                <Plus size={16} /> เพิ่มรายการ
+              </button>
+            </div>
           </>
         )}
       </div>

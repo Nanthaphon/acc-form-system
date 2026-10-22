@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { CSSProperties, MutableRefObject } from 'react'
 
 // A field that grows as the text does, instead of scrolling it out of sight.
@@ -33,8 +33,19 @@ export default function GrowTextarea({ value, onChange, className, placeholder, 
   }, [ref])
 
   // Measured after every change, including one made elsewhere (a restored
-  // version, a copied document), so the height always matches the text.
-  useLayoutEffect(fit, [fit, value])
+  // version, a copied document), so the height always matches the text — and
+  // after a change of type size or face, which wraps the same text differently.
+  useLayoutEffect(fit, [fit, value, rest.style?.fontSize, rest.style?.fontFamily])
+
+  // A web font arriving after the first measurement is wider than the stand-in
+  // it replaces: a long text gains a line and the last one was cut off.
+  useEffect(() => {
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined
+    if (!fonts) return
+    fonts.ready.then(fit)
+    fonts.addEventListener?.('loadingdone', fit)
+    return () => fonts.removeEventListener?.('loadingdone', fit)
+  }, [fit])
 
   // A narrower box wraps the same text onto more lines, so the height is
   // measured again whenever the field itself changes width.
