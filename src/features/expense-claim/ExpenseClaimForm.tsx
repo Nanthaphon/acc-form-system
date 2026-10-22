@@ -213,6 +213,32 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
     ...(whtByRow ? [{ key: ROW_WHT_KEY, label: 'หัก ณ ที่จ่าย', rate: 'wht' as const }] : []),
     ...(!!header.retentionRate && scopes.ret === 'rows' ? [{ key: ROW_RET_RATE_KEY, label: 'ประกันงาน', rate: 'ret' as const }] : []),
   ]
+
+  // The table fills the card: the sheet's columns are stretched alike, so they
+  // keep the sheet's proportions, while the tick and delete columns keep their
+  // size. Never narrower than the sheet — a narrow screen scrolls instead.
+  const tableBox = useRef<HTMLDivElement>(null)
+  const [boxWidth, setBoxWidth] = useState(0)
+  useLayoutEffect(() => {
+    const el = tableBox.current
+    if (!el) return
+    setBoxWidth(el.clientWidth)
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => setBoxWidth(entry.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [hasColumns])
+  const fixedPx = tickCols.length * TICK_COL_PX + ACTION_COL_PX
+  const sheetPx = (showSeq ? layout.seq : 0) + layout.cols.reduce((s, w) => s + w, 0)
+  const stretch = boxWidth > 0 && sheetPx > 0 ? Math.max(1, (boxWidth - fixedPx) / sheetPx) : 1
+  const seqPx = Math.floor(layout.seq * stretch)
+  const colPx = layout.cols.map(w => Math.floor(w * stretch))
+  // Whole pixels leave a few over; the widest column takes them, so the table meets the edge.
+  if (stretch > 1 && colPx.length) {
+    const short = Math.floor(boxWidth) - fixedPx - (showSeq ? seqPx : 0) - colPx.reduce((s, w) => s + w, 0)
+    if (short > 0) colPx[colPx.indexOf(Math.max(...colPx))] += short
+  }
+  const tablePx = (showSeq ? seqPx : 0) + colPx.reduce((s, w) => s + w, 0) + fixedPx
   // Lines where อื่นๆ was picked and the rate is still being typed, as "wht:3".
   const [otherRateRows, setOtherRateRows] = useState<Set<string>>(new Set())
   const setRowRate = (kind: 'wht' | 'ret', i: number, rate: number) => {
@@ -328,18 +354,18 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
           </div>
         ) : (
           <>
-            <div className="scroll-slim overflow-x-auto">
+            <div ref={tableBox} className="scroll-slim overflow-x-auto">
               <table
                 className={`table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`}
-                style={{ width: `${(showSeq ? layout.seq : 0) + layout.cols.reduce((s, w) => s + w, 0) + tickCols.length * TICK_COL_PX + ACTION_COL_PX}px` }}
+                style={{ width: `${tablePx}px` }}
               >
                 <thead>
                   <tr>
-                    {showSeq && <th style={{ width: layout.seq }} className={`border-x border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
+                    {showSeq && <th style={{ width: seqPx }} className={`border-x border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
                     {vcols.map((col, ci) => (
                       <th
                         key={col.key}
-                        style={{ width: layout.cols[ci] }}
+                        style={{ width: colPx[ci] }}
                         className={`whitespace-pre-line break-words border-b border-r ${firstCol(ci) ? 'border-l' : ''} border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
