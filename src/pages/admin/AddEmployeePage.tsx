@@ -12,6 +12,7 @@ import { listAccessGroups } from '../../data/accessGroups'
 import { loadOptionLists, NO_OPTIONS } from '../../data/fieldOptions'
 import OptionInput from '../../components/OptionInput'
 import { ROLE_OPTIONS } from '../../shared/roles'
+import { emailProblem, normalizeEmail } from '../../shared/emailAddress'
 import type { Company, AccessGroup, Role } from '../../types/schema'
 
 const MIN_ID = 6 // the employee ID is also the first password, which needs 6+ characters
@@ -19,7 +20,7 @@ const MIN_ID = 6 // the employee ID is also the first password, which needs 6+ c
 const EMPTY = {
   employeeId: '', firstName: '', lastName: '', position: '',
   department: '', companyId: '', defaultJob: '', bankAccount: '',
-  role: 'employee' as Role, accessGroup: '',
+  role: 'employee' as Role, accessGroup: '', email: '',
 }
 
 export default function AddEmployeePage() {
@@ -47,9 +48,17 @@ export default function AddEmployeePage() {
       uiAlert('กรุณากรอกชื่อและนามสกุล', { title: 'ข้อมูลไม่ครบ' })
       return
     }
+    const mailIssue = emailProblem(f.email)
+    if (mailIssue) {
+      uiAlert(mailIssue, { title: 'ข้อมูลไม่ถูกต้อง' })
+      return
+    }
     setSaving(true)
     try {
-      const emp: NewEmployee = { ...f, employeeId: username, accessGroup: f.accessGroup || undefined, mustChangePassword: mustChange }
+      const emp: NewEmployee = {
+        ...f, employeeId: username, accessGroup: f.accessGroup || undefined,
+        email: normalizeEmail(f.email) || undefined, mustChangePassword: mustChange,
+      }
       await createEmployee(emp)
       setCreated({ employeeId: username, name: `${f.firstName} ${f.lastName}`.trim(), mustChange })
     } catch (err: any) {
@@ -135,9 +144,13 @@ export default function AddEmployeePage() {
               <label className={ui.label}>นามสกุล</label>
               <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} />
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <label className={ui.label}>ตำแหน่ง</label>
               <OptionInput className={ui.input} placeholder="เช่น เจ้าหน้าที่บัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
+            </div>
+            <div>
+              <label className={ui.label}>อีเมล</label>
+              <input type="email" className={ui.input} placeholder="สำหรับแจ้งเตือนเอกสารรอเซ็น" value={f.email} onChange={e => set('email', e.target.value)} />
             </div>
           </div>
         </div>

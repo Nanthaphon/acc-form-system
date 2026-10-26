@@ -1,10 +1,12 @@
 import Papa from 'papaparse'
 import type { Role } from '../types/schema'
+import { emailProblem, normalizeEmail } from './emailAddress'
 
 export interface CsvEmployeeRow {
   employeeId: string; firstName: string; lastName: string
   position: string; department: string; companyId: string
   defaultJob: string; bankAccount: string; role: Role; accessGroup?: string
+  email?: string
   /** Where the row sits in the person's own file, header = 1. For messages. */
   line?: number
 }
@@ -64,6 +66,8 @@ function rowsFromRecords(records: Record<string, string>[], firstLine = 2): Pars
     if (role !== 'employee' && role !== 'admin') {
       errors.push(`บรรทัด ${line}: role ต้องเป็น employee หรือ admin`)
     }
+    const mailIssue = emailProblem(raw.email)
+    if (mailIssue) errors.push(`บรรทัด ${line}: ${mailIssue}`)
     rows.push({
       employeeId: clean(raw.employeeId),
       firstName: clean(raw.firstName),
@@ -75,6 +79,7 @@ function rowsFromRecords(records: Record<string, string>[], firstLine = 2): Pars
       bankAccount: clean(raw.bankAccount),
       role: (role === 'admin' ? 'admin' : 'employee') as Role,
       accessGroup: clean(raw.accessGroup) || undefined,
+      email: normalizeEmail(raw.email) || undefined,
       line,
     })
   })

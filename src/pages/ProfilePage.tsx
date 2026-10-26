@@ -10,6 +10,7 @@ import { loadOptionLists, NO_OPTIONS } from '../data/fieldOptions'
 import type { OptionField } from '../data/fieldOptions'
 import OptionInput from '../components/OptionInput'
 import { roleLabel } from '../shared/roles'
+import { emailProblem, normalizeEmail } from '../shared/emailAddress'
 import type { Company } from '../types/schema'
 
 const labelCls = 'mb-1.5 block text-xs font-medium text-stone-500'
@@ -22,6 +23,7 @@ const FIELDS: Array<[key: string, label: string, placeholder: string, wide?: boo
   ['department', 'แผนก', 'เช่น Payroll'],
   ['defaultJob', 'Job (ค่าเริ่มต้น)', 'ใส่อัตโนมัติเวลากรอกฟอร์ม'],
   ['bankAccount', 'เลขบัญชี', 'เลขบัญชีธนาคาร'],
+  ['email', 'อีเมล', 'สำหรับแจ้งเตือนเอกสารรอเซ็น'],
 ]
 
 export default function ProfilePage() {
@@ -35,9 +37,14 @@ export default function ProfilePage() {
   if (!form) return null
 
   async function save() {
+    const mailIssue = emailProblem(form!.email)
+    if (mailIssue) {
+      uiAlert(mailIssue, { title: 'ข้อมูลไม่ถูกต้อง' })
+      return
+    }
     setSaving(true)
     try {
-      await updateProfile(form!.uid, form!)
+      await updateProfile(form!.uid, form!.email === undefined ? form! : { ...form!, email: normalizeEmail(form!.email) || null })
       await refresh()
       uiAlert('บันทึกข้อมูลแล้ว', { tone: 'success' })
     } catch {

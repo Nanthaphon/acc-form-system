@@ -8,6 +8,7 @@ export interface NewEmployee {
   employeeId: string; firstName: string; lastName: string
   position: string; department: string; companyId: string
   defaultJob: string; bankAccount: string; role: Role; accessGroup?: string
+  email?: string
   mustChangePassword?: boolean   // ask for a new password on first login (default true)
 }
 
@@ -27,6 +28,8 @@ export async function createEmployee(e: NewEmployee): Promise<string> {
     position: e.position, department: e.department, companyId: e.companyId,
     defaultJob: e.defaultJob, bankAccount: e.bankAccount, role: e.role,
     accessGroup: e.accessGroup,
+    // Only when given, so a database without the email column still takes new people.
+    ...(e.email ? { email: e.email } : {}),
     mustChangePassword: e.mustChangePassword ?? true, createdAt: Date.now(),
   }
   const { error: e2 } = await supabase.from('profiles').insert(profile)
@@ -42,10 +45,15 @@ export async function getProfileByUid(uid: string): Promise<UserProfile | null> 
 // lists only need names and details.
 const EMPLOYEE_LIST_COLS = 'uid,employeeId,firstName,lastName,position,department,companyId,defaultJob,bankAccount,role,groupId,accessGroup,mustChangePassword,createdAt'
 const EMPLOYEE_LOGIN_COLS = 'isSuperAdmin,passwordIsDefault'
+const EMPLOYEE_EMAIL_COL = 'email'
 export async function listEmployees(): Promise<UserProfile[]> {
   const q = (cols: string) => supabase.from('profiles').select(cols).order('employeeId')
-  let { data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS}`)
-  // Those two columns exist only once supabase/2026-09-11-super-admin.sql has been run.
+  // Newer columns, each with the migration that adds it: a database that has not
+  // run one still lists everyone, without that column.
+  //   email — supabase/2026-10-26-employee-email.sql
+  //   isSuperAdmin, passwordIsDefault — supabase/2026-09-11-super-admin.sql
+  let { data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS},${EMPLOYEE_EMAIL_COL}`)
+  if (error?.code === '42703') ({ data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS}`))
   if (error?.code === '42703') ({ data } = await q(EMPLOYEE_LIST_COLS))
   return (data ?? []) as unknown as UserProfile[]
 }
@@ -136,4 +144,27 @@ export async function existingEmployeeIds(): Promise<Set<string>> {
   const { data, error } = await supabase.from('profiles').select('employeeId')
   if (error) throw error
   return new Set((data ?? []).map(p => String((p as { employeeId: string }).employeeId)))
+}
+
+/** Most people in an import file already have an account; the file still
+ *  carries their email. Sets it for each existing employee whose address
+ *  differs, and leaves everything else about them alone. */
+export async function updateEmployeeEmails(
+  rows: { employeeId: string; email?: string }[],
+): Promise<{ updated: number; failed: { employeeId: string; reason: string }[] }> {
+  const wanted = rows.filter(r => r.email)
+  if (wanted.length === 0) return { updated: 0, failed: [] }
+  const { data, error } = await supabase.from('profiles').select('uid,employeeId,email')
+  if (error) throw error
+  const byId = new Map((data ?? []).map(p => [String(p.employeeId), p as { uid: string; email: string | null }]))
+  let updated = 0
+  const failed: { employeeId: string; reason: string }[] = []
+  for (const r of wanted) {
+    const p = byId.get(r.employeeId)
+    if (!p || p.email === r.email) continue
+    const { error: e } = await supabase.from('profiles').update({ email: r.email }).eq('uid', p.uid)
+    if (e) failed.push({ employeeId: r.employeeId, reason: e.message })
+    else updated++
+  }
+  return { updated, failed }
 }

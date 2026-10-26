@@ -15,6 +15,15 @@ describe('parseEmployeeCsv', () => {
     expect(rows[0].role).toBe('employee')
     expect(rows[1].role).toBe('admin')
   })
+  it('reads an email column, stored in lower case, and refuses one that is not an address', () => {
+    const csv = `employeeId,firstName,lastName,companyId,email
+244530,หทัยรัตน์,ไวยขุนทด,globe, Hathai@Globe.co.th
+244531,สมชาย,ใจดี,globe,
+244532,มานี,มีนา,globe,manee-at-globe`
+    const { rows, errors } = parseEmployeeCsv(csv)
+    expect(rows.map(r => r.email)).toEqual(['hathai@globe.co.th', undefined, 'manee-at-globe'])
+    expect(errors).toEqual(['บรรทัด 4: อีเมล "manee-at-globe" ไม่ถูกต้อง'])
+  })
   it('รายงาน error เมื่อขาด employeeId', () => {
     const bad = `employeeId,firstName,lastName,position,department,companyId,defaultJob,bankAccount,role
 ,x,y,z,d,globe,,,employee`

@@ -40,6 +40,7 @@ const COLUMNS: Column[] = [
   { key: 'bankAccount', width: 18, required: false, text: true },
   { key: 'role', width: 12, required: false },
   { key: 'accessGroup', width: 16, required: false },
+  { key: 'email', width: 28, required: false },
 ]
 
 /** The value a person picks for a company: the name they know it by. The

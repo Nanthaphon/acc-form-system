@@ -182,6 +182,7 @@ export interface UserProfile {
   companyId: string
   defaultJob: string
   bankAccount: string
+  email?: string | null            // real mailbox for signing notices (not the login)
   role: Role
   mustChangePassword: boolean
   groupId?: string

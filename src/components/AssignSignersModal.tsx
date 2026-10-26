@@ -4,6 +4,7 @@ import { CheckCircle2, Clock3, PenLine, Send, Signature, X } from 'lucide-react'
 import type { SubmissionSummary, FormSettings, DocSignature } from '../types/schema'
 import { formSignatureBlocks } from '../types/schema'
 import { assignSigners, signDocument, unsignDocument } from '../data/submissions'
+import { notifySigners, notifySummary } from '../data/notify'
 import type { Signer } from '../data/submissions'
 import { dbErrorMessage } from '../shared/dbError'
 import { formatDateTime } from '../shared/date'
@@ -98,8 +99,11 @@ export default function AssignSignersModal({ submission, settings, signers, curr
       const strays = sigs.filter(x => x.status === 'pending' && !listed.has(x.blockId))
       await assignSigners(submission.id, [...assignments, ...strays])
       if (willSign) await signDocument(submission.id, ownBlock.id)
+      // Only the people newly asked: someone already waiting was told the first time.
+      const asked = open.filter(b => assign[b.id] && sigFor(b.id)?.assignedUid !== assign[b.id]).map(b => assign[b.id])
+      const mail = notifySummary(await notifySigners(submission.id, asked))
       uiAlert(
-        newSends ? 'เรียบร้อย — คนที่เลือกจะเห็นเอกสารในเมนู "ฟอร์มเอกสารรอเซ็น"' : willSign ? 'เซ็นเอกสารแล้ว' : 'บันทึกแล้ว',
+        newSends ? `เรียบร้อย — คนที่เลือกจะเห็นเอกสารในเมนู "ฟอร์มเอกสารรอเซ็น"${mail ? `\n${mail}` : ''}` : willSign ? 'เซ็นเอกสารแล้ว' : 'บันทึกแล้ว',
         { tone: 'success' },
       )
       onDone(); onClose()

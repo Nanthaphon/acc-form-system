@@ -142,6 +142,7 @@ export default function EmployeeDetailPage() {
             <Info label="ชื่อ-นามสกุล" value={`${profile.firstName} ${profile.lastName}`} />
             <Info label="ตำแหน่ง" value={profile.position} />
             <Info label="แผนก" value={profile.department} />
+            <Info label="อีเมล" value={profile.email ?? ''} />
             <Info label="บริษัท" value={companyName(profile.companyId)} />
             <Info label="กลุ่ม (Access group)" value={accessGroupName(profile.accessGroup)} />
             <Info label="สิทธิ์" value={roleLabel(profile)} />

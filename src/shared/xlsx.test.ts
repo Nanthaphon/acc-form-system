@@ -39,7 +39,7 @@ const writtenByExcel = () => {
 
 const HEADERS = [
   'employeeId', 'firstName', 'lastName', 'companyId', 'position',
-  'department', 'defaultJob', 'bankAccount', 'role', 'accessGroup',
+  'department', 'defaultJob', 'bankAccount', 'role', 'accessGroup', 'email',
 ]
 
 describe('the template, as built from the live lists', () => {

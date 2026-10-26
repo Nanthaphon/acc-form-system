@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowLeft, Download, FileSpreadsheet, FileUp, Upload } f
 import { checkAgainstLists, parseEmployeeCsv, parseEmployeeGrid } from '../../shared/csv'
 import type { CsvEmployeeRow, ImportLists } from '../../shared/csv'
 import { isXlsx, readSheet } from '../../shared/xlsx'
-import { existingEmployeeIds, importEmployees, isRateLimited } from '../../data/users'
+import { existingEmployeeIds, importEmployees, isRateLimited, updateEmployeeEmails } from '../../data/users'
 import type { ImportProgress } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
@@ -49,6 +49,8 @@ export default function ImportCsvPage() {
   const [errors, setErrors] = useState<string[]>([])
   const [importing, setImporting] = useState(false)
   const [building, setBuilding] = useState(false)
+  // Existing people are not created again, but an email the file gives them is saved.
+  const mailUpdates = skipped.filter(r => r.email)
   useEffect(() => { listCompanies().then(setCompanies) }, [])
 
   function reset() {
@@ -99,18 +101,28 @@ export default function ImportCsvPage() {
   }
 
   async function onImport() {
-    if (!(await uiConfirm(`ระบบจะสร้างบัญชีเข้าใช้ให้ทุกคน รหัสผ่านเริ่มต้น = รหัสพนักงาน`, { title: `นำเข้าพนักงาน ${rows.length} คน ?`, confirmText: 'นำเข้า' }))) return
+    const creating = rows.length > 0
+    const body = [
+      creating && 'ระบบจะสร้างบัญชีเข้าใช้ให้ทุกคน รหัสผ่านเริ่มต้น = รหัสพนักงาน',
+      mailUpdates.length > 0 && `คนที่มีบัญชีแล้ว ${mailUpdates.length} คน จะอัปเดตเฉพาะอีเมล`,
+    ].filter(Boolean).join('\n')
+    const title = creating ? `นำเข้าพนักงาน ${rows.length} คน ?` : `อัปเดตอีเมล ${mailUpdates.length} คน ?`
+    if (!(await uiConfirm(body, { title, confirmText: creating ? 'นำเข้า' : 'อัปเดต' }))) return
     setImporting(true)
     try {
-      const res = await importEmployees(rows, setProgress)
-      if (res.failed.length === 0) {
-        uiAlert(`เพิ่มพนักงานสำเร็จ ${res.ok} คน`, { title: 'นำเข้าเรียบร้อย', tone: 'success' })
+      const res = creating ? await importEmployees(rows, setProgress) : { ok: 0, failed: [] }
+      const mail = await updateEmployeeEmails(mailUpdates)
+      const failed = [...res.failed, ...mail.failed]
+      const done = [res.ok > 0 && `เพิ่มพนักงาน ${res.ok} คน`, mail.updated > 0 && `อัปเดตอีเมล ${mail.updated} คน`]
+        .filter(Boolean).join(' · ') || 'ไม่มีข้อมูลที่ต้องเปลี่ยน'
+      if (failed.length === 0) {
+        uiAlert(done, { title: 'นำเข้าเรียบร้อย', tone: 'success' })
       } else {
-        const lines = res.failed.map(f => `• ${f.employeeId} — ${f.reason}`).join('\n')
+        const lines = failed.map(f => `• ${f.employeeId} — ${f.reason}`).join('\n')
         const limited = res.failed.some(f => isRateLimited({ message: f.reason }))
           ? '\n\nSupabase ยังไม่ยอมให้สร้างบัญชีเพิ่มแม้รอแล้ว — นำเข้าไฟล์เดิมซ้ำได้ภายหลัง คนที่สร้างแล้วจะถูกข้ามให้เอง'
           : ''
-        uiAlert(`สำเร็จ ${res.ok} คน · ไม่สำเร็จ ${res.failed.length} คน\n\n${lines}${limited}`, { title: 'นำเข้าไม่ครบทุกคน', tone: 'danger' })
+        uiAlert(`${done} · ไม่สำเร็จ ${failed.length} คน\n\n${lines}${limited}`, { title: 'นำเข้าไม่ครบทุกคน', tone: 'danger' })
       }
       reset()
     } catch (err: any) {
@@ -122,7 +134,7 @@ export default function ImportCsvPage() {
   }
 
   const companyName = (id: string) => companies.find(c => c.id === id)?.name
-  const ready = rows.length > 0 && errors.length === 0
+  const ready = (rows.length > 0 || mailUpdates.length > 0) && errors.length === 0
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -186,7 +198,9 @@ export default function ImportCsvPage() {
             </div>
           ) : rows.length === 0 ? (
             <p className="text-sm text-stone-500">
-              {skipped.length > 0 ? `ทุกคนในไฟล์ (${skipped.length} คน) มีบัญชีในระบบแล้ว — ไม่มีใครต้องนำเข้าเพิ่ม` : 'ไม่พบข้อมูลพนักงานในไฟล์'}
+              {skipped.length === 0 ? 'ไม่พบข้อมูลพนักงานในไฟล์'
+                : mailUpdates.length > 0 ? `ทุกคนในไฟล์ (${skipped.length} คน) มีบัญชีในระบบแล้ว — จะอัปเดตอีเมลให้ ${mailUpdates.length} คน`
+                : `ทุกคนในไฟล์ (${skipped.length} คน) มีบัญชีในระบบแล้ว — ไม่มีใครต้องนำเข้าเพิ่ม`}
             </p>
           ) : (
             <>
@@ -194,14 +208,14 @@ export default function ImportCsvPage() {
                 พนักงานใหม่ <b className="text-stone-900">{rows.length}</b> คน{rows.length > PREVIEW_ROWS ? ` — แสดง ${PREVIEW_ROWS} คนแรก` : ''}
                 {skipped.length > 0 && (
                   <span className="text-stone-500" title={skipped.map(r => r.employeeId).join(', ')}>
-                    {' '}· มีบัญชีในระบบแล้ว {skipped.length} คน จะข้ามไป
+                    {' '}· มีบัญชีในระบบแล้ว {skipped.length} คน {mailUpdates.length > 0 ? `อัปเดตเฉพาะอีเมล ${mailUpdates.length} คน` : 'จะข้ามไป'}
                   </span>
                 )}
               </p>
               <div className="scroll-slim overflow-x-auto rounded-lg border border-stone-100">
                 <table className="w-full text-sm">
                   <thead className="bg-stone-50 text-stone-600">
-                    <tr>{['รหัส', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'บริษัท', 'สิทธิ์'].map(h => <th key={h} className="whitespace-nowrap px-3 py-2 text-left font-medium">{h}</th>)}</tr>
+                    <tr>{['รหัส', 'ชื่อ-นามสกุล', 'ตำแหน่ง', 'บริษัท', 'อีเมล', 'สิทธิ์'].map(h => <th key={h} className="whitespace-nowrap px-3 py-2 text-left font-medium">{h}</th>)}</tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
                     {rows.slice(0, PREVIEW_ROWS).map((r, i) => (
@@ -212,6 +226,7 @@ export default function ImportCsvPage() {
                         <td className="px-3 py-2 text-stone-700">
                           {companyName(r.companyId) ?? <span className="text-ochre-600" title="ไม่พบรหัสบริษัทนี้ในระบบ">{r.companyId} ⚠</span>}
                         </td>
+                        <td className="px-3 py-2 text-stone-700">{r.email || '—'}</td>
                         <td className="whitespace-nowrap px-3 py-2 text-stone-700">{r.role === 'admin' ? 'Account Admin' : 'พนักงาน'}</td>
                       </tr>
                     ))}
@@ -231,7 +246,7 @@ export default function ImportCsvPage() {
               >
                 {importing
                   ? <><Spinner size={16} /> กำลังนำเข้า {progress ? `${Math.min(progress.done + 1, progress.total)}/${progress.total}` : '...'}</>
-                  : <><Upload size={16} /> นำเข้า {rows.length} คน</>}
+                  : <><Upload size={16} /> {rows.length > 0 ? `นำเข้า ${rows.length} คน` : `อัปเดตอีเมล ${mailUpdates.length} คน`}</>}
               </button>
             )}
             <button

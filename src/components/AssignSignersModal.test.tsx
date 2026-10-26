@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import AssignSignersModal from './AssignSignersModal'
 import { assignSigners, signDocument, unsignDocument } from '../data/submissions'
+import { notifySigners } from '../data/notify'
+import { uiAlert } from './dialog/dialogService'
 import type { DocSignature, FormSettings, SubmissionSummary } from '../types/schema'
 
 vi.mock('../data/submissions', () => ({
@@ -11,6 +13,10 @@ vi.mock('../data/submissions', () => ({
   unsignDocument: vi.fn(() => Promise.resolve()),
 }))
 vi.mock('./dialog/dialogService', () => ({ uiAlert: vi.fn() }))
+vi.mock('../data/notify', async importOriginal => ({
+  ...(await importOriginal<typeof import('../data/notify')>()),
+  notifySigners: vi.fn(() => Promise.resolve({ sent: 1, noEmail: [], failed: [] })),
+}))
 
 const settings = { name: 'ใบรับเงินคืน', signatureBlocks: [{ id: 'maker', label: 'ผู้จัดทำเอกสาร' }, { id: 'checker', label: 'ผู้ตรวจสอบ' }] } as FormSettings
 const signers = [{ uid: 'boss', name: 'ไกรธัช จิระกรธนัน' }, { uid: 'u1', name: 'นันทพล นายาต' }]
@@ -34,6 +40,22 @@ const pickHead = () => {
 beforeEach(() => { vi.clearAllMocks() })
 
 describe('เซ็น / ส่งเซ็น', () => {
+  it('emails only the person newly asked, after the sending, and says so', async () => {
+    show()
+    pickHead()
+    fireEvent.click(screen.getByRole('button', { name: /เซ็นและส่งให้ 1 คน/ }))
+    await waitFor(() => expect(notifySigners).toHaveBeenCalledWith('s1', ['boss']))
+    expect(vi.mocked(assignSigners).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(notifySigners).mock.invocationCallOrder[0])
+    await waitFor(() => expect(uiAlert).toHaveBeenCalledWith(expect.stringContaining('แจ้งทางอีเมลแล้ว 1 คน'), expect.anything()))
+  })
+
+  it('does not email again someone who was already waiting', async () => {
+    show([{ blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'ไกรธัช จิระกรธนัน', status: 'pending' }])
+    fireEvent.click(screen.getByRole('button', { name: /เซ็นเอกสาร/ }))
+    await waitFor(() => expect(signDocument).toHaveBeenCalled())
+    expect(notifySigners).toHaveBeenCalledWith('s1', [])
+  })
+
   it('signs my line and sends the head\'s in one go, saying so on the button', async () => {
     show()
     expect(screen.getByRole('checkbox', { name: /ใส่ลายเซ็นของฉัน/ })).toBeChecked()

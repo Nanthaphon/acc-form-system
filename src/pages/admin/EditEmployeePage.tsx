@@ -9,6 +9,7 @@ import { listAccessGroups } from '../../data/accessGroups'
 import { loadOptionLists, NO_OPTIONS } from '../../data/fieldOptions'
 import OptionInput from '../../components/OptionInput'
 import { dbErrorMessage } from '../../shared/dbError'
+import { emailProblem, normalizeEmail } from '../../shared/emailAddress'
 import { isSuperAdmin, roleLabel, ROLE_OPTIONS } from '../../shared/roles'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { PageHeader, ui } from '../../components/ui'
@@ -50,12 +51,19 @@ export default function EditEmployeePage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!uid || !f || readOnly) return
+    const mailIssue = emailProblem(f.email)
+    if (mailIssue) {
+      uiAlert(mailIssue, { title: 'ข้อมูลไม่ถูกต้อง' })
+      return
+    }
     setSaving(true)
     try {
       await updateProfile(uid, {
         firstName: f.firstName, lastName: f.lastName, position: f.position,
         department: f.department, companyId: f.companyId, defaultJob: f.defaultJob,
         bankAccount: f.bankAccount, accessGroup: f.accessGroup,
+        // Absent when the database has no email column yet — then nothing is sent for it.
+        ...(f.email !== undefined ? { email: normalizeEmail(f.email) || null } : {}),
         ...(targetIsSuper || isSelf ? {} : { role: f.role }),
       })
       uiAlert('บันทึกข้อมูลพนักงานแล้ว', { tone: 'success' })
@@ -117,9 +125,13 @@ export default function EditEmployeePage() {
                 <label className={ui.label}>นามสกุล</label>
                 <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} />
               </div>
-              <div className="sm:col-span-2">
+                <div>
                 <label className={ui.label}>ตำแหน่ง</label>
                 <OptionInput className={ui.input} placeholder="เช่น หัวหน้าฝ่ายบัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
+              </div>
+              <div>
+                <label className={ui.label}>อีเมล</label>
+                <input type="email" className={ui.input} placeholder="สำหรับแจ้งเตือนเอกสารรอเซ็น" value={f.email ?? ''} onChange={e => set('email', e.target.value)} />
               </div>
             </div>
           </div>
