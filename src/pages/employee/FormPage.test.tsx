@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import FormPage from './FormPage'
-import { cancelSigning, createSubmission, getSubmission, incrementPrint, signBlockAsSelf, updateSubmission } from '../../data/submissions'
+import { cancelSigning, createSubmission, getSubmission, incrementPrint, signBlockAsSelf, unsignDocument, updateSubmission } from '../../data/submissions'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import type { Submission } from '../../types/schema'
 
@@ -225,6 +225,21 @@ describe('the requester\'s own signature goes on as it is saved', () => {
       expect(signBlockAsSelf).toHaveBeenCalled()
       const order = [cancelSigning, updateSubmission, signBlockAsSelf].map(f => vi.mocked(f).mock.invocationCallOrder[0])
       expect(order).toEqual([...order].sort((a, b) => a - b))
+    })
+
+    it('can still be changed after it was sent to an approver who has not signed yet — and stays with them', async () => {
+      withSignature()
+      const pending = { blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'หัวหน้า', status: 'pending' as const }
+      openSaved({ createdBy: 'u1', signatures: [ownSig(), pending] })
+      const detail = await screen.findByDisplayValue('ค่าเดินทาง')
+      expect(detail).not.toBeDisabled()
+      fireEvent.change(detail, { target: { value: 'ค่าเดินทาง (แก้)' } })
+      fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+      await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+      // only the requester's own signature comes off: the approver is still asked to sign
+      expect(unsignDocument).toHaveBeenCalledWith('s1', requester.id)
+      expect(cancelSigning).not.toHaveBeenCalled()
+      expect(updateSubmission).toHaveBeenCalled()
     })
 
     it('prints it as it is when nothing was changed', async () => {
