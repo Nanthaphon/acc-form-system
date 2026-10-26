@@ -120,8 +120,15 @@ describe('one button saves, then prints', () => {
     fireEvent.click(await screen.findByRole('button', { name: /พิมพ์/ }))
     await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
     expect(updateSubmission).not.toHaveBeenCalled()
-    // someone else signed it: no way round that from here
-    expect(screen.queryByRole('button', { name: /แก้ไขเอกสาร/ })).not.toBeInTheDocument()
+  })
+
+  // Typing into a document that cannot be saved, only to lose it, was the bug:
+  // someone else's signature shuts every box.
+  it('shuts every box on a document someone else has signed', async () => {
+    openSaved({ createdBy: 'u1', signatures: [{ blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'หัวหน้า', status: 'signed', signedAt: 1 }] })
+    expect(await screen.findByText(/มีคนเซ็นแล้ว จึงแก้ไขเนื้อหาไม่ได้/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByDisplayValue('ค่าเดินทาง')).toBeDisabled())
+    expect(screen.getByRole('button', { name: /เพิ่มรายการ/ })).toBeDisabled()
   })
 })
 
@@ -193,11 +200,53 @@ describe('the requester\'s own signature goes on as it is saved', () => {
     expect(print).not.toHaveBeenCalled()
   })
 
-  it('a document signed only by its requester can be unlocked from the form to correct it', async () => {
-    withSignature()
-    openSaved({ createdBy: 'u1', signatures: [{ blockId: requester.id, blockLabel: requester.label, assignedUid: 'u1', assignedName: 'ธนัตถ์ นัยพินิจ', status: 'signed', signedAt: 1 }] })
-    fireEvent.click(await screen.findByRole('button', { name: /แก้ไขเอกสาร/ }))
-    await waitFor(() => expect(cancelSigning).toHaveBeenCalledWith('s1'))
+  // The reported bug: a document saved with the requester's signature was
+  // locked, yet its boxes could be typed in; "บันทึก" then only printed, and
+  // the changes were gone.
+  describe('a document signed by its requester alone', () => {
+    const ownSig = () => ({ blockId: requester.id, blockLabel: requester.label, assignedUid: 'u1', assignedName: 'ธนัตถ์ นัยพินิจ', status: 'signed' as const, signedAt: 1 })
+
+    it('saves a change: the signature comes off, the change is saved, the signature goes back on', async () => {
+      withSignature()
+      openSaved({ createdBy: 'u1', signatures: [ownSig()] })
+      const detail = await screen.findByDisplayValue('ค่าเดินทาง')
+      // as the database does: once the signature is off, the document carries none
+      vi.mocked(cancelSigning).mockImplementationOnce(async () => {
+        const doc = await vi.mocked(getSubmission)('s1')
+        vi.mocked(getSubmission).mockResolvedValue({ ...doc!, signatures: [] })
+      })
+      expect(detail).not.toBeDisabled()
+      expect(screen.queryByText(/แก้ไขเนื้อหาไม่ได้/)).not.toBeInTheDocument()
+      fireEvent.change(detail, { target: { value: 'ค่าเดินทาง (แก้)' } })
+      fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+      await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+      expect(cancelSigning).toHaveBeenCalledWith('s1')
+      expect(vi.mocked(updateSubmission).mock.calls[0][1].items[0].detail).toBe('ค่าเดินทาง (แก้)')
+      expect(signBlockAsSelf).toHaveBeenCalled()
+      const order = [cancelSigning, updateSubmission, signBlockAsSelf].map(f => vi.mocked(f).mock.invocationCallOrder[0])
+      expect(order).toEqual([...order].sort((a, b) => a - b))
+    })
+
+    it('prints it as it is when nothing was changed', async () => {
+      withSignature()
+      openSaved({ createdBy: 'u1', signatures: [ownSig()] })
+      await screen.findByDisplayValue('ค่าเดินทาง')
+      fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+      await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+      expect(cancelSigning).not.toHaveBeenCalled()
+      expect(updateSubmission).not.toHaveBeenCalled()
+    })
+
+    it('takes the signature off for good when switched off', async () => {
+      withSignature()
+      openSaved({ createdBy: 'u1', signatures: [ownSig()] })
+      await screen.findByDisplayValue('ค่าเดินทาง')
+      fireEvent.click(screen.getByRole('checkbox', { name: /ใส่ลายเซ็นของฉันในช่อง/ }))
+      fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+      await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+      expect(cancelSigning).toHaveBeenCalledWith('s1')
+      expect(signBlockAsSelf).not.toHaveBeenCalled()
+    })
   })
 })
 

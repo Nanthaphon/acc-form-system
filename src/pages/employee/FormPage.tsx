@@ -1,8 +1,8 @@
-import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import { uiAlert } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Check, Eye, History, LockOpen, Pencil, Printer, Save } from 'lucide-react'
+import { Check, Eye, History, Lock, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment, SubmissionSummary } from '../../types/schema'
@@ -130,11 +130,14 @@ export default function FormPage() {
 
   // Saving and printing are one button: people printed a filled-in form and
   // walked away believing it was in the system, when nothing had been saved.
-  // The document is saved first and printed only once it is; a signed one
-  // can no longer change, so it is just printed.
+  // The document is saved first and printed only once it is. One someone else
+  // has signed can no longer change, so it is just printed.
   async function saveAndPrint() {
     if (saving) return // a double click must not create two documents
-    if (locked) { await print(savedId, false); return }
+    if (frozen) { await print(savedId, false); return }
+    // Signed by the requester alone and left as it was: printed as it is.
+    const unchanged = baseline.current === snapshot(header, items) && !pendingFiles.length && !removedAtts.length
+    if (ownSigned && signMine && unchanged) { await print(savedId, false); return }
     const totals = buildTotals()
     // Require a total > 0 only for forms that actually have amount columns.
     const hasNumericCol = settings.columns.some(c => c.type === 'number' || c.type === 'calc')
@@ -148,6 +151,10 @@ export default function FormPage() {
     }
     setSaving(true)
     try {
+      // A signed document cannot be changed (protect_signed_content): the
+      // requester's own signature comes off first, and goes back on once the
+      // change is saved — they need never know the document was locked.
+      if (ownSigned && !(await takeOwnSignatureOff())) return
       const subId = await persist(totals)
       if (!subId || !(await stampMySignature(subId))) return
       await print(subId, true)
@@ -177,22 +184,19 @@ export default function FormPage() {
     }
   }
 
-  // A signature locks the content (protect_signed_content). When every
-  // signature on it is the requester's own, they take it off right here to
-  // correct the document, and "บันทึกและพิมพ์" puts it back on.
-  async function unlockToEdit() {
-    if (!savedId) return
-    if (!(await uiConfirm('ลายเซ็นของคุณจะถูกเอาออกจากเอกสาร เพื่อให้แก้ไขได้ — แก้เสร็จแล้วกด “บันทึกและพิมพ์” ระบบจะใส่ลายเซ็นให้ใหม่', {
-      title: 'แก้ไขเอกสารนี้?', confirmText: 'เอาลายเซ็นออกและแก้ไข',
-    }))) return
+  // Take the requester's own signature off so the document can be changed.
+  async function takeOwnSignatureOff(): Promise<boolean> {
+    if (!savedId) return true
     try {
       // Nobody else is on it: clear it back to a plain saved document rather
       // than leave a line waiting on the requester.
       if (sigs.every(x => x.assignedUid === profile?.uid)) await cancelSigning(savedId)
       else for (const s of sigs.filter(x => x.status === 'signed')) await unsignDocument(savedId, s.blockId)
       setSigs((await getSubmission(savedId))?.signatures ?? [])
+      return true
     } catch (e) {
-      uiAlert(dbErrorMessage(e), { title: 'เอาลายเซ็นออกไม่สำเร็จ' })
+      uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })
+      return false
     }
   }
 
@@ -272,17 +276,21 @@ export default function FormPage() {
   // Signed documents are locked in the database (protect_signed_content), so
   // the page says so up front instead of only failing at save time.
   const locked = isSigned({ signatures: sigs } as never)
-  const canUnlock = locked && isMine && sigs.filter(x => x.status === 'signed').every(x => x.assignedUid === profile?.uid)
+  // Signed by the requester alone: still theirs to change — saving takes the
+  // signature off and puts it back (saveAndPrint). Signed by anyone else: frozen,
+  // and the boxes are shut so nothing can be typed that will not be kept.
+  const ownSigned = locked && isMine && sigs.filter(x => x.status === 'signed').every(x => x.assignedUid === profile?.uid)
+  const frozen = locked && !ownSigned
 
   // Keep the draft as it is typed — gone again once it matches what is saved.
-  // A locked document cannot be changed, so it has nothing to keep.
+  // A frozen document cannot be changed, so it has nothing to keep.
   useEffect(() => {
-    if (!restoreTried.current || baseline.current === null || locked) return
+    if (!restoreTried.current || baseline.current === null || frozen) return
     if (snapshot(header, items) === baseline.current) { clearFormDraft(draftKey); setDraftSavedAt(null); return }
     const now = Date.now()
     writeFormDraft(draftKey, header, items, now)
     setDraftSavedAt(now)
-  }, [header, items, draftKey, locked])
+  }, [header, items, draftKey, frozen])
 
   // Back to what the form held when it opened, and the draft thrown away.
   function discardDraft() {
@@ -291,16 +299,19 @@ export default function FormPage() {
     setHeader(loaded.header); setItems(loaded.items); setRestoredAt(null)
   }
   // The sheet shows the signature the requester has chosen to put on before it
-  // is actually there — "บันทึกและพิมพ์" signs it, today. Never on a locked
-  // document: that button only prints it, and the paper would carry a
-  // signature the system does not have.
-  const previewMine = stampsMySignature && !locked && !sigs.some(x => x.blockId === requesterBlock.id && x.status === 'signed')
+  // is actually there — "บันทึกและพิมพ์" signs it, today — and no longer shows
+  // their own one once they have switched it off. Never on a frozen document:
+  // that button only prints it, and the paper would carry a signature the
+  // system does not have.
+  const ownLineSigned = sigs.some(x => x.blockId === requesterBlock.id && x.status === 'signed')
+  const previewMine = stampsMySignature && !frozen && !ownLineSigned
+  const shownSigs = ownSigned && !signMine ? sigs.filter(x => x.blockId !== requesterBlock.id) : sigs
   const sheetSigs: DocSignature[] = previewMine
-    ? [...sigs.filter(x => x.blockId !== requesterBlock.id), {
+    ? [...shownSigs.filter(x => x.blockId !== requesterBlock.id), {
       blockId: requesterBlock.id, blockLabel: requesterBlock.label, assignedUid: me.uid, assignedName: me.name,
       status: 'signed', signatureImage: profile?.signatureImage ?? undefined, signedAt: Date.now(),
     }]
-    : sigs
+    : shownSigs
   const isAdmin = profile?.role === 'admin'
 
   // A closed form (maintenance) is not accessible to employees via direct URL.
@@ -317,18 +328,12 @@ export default function FormPage() {
   return (
     <div>
       <div className="no-print space-y-4">
-        {locked && (canUnlock ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
-            <span className="min-w-0 flex-1">เอกสารนี้มีลายเซ็นของคุณแล้ว จึงล็อกเนื้อหาไว้ — ถ้าต้องแก้ ให้เอาลายเซ็นออกก่อน</span>
-            <button type="button" onClick={unlockToEdit} className={ui.btnSecondary}>
-              <LockOpen size={16} /> แก้ไขเอกสาร
-            </button>
+        {frozen && (
+          <div className="flex items-center gap-2 rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
+            <Lock size={16} className="shrink-0" />
+            เอกสารนี้มีคนเซ็นแล้ว จึงแก้ไขเนื้อหาไม่ได้ — ถ้าต้องแก้ ให้ยกเลิกการส่งเซ็นที่หน้าประวัติก่อน
           </div>
-        ) : (
-          <div className="rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
-            เอกสารนี้มีลายเซ็นแล้ว จึงแก้ไขเนื้อหาไม่ได้ — ถ้าต้องแก้ ให้ลบลายเซ็นออกก่อนที่หน้าประวัติ
-          </div>
-        ))}
+        )}
         <PageHeader
           onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
           title={settings.name || settings.title}
@@ -354,6 +359,9 @@ export default function FormPage() {
         >
           {showPreview ? <Pencil size={20} /> : <Eye size={20} />}
         </button>
+        {/* Everything typed into: shut on a frozen document, so nothing can be
+            typed there that will not be kept. */}
+        <fieldset disabled={frozen} className="m-0 min-w-0 space-y-4 border-0 p-0">
         {!showPreview && (
           <div className={ui.card}>
             <label className={ui.label}>บริษัท</label>
@@ -379,11 +387,12 @@ export default function FormPage() {
             onRemovePending={i => setPendingFiles(p => p.filter((_, x) => x !== i))}
           />
         )}
+        </fieldset>
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
         <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sheetSigs} />
       </div>
-      {!locked && isMine && requesterBlock && (
+      {!frozen && isMine && requesterBlock && (
         <div className="no-print mt-4">
           <OwnSignatureToggle
             signature={profile?.signatureImage} blockLabel={requesterBlock.label} on={signMine} onChange={setSignMine}
@@ -396,10 +405,10 @@ export default function FormPage() {
           className={ui.btnPrimary}
           onClick={saveAndPrint}
           disabled={saving}
-          title={locked ? 'เอกสารมีลายเซ็นแล้ว แก้ไขไม่ได้ — พิมพ์ได้อย่างเดียว' : undefined}
+          title={frozen ? 'เอกสารมีคนเซ็นแล้ว แก้ไขไม่ได้ — พิมพ์ได้อย่างเดียว' : undefined}
         >
           {saving ? <><Spinner size={16} /> กำลังบันทึก...</>
-            : locked ? <><Printer size={16} /> พิมพ์ / บันทึก PDF</>
+            : frozen ? <><Printer size={16} /> พิมพ์ / บันทึก PDF</>
             : <><Save size={16} /> บันทึกและพิมพ์</>}
         </button>
         <button
@@ -410,7 +419,7 @@ export default function FormPage() {
         </button>
         <span className="w-full text-xs text-stone-400 sm:w-auto">
           {draftSavedAt && <span className="mr-2 inline-flex items-center gap-1 text-olive-700"><Check size={13} /> เก็บดราฟแล้ว {formatDateTime(draftSavedAt).slice(-5)}</span>}
-          {locked ? '' : 'บันทึกเข้าระบบก่อน แล้วเปิดหน้าพิมพ์ · '}ต้องการไฟล์ PDF: เลือกปลายทางเป็น “Save as PDF”
+          {frozen ? '' : 'บันทึกเข้าระบบก่อน แล้วเปิดหน้าพิมพ์ · '}ต้องการไฟล์ PDF: เลือกปลายทางเป็น “Save as PDF”
         </span>
       </div>
       {savedId && (
