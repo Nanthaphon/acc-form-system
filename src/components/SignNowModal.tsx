@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eraser, PenLine, Signature, X } from 'lucide-react'
+import { CheckCircle2, Clock3, Eraser, PenLine, Signature, X } from 'lucide-react'
 import type { SubmissionSummary, FormSettings } from '../types/schema'
 import { formSignatureBlocks } from '../types/schema'
 import { signBlockAsSelf, unsignDocument, canRemoveSignature } from '../data/submissions'
 import type { Signer } from '../data/submissions'
 import { uiAlert, uiConfirm } from './dialog/dialogService'
 import { dbErrorMessage } from '../shared/dbError'
-import { Badge, ui } from './ui'
+import { formatDateTime } from '../shared/date'
+import { ui } from './ui'
 import { Spinner } from './Spinner'
 
 interface Props {
@@ -18,6 +19,9 @@ interface Props {
   onClose: () => void
   onDone: () => void              // reload the list after signing
 }
+
+// The compact button at the end of a signature line.
+const btnRow = 'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60'
 
 // Admins sign their own document here: every signature line of the form is
 // listed with a button that stamps their saved signature on the spot. No
@@ -62,62 +66,95 @@ export default function SignNowModal({ submission, settings, me, mySignature, on
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-4 sm:p-8" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-xl border border-stone-200 bg-white p-6 shadow-xl" onClick={e => e.stopPropagation()}>
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><PenLine size={18} /></div>
-          <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-stone-900">เซ็นเอกสาร — {submission.docNumber}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"><X size={18} /></button>
-        </div>
-
-        {!mySignature ? (
-          <div className="rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
-            คุณยังไม่ได้อัปโหลดลายเซ็น — <Link to="/profile" className="font-medium underline">ไปอัปโหลดที่หน้าข้อมูลของฉัน</Link> ก่อนจึงจะเซ็นได้
+    // Centred on the screen; a screen too short for it scrolls instead.
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
+      <div className="flex min-h-full items-center justify-center p-4 sm:p-8" onClick={onClose}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`เซ็นเอกสาร ${submission.docNumber}`}
+          className="w-full max-w-xl rounded-lg border border-stone-200 bg-white shadow-2xl"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-3 border-b border-stone-100 px-6 py-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><Signature size={20} /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-stone-900">เซ็นเอกสาร</h2>
+              <div className="truncate text-xs text-stone-500">
+                <span className="font-mono">{submission.docNumber}</span>
+                {(settings.name || settings.title) && <> · {settings.name || settings.title}</>}
+              </div>
+            </div>
+            <button onClick={onClose} aria-label="ปิด" className="rounded-lg p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-700"><X size={18} /></button>
           </div>
-        ) : (
-          <>
-            <p className={`${ui.hint} mb-4`}>เลือกช่องที่จะเซ็น · ลายเซ็นที่บันทึกไว้จะถูกแปะลงทันที ช่องที่ไม่เซ็นจะเว้นว่างไว้เซ็นบนกระดาษ</p>
-            <div className="divide-y divide-stone-100 rounded-lg border border-stone-200">
-              {blocks.map(b => {
-                const sig = sigFor(b.id)
-                const mine = sig?.assignedUid === me.uid
-                return (
-                  <div key={b.id} className="flex min-h-[52px] flex-wrap items-center gap-2 px-3 py-2">
-                    <span className="w-32 shrink-0 text-sm font-medium text-stone-700">{b.label}</span>
-                    {sig?.status === 'signed' ? (
-                      <>
-                        <Badge tone="green">✔ เซ็นแล้วโดย {sig.assignedName}</Badge>
-                        {canRemoveSignature(sig, me.uid, ownerUid) && (
+
+          <div className="space-y-4 px-6 py-5">
+            {!mySignature ? (
+              <div className="rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
+                คุณยังไม่ได้อัปโหลดลายเซ็น — <Link to="/profile" className="font-medium underline">ไปอัปโหลดที่หน้าข้อมูลของฉัน</Link> ก่อนจึงจะเซ็นได้
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-4 rounded-lg border border-stone-200 bg-stone-50/60 px-4 py-3">
+                  <div className="flex h-12 w-28 shrink-0 items-center justify-center rounded-md border border-stone-200 bg-white">
+                    <img src={mySignature} alt="ลายเซ็นของคุณ" className="max-h-10 max-w-[100px] object-contain" />
+                  </div>
+                  <div className="min-w-0 text-xs text-stone-500">
+                    <div className="text-sm font-medium text-stone-800">ลายเซ็นของคุณ</div>
+                    กด “เซ็นตรงนี้” เพื่อแปะลงช่องนั้นทันที · ช่องที่ไม่เซ็นเว้นไว้เซ็นบนกระดาษ
+                  </div>
+                </div>
+
+                <ul className="divide-y divide-stone-100 rounded-lg border border-stone-200">
+                  {blocks.map(b => {
+                    const sig = sigFor(b.id)
+                    const signed = sig?.status === 'signed'
+                    // Someone else was already asked to sign this line — leave it to them.
+                    const waiting = sig?.status === 'pending' && sig.assignedUid !== me.uid
+                    return (
+                      <li key={b.id} className="flex min-h-[64px] items-center gap-3 px-4 py-3">
+                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                          signed ? 'bg-olive-50 text-olive-700' : waiting ? 'bg-ochre-50 text-ochre-700' : 'bg-stone-100 text-stone-500'}`}>
+                          {signed ? <CheckCircle2 size={16} /> : waiting ? <Clock3 size={16} /> : <PenLine size={16} />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-stone-800">{b.label}</div>
+                          <div className="text-xs text-stone-500">
+                            {signed ? <>เซ็นแล้วโดย {sig.assignedName}{sig.signedAt ? <span className="block whitespace-nowrap sm:inline"><span className="hidden sm:inline"> · </span>{formatDateTime(sig.signedAt)}</span> : null}</>
+                              : waiting ? <>รอ {sig.assignedName} เซ็น</>
+                              : 'ยังไม่มีลายเซ็น'}
+                          </div>
+                        </div>
+                        {signed ? (
+                          canRemoveSignature(sig, me.uid, ownerUid) && (
+                            <button
+                              onClick={() => unsign(b.id, b.label, sig.assignedName)}
+                              disabled={busyId !== null}
+                              className={`${btnRow} border-stone-200 bg-white text-brick-600 hover:border-rose-200 hover:bg-rose-50`}
+                            >
+                              {busyId === b.id ? <><Spinner size={15} /> กำลังลบ...</> : <><Eraser size={15} /> ลบลายเซ็น</>}
+                            </button>
+                          )
+                        ) : waiting ? null : (
                           <button
-                            onClick={() => unsign(b.id, b.label, sig.assignedName)}
+                            onClick={() => sign(b.id, b.label)}
                             disabled={busyId !== null}
-                            className={`${ui.btnSecondary} ml-auto text-brick-600 ring-rose-200 hover:bg-rose-50 disabled:opacity-60`}
+                            className={`${btnRow} border-clay-600 bg-clay-600 text-white hover:border-clay-700 hover:bg-clay-700`}
                           >
-                            {busyId === b.id ? <><Spinner size={16} /> กำลังลบ...</> : <><Eraser size={16} /> ลบลายเซ็น</>}
+                            {busyId === b.id ? <><Spinner size={15} /> กำลังเซ็น...</> : <><Signature size={15} /> เซ็นตรงนี้</>}
                           </button>
                         )}
-                      </>
-                    ) : sig?.status === 'pending' && !mine ? (
-                      // Someone else was already asked to sign this line — leave it to them.
-                      <Badge tone="amber">รอ {sig.assignedName} เซ็น</Badge>
-                    ) : (
-                      <button
-                        onClick={() => sign(b.id, b.label)}
-                        disabled={busyId !== null}
-                        className={`${ui.btnSecondary} ml-auto disabled:opacity-60`}
-                      >
-                        {busyId === b.id ? <><Spinner size={16} /> กำลังเซ็น...</> : <><Signature size={16} /> เซ็นตรงนี้</>}
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            )}
+          </div>
 
-        <div className="mt-5 flex justify-end">
-          <button onClick={onClose} className={ui.btnSecondary}>ปิด</button>
+          <div className="flex justify-end rounded-b-lg border-t border-stone-100 bg-stone-50/60 px-6 py-4">
+            <button onClick={onClose} className={ui.btnSecondary}>ปิด</button>
+          </div>
         </div>
       </div>
     </div>
