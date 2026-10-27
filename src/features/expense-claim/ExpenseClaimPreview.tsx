@@ -127,7 +127,7 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
   // has far less room for rows than a bare one, and gets what it actually has.
   const paragraphLines = (text?: string | null) =>
     text?.trim() ? rowLines([PRINT_TABLE_MM], [text]) : 0
-  const bodyMm = printBodyMm({
+  const sheetParts = {
     categoryRows: Math.ceil(settings.categories.filter(Boolean).length / 2),
     showRequester: settings.showRequester !== false,
     headerFields: (settings.headerFields ?? []).length,
@@ -144,15 +144,33 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
     showAmountWords: hasNumericCols && settings.showAmountWords !== false,
     signatureRows: sigRows.length,
     noteLines: notes.length ? notes.length + 1 : 0,
-  })
-  const pages = paginateRows(lineCounts.map(n => rowHeightMm(n, cellScale)), bodyMm)
+  }
+  const rowMm = lineCounts.map(n => rowHeightMm(n, cellScale))
+  let pages = paginateRows(rowMm, printBodyMm(sheetParts))
+  // More than one sheet: each sums its own rows, and the last one sums every
+  // sheet as well — a row more than a single sheet has, so room is kept for it.
+  if (pages.length > 1 && hasNumericCols) pages = paginateRows(rowMm, printBodyMm({ ...sheetParts, totalRows: 2 }))
   const totalPages = pages.length
+  const multiPage = totalPages > 1
 
   return (
     <div id="print-area" style={{ fontFamily: "'Sarabun', serif" }} className="mx-auto max-w-3xl space-y-6 text-black print:space-y-0">
       {pages.map((page, pageIdx) => {
         const rowIdxs = page.rows
-        // Pad each sheet's table to a full height so every sheet looks identical.
+        const isLast = pageIdx === totalPages - 1
+        // This sheet's own rows; a single sheet's are the whole document's.
+        const pageItems = rowIdxs.map(i => items[i])
+        const pageTotals = multiPage ? computeColumnTotals(cols, pageItems) : columnTotals
+        const totalsRow = (label: string, totals: Record<string, number>) => (
+          <tr className="font-bold">
+            <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>{label}</td>
+            {vcols.slice(firstNumericIdx).map(col => (
+              <td key={col.key} className="border border-black px-1 py-1 text-right">
+                {isTextCol(col.type) ? '' : money(totals[col.key] ?? 0)}
+              </td>
+            ))}
+          </tr>
+        )
 
         return (
           <div key={pageIdx} className="doc-page bg-white p-6 text-xs">
@@ -260,22 +278,15 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
                 ))}
                 {/* No blank rows ruled under the last one: the table ends where
                     the document does, and the space goes to whoever needs it. */}
-                {/* แถวรวม — ยอดรวมทั้งหมด แสดงเหมือนกันทุกแผ่น (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
-                {hasNumericCols && (
-                  <tr className="font-bold">
-                    <td className="border border-black px-1 py-1 text-right" colSpan={labelSpan}>รวมทั้งสิ้น</td>
-                    {vcols.slice(firstNumericIdx).map(col => (
-                      <td key={col.key} className="border border-black px-1 py-1 text-right">
-                        {isTextCol(col.type) ? '' : money(columnTotals[col.key] ?? 0)}
-                      </td>
-                    ))}
-                  </tr>
-                )}
+                {/* แถวรวม — แผ่นเดียว: รวมทั้งสิ้น · หลายแผ่น: รวมของแผ่นนั้น และแผ่นสุดท้ายมีรวมทุกหน้าอีกแถว
+                    (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข) */}
+                {hasNumericCols && totalsRow(multiPage ? 'รวมหน้านี้' : 'รวมทั้งสิ้น', pageTotals)}
+                {hasNumericCols && multiPage && isLast && totalsRow('รวมทั้งสิ้นทุกหน้า', columnTotals)}
               </tbody>
             </table>
 
-            {/* VAT / หัก ณ ที่จ่าย / ยอดสุทธิ */}
-            {hasTax && (
+            {/* VAT / หัก ณ ที่จ่าย / ยอดสุทธิ — figures for the whole document, so on its last sheet */}
+            {hasTax && isLast && (
               <div className="mt-2 ml-auto w-56 text-[10px]">
                 <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
                 {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(scopes.vat === 'rows', bases.vat, ROW_VAT_KEY)}</span><span>{money(tax.vatAmount)}</span></div>}
@@ -301,7 +312,9 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
             {/* เป็นจำนวนเงิน (ซ่อนถ้าไม่มีคอลัมน์ตัวเลข หรือปิดการแสดง) */}
             {hasNumericCols && settings.showAmountWords !== false && (
               <div className="mt-2 border border-black px-2 py-1 text-center">
-                เป็นจำนวนเงิน &nbsp; {bahtWords}
+                {!multiPage ? <>เป็นจำนวนเงิน &nbsp; {bahtWords}</>
+                  : isLast ? <>เป็นจำนวนเงินรวมทุกหน้า &nbsp; {bahtWords}</>
+                  : <>เป็นจำนวนเงินหน้านี้ &nbsp; {bahtText(grandTotal(cols, pageItems))}</>}
               </div>
             )}
 

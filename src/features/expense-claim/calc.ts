@@ -300,6 +300,7 @@ export interface SheetParts {
   showAmountWords?: boolean
   signatureRows?: number
   noteLines?: number       // the notes, including their heading
+  totalRows?: number       // total rows under the table (default 1; 2 on a last sheet that also sums every sheet)
 }
 export function sheetOverheadMm(p: SheetParts): number {
   const paragraphs = (p.introLines ?? 0) + (p.bodyLines ?? 0)
@@ -310,7 +311,7 @@ export function sheetOverheadMm(p: SheetParts): number {
     + (p.introLines ? PARAGRAPH_BLOCK_MM : 0) + (p.bodyLines ? PARAGRAPH_BLOCK_MM : 0)
     + paragraphs * TEXT_LINE_MM
     + (p.headLines ?? 1) * TABLE_LINE_MM + THEAD_PADDING_MM
-    + TOTALS_ROW_MM
+    + (p.totalRows ?? 1) * TOTALS_ROW_MM
     + (p.taxLines ? TAX_BLOCK_MM + p.taxLines * TAX_LINE_MM : 0)
     + (p.showAmountWords ? BAHT_BOX_MM : 0)
     + (p.signatureRows ?? 0) * SIGNATURE_ROW_MM
