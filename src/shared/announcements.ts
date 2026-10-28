@@ -29,7 +29,7 @@ export interface Announcement {
 // Newest first.
 export const ANNOUNCEMENTS: Announcement[] = [
   {
-    date: '2026-10-28',
+    date: '2026-10-29',
     title: 'แก้เอกสารที่อนุมัติแล้ว โดยไม่มีฉบับผิดค้างในระบบ',
     note: 'ต้องให้ผู้ดูแลระบบอัปเดตฐานข้อมูลก่อน จึงจะยกเลิกเอกสารได้',
     items: [
