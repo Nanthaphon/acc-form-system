@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { writeSkippingMissing } from './formSettings'
+import { settingsRow, writeSkippingMissing } from './formSettings'
+import type { FormSettings } from '../types/schema'
 
 const missing = (col: string) => ({ error: { code: 'PGRST204', message: `Could not find the '${col}' column of 'form_settings' in the schema cache` } })
 const ok = { error: null }
@@ -30,5 +31,19 @@ describe('writeSkippingMissing', () => {
     const write = vi.fn().mockResolvedValue(missing('zzz'))
     await expect(writeSkippingMissing(write, { a: 1 })).rejects.toMatchObject({ code: 'PGRST204' })
     expect(write).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('settingsRow', () => {
+  // The ลำดับ width is stored in a whole-number column; 23% of the table is
+  // 43.7mm, and sending that made the database refuse the whole save.
+  it('writes the ลำดับ width as whole millimetres', () => {
+    expect(settingsRow({ seqWidth: 43.7 } as FormSettings).seqWidth).toBe(44)
+    expect(settingsRow({ seqWidth: 9.5 } as FormSettings).seqWidth).toBe(10)
+  })
+
+  it('leaves a width that was never set alone', () => {
+    expect(settingsRow({ seqWidth: null } as FormSettings).seqWidth).toBeNull()
+    expect(settingsRow({} as FormSettings)).not.toHaveProperty('seqWidth')
   })
 })

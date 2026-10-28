@@ -80,10 +80,18 @@ export async function deleteForm(formType: string): Promise<void> {
   if (error) throw error
 }
 
+// The row as the table takes it. "seqWidth" is a whole-number column, while a
+// width set in percent comes out in fractions of a millimetre (23% = 43.7mm) —
+// written as it is, the whole save is refused. Half a millimetre either way
+// does not show on paper.
+export function settingsRow(fs: FormSettings): FormSettings {
+  return typeof fs.seqWidth === 'number' ? { ...fs, seqWidth: Math.round(fs.seqWidth) || null } : fs
+}
+
 // Saves a form's settings. Returns the columns the database doesn't have yet
 // (skipped) so the caller can tell the admin what wasn't stored.
 export async function updateFormSettings(fs: FormSettings): Promise<string[]> {
-  const skipped = await writeSkippingMissing(r => supabase.from('form_settings').upsert(r), { ...fs, updatedAt: Date.now() })
+  const skipped = await writeSkippingMissing(r => supabase.from('form_settings').upsert(r), { ...settingsRow(fs), updatedAt: Date.now() })
   // Without the multi-group column, keep the first chosen group in the old single field.
   if (skipped.includes('accessGroups')) {
     const { error } = await supabase.from('form_settings')
