@@ -7,6 +7,7 @@ import { RequireAuth } from './auth/RequireAuth'
 import { RequireAdmin } from './auth/RequireAdmin'
 import Layout from './components/Layout'
 import DialogHost from './components/dialog/DialogHost'
+import EnvBanner from './components/EnvBanner'
 import LoginPage from './pages/LoginPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProfilePage from './pages/ProfilePage'
@@ -68,6 +69,6 @@ document.addEventListener('wheel', () => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider><RouterProvider router={router} /><DialogHost /></AuthProvider>
+    <AuthProvider><RouterProvider router={router} /><DialogHost /><EnvBanner /></AuthProvider>
   </StrictMode>,
 )
