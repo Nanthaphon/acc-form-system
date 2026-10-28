@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { autoValue, blankFor, countDottedBlanks, dotsToTokens, formatTemplateValue, makeToken, parseTemplate, splitOptions, templateFields } from './bodyTemplate'
+import { autoValue, blankFor, countDottedBlanks, dotsToTokens, formatTemplateValue, makeToken, parseTemplate, splitOptions, templateFields, selectTokens } from './bodyTemplate'
 
 describe('parseTemplate', () => {
   it('splits text and fields, keeping the text around them', () => {
@@ -149,5 +149,15 @@ describe('automatic fields', () => {
     expect(autoValue('amount', { amount: 0 })).toBe('')
     expect(autoValue('amountText', { amount: 0 })).toBe('')
     expect(autoValue('company', { company: null })).toBe('')
+  })
+})
+
+describe('selectTokens', () => {
+  it('finds each dropdown and where its token sits', () => {
+    const text = 'จ่าย {{ธนาคาร:เลือก=กรุงเทพ|กสิกร}} บัญชี {{เลขบัญชี}}'
+    const [t] = selectTokens(text)
+    expect(selectTokens(text)).toHaveLength(1)
+    expect(t).toMatchObject({ label: 'ธนาคาร', options: ['กรุงเทพ', 'กสิกร'] })
+    expect(text.slice(t.start, t.end)).toBe('{{ธนาคาร:เลือก=กรุงเทพ|กสิกร}}')
   })
 })

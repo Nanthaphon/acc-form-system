@@ -157,6 +157,31 @@ export function splitOptions(typed: string): string[] {
   return cleanOptions(typed.split(/[,\n|]/))
 }
 
+// Every dropdown written in the text, with where its token sits — so one can be
+// opened again and its choices edited without touching the {{…}} by hand.
+export interface SelectToken { start: number; end: number; label: string; options: string[] }
+export function selectTokens(text: string): SelectToken[] {
+  const out: SelectToken[] = []
+  for (const m of text.matchAll(TOKEN)) {
+    const f = parseToken(m[1])
+    if (f?.type === 'select') out.push({ start: m.index, end: m.index + m[0].length, label: f.label, options: f.options ?? [] })
+  }
+  return out
+}
+
+// Ready-made choice lists, added in one click instead of typed one by one.
+export const OPTION_PRESETS: { label: string; options: string[] }[] = [
+  {
+    label: 'ธนาคารในไทย',
+    options: [
+      'ธนาคารกรุงเทพ', 'ธนาคารกสิกรไทย', 'ธนาคารกรุงไทย', 'ธนาคารไทยพาณิชย์', 'ธนาคารกรุงศรีอยุธยา',
+      'ธนาคารทีทีบี', 'ธนาคารยูโอบี', 'ธนาคารซีไอเอ็มบี ไทย', 'ธนาคารเกียรตินาคินภัทร', 'ธนาคารทิสโก้',
+      'ธนาคารแลนด์ แอนด์ เฮ้าส์', 'ธนาคารไอซีบีซี (ไทย)', 'ธนาคารสแตนดาร์ดชาร์เตอร์ด (ไทย)',
+      'ธนาคารออมสิน', 'ธนาคารอาคารสงเคราะห์', 'ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร',
+    ],
+  },
+]
+
 export function countDottedBlanks(text: string): number {
   return (text.match(DOTS) ?? []).length
 }
