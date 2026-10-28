@@ -69,6 +69,26 @@ export async function createForm(name: string, groupId: string): Promise<string>
   return newId
 }
 
+// A copy of a form, to make a similar one without building it from nothing:
+// every setting — columns, paragraphs, signature lines, who may see it — comes
+// along. Two things do not. The form code stays blank: document numbers are
+// counted per form, so two forms sharing a code would hand out the same number
+// twice. And the copy starts closed (ปิดปรับปรุง), so nobody fills it in
+// before it has been told apart from the original.
+export function duplicateRow(src: FormSettings, name: string, newId: string, now: number): FormSettings {
+  return {
+    ...src,
+    formType: newId, name, title: name, formCode: '',
+    active: false, createdAt: now, updatedAt: now,
+  }
+}
+
+export async function duplicateForm(src: FormSettings, name: string): Promise<string> {
+  const newId = crypto.randomUUID()
+  await writeSkippingMissing(r => supabase.from('form_settings').insert(r), { ...settingsRow(duplicateRow(src, name, newId, Date.now())) })
+  return newId
+}
+
 export async function renameForm(formType: string, name: string): Promise<void> {
   // Keep the document title (หัวเอกสาร) in sync with the form name.
   await writeSkippingMissing(r => supabase.from('form_settings').update(r).eq('formType', formType),

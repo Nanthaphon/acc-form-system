@@ -2,14 +2,14 @@ import { uiAlert, uiConfirm, uiPrompt } from '../components/dialog/dialogService
 import { dbErrorMessage } from '../shared/dbError'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, FileText, Folder, LayoutGrid, List, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, CopyPlus, FileText, Folder, LayoutGrid, List, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
 import ActionIconButton from '../components/ActionIconButton'
 import { PageHeader, ui } from '../components/ui'
 import { useAuth } from '../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../types/schema'
 import { isActive, canSeeForm } from '../types/schema'
 import { listGroups, renameGroup } from '../data/formGroups'
-import { listForms, createForm, renameForm, deleteForm, setFormActive } from '../data/formSettings'
+import { listForms, createForm, duplicateForm, renameForm, deleteForm, setFormActive } from '../data/formSettings'
 import { filterAndSortForms, formDisplayName, FORM_SORT_LABELS } from '../shared/formSort'
 import type { FormSortKey, SortDir } from '../shared/formSort'
 import { formatDate } from '../shared/date'
@@ -93,6 +93,18 @@ export default function GroupPage() {
       const newId = await createForm(name, groupId)
       nav(`/form/${newId}/edit`)
     } catch (e) { uiAlert(dbErrorMessage(e), { title: 'สร้างฟอร์มไม่สำเร็จ' }) }
+  }
+
+  // A similar form starts from a copy of this one rather than from nothing.
+  async function onDuplicateForm(form: FormSettings) {
+    const name = (await uiPrompt('ตั้งค่าทุกอย่างคัดลอกมาด้วย · รหัสฟอร์มเว้นว่างให้ตั้งใหม่ (กันเลขที่เอกสารซ้ำ) · ฟอร์มใหม่ปิดปรับปรุงไว้ก่อน', {
+      title: 'ทำสำเนาฟอร์ม', defaultValue: `${formDisplayName(form)} (สำเนา)`, confirmText: 'ทำสำเนา',
+    }))?.trim()
+    if (!name) return
+    try {
+      const newId = await duplicateForm(form, name)
+      nav(`/form/${newId}/edit`)
+    } catch (e) { uiAlert(dbErrorMessage(e), { title: 'ทำสำเนาฟอร์มไม่สำเร็จ' }) }
   }
 
   async function onRenameForm(form: FormSettings) {
@@ -185,7 +197,7 @@ export default function GroupPage() {
       )}
 
       {view === 'card' && shownForms.length > 0 && (
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {shownForms.map(form => {
           const stamp = showCreated ? form.createdAt : form.updatedAt
           return (
@@ -220,6 +232,11 @@ export default function GroupPage() {
                     label="เปลี่ยนชื่อฟอร์ม"
                     icon={<Pencil size={16} />}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRenameForm(form) }}
+                  />
+                  <ActionIconButton
+                    label="ทำสำเนาฟอร์ม"
+                    icon={<CopyPlus size={16} />}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDuplicateForm(form) }}
                   />
                   <ActionIconButton
                     label="ลบฟอร์ม"
@@ -267,6 +284,7 @@ export default function GroupPage() {
                       </span>
                       <ActionIconButton label="ตั้งค่าฟอร์ม" icon={<Settings size={16} />} onClick={() => nav(`/form/${form.formType}/edit`)} />
                       <ActionIconButton label="เปลี่ยนชื่อฟอร์ม" icon={<Pencil size={16} />} onClick={() => onRenameForm(form)} />
+                      <ActionIconButton label="ทำสำเนาฟอร์ม" icon={<CopyPlus size={16} />} onClick={() => onDuplicateForm(form)} />
                       <ActionIconButton label="ลบฟอร์ม" tone="red" icon={<Trash2 size={16} />} onClick={() => onDeleteForm(form)} />
                     </div>
                   )}

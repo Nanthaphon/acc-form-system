@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { settingsRow, writeSkippingMissing } from './formSettings'
+import { duplicateRow, settingsRow, writeSkippingMissing } from './formSettings'
 import type { FormSettings } from '../types/schema'
 
 const missing = (col: string) => ({ error: { code: 'PGRST204', message: `Could not find the '${col}' column of 'form_settings' in the schema cache` } })
@@ -45,5 +45,31 @@ describe('settingsRow', () => {
   it('leaves a width that was never set alone', () => {
     expect(settingsRow({ seqWidth: null } as FormSettings).seqWidth).toBeNull()
     expect(settingsRow({} as FormSettings)).not.toHaveProperty('seqWidth')
+  })
+})
+
+describe('duplicateRow', () => {
+  const src = {
+    formType: 'f1', name: 'ใบเบิก', title: 'ใบเบิก', formCode: 'GAC69-005', groupId: 'g1', active: true,
+    subject: 'ขออนุมัติ', attention: '', categories: ['ค่าเดินทาง'], notes: ['1. หมายเหตุ'],
+    columns: [{ key: 'amount', label: 'จำนวนเงิน', type: 'number' }], bodyText: 'เลขบัญชี {{เลขบัญชี}}',
+    signatureBlocks: [{ id: 'maker', label: 'ผู้เบิก' }], accessGroups: ['acc'], createdAt: 1, updatedAt: 1,
+  } as FormSettings
+
+  it('copies every setting under a new id and name', () => {
+    const copy = duplicateRow(src, 'ใบเบิก (สำเนา)', 'f2', 99)
+    expect(copy).toMatchObject({ formType: 'f2', name: 'ใบเบิก (สำเนา)', title: 'ใบเบิก (สำเนา)', groupId: 'g1', createdAt: 99, updatedAt: 99 })
+    expect(copy.columns).toEqual(src.columns)
+    expect(copy.bodyText).toBe(src.bodyText)
+    expect(copy.signatureBlocks).toEqual(src.signatureBlocks)
+    expect(copy.accessGroups).toEqual(src.accessGroups)
+  })
+
+  // Numbers are counted per form: a shared code would give two documents one number.
+  it('leaves the form code blank, and the copy closed until it is ready', () => {
+    const copy = duplicateRow(src, 'x', 'f2', 99)
+    expect(copy.formCode).toBe('')
+    expect(copy.active).toBe(false)
+    expect(src.formCode).toBe('GAC69-005')
   })
 })
