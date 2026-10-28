@@ -135,10 +135,40 @@ export async function cancelSigning(subId: string): Promise<void> {
   if (error) throw error
   notifyPendingSignChanged()
 }
+// ----- Cancelling a document -----
+// A document found wrong after it was signed is cancelled rather than deleted:
+// it stays as a record, marked ยกเลิก with the reason, and — when a corrected
+// one was made — linked to it both ways (void_submission in
+// supabase/2026-10-28-void-documents.sql).
+export async function voidSubmission(subId: string, reason: string, replacedBy?: string): Promise<void> {
+  const { error } = await supabase.rpc('void_submission', { sub_id: subId, reason, replaced_by: replacedBy ?? null })
+  if (error) throw voidError(error)
+  notifyPendingSignChanged() // anyone still asked to sign it no longer is
+}
+// Cancelled by mistake: an admin brings it back.
+export async function unvoidSubmission(subId: string): Promise<void> {
+  const { error } = await supabase.rpc('unvoid_submission', { sub_id: subId })
+  if (error) throw voidError(error)
+}
+// Before the SQL has been run the function does not exist yet.
+function voidError(e: { code?: string; message?: string }): Error {
+  const missing = e.code === 'PGRST202' || e.code === '42883' || /could not find the function/i.test(e.message ?? '')
+  return new Error(missing ? 'ระบบยังไม่พร้อมยกเลิกเอกสาร — ผู้ดูแลระบบต้องรัน supabase/2026-10-28-void-documents.sql ก่อน' : (e.message || 'เกิดข้อผิดพลาด'))
+}
+export function isVoided(s: Pick<SubmissionSummary, 'voided'>): boolean {
+  return !!s.voided
+}
+
 // ----- Document lists -----
 // Columns the lists show. Item rows and attachments are only needed on the
 // document itself, so lists skip them.
 const LIST_COLS = 'id,formType,docNumber,header,totals,createdBy,createdByEmployeeId,createdAt,updatedAt,printCount,lastPrintedAt'
+// voided/replaces arrive with supabase/2026-10-28-void-documents.sql; until it
+// is run the lists load without them.
+let hasVoidCols = true
+// Whether cancelling is set up in the database — known once a list has loaded.
+// Until then the screens offer no way to cancel or correct a signed document.
+export function voidingAvailable(): boolean { return hasVoidCols }
 // Every signed block carries a full copy of the signer's image, far too heavy to
 // download for a whole list. signatures_light() (supabase/2026-09-11-list-performance.sql)
 // returns the array without the images; until that SQL has been run, fall back
@@ -149,13 +179,16 @@ function listQuery(cols: string) { return supabase.from('submissions').select(co
 type ListQuery = ReturnType<typeof listQuery>
 
 async function listRows(refine: (q: ListQuery) => ListQuery): Promise<SubmissionSummary[]> {
-  if (hasLightSigs) {
-    const { data, error } = await refine(listQuery(`${LIST_COLS},signatures:signatures_light`))
+  for (;;) {
+    const cols = `${LIST_COLS}${hasVoidCols ? ',voided,replaces' : ''},signatures${hasLightSigs ? ':signatures_light' : ''}`
+    const { data, error } = await refine(listQuery(cols))
     if (!error) return (data ?? []) as unknown as SubmissionSummary[]
-    if (error.code === '42703') hasLightSigs = false // function not installed yet
+    // A column or function not installed yet: drop it and ask again.
+    if (error.code === '42703' && /void|replaces/i.test(error.message ?? '') && hasVoidCols) { hasVoidCols = false; continue }
+    if (error.code === '42703' && hasLightSigs) { hasLightSigs = false; continue }
+    if (error.code === '42703' && hasVoidCols) { hasVoidCols = false; continue }
+    return []
   }
-  const { data } = await refine(listQuery(`${LIST_COLS},signatures`))
-  return (data ?? []) as unknown as SubmissionSummary[]
 }
 // jsonb containment on signatures: the database does the matching.
 const signedBy = (entry: Partial<DocSignature>) => JSON.stringify([entry])
@@ -210,6 +243,7 @@ export function hasUnsignedLine(s: Pick<SubmissionSummary, 'signatures'>, blocks
 //   some pending  -> รอลายเซ็น
 //   all signed    -> เซ็นครบ (ผู้เบิกเซ็นแล้ว when the requester is the only one)
 export function subStatus(s: SubmissionSummary): SubmissionStatus {
+  if (s.voided) return 'void'
   const sigs = s.signatures ?? []
   if (sigs.length === 0) return 'done'
   return sigs.every(x => x.status === 'signed') ? 'signed' : 'pending'
@@ -218,6 +252,7 @@ const STATUS_META: Record<SubmissionStatus, { label: string; className: string }
   done: { label: 'บันทึกแล้ว', className: 'bg-clay-50 text-clay-700' },
   pending: { label: 'รอลายเซ็น', className: 'bg-ochre-50 text-ochre-700' },
   signed: { label: 'เซ็นครบ', className: 'bg-olive-50 text-olive-700' },
+  void: { label: 'ยกเลิก', className: 'bg-rose-50 text-brick-700' },
 }
 export function statusMeta(s: SubmissionStatus) { return STATUS_META[s] }
 

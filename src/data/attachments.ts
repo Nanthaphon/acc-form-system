@@ -60,6 +60,32 @@ export async function deleteAttachmentFiles(paths: string[]): Promise<void> {
   try { await supabase.storage.from(ATTACHMENT_BUCKET).remove(paths) } catch { /* ignore */ }
 }
 
+// Whether a file is stored under this document, or still under the one it was
+// carried over from (a corrected document starts with its original's receipts).
+export function storedUnder(subId: string, a: Attachment): boolean {
+  return a.path.startsWith(`${subId}/`)
+}
+
+// Copies files carried over from another document under this one, so each
+// document owns its files and deleting one never takes the other's receipts.
+// All-or-nothing, like uploadAttachments.
+export async function copyAttachmentsTo(subId: string, list: Attachment[]): Promise<Attachment[]> {
+  const done: Attachment[] = []
+  try {
+    for (const a of list) {
+      if (storedUnder(subId, a)) { done.push(a); continue }
+      const path = objectKey(subId, a.name)
+      const { error } = await supabase.storage.from(ATTACHMENT_BUCKET).copy(a.path, path)
+      if (error) throw error
+      done.push({ ...a, path })
+    }
+    return done
+  } catch (e) {
+    await deleteAttachmentFiles(done.filter((a, i) => a.path !== list[i].path).map(a => a.path))
+    throw e
+  }
+}
+
 export async function saveAttachmentList(subId: string, list: Attachment[]): Promise<void> {
   const { error } = await supabase.from('submissions').update({ attachments: list }).eq('id', subId)
   if (error) throw error

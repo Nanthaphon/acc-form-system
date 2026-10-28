@@ -1,11 +1,11 @@
-import { uiAlert } from '../../components/dialog/dialogService'
+import { uiAlert, uiPrompt } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Check, Eye, History, Lock, Pencil, Printer, Save } from 'lucide-react'
+import { Ban, Check, Eye, FilePen, History, Lock, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
-import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment, SubmissionSummary } from '../../types/schema'
+import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment, SubmissionSummary, VoidInfo } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
 import { computeColumnTotals, grandTotal, taxBases, taxSummary } from '../../features/expense-claim/calc'
 import { FEATURES } from '../../shared/features'
@@ -13,10 +13,10 @@ import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
 import VersionHistory from '../../components/VersionHistory'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { createSubmission, updateSubmission, getSubmission, incrementPrint, isSigned, signBlockAsSelf, cancelSigning, unsignDocument } from '../../data/submissions'
+import { createSubmission, updateSubmission, getSubmission, incrementPrint, isSigned, signBlockAsSelf, cancelSigning, unsignDocument, voidSubmission } from '../../data/submissions'
 import { getCompany, listCompanies } from '../../data/companies'
 import { getFormSettings } from '../../data/formSettings'
-import { uploadAttachments, deleteAttachmentFiles, saveAttachmentList } from '../../data/attachments'
+import { uploadAttachments, deleteAttachmentFiles, saveAttachmentList, copyAttachmentsTo, storedUnder } from '../../data/attachments'
 import AttachmentsField from '../../components/AttachmentsField'
 import OwnSignatureToggle from '../../components/OwnSignatureToggle'
 import { Spinner } from '../../components/Spinner'
@@ -31,6 +31,10 @@ export default function FormPage() {
   const { id, formType } = useParams()
   const [searchParams] = useSearchParams()
   const cloneId = searchParams.get('clone')
+  // Correcting a document others have signed: a new document from its content,
+  // and the original cancelled in its favour once the new one is saved.
+  const reviseId = searchParams.get('revise')
+  const sourceId = cloneId ?? reviseId
   const { profile, refresh: refreshProfile } = useAuth()
   const nav = useNavigate()
   const [company, setCompany] = useState<Company | null>(null)
@@ -47,6 +51,8 @@ export default function FormPage() {
   const [saving, setSaving] = useState(false)
   const [ownerUid, setOwnerUid] = useState<string | null>(null) // null: a new document, which is mine
   const [signMine, setSignMine] = useState(true)
+  const [voided, setVoided] = useState<VoidInfo | null>(null)                           // this document was cancelled
+  const [revising, setRevising] = useState<{ id: string; docNumber: string } | null>(null) // the one this new document corrects
   const [header, setHeader] = useState<ExpenseHeader>({
     subject: 'ขออนุมัติเบิกค่าใช้จ่าย', categories: [], companyId: profile?.companyId ?? '',
     firstName: profile?.firstName ?? '', lastName: profile?.lastName ?? '',
@@ -82,35 +88,38 @@ export default function FormPage() {
     getSubmission(id).then(s => {
       if (!s) return
       setHeader(s.header); setItems(s.items); setDocNumber(s.docNumber); setSavedId(s.id)
-      setSigs(s.signatures ?? []); setOwnerUid(s.createdBy)
+      setSigs(s.signatures ?? []); setOwnerUid(s.createdBy); setVoided(s.voided ?? null)
       setAttachments(s.attachments ?? [])
       setLoaded({ header: s.header, items: s.items, updatedAt: s.updatedAt ?? 0 })
       getFormSettings(s.formType).then(setSettings)
     })
   }, [id])
   useEffect(() => { // NEW mode: load the form settings for this formType
-    if (id || !formType || cloneId) return
+    if (id || !formType || sourceId) return
     getFormSettings(formType).then(fs => {
       const fresh = [emptyRow(fs.columns)]
       setSettings(fs); setItems(fresh)
       setLoaded({ header: headerNow.current, items: fresh, updatedAt: 0 })
     })
-  }, [id, formType, cloneId])
-  useEffect(() => { // CLONE mode: prefill from a source doc but stay a NEW (unsaved) doc
-    if (id || !cloneId) return
-    getSubmission(cloneId).then(s => {
+  }, [id, formType, sourceId])
+  useEffect(() => { // CLONE / REVISE mode: prefill from a source doc but stay a NEW (unsaved) doc
+    if (id || !sourceId) return
+    getSubmission(sourceId).then(s => {
       if (!s) return
       setHeader(s.header); setItems(s.items) // copy content only — new number is assigned on save
+      // A correction keeps the original's receipts (copied over on save); one
+      // already cancelled is simply copied.
+      if (reviseId && !s.voided) { setRevising({ id: s.id, docNumber: s.docNumber }); setAttachments(s.attachments ?? []) }
       setLoaded({ header: s.header, items: s.items, updatedAt: 0 })
       getFormSettings(s.formType).then(setSettings)
     })
-  }, [id, cloneId])
+  }, [id, sourceId, reviseId])
 
   // ----- Draft -----
   // What is typed is kept in this browser as it is typed, so leaving for
   // another menu does not lose it; coming back puts it back. Keyed by the
   // document as saved: once a new one is saved it is that document's draft.
-  const draftKey = formDraftKey(profile?.uid ?? '', { id: savedId, cloneId: savedId ? null : cloneId, formType })
+  const draftKey = formDraftKey(profile?.uid ?? '', { id: savedId, cloneId: savedId ? null : (cloneId ?? (reviseId ? `revise-${reviseId}` : null)), formType })
   const baseline = useRef<string | null>(null)       // the content nothing needs keeping beyond
   const restoreTried = useRef(false)
   const [restoredAt, setRestoredAt] = useState<number | null>(null)
@@ -149,6 +158,16 @@ export default function FormPage() {
       uiAlert('กรุณากรอกชื่อ นามสกุล และตำแหน่งให้ครบถ้วน')
       return
     }
+    // Why the original is being replaced — kept on it as it is cancelled.
+    let reviseReason = ''
+    if (revising) {
+      const typed = await uiPrompt(`เมื่อบันทึก จะได้เอกสารเลขที่ใหม่ และ ${revising.docNumber} จะขึ้นว่า "ยกเลิก"`, {
+        title: 'เหตุผลที่แก้ไข', placeholder: 'เช่น กรอกยอดผิด', confirmText: 'บันทึกฉบับใหม่',
+      })
+      if (typed === null) return
+      if (!typed.trim()) { uiAlert('กรุณาระบุเหตุผลที่แก้ไข', { title: 'ยังไม่ได้บันทึก' }); return }
+      reviseReason = typed.trim()
+    }
     setSaving(true)
     try {
       // A signed document cannot be changed (protect_signed_content): the
@@ -156,7 +175,9 @@ export default function FormPage() {
       // change is saved — they need never know the document was locked.
       if (ownSigned && !(await takeOwnSignatureOff())) return
       const subId = await persist(totals)
-      if (!subId || !(await stampMySignature(subId))) return
+      if (!subId) return
+      if (revising) await voidOriginal(subId, reviseReason)
+      if (!(await stampMySignature(subId))) return
       await print(subId, true)
     } finally { setSaving(false) }
   }
@@ -182,6 +203,19 @@ export default function FormPage() {
       uiAlert(`บันทึกเอกสารแล้ว แต่ใส่ลายเซ็นไม่สำเร็จ (${dbErrorMessage(e)}) — กด “บันทึกและพิมพ์” อีกครั้งเพื่อลองใหม่`, { title: 'ใส่ลายเซ็นไม่สำเร็จ' })
       return false
     }
+  }
+
+  // The corrected document is saved: the original is cancelled in its favour.
+  // Failing here leaves both — the new one is kept, and the person is told to
+  // cancel the original from the history page.
+  async function voidOriginal(newId: string, reason: string) {
+    if (!revising) return
+    try {
+      await voidSubmission(revising.id, reason, newId)
+    } catch (e) {
+      uiAlert(`บันทึกฉบับใหม่แล้ว แต่ยกเลิกฉบับเดิม ${revising.docNumber} ไม่สำเร็จ (${(e as Error).message}) — ไปกด “ยกเลิกเอกสาร” ที่ฉบับเดิมในหน้าประวัติ`, { title: 'ยกเลิกฉบับเดิมไม่สำเร็จ' })
+    }
+    setRevising(null)
   }
 
   // Take the requester's own signature off so the document can be changed.
@@ -233,11 +267,17 @@ export default function FormPage() {
       return null
     }
 
-    if (subId && (pendingFiles.length || removedAtts.length)) {
-      let uploaded: Attachment[] = []
+    // Files carried over from the document being corrected are still stored
+    // under it until they are copied here.
+    const carried = subId ? attachments.filter(a => !storedUnder(subId!, a)) : []
+    if (subId && (pendingFiles.length || removedAtts.length || carried.length)) {
+      let uploaded: Attachment[] = []   // made now — undone if the rest fails
       try {
-        if (pendingFiles.length) uploaded = await uploadAttachments(subId, pendingFiles)
-        const next = [...attachments, ...uploaded]
+        const own = carried.length ? await copyAttachmentsTo(subId, attachments) : attachments
+        uploaded = own.filter(a => !attachments.includes(a))
+        const fresh = pendingFiles.length ? await uploadAttachments(subId, pendingFiles) : []
+        uploaded = [...uploaded, ...fresh]
+        const next = [...own, ...fresh]
         await saveAttachmentList(subId, next)
         await deleteAttachmentFiles(removedAtts.map(a => a.path))
         setAttachments(next); setPendingFiles([]); setRemovedAtts([])
@@ -280,7 +320,7 @@ export default function FormPage() {
   // signature off and puts it back (saveAndPrint). Signed by anyone else: frozen,
   // and the boxes are shut so nothing can be typed that will not be kept.
   const ownSigned = locked && isMine && sigs.filter(x => x.status === 'signed').every(x => x.assignedUid === profile?.uid)
-  const frozen = locked && !ownSigned
+  const frozen = (locked && !ownSigned) || !!voided
 
   // Keep the draft as it is typed — gone again once it matches what is saved.
   // A frozen document cannot be changed, so it has nothing to keep.
@@ -328,10 +368,29 @@ export default function FormPage() {
   return (
     <div>
       <div className="no-print space-y-4">
-        {frozen && (
+        {voided && (
+          <div className="flex items-start gap-2 rounded-lg bg-rose-50 px-4 py-3 text-sm text-brick-700">
+            <Ban size={16} className="mt-0.5 shrink-0" />
+            <span>
+              เอกสารนี้ถูกยกเลิกแล้ว — {voided.reason}
+              {voided.replacedByNumber && <> · ฉบับแก้ไขคือ <span className="font-mono font-medium">{voided.replacedByNumber}</span></>}
+              <span className="block text-xs">โดย {voided.byName || '—'} · {formatDateTime(voided.at)}</span>
+            </span>
+          </div>
+        )}
+        {revising && (
+          <div className="flex items-start gap-2 rounded-lg border border-clay-200 bg-clay-50 px-4 py-3 text-sm text-clay-800">
+            <FilePen size={16} className="mt-0.5 shrink-0" />
+            <span>
+              กำลังแก้ไข <span className="font-mono font-medium">{revising.docNumber}</span> เป็นฉบับใหม่ — กด “บันทึกและพิมพ์” แล้วจะได้เลขที่ใหม่
+              และ {revising.docNumber} จะขึ้นว่า “ยกเลิก” (ยังเก็บไว้ดูได้) · ไฟล์แนบเดิมติดมาด้วย
+            </span>
+          </div>
+        )}
+        {frozen && !voided && (
           <div className="flex items-center gap-2 rounded-lg bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
             <Lock size={16} className="shrink-0" />
-            เอกสารนี้มีคนเซ็นแล้ว จึงแก้ไขเนื้อหาไม่ได้ — ถ้าต้องแก้ ให้ยกเลิกการส่งเซ็นที่หน้าประวัติก่อน
+            เอกสารนี้มีคนเซ็นแล้ว จึงแก้ไขเนื้อหาไม่ได้ — ถ้าต้องแก้ กด “แก้ไข” ที่หน้าประวัติ ระบบจะออกเป็นฉบับใหม่และยกเลิกฉบับนี้ให้
           </div>
         )}
         <PageHeader
@@ -383,14 +442,18 @@ export default function FormPage() {
             saved={attachments}
             pending={pendingFiles}
             onAdd={files => setPendingFiles(p => [...p, ...files])}
-            onRemoveSaved={a => { setAttachments(list => list.filter(x => x.path !== a.path)); setRemovedAtts(r => [...r, a]) }}
+            onRemoveSaved={a => {
+              setAttachments(list => list.filter(x => x.path !== a.path))
+              // A file still belonging to the original is just left off this one.
+              if (savedId && storedUnder(savedId, a)) setRemovedAtts(r => [...r, a])
+            }}
             onRemovePending={i => setPendingFiles(p => p.filter((_, x) => x !== i))}
           />
         )}
         </fieldset>
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
-        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sheetSigs} />
+        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sheetSigs} voided={!!voided} />
       </div>
       {!frozen && isMine && requesterBlock && (
         <div className="no-print mt-4">
@@ -405,7 +468,7 @@ export default function FormPage() {
           className={ui.btnPrimary}
           onClick={saveAndPrint}
           disabled={saving}
-          title={frozen ? 'เอกสารมีคนเซ็นแล้ว แก้ไขไม่ได้ — พิมพ์ได้อย่างเดียว' : undefined}
+          title={voided ? 'เอกสารถูกยกเลิกแล้ว — พิมพ์ได้อย่างเดียว' : frozen ? 'เอกสารมีคนเซ็นแล้ว แก้ไขไม่ได้ — พิมพ์ได้อย่างเดียว' : undefined}
         >
           {saving ? <><Spinner size={16} /> กำลังบันทึก...</>
             : frozen ? <><Printer size={16} /> พิมพ์ / บันทึก PDF</>

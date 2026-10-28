@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Eye, FileText, Printer } from 'lucide-react'
+import { Ban, Eye, FileText, Printer } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import ExpenseClaimPreview from '../features/expense-claim/ExpenseClaimPreview'
 import { getSubmission, incrementPrint } from '../data/submissions'
@@ -10,6 +10,7 @@ import type { Submission, FormSettings, Company } from '../types/schema'
 import AttachmentsField from '../components/AttachmentsField'
 import { Spinner } from '../components/Spinner'
 import { PageHeader, ui } from '../components/ui'
+import { formatDateTime } from '../shared/date'
 
 export default function SubmissionPreviewPage() {
   const { id } = useParams()
@@ -53,11 +54,26 @@ export default function SubmissionPreviewPage() {
             : <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-2 text-sm font-medium text-stone-500"><Eye size={16} /> ดูอย่างเดียว</span>}
         />
       </div>
+      {sub.voided && (
+        <div className="no-print mb-4 flex items-start gap-2 rounded-lg bg-rose-50 px-4 py-3 text-sm text-brick-700">
+          <Ban size={16} className="mt-0.5 shrink-0" />
+          <span>
+            เอกสารนี้ถูกยกเลิกแล้ว — {sub.voided.reason}
+            {sub.voided.replacedByNumber && <> · ฉบับแก้ไขคือ <span className="font-mono font-medium">{sub.voided.replacedByNumber}</span></>}
+            <span className="block text-xs">โดย {sub.voided.byName || "—"} · {formatDateTime(sub.voided.at)}</span>
+          </span>
+        </div>
+      )}
+      {sub.replaces && (
+        <div className="no-print mb-4 rounded-lg border border-clay-200 bg-clay-50 px-4 py-3 text-sm text-clay-800">
+          ฉบับแก้ไขของ <span className="font-mono font-medium">{sub.replaces.docNumber}</span> (ฉบับเดิมถูกยกเลิกแล้ว)
+        </div>
+      )}
       {/* Approvers see the receipts here — the fill page is owner-only. */}
       {(sub.attachments?.length ?? 0) > 0 && (
         <div className="no-print mb-4"><AttachmentsField saved={sub.attachments ?? []} readOnly /></div>
       )}
-      <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} signatures={sub.signatures} />
+      <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} signatures={sub.signatures} voided={!!sub.voided} />
     </div>
   )
 }

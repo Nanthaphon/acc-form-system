@@ -11,7 +11,7 @@ import type { AutoValues } from '../../shared/bodyTemplate'
 import { FEATURES } from '../../shared/features'
 import { textSizeScale } from '../../shared/textSize'
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[] }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[]; voided?: boolean }
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น 6 ถนนพัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
@@ -58,7 +58,7 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
   )
 }
 
-export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures }: Props) {
+export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures, voided }: Props) {
   const cols = settings.columns
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
@@ -173,7 +173,14 @@ export default function ExpenseClaimPreview({ company, header, items, settings =
         )
 
         return (
-          <div key={pageIdx} className="doc-page bg-white p-6 text-xs">
+          <div key={pageIdx} className="doc-page relative bg-white p-6 text-xs">
+            {/* A cancelled document still prints — as a record — but can never
+                pass for a live claim. */}
+            {voided && (
+              <div aria-hidden className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
+                <span className="-rotate-[30deg] select-none whitespace-nowrap rounded-lg border-[6px] border-brick-600/45 px-10 py-2 text-[96px] font-bold leading-none text-brick-600/45">ยกเลิก</span>
+              </div>
+            )}
             {/* Header band */}
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3">

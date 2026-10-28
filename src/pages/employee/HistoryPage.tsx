@@ -1,9 +1,9 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Copy, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
+import { Ban, Copy, FilePen, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning, voidingAvailable } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -18,6 +18,8 @@ import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
 import SignNowModal from '../../components/SignNowModal'
 import StatusBadge from '../../components/StatusBadge'
+import DocNumberCell from '../../components/DocNumberCell'
+import { askAndVoid } from '../../components/voidDocument'
 import { ActionGroup, ActionGroupItem, PrimaryAction, PrimarySlot, RowMenu, RowMenuSlot } from '../../components/RowActions'
 import type { RowMenuItem } from '../../components/RowActions'
 import { Badge, PageHeader, ui } from '../../components/ui'
@@ -81,7 +83,7 @@ export default function HistoryPage() {
       // One line: long names are cut with … and shown in full on hover.
       cell: r => <div className="max-w-[240px] truncate" title={formName(r.formType)}>{formName(r.formType)}</div>,
     },
-    { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => r.docNumber },
+    { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => <DocNumberCell sub={r} /> },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
     { key: 'amount', label: 'ยอดสุทธิ', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => formatMoney(submissionAmount(r)) },
     { key: 'prints', label: 'พิมพ์แล้ว (ครั้ง)', thCls: 'text-center', tdCls: 'text-center tabular-nums', cell: r => r.printCount },
@@ -136,13 +138,24 @@ export default function HistoryPage() {
           </thead>
           <tbody className={ui.tbody}>
             {filtered.map(r => {
+              // A cancelled document is a record: it can be looked at, printed
+              // and copied, nothing more.
+              const voided = !!r.voided
+              // Signed by someone else, so it cannot change any more: correcting
+              // it makes a new document, and this one is cancelled in its favour.
+              const frozen = isSigned(r) && !onlyOwnerSigns(r)
+              const canVoid = voidingAvailable()
               // The rare and the destructive wait behind ⋯.
-              const primary = signingIsNext(r)
-              const more: RowMenuItem[] = [
+              const primary = !voided && signingIsNext(r)
+              const more: RowMenuItem[] = voided ? [] : [
                 ...(!primary && canSignOrSend(r) ? [{ label: 'เซ็น / ส่งเซ็นเพิ่ม', icon: <Send size={16} />, onClick: () => setSignModal(r) }] : []),
                 ...(canSignNow() ? [{ label: 'เซ็นเอง / ลบลายเซ็น', icon: <Signature size={16} />, onClick: () => setSignNow(r) }] : []),
                 ...(subStatus(r) === 'pending' ? [{ label: 'ยกเลิกการส่งให้เซ็น', icon: <RotateCcw size={16} />, onClick: () => onCancelSign(r) }] : []),
-                ...(isUnsigned(r) || onlyOwnerSigns(r) ? [{ label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDelete(r), danger: true }] : []),
+                ...(isUnsigned(r) || onlyOwnerSigns(r)
+                  ? [{ label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDelete(r), danger: true }]
+                  // Someone else has been asked or has signed: kept, and cancelled instead.
+                  : !canVoid ? []
+                  : [{ label: 'ยกเลิกเอกสาร', icon: <Ban size={16} />, onClick: async () => { if (await askAndVoid(r)) load() }, danger: true }]),
               ]
               return (
                 <tr key={r.id} className={ui.tr}>
@@ -150,11 +163,9 @@ export default function HistoryPage() {
                   <td className="whitespace-nowrap px-4 py-2">
                     <div className="flex items-center justify-end gap-2">
                       <ActionGroup>
-                        {/* A document others have signed cannot be edited; viewing it is
-                            what พิมพ์ opens anyway, so it gets no button of its own. */}
-                        {!(isSigned(r) && !onlyOwnerSigns(r)) && (
-                          <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />
-                        )}
+                        {voided || (frozen && !canVoid) ? null : frozen
+                          ? <ActionGroupItem label="แก้ไขเป็นฉบับใหม่ — ฉบับนี้จะถูกยกเลิก" short="แก้ไข" to={`/form/${r.formType}?revise=${r.id}`} icon={<FilePen size={15} />} />
+                          : <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
                         <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
                         <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
                       </ActionGroup>

@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Clock3, UserRound } from 'lucide-react'
+import { Ban, Clock3, UserRound } from 'lucide-react'
 import type { SubmissionSummary } from '../types/schema'
 import { subStatus, statusMeta, statusLabel } from '../data/submissions'
+import { formatDateTime } from '../shared/date'
 
 interface TooltipPos {
   x: number
@@ -15,7 +16,7 @@ function pendingCountText(count: number): string {
 }
 
 // Status pill for a document. While waiting for signatures, hovering it lists
-// who still hasn't signed.
+// who still hasn't signed; on a cancelled one, why, and what replaced it.
 export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
   const st = subStatus(sub)
   const meta = statusMeta(st)
@@ -23,7 +24,8 @@ export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
   const [pos, setPos] = useState<TooltipPos | null>(null)
 
   const pending = (sub.signatures ?? []).filter(x => x.status !== 'signed')
-  const hasTip = st === 'pending' && pending.length > 0
+  const voided = st === 'void' ? sub.voided : null
+  const hasTip = (st === 'pending' && pending.length > 0) || !!voided
 
   function show() {
     const r = ref.current?.getBoundingClientRect()
@@ -53,6 +55,21 @@ export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
           }}
           className="pointer-events-none z-[200] w-[260px] rounded-lg border border-stone-200 bg-white p-2 text-left text-xs text-stone-700 shadow-[0_16px_40px_rgba(15,23,42,0.16)]"
         >
+          {voided ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 border-b border-stone-100 pb-2">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-50 text-brick-600"><Ban size={15} strokeWidth={2.2} /></span>
+                <div className="min-w-0">
+                  <div className="font-semibold text-stone-900">ยกเลิกเอกสารแล้ว</div>
+                  <div className="text-[11px] text-stone-500">{voided.byName || '—'} · {formatDateTime(voided.at)}</div>
+                </div>
+              </div>
+              <div className="whitespace-pre-wrap rounded-md bg-stone-50 px-2 py-1.5"><span className="text-stone-500">เหตุผล: </span>{voided.reason}</div>
+              {voided.replacedByNumber && (
+                <div className="rounded-md bg-clay-50 px-2 py-1.5 text-clay-800">ฉบับแก้ไข: <span className="font-mono font-medium">{voided.replacedByNumber}</span></div>
+              )}
+            </div>
+          ) : <>
           <div className="mb-2 flex items-center justify-between gap-2 border-b border-stone-100 pb-2">
             <div className="flex min-w-0 items-center gap-2">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ochre-50 text-ochre-600">
@@ -80,6 +97,7 @@ export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
               </li>
             ))}
           </ul>
+          </>}
           <span
             className={
               pos.placement === 'top'

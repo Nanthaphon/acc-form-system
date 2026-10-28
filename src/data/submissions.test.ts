@@ -150,3 +150,12 @@ describe('isSigned', () => {
     expect(isSigned(sub([sig('pending'), sig('signed')]))).toBe(true)
   })
 })
+
+describe('a cancelled document', () => {
+  const voided = { at: 1, byUid: 'uid-1', byName: 'ผู้เบิก', reason: 'กรอกยอดผิด' }
+  it('is ยกเลิก whatever its signatures say', () => {
+    const s = { ...sub([sig('signed')]), voided }
+    expect(subStatus(s)).toBe('void')
+    expect(statusLabel(s)).toBe('ยกเลิก')
+  })
+})

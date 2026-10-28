@@ -6,7 +6,7 @@ import { emptyFilters } from '../shared/submissionFilter'
 import DateInput from './DateInput'
 import { ui } from './ui'
 
-const STATUSES: SubmissionStatus[] = ['done', 'pending', 'signed']
+const STATUSES: SubmissionStatus[] = ['done', 'pending', 'signed', 'void']
 
 interface Props {
   value: Filters

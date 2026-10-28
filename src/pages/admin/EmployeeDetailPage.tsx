@@ -23,6 +23,7 @@ import SetPasswordModal from '../../components/SetPasswordModal'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
+import DocNumberCell from '../../components/DocNumberCell'
 import { formatMoney } from '../../shared/money'
 
 const HEADERS = [
@@ -164,7 +165,7 @@ export default function EmployeeDetailPage() {
               <tbody className={ui.tbody}>
                 {filtered.map(r => (
                   <tr key={r.id} className={ui.tr}>
-                    <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}>{r.docNumber}</td>
+                    <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}><DocNumberCell sub={r} /></td>
                     <td className={`${ui.td} font-medium text-stone-900`}>{formName(r.formType)}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>{formatDate(r.createdAt)}</td>
                     <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>

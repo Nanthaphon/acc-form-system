@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Eye, Inbox, Signature } from 'lucide-react'
 import ActionIconButton from '../components/ActionIconButton'
 import { Badge, PageHeader, ui } from '../components/ui'
+import DocNumberCell from '../components/DocNumberCell'
 import { Spinner } from '../components/Spinner'
 import { useAuth } from '../auth/AuthProvider'
 import type { SubmissionSummary, FormSettings, DocSignature } from '../types/schema'
@@ -72,7 +73,7 @@ export default function SignInboxPage() {
             <tbody className={ui.tbody}>
               {pendingRows.map(r => (
                 <tr key={r.id} className={`${ui.tr} align-top`}>
-                  <td className={`${ui.td} whitespace-nowrap font-medium text-stone-900`}>{r.docNumber}</td>
+                  <td className={`${ui.td} whitespace-nowrap font-medium text-stone-900`}><DocNumberCell sub={r} /></td>
                   <td className={ui.td}>{formName(r.formType)}</td>
                   <td className={`${ui.td} whitespace-nowrap`}>{r.header.firstName} {r.header.lastName}</td>
                   <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>
@@ -123,7 +124,7 @@ export default function SignInboxPage() {
                 const lastSignedAt = Math.max(...mine.map(b => b.signedAt ?? 0))
                 return (
                   <tr key={r.id} className={ui.tr}>
-                    <td className={`${ui.td} whitespace-nowrap font-medium text-stone-900`}>{r.docNumber}</td>
+                    <td className={`${ui.td} whitespace-nowrap font-medium text-stone-900`}><DocNumberCell sub={r} /></td>
                     <td className={ui.td}>{formName(r.formType)}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>{r.header.firstName} {r.header.lastName}</td>
                     <td className={ui.td}>{mine.map(b => b.blockLabel).join(', ')}</td>

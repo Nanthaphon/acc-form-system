@@ -1,9 +1,11 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Copy, Eye, Pencil, Printer, Trash2 } from 'lucide-react'
-import { listAllSubmissions, submissionAmount, deleteSubmission, isSigned } from '../../data/submissions'
+import { ArchiveRestore, Ban, Copy, Eye, Pencil, Printer, Trash2 } from 'lucide-react'
+import { listAllSubmissions, submissionAmount, deleteSubmission, isSigned, voidingAvailable } from '../../data/submissions'
 import StatusBadge from '../../components/StatusBadge'
+import DocNumberCell from '../../components/DocNumberCell'
+import { askAndUnvoid, askAndVoid } from '../../components/voidDocument'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listEmployees } from '../../data/users'
 import { listForms } from '../../data/formSettings'
@@ -68,7 +70,7 @@ export default function PrintHistoryPage() {
       // One line: long names are cut with … and shown in full on hover.
       cell: r => <div className="max-w-[240px] truncate" title={formName(r.formType)}>{formName(r.formType)}</div>,
     },
-    { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => r.docNumber },
+    { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => <DocNumberCell sub={r} /> },
     {
       key: 'emp', label: 'พนักงาน', tdCls: 'whitespace-nowrap',
       cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-stone-400">({r.createdByEmployeeId})</span></>,
@@ -112,11 +114,16 @@ export default function PrintHistoryPage() {
                 {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
                 <td className="whitespace-nowrap px-4 py-2">
                   <div className="flex items-center justify-end gap-1.5">
-                    {isSigned(r)
+                    {r.voided
+                      ? <ActionIconButton showLabel label="ดูเอกสาร · ยกเลิกแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
+                      : isSigned(r)
                       ? <ActionIconButton showLabel label="ดูเอกสาร · มีลายเซ็นแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
                       : <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />}
                     <ActionIconButton showLabel label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
                     <ActionIconButton showLabel label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
+                    {r.voided
+                      ? <ActionIconButton showLabel label="กู้คืนเอกสารที่ยกเลิก" short="กู้คืน" onClick={async () => { if (await askAndUnvoid(r)) loadRows() }} icon={<ArchiveRestore size={16} />} />
+                      : voidingAvailable() && <ActionIconButton showLabel label="ยกเลิกเอกสาร — เก็บไว้ในระบบ ขึ้นว่ายกเลิก" short="ยกเลิก" onClick={async () => { if (await askAndVoid(r)) loadRows() }} tone="red" icon={<Ban size={16} />} />}
                     <ActionIconButton showLabel label="ลบเอกสาร" short="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
                   </div>
                 </td>

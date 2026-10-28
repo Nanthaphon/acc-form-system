@@ -236,8 +236,20 @@ export interface ExpenseHeader {
 // Derived from a document's signature assignments PLUS its form's config —
 // Sending for online signatures is optional, so a saved document with no
 // assignments is already finished ('done'); once sent it is 'pending' until
-// every assigned block is signed.
-export type SubmissionStatus = 'done' | 'pending' | 'signed'
+// every assigned block is signed. A cancelled document is 'void' whatever else
+// it holds.
+export type SubmissionStatus = 'done' | 'pending' | 'signed' | 'void'
+
+// A document cancelled because it was wrong (supabase/2026-10-28-void-documents.sql).
+// It stays as a record; when it was corrected, the new document is named here.
+export interface VoidInfo {
+  at: number
+  byUid: string
+  byName: string
+  reason: string
+  replacedById?: string
+  replacedByNumber?: string
+}
 
 // A signature block configured on a form (up to 6). Whether a block is signed
 // online is decided per document when it is sent — any block left without a
@@ -297,6 +309,8 @@ export interface Submission {
   lastPrintedAt: number | null
   signatures?: DocSignature[]        // online signature assignments for this document
   attachments?: Attachment[]         // files attached to this document (stored in the 'attachments' bucket)
+  voided?: VoidInfo | null           // cancelled — kept as a record, nothing more to do with it
+  replaces?: { id: string; docNumber: string } | null  // the cancelled document this one corrects
 }
 
 // A document as the lists load it: no item rows or attachments, and its

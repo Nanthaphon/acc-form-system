@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import FormPage from './FormPage'
-import { cancelSigning, createSubmission, getSubmission, incrementPrint, signBlockAsSelf, unsignDocument, updateSubmission } from '../../data/submissions'
+import { cancelSigning, createSubmission, getSubmission, incrementPrint, signBlockAsSelf, unsignDocument, updateSubmission, voidSubmission } from '../../data/submissions'
+import { copyAttachmentsTo, saveAttachmentList } from '../../data/attachments'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 import type { Submission } from '../../types/schema'
 
@@ -21,6 +22,7 @@ vi.mock('../../data/formSettings', () => ({ getFormSettings: vi.fn(() => Promise
 vi.mock('../../data/companies', () => ({ getCompany: vi.fn(() => Promise.resolve(null)), listCompanies: vi.fn(() => Promise.resolve([])) }))
 vi.mock('../../data/attachments', async importOriginal => ({
   ...await importOriginal<object>(), uploadAttachments: vi.fn(), deleteAttachmentFiles: vi.fn(), saveAttachmentList: vi.fn(),
+  copyAttachmentsTo: vi.fn((id: string, list: { path: string }[]) => Promise.resolve(list.map(a => ({ ...a, path: a.path.replace(/^[^/]+/, id) })))),
 }))
 vi.mock('../../components/VersionHistory', () => ({ default: () => null }))
 vi.mock('../../data/submissions', async importOriginal => ({
@@ -32,12 +34,15 @@ vi.mock('../../data/submissions', async importOriginal => ({
   signBlockAsSelf: vi.fn(() => Promise.resolve()),
   cancelSigning: vi.fn(() => Promise.resolve()),
   unsignDocument: vi.fn(() => Promise.resolve()),
+  voidSubmission: vi.fn(() => Promise.resolve()),
 }))
 const uiAlert = vi.fn((..._args: unknown[]) => Promise.resolve(true))
 vi.mock('../../components/dialog/dialogService', () => ({
   uiAlert: (...args: unknown[]) => uiAlert(...args),
   uiConfirm: vi.fn(() => Promise.resolve(true)),
+  uiPrompt: (...args: unknown[]) => uiPrompt(...args),
 }))
+const uiPrompt = vi.fn((..._args: unknown[]) => Promise.resolve<string | null>('กรอกยอดผิด'))
 
 const print = vi.fn()
 beforeEach(() => {
@@ -327,5 +332,58 @@ describe('a draft of what was typed', () => {
     openSaved({ updatedAt: 2000 } as Partial<Submission>)
     expect(await screen.findByText(/กู้คืนข้อมูลที่กรอกค้างไว้/)).toBeInTheDocument()
     expect(screen.getByDisplayValue('ค่าเดินทาง (แก้ค้าง)')).toBeInTheDocument()
+  })
+})
+
+// A signed document found wrong used to be copied and saved again, leaving the
+// wrong one in the system beside the right one with nothing to tell them apart.
+describe('correcting a document others have signed', () => {
+  const signedByBoss = { blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'หัวหน้า', status: 'signed' as const, signedAt: 1 }
+  const openRevise = () => {
+    vi.mocked(getSubmission).mockImplementation(async (id: string) => (id === 's1' ? {
+      id: 's1', docNumber: 'EX-0007', formType: 'expense', createdBy: 'u1',
+      header: { subject: '', categories: [], companyId: 'globe', firstName: 'ธนัตถ์', lastName: 'นัยพินิจ', position: 'HR', job: '' },
+      items: [{ detail: 'ค่าเดินทาง', amount: 500 }], totals: {}, signatures: [signedByBoss],
+      attachments: [{ path: 's1/receipt.pdf', name: 'ใบเสร็จ.pdf', size: 10, type: 'application/pdf', uploadedAt: 1 }],
+    } : { id, docNumber: 'EX-0008', signatures: [] }) as unknown as Submission)
+    return render(
+      <MemoryRouter initialEntries={['/form/expense?revise=s1']}>
+        <Routes><Route path="/form/:formType" element={<FormPage />} /></Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  it('makes a new document with the receipts, and cancels the original in its favour', async () => {
+    vi.mocked(createSubmission).mockResolvedValueOnce({ id: 'new1', docNumber: 'EX-0008' } as Submission)
+    openRevise()
+    expect(await screen.findByText(/เป็นฉบับใหม่/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByDisplayValue('ค่าเดินทาง')).not.toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+    await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+    expect(createSubmission).toHaveBeenCalledTimes(1)
+    expect(updateSubmission).not.toHaveBeenCalled()
+    expect(copyAttachmentsTo).toHaveBeenCalledWith('new1', [expect.objectContaining({ path: 's1/receipt.pdf' })])
+    expect(saveAttachmentList).toHaveBeenCalledWith('new1', [expect.objectContaining({ path: 'new1/receipt.pdf' })])
+    expect(voidSubmission).toHaveBeenCalledWith('s1', 'กรอกยอดผิด', 'new1')
+  })
+
+  it('saves nothing until a reason is given', async () => {
+    uiPrompt.mockResolvedValueOnce(null)
+    openRevise()
+    await screen.findByText(/เป็นฉบับใหม่/)
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+    await waitFor(() => expect(uiPrompt).toHaveBeenCalled())
+    expect(createSubmission).not.toHaveBeenCalled()
+    expect(voidSubmission).not.toHaveBeenCalled()
+  })
+
+  it('a cancelled document is shut, says why, and can only be printed', async () => {
+    openSaved({ createdBy: 'u1', voided: { at: 1, byUid: 'u1', byName: 'ธนัตถ์ นัยพินิจ', reason: 'กรอกยอดผิด', replacedById: 'n2', replacedByNumber: 'EX-0008' } })
+    expect(await screen.findByText(/เอกสารนี้ถูกยกเลิกแล้ว — กรอกยอดผิด/)).toBeInTheDocument()
+    expect(screen.getByText('EX-0008')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByDisplayValue('ค่าเดินทาง')).toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: /พิมพ์ \/ บันทึก PDF/ }))
+    await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+    expect(updateSubmission).not.toHaveBeenCalled()
   })
 })
