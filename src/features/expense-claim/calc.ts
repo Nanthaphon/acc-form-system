@@ -398,11 +398,20 @@ const AUTO_MIN_MM = 12
 
 // Widths are set as a share of the table — 100% is the sheet's whole table —
 // and kept in millimetres, which is what the sheet and the fill-in table use.
+// Always whole percent — no decimals.
 export function mmToPct(mm: number): number {
-  return Math.round((mm / PRINT_TABLE_MM) * 1000) / 10
+  return Math.round((mm / PRINT_TABLE_MM) * 100)
 }
 export function pctToMm(pct: number): number {
   return (pct * PRINT_TABLE_MM) / 100
+}
+// A width saved when decimals were still allowed, cut down to whole percent
+// (10.5% → 10%) so the boxes, the totals and the sheet all agree. Under 1% is
+// left blank — shared out automatically.
+export function wholePctWidth(mm?: number | null): number | undefined {
+  if (!mm) return undefined
+  const pct = Math.floor((mm * 100) / PRINT_TABLE_MM + 1e-6)
+  return pct > 0 ? pctToMm(pct) : undefined
 }
 export const PX_PER_MM = 96 / 25.4
 

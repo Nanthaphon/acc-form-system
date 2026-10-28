@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, rowHasNumbers, round2, taxSummary, printWidthsMm, totalColumn } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, bahtTextForRows, rowHasNumbers, round2, taxSummary, printWidthsMm, totalColumn, mmToPct, pctToMm, wholePctWidth } from './calc'
 import { EXPENSE_CLAIM_DEFAULT_COLUMNS, emptyRow } from '../../types/schema'
 import type { FormColumn } from '../../types/schema'
 
@@ -246,5 +246,19 @@ describe('emptyRow', () => {
 
   it('ยอดรวมของเอกสารนับแถวที่กรอกแค่วันละด้วย', () => {
     expect(grandTotal(cols, [{ ...emptyRow(cols), ratePerDay: 1000 }, { ...emptyRow(cols), workDays: 2, ratePerDay: 1000 }])).toBe(2910)
+  })
+})
+
+describe('column widths in whole percent', () => {
+  it('shows a width as whole percent, never with a decimal', () => {
+    expect(mmToPct(40)).toBe(21)          // 21.05%
+    expect(mmToPct(pctToMm(7))).toBe(7)
+  })
+
+  it('cuts a width saved with a decimal down to whole percent: 10.5% is 10%', () => {
+    expect(wholePctWidth(pctToMm(10.5))).toBeCloseTo(pctToMm(10), 9)
+    expect(wholePctWidth(pctToMm(7))).toBeCloseTo(pctToMm(7), 9)     // already whole: kept, not floored to 6
+    expect(wholePctWidth(pctToMm(0.6))).toBeUndefined()              // under 1%: left to share automatically
+    expect(wholePctWidth(undefined)).toBeUndefined()
   })
 })

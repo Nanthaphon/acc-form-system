@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'luci
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, showSeqColumn, isTextCol } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { mmToPct, printWidthsMm, totalColumn, PRINT_TABLE_MM } from '../../features/expense-claim/calc'
+import { mmToPct, printWidthsMm, totalColumn, wholePctWidth, PRINT_TABLE_MM } from '../../features/expense-claim/calc'
 import PercentWidthInput from '../../components/PercentWidthInput'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
@@ -114,7 +114,15 @@ export default function FormSettingsPage() {
   useEffect(() => {
     setLoaded(false)
     getFormSettings(formType)
-      .then(s => { setSettings(s); setLoaded(true) })
+      .then(s => {
+        // Widths are whole percent; one saved with a decimal is cut down here.
+        setSettings({
+          ...s,
+          seqWidth: s.seqWidth ? wholePctWidth(s.seqWidth) ?? null : s.seqWidth,
+          columns: s.columns.map(c => c.width ? { ...c, width: wholePctWidth(c.width) } : c),
+        })
+        setLoaded(true)
+      })
       .catch(e => uiAlert(dbErrorMessage(e), { title: 'โหลดฟอร์มไม่สำเร็จ' }))
     loadCompanies()
     listAccessGroups().then(setGroups)
@@ -378,7 +386,7 @@ export default function FormSettingsPage() {
   // What is left of the 100%, and what each column left blank will get of it —
   // the share the sheet actually prints it at.
   const usedPct = mmToPct(setWidthMm)
-  const leftPct = Math.max(0, Math.round((100 - usedPct) * 10) / 10)
+  const leftPct = Math.max(0, 100 - usedPct)
   const visibleCols = columns.filter(c => !c.hidden)
   const autoCount = visibleCols.filter(c => !c.width).length
   const printedMm = printWidthsMm(showSeq ? seqColumnWidth(settings) : 0, visibleCols.map(c => c.width)).cols

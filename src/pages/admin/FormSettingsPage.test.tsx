@@ -102,18 +102,18 @@ describe('FormSettingsPage', () => {
     expect(opts?.tone).not.toBe('success')
   })
 
-  // Widths are set as a share of the table — 100% is the whole sheet — and kept
-  // in millimetres for the sheet itself (1% = 1.9mm).
+  // Widths are set as a share of the table in whole percent — 100% is the whole
+  // sheet — and kept in millimetres for the sheet itself (1% = 1.9mm).
   it('sets column widths in percent of the table', async () => {
     vi.mocked(updateFormSettings).mockResolvedValueOnce([])
     show()
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
     const first = screen.getByLabelText('ความกว้างคอลัมน์ 1 (%)') as HTMLInputElement
-    expect(first.value).toBe('21.1')                       // the 40mm it was set to
-    fireEvent.change(first, { target: { value: '12.' } })   // a decimal point is not swallowed mid-typing
-    expect(first.value).toBe('12.')
-    fireEvent.change(first, { target: { value: '1a2.5.0' } })   // only digits and one point are kept
-    expect(first.value).toBe('12.50')
+    expect(first.value).toBe('21')                         // the 40mm it was saved at (21.05%), cut to whole percent
+    fireEvent.change(first, { target: { value: '10.5' } })   // no decimals: 10.5 is taken as 10
+    expect(first.value).toBe('10')
+    fireEvent.change(first, { target: { value: '1a2' } })     // only digits are kept
+    expect(first.value).toBe('12')
     fireEvent.change(first, { target: { value: '20' } })
     fireEvent.click(screen.getByRole('button', { name: /บันทึกฟอร์ม/ }))
     await waitFor(() => expect(updateFormSettings).toHaveBeenCalled())
@@ -125,12 +125,12 @@ describe('FormSettingsPage', () => {
     show()
     await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
     const first = screen.getByLabelText('ความกว้างคอลัมน์ 1 (%)') as HTMLInputElement
-    // ลำดับ 10mm (5.3%) is taken: 94.7% is what is left for this column
+    // ลำดับ 10mm (5.3%) is taken: 94.7% is left, and widths are whole percent
     fireEvent.change(first, { target: { value: '80' } })
     expect(first).not.toHaveAttribute('aria-invalid')
     fireEvent.change(first, { target: { value: '95' } })
     expect(first).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByRole('alert')).toHaveTextContent('ใส่ได้ไม่เกิน 94.7%')
+    expect(screen.getByRole('alert')).toHaveTextContent('ใส่ได้ไม่เกิน 94%')
     fireEvent.blur(first)
     expect(first.value).toBe('80')
     expect(first).not.toHaveAttribute('aria-invalid')
@@ -146,17 +146,17 @@ describe('FormSettingsPage', () => {
       ],
     } as unknown as FormSettings)
     show()
-    await waitFor(() => expect(screen.getByText(/ความกว้างรวม 200% เกิน 100%/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/ความกว้างรวม 198% เกิน 100%/)).toBeInTheDocument())
     const detail = screen.getByLabelText('ความกว้างคอลัมน์ 2 (%)')
     expect(detail).toHaveAttribute('aria-invalid', 'true')
     fireEvent.click(screen.getByRole('button', { name: /บันทึกฟอร์ม/ }))
     expect(uiAlert).toHaveBeenCalledWith(expect.stringContaining('เกิน 100%'), expect.objectContaining({ title: 'บันทึกไม่ได้' }))
     expect(updateFormSettings).not.toHaveBeenCalled()
-    // coming down is taken even while still over (47.4 + 10 + 57.9 = 115.3)…
+    // (saved as 47.4 + 94.7 + 57.9, opened as 47 + 94 + 57) coming down is taken even while still over…
     fireEvent.change(detail, { target: { value: '10' } })
     expect((detail as HTMLInputElement).value).toBe('10')
-    expect(screen.getByText(/ความกว้างรวม 115.3% เกิน 100%/)).toBeInTheDocument()
-    // …and once under 100% (47.4 + 10 + 30) nothing is red
+    expect(screen.getByText(/ความกว้างรวม 114% เกิน 100%/)).toBeInTheDocument()
+    // …and once under 100% (47 + 10 + 30) nothing is red
     fireEvent.change(screen.getByLabelText('ความกว้างคอลัมน์ 3 (%)'), { target: { value: '30' } })
     expect(screen.queryByText(/เกิน 100%/)).not.toBeInTheDocument()
     expect(detail).not.toHaveAttribute('aria-invalid')
