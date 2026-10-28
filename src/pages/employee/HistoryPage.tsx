@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Ban, Copy, FilePen, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, isSigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning, voidingAvailable } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning, voidingAvailable } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -143,7 +143,9 @@ export default function HistoryPage() {
               const voided = !!r.voided
               // Signed by someone else, so it cannot change any more: correcting
               // it makes a new document, and this one is cancelled in its favour.
-              const frozen = isSigned(r) && !onlyOwnerSigns(r)
+              // Signed by the requester alone — even while sent to others who
+              // have not signed yet — it is still edited in place (FormPage).
+              const frozen = (r.signatures ?? []).some(x => x.status === 'signed' && x.assignedUid !== r.createdBy)
               const canVoid = voidingAvailable()
               // The rare and the destructive wait behind ⋯.
               const primary = !voided && signingIsNext(r)

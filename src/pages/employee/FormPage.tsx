@@ -162,7 +162,7 @@ export default function FormPage() {
     let reviseReason = ''
     if (revising) {
       const typed = await uiPrompt(`เมื่อบันทึก จะได้เอกสารเลขที่ใหม่ และ ${revising.docNumber} จะขึ้นว่า "ยกเลิก"`, {
-        title: 'เหตุผลที่แก้ไข', placeholder: 'เช่น กรอกยอดผิด', confirmText: 'บันทึกฉบับใหม่',
+        title: 'เหตุผลที่แก้ไข', placeholder: 'เช่น กรอกยอดผิด', confirmText: 'บันทึกฉบับใหม่', cancelText: 'กลับไปแก้ต่อ',
       })
       if (typed === null) return
       if (!typed.trim()) { uiAlert('กรุณาระบุเหตุผลที่แก้ไข', { title: 'ยังไม่ได้บันทึก' }); return }
