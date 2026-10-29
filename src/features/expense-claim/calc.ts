@@ -174,8 +174,8 @@ export function taxSubtotal(columns: FormColumn[], rows: ExpenseRow[]): number {
 /** How the lines of a table that works withholding out stand: none withheld,
  *  every one at the same rate, or each at its own. */
 export type TableWht = { kind: 'none' } | { kind: 'all'; rate: number } | { kind: 'mixed' }
-export function tableWht(rows: ExpenseRow[]): TableWht {
-  const rates = rows.map(r => rowWhtRate(r) ?? 0)
+export function tableWht(rows: ExpenseRow[], legacyRate = 0): TableWht {
+  const rates = rows.map(r => rowWhtRate(r) ?? legacyRate)
   if (rates.every(r => r === 0)) return { kind: 'none' }
   return rates.every(r => r === rates[0]) ? { kind: 'all', rate: rates[0] } : { kind: 'mixed' }
 }

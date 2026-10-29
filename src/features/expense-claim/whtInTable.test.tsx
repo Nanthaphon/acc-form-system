@@ -140,3 +140,52 @@ describe('withholding every line of the table at once', () => {
     expect(onItemsChange.mock.lastCall![0][1]).toMatchObject({ [ROW_WHT_RATE_KEY]: 3 })
   })
 })
+
+// Every form picks withholding the same way, whether or not its table has a
+// column for it: one switch and rate for every line, changed line by line in
+// the table. A form without the column still takes it off below the table.
+describe('withholding on a form without a column for it', () => {
+  const plain: FormColumn[] = [{ key: 'detail', label: 'รายละเอียด', type: 'text' }, { key: 'amount', label: 'จำนวนเงิน', type: 'number', isTotal: true }]
+  const lines: ExpenseRow[] = [{ detail: 'ค่าบริการ', amount: 5000 }, { detail: 'ค่าขนส่ง', amount: 2000 }]
+  const show = (h: ExpenseHeader, rows = lines) => {
+    const onHeaderChange = vi.fn(), onItemsChange = vi.fn()
+    render(<ExpenseClaimForm header={h} items={rows} columns={plain} onHeaderChange={onHeaderChange} onItemsChange={onItemsChange} />)
+    return { onHeaderChange, onItemsChange }
+  }
+
+  it('switched on, withholds every line at 3% — and each line shows it', () => {
+    const { onHeaderChange } = show(header)
+    fireEvent.click(screen.getByRole('switch', { name: 'หัก ณ ที่จ่าย' }))
+    expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ whtRate: 3, whtScope: 'all' }))
+  })
+
+  it('shows the document\'s rate on every line, with what it comes to', () => {
+    const { container } = render(<ExpenseClaimForm header={{ ...header, whtRate: 3 }} items={lines} columns={plain} onHeaderChange={vi.fn()} onItemsChange={vi.fn()} />)
+    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' })).toHaveValue('3')
+    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 2' })).toHaveValue('3')
+    expect([...container.querySelectorAll('[data-rate-amount]')].map(e => e.textContent)).toEqual(['150.00', '60.00'])
+    expect(screen.queryByRole('radiogroup', { name: 'ขอบเขตหัก ณ ที่จ่าย' })).toBeNull()
+  })
+
+  it('one line given its own rate: every line keeps a rate of its own from then on', () => {
+    const { onHeaderChange, onItemsChange } = show({ ...header, whtRate: 3 })
+    fireEvent.change(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 2' }), { target: { value: '1' } })
+    expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ whtScope: 'rows' }))
+    expect(onItemsChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({ [ROW_WHT_RATE_KEY]: 3 }), expect.objectContaining({ [ROW_WHT_RATE_KEY]: 1 }),
+    ])
+  })
+
+  it('back to one rate for every line from the switch\'s picker', () => {
+    const { onHeaderChange, onItemsChange } = show({ ...header, whtRate: 3, whtScope: 'rows' }, lines.map(l => ({ ...l, [ROW_WHT_RATE_KEY]: 5 })))
+    fireEvent.change(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' }), { target: { value: '2' } })
+    expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ whtRate: 2, whtScope: 'all' }))
+    expect(onItemsChange).toHaveBeenCalled()
+  })
+
+  // A document saved as ทั้งเอกสาร 5% before this is still 5% of everything.
+  it('leaves a document saved at one rate for everything as it was', () => {
+    const tax = taxSummary(7000, false, 5, 0, taxBases(plain, lines, { wht: 'all' }))
+    expect(tax.whtAmount).toBe(350)
+  })
+})

@@ -204,7 +204,10 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   // A form whose own columns work out หัก ณ ที่จ่าย (whtRow) asks each line for
   // its rate always, and leaves withholding out of the sums below the table.
   const inTable = whtInTable(cols)
-  const whtByRow = inTable || (!!header.whtRate && scopes.wht === 'rows')
+  // Every form picks withholding the same way: switched on, each line shows
+  // its rate (the document's, until a line is given its own) and can change it.
+  const whtByRow = inTable || (FEATURES.taxPerRow && !!header.whtRate)
+  const whtEachLine = scopes.wht === 'rows'
   const bases = taxBases(cols, items, scopes)
   const tax = taxSummary(total, header.vat, header.whtRate, header.retentionRate, bases, onNet)
   // What the paragraphs' automatic fields show — the same figures the sheet prints.
@@ -244,6 +247,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const [otherRateRows, setOtherRateRows] = useState<Set<string>>(new Set())
   const setRowRate = (kind: 'wht' | 'ret', i: number, rate: number) => {
     const set: ExpenseRow = kind === 'wht' ?{ [ROW_WHT_RATE_KEY]: rate, [ROW_WHT_KEY]: UNTICK } : { [ROW_RET_RATE_KEY]: rate }
+    // One line given its own rate while the document withholds every line at
+    // one: from now on each line carries a rate, the others keeping the one they had.
+    if (kind === 'wht' && !inTable && !whtEachLine) {
+      onHeaderChange({ ...header, whtScope: 'rows' })
+      onItemsChange(items.map((r, x) => ({ ...r, ...(x === i ? set : { [ROW_WHT_RATE_KEY]: header.whtRate || 0, [ROW_WHT_KEY]: UNTICK }) })))
+      return
+    }
     onItemsChange(items.map((r, x) => x === i ? { ...r, ...set } : r))
   }
   const ratePresets = (kind: 'wht' | 'ret') => kind === 'wht' ? WHT_PRESETS : RET_PRESETS
@@ -452,7 +462,9 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         }
                         // An older ticked line shows the document's rate, which is what it is withheld at.
                         const kind = t.rate
-                        const rate = kind === 'wht' ? rowWhtRate(row) ?? (header.whtRate || 0) : rowRetRate(row)
+                        const rate = kind !== 'wht' ? rowRetRate(row)
+                          : inTable || whtEachLine ? rowWhtRate(row) ?? (header.whtRate || 0)
+                          : header.whtRate || 0   // every line at the document's rate
                         const choice = rateChoice(kind, i, rate)
                         return (
                           <td key={t.key} className={`border-b border-stone-100 ${COL_RULE} bg-clay-50/40 p-1 text-center`}>
@@ -535,7 +547,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                 className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:border-clay-400 hover:text-clay-600"
                 onClick={() => {
                   // A table withholding every line at one rate gives the new line that rate too.
-                  const all = inTable ? tableWht(items) : null
+                  const all = inTable || (whtByRow && whtEachLine) ? tableWht(items, header.whtRate || 0) : null
                   const fresh = all?.kind === 'all' ? { ...emptyRow(cols), [ROW_WHT_RATE_KEY]: all.rate } : emptyRow(cols)
                   onItemsChange([...items, fresh])
                 }}

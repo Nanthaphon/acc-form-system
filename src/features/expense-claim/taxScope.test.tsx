@@ -71,8 +71,9 @@ describe('choosing it on the document', () => {
     const vat = screen.getByRole('radiogroup', { name: 'ขอบเขต VAT' })
     expect(within(vat).getByRole('radio', { name: 'ทั้งเอกสาร' })).toBeChecked()
     expect(within(vat).getByRole('radio', { name: 'บางรายการ' })).not.toBeChecked()
-    const wht = screen.getByRole('radiogroup', { name: 'ขอบเขตหัก ณ ที่จ่าย' })
-    expect(within(wht).getByRole('radio', { name: 'ทั้งเอกสาร' })).toBeChecked()
+    // withholding has no such choice: every line at one rate, changed line by line in the table
+    expect(screen.queryByRole('radiogroup', { name: 'ขอบเขตหัก ณ ที่จ่าย' })).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' })).toHaveValue('3')
   })
 
   it('offers no choice for a tax that is off', () => {

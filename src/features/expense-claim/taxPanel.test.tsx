@@ -92,6 +92,6 @@ describe('the tax panel', () => {
   it('points to the table for the rates when each line has its own', () => {
     show({ ...base, whtRate: 3, whtScope: 'rows' })
     expect(screen.queryByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' })).not.toBeInTheDocument()
-    expect(within(row('หัก ณ ที่จ่าย')).getByText('อัตราเลือกในตาราง')).toBeInTheDocument()
+    expect(within(row('หัก ณ ที่จ่าย')).getByText('อัตราเลือกในแต่ละรายการ')).toBeInTheDocument()
   })
 })

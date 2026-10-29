@@ -85,7 +85,9 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
   whtInTable?: boolean
 }) {
   const vatByRow = FEATURES.taxPerRow && !!header.vat && header.vatScope === 'rows'
+  // Lines each carrying a rate of their own (picked in the table).
   const whtByRow = FEATURES.taxPerRow && !!header.whtRate && header.whtScope === 'rows'
+  const lineWht = tableWht(items, header.whtRate || 0)
 
   // `whtOther` holds the typed rate while อื่นๆ is picked — empty or half-typed,
   // which the numeric header.whtRate can't represent.
@@ -179,15 +181,39 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
           )}
         </TaxRow>
       )}
+      {/* Every line at one rate (the document's), until a line is given its
+          own in the table — the same switch and picker as a form that works
+          withholding out in its columns, so every form reads alike. */}
       {!whtInTable && <TaxRow
         name="หัก ณ ที่จ่าย"
         on={whtOn}
-        onToggle={on => { setWhtOther(null); onHeaderChange({ ...header, whtRate: on ? STANDARD_WHT : 0 }) }}
+        onToggle={on => {
+          setWhtOther(null)
+          onHeaderChange({ ...header, whtRate: on ? STANDARD_WHT : 0, whtScope: 'all' })
+          if (!on && whtByRow) onItemsChange(withWhtRate(items, 0))
+        }}
         amount={<span className="text-brick-600">−{fmt(tax.whtAmount)}</span>}
-        below={whtByRow && byRateHint('หัก ณ ที่จ่าย', 'หัก ณ ที่จ่าย', whtLines(bases, header.whtRate))}
+        below={whtByRow && lineWht.kind !== 'all' && byRateHint('หัก ณ ที่จ่าย', 'หัก ณ ที่จ่าย', whtLines(bases, header.whtRate))}
       >
-        {whtByRow ? (
-          <span className="text-xs text-stone-500">อัตราเลือกในตาราง</span>
+        {whtByRow && lineWht.kind === 'all' ? (
+          <span className="flex items-center gap-1.5">
+            <select
+              aria-label="อัตราหัก ณ ที่จ่าย"
+              className={SELECT_BOX}
+              value={WHT_PRESETS.includes(lineWht.rate) ? String(lineWht.rate) : 'own'}
+              onChange={e => {
+                // the same rate for every line again: the document's rate
+                onHeaderChange({ ...header, whtRate: Number(e.target.value), whtScope: 'all' })
+                onItemsChange(withWhtRate(items, 0))
+              }}
+            >
+              {WHT_PRESETS.map(r => <option key={r} value={String(r)}>{r}%</option>)}
+              {!WHT_PRESETS.includes(lineWht.rate) && <option value="own" disabled>{lineWht.rate}%</option>}
+            </select>
+            <span className="text-xs text-stone-500">ทุกรายการ · เปลี่ยนเป็นรายการได้ในตาราง</span>
+          </span>
+        ) : whtByRow ? (
+          <span className="text-xs text-stone-500">อัตราเลือกในแต่ละรายการ</span>
         ) : (
           <span className="flex items-center gap-1.5">
             <select
@@ -227,9 +253,9 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
                 %
               </span>
             )}
+            {FEATURES.taxPerRow && <span className="text-xs text-stone-500">ทุกรายการ · เปลี่ยนเป็นรายการได้ในตาราง</span>}
           </span>
         )}
-        {FEATURES.taxPerRow && <ScopePicker value={header.whtScope} onChange={v => setScope('whtScope', v)} label="ขอบเขตหัก ณ ที่จ่าย" />}
       </TaxRow>}
 
       <TaxRow
