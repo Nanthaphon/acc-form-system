@@ -80,7 +80,8 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
   tax: TaxResult
   bases: TaxBases
   taxedAgain: boolean
-  /** The form works หัก ณ ที่จ่าย out in its own columns: no switch for it here. */
+  /** The form works หัก ณ ที่จ่าย out in its own columns: its row here shows
+   *  what the table took, with no switch of its own. */
   whtInTable?: boolean
 }) {
   const vatByRow = FEATURES.taxPerRow && !!header.vat && header.vatScope === 'rows'
@@ -147,6 +148,17 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
         {FEATURES.taxPerRow && <ScopePicker value={header.vatScope} onChange={v => setScope('vatScope', v)} label="ขอบเขต VAT" />}
       </TaxRow>
 
+      {whtInTable && (
+        <div data-tax-row className="border-b border-stone-200/70 py-3 last:border-b-0">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="inline-flex h-5 w-9 shrink-0" aria-hidden />
+            <span className="w-36 text-sm font-medium text-stone-900">หัก ณ ที่จ่าย</span>
+            <span className="text-xs text-stone-500">คิดในตาราง · อัตราเลือกในแต่ละรายการ</span>
+            <span className="ml-auto text-sm tabular-nums text-brick-600">−{fmt(tax.whtAmount)}</span>
+          </div>
+          {(bases.whtGroups?.length ?? 0) > 1 && <div className="mt-2 pl-12 text-xs">{byRateHint('หัก ณ ที่จ่าย', 'หัก ณ ที่จ่าย', whtLines(bases))}</div>}
+        </div>
+      )}
       {!whtInTable && <TaxRow
         name="หัก ณ ที่จ่าย"
         on={whtOn}

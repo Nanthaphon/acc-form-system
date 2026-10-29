@@ -3,7 +3,7 @@ import { ALargeSmall, Link2, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, round2, taxBases, taxHeader, taxSummary, totalColumn, whtBaseColumn, whtInTable, visibleColumns, fillTableLayout, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, isRowTicked, rowHasNumbers, round2, taxBases, taxSubtotal, taxSummary, totalColumn, whtBaseColumn, whtInTable, visibleColumns, fillTableLayout, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { AUTO_FIELDS, autoValue, parseTemplate, templateFields } from '../../shared/bodyTemplate'
@@ -193,7 +193,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const hasColumns = vcols.length > 0
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
-  const total = grandTotal(cols, items)
+  const total = taxSubtotal(cols, items)
   // Each tax is charged either on the whole document or on chosen lines, and
   // the two are decided separately: VAT on everything, withholding on two rows.
   // Both are held back for now (shared/features): until they are let out,
@@ -206,7 +206,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const inTable = whtInTable(cols)
   const whtByRow = inTable || (!!header.whtRate && scopes.wht === 'rows')
   const bases = taxBases(cols, items, scopes)
-  const tax = taxSummary(total, header.vat, taxHeader(cols, header).whtRate, header.retentionRate, bases, onNet)
+  const tax = taxSummary(total, header.vat, header.whtRate, header.retentionRate, bases, onNet)
   // What the paragraphs' automatic fields show — the same figures the sheet prints.
   const autoValues = { company: companyName, amount: tax.netTotal, requester: `${header.firstName} ${header.lastName}`, position: header.position }
   // Whether this document is taxed a second time, on what it comes to rather

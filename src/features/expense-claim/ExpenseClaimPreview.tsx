@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY, taxHeader } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY, taxHeader, taxSubtotal, whtInTable } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -76,7 +76,9 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
   const scopes = FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope, ret: header.retentionScope } : {}
   const onNet = FEATURES.taxOnNet ? { vat: header.vatOnNet, whtRate: header.whtOnNetRate } : undefined
   const bases = taxBases(cols, items, scopes)
-  const tax = taxSummary(grandTotal(cols, items), header.vat, header.whtRate, header.retentionRate, bases, onNet)
+  const tax = taxSummary(taxSubtotal(cols, items), header.vat, header.whtRate, header.retentionRate, bases, onNet)
+  // Withholding the table worked out goes in the summary as one line, when there is a summary.
+  const tableWht = whtInTable(cols) && tax.whtAmount > 0
   const taxedAgain = !!onNet?.vat || !!onNet?.whtRate
   // A tax charged line by line prints what it was worked out from, so the sheet
   // can be checked against its own ticks without adding them up by hand.
@@ -138,7 +140,7 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
     headLines: rowLines(widthWeights, vcols.map(c => c.label)),
     taxLines: hasTax
       // Withholding and ค่าประกันงาน picked line by line print a line per rate.
-      ? 2 + (header.vat ? 1 : 0)
+      ? 2 + (header.vat ? 1 : 0) + (tableWht ? 1 : 0)
         + (!header.retentionRate ? 0 : scopes.ret === 'rows' ? Math.max(1, retLines(bases).length) : 1)
         + (!header.whtRate ? 0 : scopes.wht === 'rows' ? Math.max(1, whtLines(bases, header.whtRate).length) : 1)
         + (taxedAgain ? 1 + (onNet?.vat ? 1 : 0) + (onNet?.whtRate ? 1 : 0) : 0)
@@ -299,6 +301,7 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
               <div className="mt-2 ml-auto w-56 text-[10px]">
                 <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
                 {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(scopes.vat === 'rows', bases.vat, ROW_VAT_KEY)}</span><span>{money(tax.vatAmount)}</span></div>}
+                {tableWht && <div className="flex justify-between"><span>หัก ณ ที่จ่าย (ตามรายการ)</span><span>-{money(tax.whtAmount)}</span></div>}
                 {!!header.whtRate && scopes.wht !== 'rows' && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>-{money(tax.whtAmount)}</span></div>}
                 {!!header.whtRate && scopes.wht === 'rows' && whtLines(bases, header.whtRate).map(l => (
                   <div key={l.rate} className="flex justify-between"><span>หัก ณ ที่จ่าย {l.rate}% (ฐาน {money(l.base)} · {l.count} รายการ)</span><span>-{money(l.amount)}</span></div>

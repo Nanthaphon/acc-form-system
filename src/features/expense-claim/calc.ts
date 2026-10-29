@@ -141,12 +141,35 @@ export function rowWhtRate(row: ExpenseRow): number | null {
 }
 
 // A form that works หัก ณ ที่จ่าย out in its own columns — a whtRow column,
-// and a net column taking it off — has its withholding in the table. Each line
-// then picks its rate whether or not the document's withholding is switched
-// on, and the document's withholding stays out of the sums: taking it off
-// again under the table would take it twice.
+// usually with a net column taking it off — has its withholding in the table.
+// Each line picks its rate whether or not the document's withholding is
+// switched on, and the sums under the table take the withholding as the
+// table worked it out: the column's own total, never a second round.
+export function whtRowColumn(columns: FormColumn[]): FormColumn | undefined {
+  return columns.find(c => c.type === 'calc' && c.calc?.op === 'whtRow')
+}
 export function whtInTable(columns: FormColumn[]): boolean {
-  return columns.some(c => c.type === 'calc' && c.calc?.op === 'whtRow')
+  return !!whtRowColumn(columns)
+}
+// Whether a column's value is worked out, at any remove, from `target`.
+function dependsOn(columns: FormColumn[], key: string, target: string, seen = new Set<string>()): boolean {
+  if (key === target) return true
+  if (seen.has(key)) return false
+  seen.add(key)
+  const col = columns.find(c => c.key === key)
+  return !!col?.calc && calcOperands(col.calc).some(k => dependsOn(columns, k, target, seen))
+}
+/** What the taxes under the table are worked out on. Usually the document's
+ *  total column — but where that column already has the table's withholding
+ *  taken off (จำนวนเงินสุทธิ), the amount before it (จำนวนเงินรวม): the
+ *  withholding is then taken off once, below, whichever column was marked
+ *  as the total. */
+export function taxSubtotal(columns: FormColumn[], rows: ExpenseRow[]): number {
+  const wht = whtRowColumn(columns)
+  const total = totalColumn(columns)
+  const base = wht?.calc ? calcOperands(wht.calc)[0] : undefined
+  if (!wht || !total || !base || !dependsOn(columns, total.key, wht.key)) return grandTotal(columns, rows)
+  return round2(computeColumnTotals(columns, rows)[base] ?? 0)
 }
 /** The column a line's หัก ณ ที่จ่าย is worked out on: the one a whtRow
  *  column takes, or else the document's total column (as taxBases reads it). */
@@ -174,6 +197,9 @@ export interface TaxBases {
   whtGroups?: WhtGroup[]
   /** Only when ค่าประกันงาน is picked line by line. */
   retGroups?: WhtGroup[]
+  /** Withholding the table itself worked out (a whtRow column's total) —
+   *  taken as it is, whether or not the document's withholding is on. */
+  whtFixed?: number
 }
 
 // What VAT and withholding are each worked out on, given how this document
@@ -198,6 +224,32 @@ export function taxBases(
     return [...groups.values()]
   }
   const sumOf = (groups: WhtGroup[]) => round2(groups.reduce((s, g) => s + g.base, 0))
+
+  // Worked out in the table: every line has its own rate, on the column the
+  // table charges it on, and the total is what the table's column adds up to.
+  const inTable = whtRowColumn(columns)
+  if (inTable) {
+    const baseKey = calcOperands(inTable.calc!)[0]
+    const groups = new Map<number, WhtGroup>()
+    for (const r of rows) {
+      const rate = rowWhtRate(r) ?? 0
+      if (!rate) continue
+      const g = groups.get(rate) ?? { rate, base: 0, count: 0 }
+      g.base = round2(g.base + (Number(computeRow(columns, r)[baseKey]) || 0)); g.count++
+      groups.set(rate, g)
+    }
+    const fixed = round2(computeColumnTotals(columns, rows)[inTable.key] ?? 0)
+    const whtGroups = [...groups.values()]
+    const retGroups = scopes.ret === 'rows' ? byRate(rowRetRate) : undefined
+    const subtotal = taxSubtotal(columns, rows)
+    return {
+      vat: scopes.vat === 'rows' ? ticked(ROW_VAT_KEY) : subtotal,
+      wht: sumOf(whtGroups),
+      ret: retGroups ? sumOf(retGroups) : subtotal,
+      whtGroups, whtFixed: fixed,
+      ...(retGroups ? { retGroups } : {}),
+    }
+  }
 
   const whtGroups = scopes.wht === 'rows' ? byRate(rowWhtRate) : undefined
   const retGroups = scopes.ret === 'rows' ? byRate(rowRetRate) : undefined
@@ -261,7 +313,8 @@ export function taxSummary(
   // whtRate is also the switch: withholding off means nothing is withheld,
   // whatever rates the lines carry. Picked line by line, it is the sum of
   // each rate's own figure, as the summary lists them.
-  const whtAmount = !whtRate ? 0
+  const whtAmount = bases?.whtFixed !== undefined ? bases.whtFixed
+    : !whtRate ? 0
     : bases?.whtGroups ? round2(whtLines(bases, whtRate).reduce((s, l) => s + l.amount, 0))
     : round2((bases?.wht ?? subtotal) * whtRate / 100)
   // ค่าประกันงาน (retention) is held back on the pre-VAT amount, like

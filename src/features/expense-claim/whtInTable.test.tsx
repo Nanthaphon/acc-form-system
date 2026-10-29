@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
-import { computeRow, grandTotal, taxBases, taxHeader, taxSummary, whtInTable, ROW_WHT_KEY, ROW_WHT_RATE_KEY } from './calc'
+import { computeRow, grandTotal, taxBases, taxHeader, taxSubtotal, taxSummary, whtInTable, ROW_WHT_KEY, ROW_WHT_RATE_KEY } from './calc'
 import type { ExpenseHeader, ExpenseRow, FormColumn, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 
@@ -31,15 +31,25 @@ describe('withholding worked out in the table', () => {
     expect(computeRow(cols, { detail: 'x', gross: 1000, [ROW_WHT_KEY]: 1 })).toMatchObject({ wht: 0, net: 1000 })
   })
 
-  // The net column is the document's total already: the withholding switched
-  // on below the table would take it off a second time.
-  it('is not taken off again by the document\'s withholding', () => {
-    const withWht = { ...header, whtRate: 3, whtScope: 'rows' as const }
+  // The sums under the table take the withholding as the table worked it out —
+  // once, whether or not the document's own withholding is switched on.
+  it('is taken off once under the table, as the table worked it out', () => {
     expect(whtInTable(cols)).toBe(true)
-    const total = grandTotal(cols, items)
-    expect(total).toBe(8330)                       // 1,980 + 4,850 + 1,500
-    const tax = taxSummary(total, false, taxHeader(cols, withWht).whtRate, 0, taxBases(cols, items, { wht: 'rows' }))
-    expect(tax.whtAmount).toBe(0)
+    expect(grandTotal(cols, items)).toBe(8330)            // the net column: 1,980 + 4,850 + 1,500
+    expect(taxSubtotal(cols, items)).toBe(8500)           // before the withholding
+    for (const h of [header, { ...header, whtRate: 3, whtScope: 'rows' as const }]) {
+      const tax = taxSummary(taxSubtotal(cols, items), false, h.whtRate, 0, taxBases(cols, items, { wht: h.whtScope }))
+      expect(tax.whtAmount).toBe(170)                     // 20 + 150, the column's own total
+      expect(tax.netTotal).toBe(8330)
+    }
+  })
+
+  // "ยอดรวม" ticked on จำนวนเงินรวม instead of จำนวนเงินสุทธิ — an easy slip —
+  // used to leave the withholding out of ยอดสุทธิ and the amount in words.
+  it('comes to the same net whichever column is marked as the total', () => {
+    const grossMarked = cols.map(c => ({ ...c, isTotal: c.key === 'gross' }))
+    expect(taxSubtotal(grossMarked, items)).toBe(8500)
+    const tax = taxSummary(taxSubtotal(grossMarked, items), false, undefined, 0, taxBases(grossMarked, items, {}))
     expect(tax.netTotal).toBe(8330)
   })
 
@@ -49,17 +59,22 @@ describe('withholding worked out in the table', () => {
     expect(taxHeader(plain, { ...header, whtRate: 3 }).whtRate).toBe(3)
   })
 
-  it('asks each line for its rate without switching withholding on, and shows what it comes to', () => {
+  it('asks each line for its rate without switching withholding on, and shows what the table took below it', () => {
     const onItemsChange = vi.fn()
     const { container, unmount } = render(<ExpenseClaimForm header={header} items={[row('ค่าบริการ', 5000)]} columns={cols} onHeaderChange={vi.fn()} onItemsChange={onItemsChange} />)
     fireEvent.change(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' }), { target: { value: '3' } })
     expect(onItemsChange).toHaveBeenCalledWith([expect.objectContaining({ [ROW_WHT_RATE_KEY]: 3 })])
-    // and no second withholding switch under the table
-    const whtTaxRow = (c: HTMLElement) => [...c.querySelectorAll('[data-tax-row]')].some(r => r.textContent?.includes('หัก ณ ที่จ่าย'))
-    expect(whtTaxRow(container)).toBe(false)
+    // the withholding row under the table stays, showing what the table took — with no switch of its own
+    const whtTaxRow = (c: HTMLElement) => [...c.querySelectorAll('[data-tax-row]')].find(r => r.textContent?.includes('หัก ณ ที่จ่าย'))
+    expect(whtTaxRow(container)?.textContent).toContain('คิดในตาราง')
+    expect(whtTaxRow(container)?.querySelector('[role=switch]')).toBeNull()
     unmount()
+    const taken = render(<ExpenseClaimForm header={header} items={[row('ค่าบริการ', 5000, 3)]} columns={cols} onHeaderChange={vi.fn()} onItemsChange={vi.fn()} />)
+    expect(whtTaxRow(taken.container)?.textContent).toContain('−150.00')
+    expect(taken.container.textContent).toContain('4,850.00 บาท')
+    taken.unmount()
     const plain = render(<ExpenseClaimForm header={header} items={[row('ค่าบริการ', 5000)]} columns={cols.filter(c => c.key !== 'wht')} onHeaderChange={vi.fn()} onItemsChange={vi.fn()} />)
-    expect(whtTaxRow(plain.container)).toBe(true)
+    expect(whtTaxRow(plain.container)?.querySelector('[role=switch]')).not.toBeNull()
   })
 
   it('prints the lines with their withholding, and no withholding line under the table', () => {
