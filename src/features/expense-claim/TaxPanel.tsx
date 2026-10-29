@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ExpenseHeader, ExpenseRow, FormColumn, TaxScope } from '../../types/schema'
-import { retLines, rowHasNumbers, tickedRowCount, whtLines, ROW_VAT_KEY, STANDARD_WHT, TICK, WHT_PRESETS } from './calc'
+import { retLines, rowHasNumbers, tableWht, tickedRowCount, whtLines, withWhtRate, ROW_VAT_KEY, STANDARD_WHT, TICK, WHT_PRESETS } from './calc'
 import type { RateLine, TaxBases, TaxResult } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as fmt } from '../../shared/money'
@@ -101,6 +101,8 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
   }
 
   const retByRow = FEATURES.taxPerRow && !!header.retentionRate && header.retentionScope === 'rows'
+  // Where the lines of a table that works withholding out stand.
+  const inTable = tableWht(items)
 
   const lines = items.filter(r => rowHasNumbers(cols, r)).length
 
@@ -148,16 +150,34 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
         {FEATURES.taxPerRow && <ScopePicker value={header.vatScope} onChange={v => setScope('vatScope', v)} label="ขอบเขต VAT" />}
       </TaxRow>
 
+      {/* Worked out in the table: the switch sets every line's rate at once
+          (and clears them all), so the table's own columns always agree with
+          what is taken off here. Lines can still each pick their own. */}
       {whtInTable && (
-        <div data-tax-row className="border-b border-stone-200/70 py-3 last:border-b-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <span className="inline-flex h-5 w-9 shrink-0" aria-hidden />
-            <span className="w-36 text-sm font-medium text-stone-900">หัก ณ ที่จ่าย</span>
-            <span className="text-xs text-stone-500">คิดในตาราง · อัตราเลือกในแต่ละรายการ</span>
-            <span className="ml-auto text-sm tabular-nums text-brick-600">−{fmt(tax.whtAmount)}</span>
-          </div>
-          {(bases.whtGroups?.length ?? 0) > 1 && <div className="mt-2 pl-12 text-xs">{byRateHint('หัก ณ ที่จ่าย', 'หัก ณ ที่จ่าย', whtLines(bases))}</div>}
-        </div>
+        <TaxRow
+          name="หัก ณ ที่จ่าย"
+          on={inTable.kind !== 'none'}
+          onToggle={on => onItemsChange(withWhtRate(items, on ? STANDARD_WHT : 0))}
+          amount={<span className="text-brick-600">−{fmt(tax.whtAmount)}</span>}
+          below={inTable.kind === 'mixed' && (bases.whtGroups?.length ?? 0) > 1 && byRateHint('หัก ณ ที่จ่าย', 'หัก ณ ที่จ่าย', whtLines(bases))}
+        >
+          {inTable.kind === 'all' ? (
+            <span className="flex items-center gap-1.5">
+              <select
+                aria-label="อัตราหัก ณ ที่จ่ายทุกรายการ"
+                className={SELECT_BOX}
+                value={WHT_PRESETS.includes(inTable.rate) ? String(inTable.rate) : 'own'}
+                onChange={e => onItemsChange(withWhtRate(items, Number(e.target.value)))}
+              >
+                {WHT_PRESETS.map(r => <option key={r} value={String(r)}>{r}%</option>)}
+                {!WHT_PRESETS.includes(inTable.rate) && <option value="own" disabled>{inTable.rate}%</option>}
+              </select>
+              <span className="text-xs text-stone-500">ทุกรายการ · เปลี่ยนเป็นรายการได้ในตาราง</span>
+            </span>
+          ) : (
+            <span className="text-xs text-stone-500">อัตราเลือกในแต่ละรายการ</span>
+          )}
+        </TaxRow>
       )}
       {!whtInTable && <TaxRow
         name="หัก ณ ที่จ่าย"

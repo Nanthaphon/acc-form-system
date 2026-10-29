@@ -171,6 +171,19 @@ export function taxSubtotal(columns: FormColumn[], rows: ExpenseRow[]): number {
   if (!wht || !total || !base || !dependsOn(columns, total.key, wht.key)) return grandTotal(columns, rows)
   return round2(computeColumnTotals(columns, rows)[base] ?? 0)
 }
+/** How the lines of a table that works withholding out stand: none withheld,
+ *  every one at the same rate, or each at its own. */
+export type TableWht = { kind: 'none' } | { kind: 'all'; rate: number } | { kind: 'mixed' }
+export function tableWht(rows: ExpenseRow[]): TableWht {
+  const rates = rows.map(r => rowWhtRate(r) ?? 0)
+  if (rates.every(r => r === 0)) return { kind: 'none' }
+  return rates.every(r => r === rates[0]) ? { kind: 'all', rate: rates[0] } : { kind: 'mixed' }
+}
+/** Every line withheld at `rate` (0: none) — the one switch for the whole table. */
+export function withWhtRate(rows: ExpenseRow[], rate: number): ExpenseRow[] {
+  return rows.map(r => ({ ...r, [ROW_WHT_RATE_KEY]: rate, [ROW_WHT_KEY]: UNTICK }))
+}
+
 /** The column a line's หัก ณ ที่จ่าย is worked out on: the one a whtRow
  *  column takes, or else the document's total column (as taxBases reads it). */
 export function whtBaseColumn(columns: FormColumn[]): string | undefined {

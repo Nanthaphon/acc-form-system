@@ -3,7 +3,7 @@ import { ALargeSmall, Link2, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, isRowTicked, rowHasNumbers, round2, taxBases, taxSubtotal, taxSummary, totalColumn, whtBaseColumn, whtInTable, visibleColumns, fillTableLayout, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, isRowTicked, rowHasNumbers, round2, tableWht, taxBases, taxSubtotal, taxSummary, totalColumn, whtBaseColumn, whtInTable, visibleColumns, fillTableLayout, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { AUTO_FIELDS, autoValue, parseTemplate, templateFields } from '../../shared/bodyTemplate'
@@ -533,7 +533,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
             <div className="mx-auto max-w-full" style={{ width: tablePx * zoom }}>
               <button
                 className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:border-clay-400 hover:text-clay-600"
-                onClick={() => onItemsChange([...items, emptyRow(cols)])}
+                onClick={() => {
+                  // A table withholding every line at one rate gives the new line that rate too.
+                  const all = inTable ? tableWht(items) : null
+                  const fresh = all?.kind === 'all' ? { ...emptyRow(cols), [ROW_WHT_RATE_KEY]: all.rate } : emptyRow(cols)
+                  onItemsChange([...items, fresh])
+                }}
               >
                 <Plus size={16} /> เพิ่มรายการ
               </button>

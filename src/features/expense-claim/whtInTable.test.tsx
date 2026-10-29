@@ -64,10 +64,9 @@ describe('withholding worked out in the table', () => {
     const { container, unmount } = render(<ExpenseClaimForm header={header} items={[row('ค่าบริการ', 5000)]} columns={cols} onHeaderChange={vi.fn()} onItemsChange={onItemsChange} />)
     fireEvent.change(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' }), { target: { value: '3' } })
     expect(onItemsChange).toHaveBeenCalledWith([expect.objectContaining({ [ROW_WHT_RATE_KEY]: 3 })])
-    // the withholding row under the table stays, showing what the table took — with no switch of its own
+    // the withholding row under the table stays, showing what the table took
     const whtTaxRow = (c: HTMLElement) => [...c.querySelectorAll('[data-tax-row]')].find(r => r.textContent?.includes('หัก ณ ที่จ่าย'))
-    expect(whtTaxRow(container)?.textContent).toContain('คิดในตาราง')
-    expect(whtTaxRow(container)?.querySelector('[role=switch]')).toBeNull()
+    expect(whtTaxRow(container)?.textContent).toContain('ปิดอยู่')         // no line withheld yet
     unmount()
     const taken = render(<ExpenseClaimForm header={header} items={[row('ค่าบริการ', 5000, 3)]} columns={cols} onHeaderChange={vi.fn()} onItemsChange={vi.fn()} />)
     expect(whtTaxRow(taken.container)?.textContent).toContain('−150.00')
@@ -96,5 +95,48 @@ describe('withholding worked out in the table', () => {
     const plain: FormColumn[] = [{ key: 'detail', label: 'รายละเอียด', type: 'text' }, { key: 'amount', label: 'จำนวนเงิน', type: 'number', isTotal: true }]
     const { container } = render(<ExpenseClaimForm header={{ ...header, whtRate: 3, whtScope: 'rows' }} items={[{ detail: 'x', amount: 2000, [ROW_WHT_RATE_KEY]: 1 }]} columns={plain} onHeaderChange={vi.fn()} onItemsChange={vi.fn()} />)
     expect(container.querySelector('[data-rate-amount]')?.textContent).toBe('20.00')
+  })
+
+})
+
+// Every line ไม่หัก: one switch withholds them all — by setting each line's rate,
+// so the table's own columns and the sums under it still agree.
+describe('withholding every line of the table at once', () => {
+  const twoRows = [row('ค่าบริการ', 5000), row('ค่าขนส่ง', 2000)]
+  const show = (rows: ExpenseRow[], onItemsChange = vi.fn()) =>
+    ({ onItemsChange, ...render(<ExpenseClaimForm header={header} items={rows} columns={cols} onHeaderChange={vi.fn()} onItemsChange={onItemsChange} />) })
+
+  it('switched on, gives every line the standard 3%; off, takes it off them all', () => {
+    const { onItemsChange, unmount } = show(twoRows)
+    fireEvent.click(screen.getByRole('switch', { name: 'หัก ณ ที่จ่าย' }))
+    expect(onItemsChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({ [ROW_WHT_RATE_KEY]: 3 }), expect.objectContaining({ [ROW_WHT_RATE_KEY]: 3 }),
+    ])
+    unmount()
+    const on = show([row('ค่าบริการ', 5000, 3), row('ค่าขนส่ง', 2000, 3)])
+    fireEvent.click(screen.getByRole('switch', { name: 'หัก ณ ที่จ่าย' }))
+    expect(on.onItemsChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({ [ROW_WHT_RATE_KEY]: 0 }), expect.objectContaining({ [ROW_WHT_RATE_KEY]: 0 }),
+    ])
+  })
+
+  it('changes every line\'s rate at once while they all share one', () => {
+    const { onItemsChange } = show([row('ค่าบริการ', 5000, 3), row('ค่าขนส่ง', 2000, 3)])
+    fireEvent.change(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่ายทุกรายการ' }), { target: { value: '1' } })
+    expect(onItemsChange).toHaveBeenLastCalledWith([
+      expect.objectContaining({ [ROW_WHT_RATE_KEY]: 1 }), expect.objectContaining({ [ROW_WHT_RATE_KEY]: 1 }),
+    ])
+  })
+
+  it('leaves lines that each picked their own rate to the table', () => {
+    show([row('ค่าบริการ', 5000, 3), row('ค่าขนส่ง', 2000, 1)])
+    expect(screen.queryByRole('combobox', { name: 'อัตราหัก ณ ที่จ่ายทุกรายการ' })).toBeNull()
+    expect(screen.getByText('อัตราเลือกในแต่ละรายการ')).toBeInTheDocument()
+  })
+
+  it('gives a line added later the rate every line has', () => {
+    const { onItemsChange } = show([row('ค่าบริการ', 5000, 3)])
+    fireEvent.click(screen.getByRole('button', { name: /เพิ่มรายการ/ }))
+    expect(onItemsChange.mock.lastCall![0][1]).toMatchObject({ [ROW_WHT_RATE_KEY]: 3 })
   })
 })
