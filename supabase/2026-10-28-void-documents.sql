@@ -72,7 +72,7 @@ end $$;
 -- were waiting to be signed wait again, and a correction made from it no
 -- longer claims to replace it.
 create or replace function unvoid_submission(sub_id uuid) returns void
-language plpgsql security definer set search_path = public as $
+language plpgsql security definer set search_path = public as $$
 declare r submissions;
 begin
   if not is_admin() then raise exception 'กู้คืนได้เฉพาะผู้ดูแลระบบ'; end if;
@@ -85,7 +85,7 @@ begin
   where id = sub_id;
   update submissions set replaces = null
    where replaces->>'id' = sub_id::text;
-end $;
+end $$;
 
 revoke all on function void_submission(uuid, text, uuid) from public, anon;
 revoke all on function unvoid_submission(uuid) from public, anon;
@@ -117,7 +117,7 @@ create trigger protect_voided before update on submissions
 -- someone else's document, or printed. Whatever the browser sends, those
 -- start empty; signatures only ever arrive through sign_document.
 create or replace function clean_new_submission() returns trigger
-language plpgsql set search_path = public as $
+language plpgsql set search_path = public as $$
 begin
   if auth.uid() is null then return new; end if;   -- SQL Editor / service jobs
   new.signatures := '[]'::jsonb;
@@ -126,7 +126,7 @@ begin
   new."printCount" := 0;
   new."lastPrintedAt" := null;
   return new;
-end $;
+end $$;
 drop trigger if exists clean_new_submission on submissions;
 create trigger clean_new_submission before insert on submissions
   for each row execute function clean_new_submission();
