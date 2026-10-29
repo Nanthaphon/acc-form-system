@@ -157,6 +157,15 @@ const db: Record<string, any[]> = {
   form_settings: [
     claimForm('f-claim', GROUP_MAIN, []),
     receiptForm('f-receipt', GROUP_MAIN, []),
+    // withholding worked out in the table: each line picks its rate
+    { ...simpleForm('f-wht', 'ใบเบิกค่าใช้จ่าย (หัก ณ ที่จ่ายในตาราง)', 'ใบขออนุมัติเบิกค่าใช้จ่าย', 'GAC69-006', '2026-10-29'),
+      columns: [
+        { key: 'date', label: 'วัน เดือน ปี', type: 'date', width: 19 },
+        { key: 'detail', label: 'รายละเอียดการจ่าย', type: 'text' },
+        { key: 'gross', label: 'จำนวนเงินรวม', type: 'number', width: 25 },
+        { key: 'wht', label: 'ภาษีหัก ณ ที่จ่าย', type: 'calc', width: 23, calc: { op: 'whtRow', a: 'gross' } },
+        { key: 'net', label: 'จำนวนเงินสุทธิ', type: 'calc', width: 25, isTotal: true, calc: { op: 'subtract', operands: ['gross', 'wht'] } },
+      ] },
     simpleForm('f-advance', 'ใบขอเบิกเงินทดรองจ่าย', 'ใบขอเบิกเงินทดรองจ่าย', 'GAC-6704-001', '2026-08-05'),
     simpleForm('f-petty', 'ใบเบิกเงินสดย่อย', 'ใบเบิกเงินสดย่อย', 'GAC-6704-002', '2026-08-06'),
     simpleForm('f-return', 'ใบรับเงินคืนเข้าบริษัท', 'ใบรับเงินคืน', 'GAC6709-008', '2026-08-20'),

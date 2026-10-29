@@ -34,6 +34,7 @@ function evalCalc(col: FormColumn, out: ExpenseRow): number {
     case 'subtract': return round2(ops.reduce((acc, k, i) => i === 0 ? num(k) : acc - num(k), 0))
     case 'divide': return round2(ops.reduce((acc, k, i) => i === 0 ? num(k) : (num(k) === 0 ? acc : acc / num(k)), 0))
     case 'percent': return round2(num(ops[0] ?? '') * (percent ?? 0) / 100)
+    case 'whtRow': return round2(num(ops[0] ?? '') * (rowWhtRate(out) ?? 0) / 100)
   }
   return 0
 }
@@ -137,6 +138,20 @@ export function rowWhtRate(row: ExpenseRow): number | null {
   const own = Number(row[ROW_WHT_RATE_KEY])
   if (Number.isFinite(own) && own > 0) return own
   return isRowTicked(row, ROW_WHT_KEY) ? null : 0
+}
+
+// A form that works หัก ณ ที่จ่าย out in its own columns — a whtRow column,
+// and a net column taking it off — has its withholding in the table. Each line
+// then picks its rate whether or not the document's withholding is switched
+// on, and the document's withholding stays out of the sums: taking it off
+// again under the table would take it twice.
+export function whtInTable(columns: FormColumn[]): boolean {
+  return columns.some(c => c.type === 'calc' && c.calc?.op === 'whtRow')
+}
+/** The header as the tax sums read it — without the document's withholding
+ *  on a form that works it out in the table. */
+export function taxHeader<H extends { whtRate?: number }>(columns: FormColumn[], header: H): H {
+  return whtInTable(columns) && header.whtRate ? { ...header, whtRate: undefined } : header
 }
 
 /** Lines grouped by rate; `rate: null` holds older withholding ticks. */

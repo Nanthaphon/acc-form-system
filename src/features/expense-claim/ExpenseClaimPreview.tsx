@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY, taxHeader } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -58,8 +58,10 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
   )
 }
 
-export default function ExpenseClaimPreview({ company, header, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures, voided }: Props) {
+export default function ExpenseClaimPreview({ company, header: given, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures, voided }: Props) {
   const cols = settings.columns
+  // Withholding worked out in the table's own columns is not taken off again below it.
+  const header = taxHeader(cols, given)
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
   // Print a figure only once the row holds one: a row left empty stays empty,

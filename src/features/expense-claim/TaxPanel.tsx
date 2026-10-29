@@ -71,7 +71,7 @@ function TaxRow({ name, on, onToggle, amount, children, below }: {
   )
 }
 
-export default function TaxPanel({ header, onHeaderChange, items, onItemsChange, cols, tax, bases, taxedAgain }: {
+export default function TaxPanel({ header, onHeaderChange, items, onItemsChange, cols, tax, bases, taxedAgain, whtInTable = false }: {
   header: ExpenseHeader
   onHeaderChange: (h: ExpenseHeader) => void
   items: ExpenseRow[]
@@ -80,6 +80,8 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
   tax: TaxResult
   bases: TaxBases
   taxedAgain: boolean
+  /** The form works หัก ณ ที่จ่าย out in its own columns: no switch for it here. */
+  whtInTable?: boolean
 }) {
   const vatByRow = FEATURES.taxPerRow && !!header.vat && header.vatScope === 'rows'
   const whtByRow = FEATURES.taxPerRow && !!header.whtRate && header.whtScope === 'rows'
@@ -145,7 +147,7 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
         {FEATURES.taxPerRow && <ScopePicker value={header.vatScope} onChange={v => setScope('vatScope', v)} label="ขอบเขต VAT" />}
       </TaxRow>
 
-      <TaxRow
+      {!whtInTable && <TaxRow
         name="หัก ณ ที่จ่าย"
         on={whtOn}
         onToggle={on => { setWhtOther(null); onHeaderChange({ ...header, whtRate: on ? STANDARD_WHT : 0 }) }}
@@ -196,7 +198,7 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
           </span>
         )}
         {FEATURES.taxPerRow && <ScopePicker value={header.whtScope} onChange={v => setScope('whtScope', v)} label="ขอบเขตหัก ณ ที่จ่าย" />}
-      </TaxRow>
+      </TaxRow>}
 
       <TaxRow
         name="ค่าประกันงาน"

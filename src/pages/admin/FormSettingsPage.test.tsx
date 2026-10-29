@@ -238,3 +238,20 @@ describe('FormSettingsPage', () => {
     expect(screen.queryByDisplayValue(/×/)).not.toBeInTheDocument()
   })
 })
+
+// A column of ภาษีหัก ณ ที่จ่าย worked out from จำนวนเงินรวม at each line's rate.
+describe('FormSettingsPage — withholding worked out in the table', () => {
+  it('makes a column of withholding at the rate each line picks', async () => {
+    vi.mocked(updateFormSettings).mockResolvedValueOnce([])
+    show()
+    await waitFor(() => expect(screen.getByText('คอลัมน์ตาราง')).toBeInTheDocument())
+    fireEvent.change(screen.getAllByTitle('ชนิดข้อมูล')[3], { target: { value: 'calc' } })
+    fireEvent.change(screen.getByDisplayValue('× คูณ'), { target: { value: 'whtRow' } })
+    expect(screen.getByText(/อัตราที่ผู้กรอกเลือกในแต่ละรายการ/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('คอลัมน์ที่ใช้คิดหัก ณ ที่จ่าย'), { target: { value: 'amount' } })
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกฟอร์ม/ }))
+    await waitFor(() => expect(updateFormSettings).toHaveBeenCalled())
+    const saved = vi.mocked(updateFormSettings).mock.calls[0][0] as FormSettings
+    expect(saved.columns[3].calc).toEqual({ op: 'whtRow', a: 'amount' })
+  })
+})

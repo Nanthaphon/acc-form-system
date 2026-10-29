@@ -28,10 +28,13 @@ const subPanel = 'rounded-lg bg-stone-50 p-3'
 
 const OP_LABELS: Record<CalcDef['op'], string> = {
   multiply: '× คูณ', subtract: '− ลบ', add: '+ บวก', divide: '÷ หาร', percent: '% ร้อยละ',
+  whtRow: '% หัก ณ ที่จ่ายตามที่เลือกในรายการ',
 }
 const OP_SYMBOL: Record<CalcDef['op'], string> = {
-  multiply: '×', subtract: '−', add: '+', divide: '÷', percent: '%',
+  multiply: '×', subtract: '−', add: '+', divide: '÷', percent: '%', whtRow: '%',
 }
+// Worked out from one column rather than a list of them.
+const ONE_OPERAND: CalcDef['op'][] = ['percent', 'whtRow']
 
 const MAX_VISIBLE = 12
 
@@ -214,10 +217,10 @@ export default function FormSettingsPage() {
   function changeOp(idx: number, op: CalcDef['op']) {
     const col = settings.columns[idx]
     const others = settings.columns.filter((c, i) => i !== idx && (c.type === 'number' || c.type === 'calc'))
-    if (op === 'percent') {
+    if (ONE_OPERAND.includes(op)) {
       const existing = col.calc ? calcOperands(col.calc) : []
       const a = existing[0] ?? others[0]?.key ?? ''
-      patchColumn(idx, { calc: { op, a, percent: col.calc?.percent ?? 0 } })
+      patchColumn(idx, { calc: op === 'percent' ? { op, a, percent: col.calc?.percent ?? 0 } : { op, a } })
     } else {
       const legacyOps = col.calc ? calcOperands(col.calc) : []
       const operands = legacyOps.length >= 2 ? legacyOps : [others[0]?.key, others[1]?.key].filter((x): x is string => !!x)
@@ -586,6 +589,7 @@ export default function FormSettingsPage() {
           {columns.map((col, i) => {
             const others = columns.filter((c, x) => x !== i && (c.type === 'number' || c.type === 'calc'))
             const isPercent = col.calc?.op === 'percent'
+            const isWhtRow = col.calc?.op === 'whtRow'
             const operands = col.calc ? calcOperands(col.calc) : []
             return (
               <div key={i} className={`rounded-lg border border-stone-200 p-2 ${col.hidden ? 'bg-stone-50' : 'bg-white'}`}>
@@ -647,9 +651,20 @@ export default function FormSettingsPage() {
                   <div className={`${subPanel} mt-2 flex flex-wrap items-center gap-2`}>
                     <span className="text-xs text-stone-500">คำนวณจาก</span>
                     <select className={ui.inputSm} value={col.calc?.op ?? 'multiply'} onChange={e => changeOp(i, e.target.value as CalcDef['op'])}>
-                      {(['multiply', 'subtract', 'add', 'divide', 'percent'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
+                      {(['multiply', 'subtract', 'add', 'divide', 'percent', 'whtRow'] as CalcDef['op'][]).map(op => <option key={op} value={op}>{OP_LABELS[op]}</option>)}
                     </select>
-                    {isPercent ? (
+                    {isWhtRow ? (
+                      <>
+                        <select className={ui.inputSm} aria-label="คอลัมน์ที่ใช้คิดหัก ณ ที่จ่าย" value={operands[0] ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
+                          <option value="">— เลือกคอลัมน์ —</option>
+                          {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
+                        </select>
+                        <span className="text-xs text-stone-500">× อัตราที่ผู้กรอกเลือกในแต่ละรายการ (ไม่หัก · 1 · 2 · 3 · 5% · อื่นๆ)</span>
+                        <span className="w-full text-xs text-stone-500">
+                          ยอดสุทธิ: เพิ่มคอลัมน์คำนวณแบบ “− ลบ” (จำนวนเงินรวม − คอลัมน์นี้) แล้วติ๊ก “ยอดรวม” ที่คอลัมน์นั้น — หัก ณ ที่จ่ายใต้ตารางจะไม่หักซ้ำ
+                        </span>
+                      </>
+                    ) : isPercent ? (
                       <>
                         <select className={ui.inputSm} value={operands[0] ?? ''} onChange={e => patchCalc(i, { a: e.target.value })}>
                           <option value="">— เลือกคอลัมน์ —</option>

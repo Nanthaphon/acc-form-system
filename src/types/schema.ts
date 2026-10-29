@@ -12,11 +12,14 @@ export function isTextCol(type: ColumnType): boolean {
   return type === 'text' || type === 'date' || type === 'select'
 }
 export interface CalcDef {
-  op: 'multiply' | 'subtract' | 'add' | 'percent' | 'divide'
+  // whtRow: one column × the หัก ณ ที่จ่าย rate picked on that row (ไม่หัก / 1 /
+  // 2 / 3 / 5% / อื่นๆ) — withholding worked out in the table itself.
+  op: 'multiply' | 'subtract' | 'add' | 'percent' | 'divide' | 'whtRow'
   operands?: string[]   // list of column keys (2+) for multiply/add/subtract
   a?: string             // legacy single operand (percent uses this or operands[0])
   b?: string             // legacy second operand
   percent?: number       // for op==='percent'
+  // percent and whtRow take one column: `a` (or operands[0])
 }
 
 // Returns the operand column keys for a calc def: prefers the new `operands`
