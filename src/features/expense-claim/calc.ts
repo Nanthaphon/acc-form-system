@@ -148,6 +148,13 @@ export function rowWhtRate(row: ExpenseRow): number | null {
 export function whtInTable(columns: FormColumn[]): boolean {
   return columns.some(c => c.type === 'calc' && c.calc?.op === 'whtRow')
 }
+/** The column a line's หัก ณ ที่จ่าย is worked out on: the one a whtRow
+ *  column takes, or else the document's total column (as taxBases reads it). */
+export function whtBaseColumn(columns: FormColumn[]): string | undefined {
+  const inTable = columns.find(c => c.type === 'calc' && c.calc?.op === 'whtRow')
+  return (inTable?.calc ? calcOperands(inTable.calc)[0] : undefined) ?? totalColumn(columns)?.key
+}
+
 /** The header as the tax sums read it — without the document's withholding
  *  on a form that works it out in the table. */
 export function taxHeader<H extends { whtRate?: number }>(columns: FormColumn[], header: H): H {

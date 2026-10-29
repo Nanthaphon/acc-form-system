@@ -70,4 +70,16 @@ describe('withholding worked out in the table', () => {
     expect(sheet.textContent).toContain('8,330.00')
     expect(sheet.textContent).not.toMatch(/หัก ณ ที่จ่าย \d+%/)
   })
+
+  // The person picking a rate sees what it takes in baht, right under it.
+  it('shows under each line\'s rate what it comes to in baht', () => {
+    const { container } = render(<ExpenseClaimForm header={header} items={[row('ค่าบริการ', 5000, 3), row('ค่าโรงแรม', 1500)]} columns={cols} onHeaderChange={vi.fn()} onItemsChange={vi.fn()} />)
+    expect([...container.querySelectorAll('[data-rate-amount]')].map(e => e.textContent)).toEqual(['150.00'])
+  })
+
+  it('works it out on the document total on a form withholding line by line below the table', () => {
+    const plain: FormColumn[] = [{ key: 'detail', label: 'รายละเอียด', type: 'text' }, { key: 'amount', label: 'จำนวนเงิน', type: 'number', isTotal: true }]
+    const { container } = render(<ExpenseClaimForm header={{ ...header, whtRate: 3, whtScope: 'rows' }} items={[{ detail: 'x', amount: 2000, [ROW_WHT_RATE_KEY]: 1 }]} columns={plain} onHeaderChange={vi.fn()} onItemsChange={vi.fn()} />)
+    expect(container.querySelector('[data-rate-amount]')?.textContent).toBe('20.00')
+  })
 })

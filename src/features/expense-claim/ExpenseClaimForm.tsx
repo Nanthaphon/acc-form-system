@@ -3,7 +3,7 @@ import { ALargeSmall, Link2, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react
 import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, taxBases, taxHeader, taxSummary, whtInTable, visibleColumns, fillTableLayout, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, isRowTicked, rowHasNumbers, round2, taxBases, taxHeader, taxSummary, totalColumn, whtBaseColumn, whtInTable, visibleColumns, fillTableLayout, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
 import { formatMoney } from '../../shared/money'
 import DateInput from '../../components/DateInput'
 import { AUTO_FIELDS, autoValue, parseTemplate, templateFields } from '../../shared/bodyTemplate'
@@ -247,6 +247,13 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
     onItemsChange(items.map((r, x) => x === i ? { ...r, ...set } : r))
   }
   const ratePresets = (kind: 'wht' | 'ret') => kind === 'wht' ? WHT_PRESETS : RET_PRESETS
+  // What a line's rate comes to in baht, shown under its choice — so the
+  // person picking 3% sees the 30.00 it takes, not only the percentage.
+  const rateBase = { wht: whtBaseColumn(cols), ret: totalColumn(cols)?.key }
+  const rateAmount = (kind: 'wht' | 'ret', i: number, rate: number): number => {
+    const key = rateBase[kind]
+    return key && rate > 0 ? round2((Number(computed[i]?.[key]) || 0) * rate / 100) : 0
+  }
   const rateChoice = (kind: 'wht' | 'ret', i: number, rate: number): string =>
     otherRateRows.has(`${kind}:${i}`) || (rate > 0 && !ratePresets(kind).includes(rate)) ? 'other' : String(rate)
 
@@ -469,6 +476,11 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                                 {ratePresets(kind).map(r => <option key={r} value={String(r)}>{r}%</option>)}
                                 <option value="other">อื่นๆ</option>
                               </select>
+                              {rateAmount(kind, i, rate) > 0 && (
+                                <span data-rate-amount className="text-xs font-medium tabular-nums text-brick-600">
+                                  {formatMoney(rateAmount(kind, i, rate))}
+                                </span>
+                              )}
                               {choice === 'other' && (
                                 <span className="flex items-center gap-0.5 text-xs text-stone-500">
                                   <input
