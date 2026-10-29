@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
-import { computeRow, grandTotal, taxBases, taxHeader, taxSubtotal, taxSummary, whtInTable, ROW_WHT_KEY, ROW_WHT_RATE_KEY } from './calc'
+import { adoptDocumentWht, computeRow, grandTotal, taxBases, taxHeader, taxSubtotal, taxSummary, whtInTable, whtLines, ROW_WHT_KEY, ROW_WHT_RATE_KEY } from './calc'
 import type { ExpenseHeader, ExpenseRow, FormColumn, FormSettings } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../../types/schema'
 
@@ -187,5 +187,77 @@ describe('withholding on a form without a column for it', () => {
   it('leaves a document saved at one rate for everything as it was', () => {
     const tax = taxSummary(7000, false, 5, 0, taxBases(plain, lines, { wht: 'all' }))
     expect(tax.whtAmount).toBe(350)
+  })
+})
+
+// Found in review before going live.
+describe('withholding in the table — the sums under it', () => {
+  const vatCols: FormColumn[] = [
+    { key: 'detail', label: 'รายละเอียด', type: 'text' },
+    { key: 'gross', label: 'จำนวนเงิน', type: 'number' },
+    { key: 'vat', label: 'VAT', type: 'calc', calc: { op: 'percent', a: 'gross', percent: 7 } },
+    { key: 'wht', label: 'ภาษีหัก ณ ที่จ่าย', type: 'calc', calc: { op: 'whtRow', a: 'gross' } },
+    { key: 'net', label: 'สุทธิ', type: 'calc', calc: { op: 'subtract', operands: ['gross', 'wht'] }, isTotal: true },
+  ]
+  const one = [row('ค่าบริการ', 1000, 3)]
+
+  it('charges VAT ticked line by line on the amount before withholding, as on everything', () => {
+    const all = taxSummary(taxSubtotal(cols, one), true, undefined, 0, taxBases(cols, one, {}))
+    const ticked = [{ ...one[0], 'tax:vat': 1 }]
+    const byLine = taxSummary(taxSubtotal(cols, ticked), true, undefined, 0, taxBases(cols, ticked, { vat: 'rows' }))
+    expect(all.vatAmount).toBe(70)
+    expect(byLine.vatAmount).toBe(70)
+  })
+
+  it('keeps whatever else the total column holds — a VAT column in it', () => {
+    const withVat = vatCols.map(c => c.key === 'net' ? { ...c, calc: { op: 'add' as const, operands: ['gross', 'vat'] } } : c)
+      .concat([{ key: 'pay', label: 'ยอดจ่าย', type: 'calc', calc: { op: 'subtract', operands: ['net', 'wht'] }, isTotal: true }])
+      .map(c => c.key === 'net' ? { ...c, isTotal: false } : c)
+    expect(grandTotal(withVat, one)).toBe(1040)                       // 1,000 + 70 − 30
+    const tax = taxSummary(taxSubtotal(withVat, one), false, undefined, 0, taxBases(withVat, one, {}))
+    expect(tax.netTotal).toBe(1040)
+  })
+
+  it('reads the withholding column marked as the total as the column it is charged on', () => {
+    const odd = cols.map(c => ({ ...c, isTotal: c.key === 'wht' }))
+    const tax = taxSummary(taxSubtotal(odd, one), false, undefined, 0, taxBases(odd, one, {}))
+    expect(tax.subtotal).toBe(1000)
+    expect(tax.netTotal).toBe(970)
+  })
+
+  it('lists each rate as the table took it, so the lines add up to the total', () => {
+    const small = [row('a', 0.5, 3), row('b', 0.5, 3), row('c', 0.5, 5)]
+    const bases = taxBases(cols, small, {})
+    expect(bases.whtFixed).toBeGreaterThan(0)            // each line rounded on its own
+    const lines = whtLines(bases)
+    expect(lines.reduce((s, l) => s + l.amount, 0)).toBeCloseTo(bases.whtFixed!, 9)
+  })
+
+  it('prints a summary explaining the withholding when the table\'s total is the amount before it', () => {
+    const grossTotal = cols.map(c => ({ ...c, isTotal: c.key === 'gross' }))
+    const { container } = render(<ExpenseClaimPreview company={null} header={header} items={one} docNumber="X" settings={{ ...settings, columns: grossTotal }} />)
+    expect(container.textContent).toMatch(/หัก ณ ที่จ่าย \(ตามรายการ\)\s*-30\.00/)
+  })
+})
+
+// A form given a withholding column after documents were saved on it.
+describe('documents saved before their form worked withholding out in the table', () => {
+  it('gives every line the document\'s rate when it was charged on everything', () => {
+    const rows = adoptDocumentWht(cols, { whtRate: 3, whtScope: 'all' }, [{ detail: 'a', gross: 1000 }, { detail: 'b', gross: 500 }])
+    expect(rows.map(r => r[ROW_WHT_RATE_KEY])).toEqual([3, 3])
+    expect(grandTotal(cols, rows)).toBe(1455)
+  })
+
+  it('gives lines ticked before lines had rates the document\'s rate, and leaves the rest', () => {
+    const rows = adoptDocumentWht(cols, { whtRate: 3, whtScope: 'rows' }, [
+      { detail: 'a', gross: 1000, [ROW_WHT_KEY]: 1 }, { detail: 'b', gross: 500 }, { detail: 'c', gross: 200, [ROW_WHT_RATE_KEY]: 1 },
+    ])
+    expect(rows.map(r => r[ROW_WHT_RATE_KEY])).toEqual([3, undefined, 1])
+  })
+
+  it('leaves a document with no withholding, or a form without the column, alone', () => {
+    const lines = [{ detail: 'a', gross: 1000 }]
+    expect(adoptDocumentWht(cols, {}, lines)).toBe(lines)
+    expect(adoptDocumentWht(cols.filter(c => c.key !== 'wht'), { whtRate: 3 }, lines)).toBe(lines)
   })
 })

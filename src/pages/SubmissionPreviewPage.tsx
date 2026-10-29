@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider'
 import ExpenseClaimPreview from '../features/expense-claim/ExpenseClaimPreview'
 import { getSubmission, incrementPrint } from '../data/submissions'
 import { getFormSettings } from '../data/formSettings'
+import { adoptDocumentWht } from '../features/expense-claim/calc'
 import { getCompany } from '../data/companies'
 import type { Submission, FormSettings, Company } from '../types/schema'
 import AttachmentsField from '../components/AttachmentsField'
@@ -24,8 +25,10 @@ export default function SubmissionPreviewPage() {
     if (!id) return
     getSubmission(id).then(async s => {
       if (!s) return
-      setSub(s)
-      setSettings(await getFormSettings(s.formType))
+      const fs = await getFormSettings(s.formType)
+      // saved before its form worked withholding out in the table: lines take the document's rate
+      setSub({ ...s, items: adoptDocumentWht(fs.columns, s.header, s.items) })
+      setSettings(fs)
       if (s.header.companyId) setCompany(await getCompany(s.header.companyId))
     })
   }, [id])

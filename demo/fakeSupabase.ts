@@ -392,6 +392,7 @@ const rpc = async (name: string, args: any) => {
       const me = db.profiles.find(p => p.uid === ME)
       s.voided = {
         at: Date.now(), byUid: ME, byName: me ? `${me.firstName} ${me.lastName}` : '', reason: args.reason,
+        pending: (s.signatures ?? []).filter((x: any) => x.status !== 'signed'),
         ...(n ? { replacedById: n.id, replacedByNumber: n.docNumber } : {}),
       }
       s.signatures = (s.signatures ?? []).filter((x: any) => x.status === 'signed')
@@ -399,7 +400,11 @@ const rpc = async (name: string, args: any) => {
     }
     case 'unvoid_submission': {
       const s = db.submissions.find(x => x.id === args.sub_id)
-      if (s) s.voided = null
+      if (s?.voided) {
+        s.signatures = [...(s.signatures ?? []), ...(s.voided.pending ?? [])]
+        s.voided = null
+        for (const x of db.submissions) if (x.replaces?.id === s.id) x.replaces = null
+      }
       return { data: null, error: null }
     }
     default: return { data: null, error: null }

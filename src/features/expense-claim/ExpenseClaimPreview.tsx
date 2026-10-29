@@ -2,7 +2,7 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY, taxHeader, taxSubtotal, whtInTable } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY, taxHeader, taxSubtotal, whtInTable, whtNettedInTable } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
@@ -87,7 +87,10 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
   // Which lines a tax was charged on is chosen on the fill-in screen and kept
   // with the document, but not printed: the sheet keeps its own columns, and
   // the summary says what each tax was worked out from and on how many lines.
-  const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate
+  // Withholding the table took but its own total does not show (the total
+  // column is the amount before it) is explained in the summary too — or the
+  // sheet's รวมทั้งสิ้น and its amount in words would not agree.
+  const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate || (tableWht && !whtNettedInTable(cols))
   const bahtWords = bahtText(tax.netTotal)
   // What the paragraphs' automatic fields print — the same figures as the rest of the sheet.
   const auto: AutoValues = { company: company?.name, amount: tax.netTotal, requester: `${header.firstName} ${header.lastName}`, position: header.position }

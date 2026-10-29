@@ -27,7 +27,7 @@ export async function askAndUnvoid(r: Pick<SubmissionSummary, 'id' | 'docNumber'
   const replaced = r.voided?.replacedByNumber
   const msg = replaced
     ? `เอกสารนี้มีฉบับแก้ไข ${replaced} อยู่แล้ว — กู้คืนแล้วจะมีทั้ง 2 ฉบับที่ใช้งานได้`
-    : 'เอกสารจะกลับมาใช้งานได้ตามเดิม'
+    : 'เอกสารจะกลับมาใช้งานได้ตามเดิม — คนที่เคยรอเซ็นจะกลับมารอเซ็นอีกครั้ง'
   if (!(await uiConfirm(msg, { title: `กู้คืนเอกสาร "${r.docNumber}" ?`, confirmText: 'กู้คืน' }))) return false
   try {
     await unvoidSubmission(r.id)

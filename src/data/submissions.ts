@@ -166,8 +166,9 @@ const LIST_COLS = 'id,formType,docNumber,header,totals,createdBy,createdByEmploy
 // voided/replaces arrive with supabase/2026-10-28-void-documents.sql; until it
 // is run the lists load without them.
 let hasVoidCols = true
-// Whether cancelling is set up in the database — known once a list has loaded.
-// Until then the screens offer no way to cancel or correct a signed document.
+// Whether cancelling is set up in the database. Assumed so until a list,
+// loading, finds the columns missing; from then on the screens offer no way to
+// cancel or correct a signed document.
 export function voidingAvailable(): boolean { return hasVoidCols }
 // Every signed block carries a full copy of the signer's image, far too heavy to
 // download for a whole list. signatures_light() (supabase/2026-09-11-list-performance.sql)

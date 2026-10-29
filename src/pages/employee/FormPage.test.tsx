@@ -367,6 +367,22 @@ describe('correcting a document others have signed', () => {
     expect(voidSubmission).toHaveBeenCalledWith('s1', 'กรอกยอดผิด', 'new1')
   })
 
+  // The new document is kept; saving again tries the original once more, with the link.
+  it('tries cancelling the original again when it failed', async () => {
+    vi.mocked(createSubmission).mockResolvedValueOnce({ id: 'new1', docNumber: 'EX-0008' } as Submission)
+    vi.mocked(voidSubmission).mockRejectedValueOnce(new Error('network'))
+    openRevise()
+    await screen.findByText(/เป็นฉบับใหม่/)
+    await waitFor(() => expect(screen.getByDisplayValue('ค่าเดินทาง')).not.toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+    await waitFor(() => expect(uiAlert).toHaveBeenCalledWith(expect.stringContaining('ลองใหม่'), expect.objectContaining({ title: 'ยกเลิกฉบับเดิมไม่สำเร็จ' })))
+    expect(print).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
+    await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
+    expect(createSubmission).toHaveBeenCalledTimes(1)
+    expect(voidSubmission).toHaveBeenLastCalledWith('s1', 'กรอกยอดผิด', 'new1')
+  })
+
   it('saves nothing until a reason is given', async () => {
     uiPrompt.mockResolvedValueOnce(null)
     openRevise()

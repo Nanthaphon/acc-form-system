@@ -7,7 +7,7 @@ import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { ExpenseHeader, ExpenseRow, ExpenseTotals, Company, FormSettings, SubmissionVersion, DocSignature, Attachment, SubmissionSummary, VoidInfo } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth } from '../../types/schema'
-import { computeColumnTotals, taxBases, taxSubtotal, taxSummary } from '../../features/expense-claim/calc'
+import { adoptDocumentWht, computeColumnTotals, whtInTable, taxBases, taxSubtotal, taxSummary } from '../../features/expense-claim/calc'
 import { FEATURES } from '../../shared/features'
 import { bahtText } from '../../shared/bahttext'
 import ExpenseClaimForm from '../../features/expense-claim/ExpenseClaimForm'
@@ -85,13 +85,17 @@ export default function FormPage() {
 
   useEffect(() => { // EDIT mode: load existing submission + its form settings
     if (!id) return
-    getSubmission(id).then(s => {
+    getSubmission(id).then(async s => {
       if (!s) return
-      setHeader(s.header); setItems(s.items); setDocNumber(s.docNumber); setSavedId(s.id)
+      const fs = await getFormSettings(s.formType)
+      const items = adoptDocumentWht(fs.columns, s.header, s.items)
+      // Its rate now on the lines, the document keeps none of its own to hand out again.
+      const header = whtInTable(fs.columns) && s.header.whtRate ? { ...s.header, whtRate: 0 } : s.header
+      setHeader(header); setItems(items); setDocNumber(s.docNumber); setSavedId(s.id)
       setSigs(s.signatures ?? []); setOwnerUid(s.createdBy); setVoided(s.voided ?? null)
       setAttachments(s.attachments ?? [])
-      setLoaded({ header: s.header, items: s.items, updatedAt: s.updatedAt ?? 0 })
-      getFormSettings(s.formType).then(setSettings)
+      setLoaded({ header, items, updatedAt: s.updatedAt ?? 0 })
+      setSettings(fs)
     })
   }, [id])
   useEffect(() => { // NEW mode: load the form settings for this formType
@@ -104,14 +108,17 @@ export default function FormPage() {
   }, [id, formType, sourceId])
   useEffect(() => { // CLONE / REVISE mode: prefill from a source doc but stay a NEW (unsaved) doc
     if (id || !sourceId) return
-    getSubmission(sourceId).then(s => {
+    getSubmission(sourceId).then(async s => {
       if (!s) return
-      setHeader(s.header); setItems(s.items) // copy content only — new number is assigned on save
+      const fs = await getFormSettings(s.formType)
+      const items = adoptDocumentWht(fs.columns, s.header, s.items)
+      const header = whtInTable(fs.columns) && s.header.whtRate ? { ...s.header, whtRate: 0 } : s.header
+      setHeader(header); setItems(items) // copy content only — new number is assigned on save
       // A correction keeps the original's receipts (copied over on save); one
       // already cancelled is simply copied.
       if (reviseId && !s.voided) { setRevising({ id: s.id, docNumber: s.docNumber }); setAttachments(s.attachments ?? []) }
-      setLoaded({ header: s.header, items: s.items, updatedAt: 0 })
-      getFormSettings(s.formType).then(setSettings)
+      setLoaded({ header, items, updatedAt: 0 })
+      setSettings(fs)
     })
   }, [id, sourceId, reviseId])
 
@@ -176,7 +183,7 @@ export default function FormPage() {
       if (ownSigned && !(await takeOwnSignatureOff())) return
       const subId = await persist(totals)
       if (!subId) return
-      if (revising) await voidOriginal(subId, reviseReason)
+      if (revising && !(await voidOriginal(subId, reviseReason))) return
       if (!(await stampMySignature(subId))) return
       await print(subId, true)
     } finally { setSaving(false) }
@@ -206,16 +213,19 @@ export default function FormPage() {
   }
 
   // The corrected document is saved: the original is cancelled in its favour.
-  // Failing here leaves both — the new one is kept, and the person is told to
-  // cancel the original from the history page.
-  async function voidOriginal(newId: string, reason: string) {
-    if (!revising) return
+  // Failing here keeps the new one and stays a correction, so saving again
+  // tries once more — and links the two, which cancelling the original by
+  // hand from the history page would not.
+  async function voidOriginal(newId: string, reason: string): Promise<boolean> {
+    if (!revising) return true
     try {
       await voidSubmission(revising.id, reason, newId)
+      setRevising(null)
+      return true
     } catch (e) {
-      uiAlert(`บันทึกฉบับใหม่แล้ว แต่ยกเลิกฉบับเดิม ${revising.docNumber} ไม่สำเร็จ (${(e as Error).message}) — ไปกด “ยกเลิกเอกสาร” ที่ฉบับเดิมในหน้าประวัติ`, { title: 'ยกเลิกฉบับเดิมไม่สำเร็จ' })
+      uiAlert(`บันทึกฉบับใหม่แล้ว แต่ยกเลิกฉบับเดิม ${revising.docNumber} ไม่สำเร็จ (${(e as Error).message}) — กด “บันทึกและพิมพ์” อีกครั้งเพื่อลองใหม่`, { title: 'ยกเลิกฉบับเดิมไม่สำเร็จ' })
+      return false
     }
-    setRevising(null)
   }
 
   // Take the requester's own signature off so the document can be changed.

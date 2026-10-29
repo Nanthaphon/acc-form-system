@@ -159,17 +159,57 @@ function dependsOn(columns: FormColumn[], key: string, target: string, seen = ne
   const col = columns.find(c => c.key === key)
   return !!col?.calc && calcOperands(col.calc).some(k => dependsOn(columns, k, target, seen))
 }
-/** What the taxes under the table are worked out on. Usually the document's
- *  total column — but where that column already has the table's withholding
- *  taken off (จำนวนเงินสุทธิ), the amount before it (จำนวนเงินรวม): the
- *  withholding is then taken off once, below, whichever column was marked
- *  as the total. */
-export function taxSubtotal(columns: FormColumn[], rows: ExpenseRow[]): number {
+// How a table that works withholding out reads: the withholding column, the
+// one it is charged on, the column that stands for the document's amount, and
+// whether that amount already has the withholding taken off (จำนวนเงินสุทธิ =
+// … − ภาษีหัก ณ ที่จ่าย). A form marking the withholding column itself as
+// its total is read as marking the column it is charged on.
+interface InTable { wht: FormColumn; source: string; totalKey: string; netted: boolean }
+function inTableOf(columns: FormColumn[]): InTable | null {
   const wht = whtRowColumn(columns)
+  const source = wht?.calc ? calcOperands(wht.calc)[0] : undefined
+  if (!wht || !source) return null
   const total = totalColumn(columns)
-  const base = wht?.calc ? calcOperands(wht.calc)[0] : undefined
-  if (!wht || !total || !base || !dependsOn(columns, total.key, wht.key)) return grandTotal(columns, rows)
-  return round2(computeColumnTotals(columns, rows)[base] ?? 0)
+  const totalKey = !total || total.key === wht.key ? source : total.key
+  return { wht, source, totalKey, netted: totalKey !== source && dependsOn(columns, totalKey, wht.key) }
+}
+/** A line's amount before the table's withholding — what VAT, ค่าประกันงาน
+ *  and the rest are worked out on. The document's total column for a line,
+ *  with the withholding put back where that column had already taken it off,
+ *  so a column for VAT or a discount in the total is kept. */
+export function lineTaxBase(columns: FormColumn[], row: ExpenseRow): number {
+  const c = computeRow(columns, row)
+  const t = inTableOf(columns)
+  if (!t) { const tc = totalColumn(columns); return tc ? Number(c[tc.key]) || 0 : 0 }
+  return round2((Number(c[t.totalKey]) || 0) + (t.netted ? Number(c[t.wht.key]) || 0 : 0))
+}
+/** What the taxes under the table are worked out on: the document's amount
+ *  before the table's withholding, which is then taken off once, below —
+ *  whichever column was marked as the total. */
+export function taxSubtotal(columns: FormColumn[], rows: ExpenseRow[]): number {
+  const t = inTableOf(columns)
+  if (!t) return grandTotal(columns, rows)
+  const sums = computeColumnTotals(columns, rows)
+  return round2((sums[t.totalKey] ?? 0) + (t.netted ? sums[t.wht.key] ?? 0 : 0))
+}
+/** Whether the table's own total already has its withholding taken off — so
+ *  the sheet's รวมทั้งสิ้น is the net, and needs no summary to explain it. */
+export function whtNettedInTable(columns: FormColumn[]): boolean {
+  return !!inTableOf(columns)?.netted
+}
+/** A document saved before its form worked withholding out in the table kept
+ *  the rate on the document (every line at 3%), or ticked lines at that rate.
+ *  On such a form each line carries its own rate: give them the one the
+ *  document was saved with, so it still comes to what it did. */
+export function adoptDocumentWht(columns: FormColumn[], header: { whtRate?: number; whtScope?: TaxScope }, rows: ExpenseRow[]): ExpenseRow[] {
+  const rate = header.whtRate || 0
+  if (!whtInTable(columns) || !rate) return rows
+  return rows.map(r => {
+    const own = Number(r[ROW_WHT_RATE_KEY])
+    if (Number.isFinite(own) && own > 0) return r
+    const withheld = header.whtScope === 'rows' ? isRowTicked(r, ROW_WHT_KEY) : !(ROW_WHT_RATE_KEY in r)
+    return withheld ? { ...r, [ROW_WHT_RATE_KEY]: rate, [ROW_WHT_KEY]: UNTICK } : r
+  })
 }
 /** How the lines of a table that works withholding out stand: none withheld,
  *  every one at the same rate, or each at its own. */
@@ -197,8 +237,9 @@ export function taxHeader<H extends { whtRate?: number }>(columns: FormColumn[],
   return whtInTable(columns) && header.whtRate ? { ...header, whtRate: undefined } : header
 }
 
-/** Lines grouped by rate; `rate: null` holds older withholding ticks. */
-export interface WhtGroup { rate: number | null; base: number; count: number }
+/** Lines grouped by rate; `rate: null` holds older withholding ticks.
+ *  `amount`: what the table's own column took from these lines, when it did. */
+export interface WhtGroup { rate: number | null; base: number; count: number; amount?: number }
 export interface RateLine { rate: number; base: number; count: number; amount: number }
 
 export interface TaxBases {
@@ -221,8 +262,7 @@ export function taxBases(
   columns: FormColumn[], rows: ExpenseRow[], scopes: { vat?: TaxScope; wht?: TaxScope; ret?: TaxScope },
 ): TaxBases {
   const everything = grandTotal(columns, rows)
-  const totalCol = totalColumn(columns)
-  const lineTotal = (r: ExpenseRow) => !totalCol ? 0 : Number(computeRow(columns, r)[totalCol.key]) || 0
+  const lineTotal = (r: ExpenseRow) => lineTaxBase(columns, r)
   const ticked = (key: string) => round2(rows.filter(r => isRowTicked(r, key)).reduce((s, r) => s + lineTotal(r), 0))
 
   const byRate = (rateOf: (r: ExpenseRow) => number | null): WhtGroup[] => {
@@ -247,8 +287,10 @@ export function taxBases(
     for (const r of rows) {
       const rate = rowWhtRate(r) ?? 0
       if (!rate) continue
-      const g = groups.get(rate) ?? { rate, base: 0, count: 0 }
-      g.base = round2(g.base + (Number(computeRow(columns, r)[baseKey]) || 0)); g.count++
+      const line = computeRow(columns, r)
+      const g = groups.get(rate) ?? { rate, base: 0, count: 0, amount: 0 }
+      g.base = round2(g.base + (Number(line[baseKey]) || 0)); g.count++
+      g.amount = round2((g.amount ?? 0) + (Number(line[inTable.key]) || 0))   // as the column has it, line by line
       groups.set(rate, g)
     }
     const fixed = round2(computeColumnTotals(columns, rows)[inTable.key] ?? 0)
@@ -288,17 +330,20 @@ export function retLines(bases: TaxBases): RateLine[] {
 }
 
 function rateLines(groups: WhtGroup[] | undefined, documentRate?: number): RateLine[] {
-  const merged = new Map<number, { rate: number; base: number; count: number }>()
+  const merged = new Map<number, { rate: number; base: number; count: number; amount?: number }>()
   for (const g of groups ?? []) {
     const rate = g.rate ?? documentRate ?? 0
     if (!rate) continue
-    const m = merged.get(rate) ?? { rate, base: 0, count: 0 }
+    const m = merged.get(rate) ?? { rate, base: 0, count: 0, ...(g.amount !== undefined ? { amount: 0 } : {}) }
     m.base = round2(m.base + g.base); m.count += g.count
+    if (m.amount !== undefined) m.amount = round2(m.amount + (g.amount ?? 0))
     merged.set(rate, m)
   }
+  // A group the table already worked out keeps the table's figure, so the
+  // lines below the switch add up to what is taken off.
   return [...merged.values()]
     .sort((a, b) => a.rate - b.rate)
-    .map(m => ({ ...m, amount: round2(m.base * m.rate / 100) }))
+    .map(m => ({ ...m, amount: m.amount ?? round2(m.base * m.rate / 100) }))
 }
 
 // How many lines a per-row tax is charged on — so the summary can say what a
