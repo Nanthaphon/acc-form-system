@@ -41,6 +41,7 @@ export default function FormPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [settings, setSettings] = useState<FormSettings>(EXPENSE_CLAIM_DEFAULTS)
   const [docNumber, setDocNumber] = useState('(ยังไม่บันทึก)')
+  const [createdAt, setCreatedAt] = useState<number | null>(null) // null: not saved yet — today's date is shown
   const [savedId, setSavedId] = useState<string | null>(id ?? null)
   const [showPreview, setShowPreview] = useState(false)
   const [versionRefresh, setVersionRefresh] = useState(0)
@@ -91,7 +92,7 @@ export default function FormPage() {
       const items = adoptDocumentWht(fs.columns, s.header, s.items)
       // Its rate now on the lines, the document keeps none of its own to hand out again.
       const header = whtInTable(fs.columns) && s.header.whtRate ? { ...s.header, whtRate: 0 } : s.header
-      setHeader(header); setItems(items); setDocNumber(s.docNumber); setSavedId(s.id)
+      setHeader(header); setItems(items); setDocNumber(s.docNumber); setSavedId(s.id); setCreatedAt(s.createdAt || null)
       setSigs(s.signatures ?? []); setOwnerUid(s.createdBy); setVoided(s.voided ?? null)
       setAttachments(s.attachments ?? [])
       setLoaded({ header, items, updatedAt: s.updatedAt ?? 0 })
@@ -269,7 +270,7 @@ export default function FormPage() {
         }, settings.formCode || '', editor)
         subId = created.id
         settleDraft()
-        setSavedId(created.id); setDocNumber(created.docNumber)
+        setSavedId(created.id); setDocNumber(created.docNumber); setCreatedAt(created.createdAt || Date.now())
       }
       setVersionRefresh(n => n + 1)
     } catch (e) {
@@ -463,7 +464,7 @@ export default function FormPage() {
         </fieldset>
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
-        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sheetSigs} voided={!!voided} />
+        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sheetSigs} voided={!!voided} createdAt={createdAt ?? Date.now()} />
       </div>
       {!frozen && isMine && requesterBlock && (
         <div className="no-print mt-4">

@@ -416,6 +416,7 @@ const BAHT_BOX_MM = 10.1         // เป็นจำนวนเงิน … 
 const SIGNATURE_ROW_MM = 30.9    // one row of up to three signature blocks
 const NOTES_BLOCK_MM = 6.35      // หมายเหตุ…
 const NOTE_LINE_MM = 4.24        // …and each line of it
+const PAGE_NUMBER_MM = 4.5       // หน้า n / m, in the sheet's bottom corner
 // Printing is unforgiving: a sheet 1mm too full spills onto another page, so
 // the estimate keeps a little in hand.
 const SAFETY_MM = 2
@@ -434,6 +435,7 @@ export interface SheetParts {
   signatureRows?: number
   noteLines?: number       // the notes, including their heading
   totalRows?: number       // total rows under the table (default 1; 2 on a last sheet that also sums every sheet)
+  pageNumber?: boolean     // หน้า n / m at the foot of the sheet — a document of more than one sheet
 }
 export function sheetOverheadMm(p: SheetParts): number {
   const paragraphs = (p.introLines ?? 0) + (p.bodyLines ?? 0)
@@ -449,6 +451,7 @@ export function sheetOverheadMm(p: SheetParts): number {
     + (p.showAmountWords ? BAHT_BOX_MM : 0)
     + (p.signatureRows ?? 0) * SIGNATURE_ROW_MM
     + (p.noteLines ? NOTES_BLOCK_MM + p.noteLines * NOTE_LINE_MM : 0)
+    + (p.pageNumber ? PAGE_NUMBER_MM : 0)
     + SAFETY_MM
 }
 

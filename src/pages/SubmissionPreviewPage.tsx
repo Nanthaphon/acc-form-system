@@ -76,7 +76,7 @@ export default function SubmissionPreviewPage() {
       {(sub.attachments?.length ?? 0) > 0 && (
         <div className="no-print mb-4"><AttachmentsField saved={sub.attachments ?? []} readOnly /></div>
       )}
-      <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} signatures={sub.signatures} voided={!!sub.voided} />
+      <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} signatures={sub.signatures} voided={!!sub.voided} createdAt={sub.createdAt} />
     </div>
   )
 }

@@ -11,7 +11,9 @@ import type { AutoValues } from '../../shared/bodyTemplate'
 import { FEATURES } from '../../shared/features'
 import { textSizeScale } from '../../shared/textSize'
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[]; voided?: boolean }
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[]; voided?: boolean
+  /** When the document was made — printed beside the form code. Left out, no date is printed. */
+  createdAt?: number | null }
 
 const DEFAULT_ADDRESS =
   '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น 6 ถนนพัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ'
@@ -58,7 +60,7 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
   )
 }
 
-export default function ExpenseClaimPreview({ company, header: given, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures, voided }: Props) {
+export default function ExpenseClaimPreview({ company, header: given, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures, voided, createdAt }: Props) {
   const cols = settings.columns
   // Withholding worked out in the table's own columns is not taken off again below it.
   const header = taxHeader(cols, given)
@@ -156,7 +158,8 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
   let pages = paginateRows(rowMm, printBodyMm(sheetParts))
   // More than one sheet: each sums its own rows, and the last one sums every
   // sheet as well — a row more than a single sheet has, so room is kept for it.
-  if (pages.length > 1 && hasNumericCols) pages = paginateRows(rowMm, printBodyMm({ ...sheetParts, totalRows: 2 }))
+  // …and each sheet carries its page number at the foot, which takes its own room.
+  if (pages.length > 1) pages = paginateRows(rowMm, printBodyMm({ ...sheetParts, totalRows: hasNumericCols ? 2 : 1, pageNumber: true }))
   const totalPages = pages.length
   const multiPage = totalPages > 1
 
@@ -206,11 +209,11 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
               </div>
             </div>
             <div className="mt-2 border-t-2 border-black" />
-            {/* รหัสฟอร์ม + เลขหน้า (แสดงเลขหน้าเมื่อมีมากกว่า 1 แผ่น) */}
-            {(settings.formCode || totalPages > 1) && (
-              <div className="mt-1 flex justify-between">
-                <span>{totalPages > 1 ? `หน้า ${pageIdx + 1} / ${totalPages}` : ''}</span>
-                <span>{settings.formCode}</span>
+            {/* วันที่สร้างเอกสาร + รหัสฟอร์ม, at the right under the rule */}
+            {(settings.formCode || createdAt) && (
+              <div className="mt-1 flex justify-end gap-8">
+                {createdAt ? <span>วันที่สร้างเอกสาร {formatDate(createdAt)}</span> : null}
+                {settings.formCode && <span>{settings.formCode}</span>}
               </div>
             )}
 
@@ -354,6 +357,13 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
                   <div key={i}>{note}</div>
                 ))}
               </div>
+            )}
+
+            {/* เลขหน้า — when there is more than one sheet: on paper in the sheet's
+                bottom right corner (room kept for it, see pageNumber), on screen
+                under the sheet's last line */}
+            {multiPage && (
+              <div className="mt-2 text-right print:absolute print:bottom-0 print:right-0 print:mt-0">หน้า {pageIdx + 1} / {totalPages}</div>
             )}
           </div>
         )

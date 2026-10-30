@@ -433,7 +433,7 @@ export default function FormSettingsPage() {
 
       {showPreview && (
         <div className="scroll-slim overflow-x-auto rounded-xl border border-stone-200 bg-stone-50 p-4">
-          <ExpenseClaimPreview company={previewCompany} header={previewHeader} items={previewItems} docNumber={settings.formCode || 'GAC6709-003'} settings={settings} />
+          <ExpenseClaimPreview company={previewCompany} header={previewHeader} items={previewItems} docNumber={settings.formCode || 'GAC6709-003'} settings={settings} createdAt={Date.now()} />
         </div>
       )}
 
