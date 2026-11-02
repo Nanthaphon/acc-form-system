@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArchiveRestore, Ban, Copy, Eye, Pencil, Printer, Trash2 } from 'lucide-react'
+import { ArchiveRestore, Ban, Copy, Pencil, Printer, Trash2 } from 'lucide-react'
 import { listAllSubmissions, submissionAmount, deleteSubmission, isSigned, voidingAvailable } from '../../data/submissions'
 import StatusBadge from '../../components/StatusBadge'
 import DocNumberCell from '../../components/DocNumberCell'
@@ -114,12 +114,9 @@ export default function PrintHistoryPage() {
                 {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
                 <td className="whitespace-nowrap px-4 py-2">
                   <div className="flex items-center justify-end gap-1.5">
-                    {r.voided
-                      ? <ActionIconButton showLabel label="ดูเอกสาร · ยกเลิกแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
-                      : isSigned(r)
-                      ? <ActionIconButton showLabel label="ดูเอกสาร · มีลายเซ็นแล้วจึงแก้ไขไม่ได้" short="ดู" to={`/submission/${r.id}/preview`} icon={<Eye size={16} />} />
-                      : <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />}
-                    <ActionIconButton showLabel label="ดูตัวอย่าง / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
+                    {/* Signed or cancelled: no editing, and nothing in its place — "พิมพ์" already opens the document. */}
+                    {!r.voided && !isSigned(r) && <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />}
+                    <ActionIconButton showLabel label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
                     <ActionIconButton showLabel label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
                     {r.voided
                       ? <ActionIconButton showLabel label="กู้คืนเอกสารที่ยกเลิก" short="กู้คืน" onClick={async () => { if (await askAndUnvoid(r)) loadRows() }} icon={<ArchiveRestore size={16} />} />
