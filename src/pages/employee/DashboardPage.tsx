@@ -1,16 +1,14 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react'
+import { FolderOpen, Plus } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../../types/schema'
 import { isActive, canSeeForm } from '../../types/schema'
 import { listGroups, createGroup, renameGroup, deleteGroup, setGroupActive } from '../../data/formGroups'
 import { listForms } from '../../data/formSettings'
-import Switch from '../../components/Switch'
-import FolderCardIcon from '../../components/FolderCardIcon'
-import ActionIconButton from '../../components/ActionIconButton'
+import FolderCard from '../../components/FolderCard'
 import { folderIn, folderOpen, subfoldersOf, topFolders } from '../../shared/folders'
 
 export default function DashboardPage() {
@@ -97,39 +95,18 @@ export default function DashboardPage() {
         {visibleGroups.map(g => {
           const count = isAdmin ? formsForGroup(g).length : visibleFormsForGroup(g).length
           return (
-            <div
+            <FolderCard
               key={g.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => nav(`/group/${g.id}`)}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${g.id}`) } }}
-              className={`relative cursor-pointer rounded-xl border border-stone-200 bg-white p-6 text-center transition hover:border-stone-300 hover:shadow-md ${isAdmin && !isActive(g) ? 'opacity-60' : ''}`}
-            >
-              <FolderCardIcon count={count} />
-              <div className="mt-3 truncate font-medium text-stone-900">{g.name}</div>
-              <div className="text-sm text-stone-500">{count} ฟอร์ม</div>
-              {isAdmin && (
-                <div className="mt-3 flex items-center justify-center gap-2">
-                  <Switch on={isActive(g)} onChange={() => onToggleGroup(g)} />
-                  <span className={`text-xs font-medium ${isActive(g) ? 'text-olive-600' : 'text-stone-400'}`}>{isActive(g) ? 'เปิด' : 'ปิด'}</span>
-                </div>
-              )}
-              {isAdmin && (
-                <div className="absolute right-2 top-2 flex gap-1">
-                  <ActionIconButton
-                    label="เปลี่ยนชื่อกลุ่ม"
-                    icon={<Pencil size={16} />}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRenameGroup(g) }}
-                  />
-                  <ActionIconButton
-                    label="ลบกลุ่ม"
-                    tone="red"
-                    icon={<Trash2 size={16} />}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteGroup(g) }}
-                  />
-                </div>
-              )}
-            </div>
+              name={g.name}
+              count={count}
+              active={isActive(g)}
+              isAdmin={isAdmin}
+              noun="กลุ่ม"
+              onOpen={() => nav(`/group/${g.id}`)}
+              onToggle={() => onToggleGroup(g)}
+              onRename={() => onRenameGroup(g)}
+              onDelete={() => onDeleteGroup(g)}
+            />
           )
         })}
       </div>

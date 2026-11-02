@@ -88,7 +88,8 @@ describe('sub-folders', () => {
   it('moves a form into a sub-folder', async () => {
     show('/group/main')
     await screen.findByText('ใบเบิก')
-    fireEvent.click(screen.getByRole('button', { name: 'ย้ายไปโฟลเดอร์อื่น' }))
+    fireEvent.click(screen.getByRole('button', { name: 'ตัวเลือกของ ใบเบิก' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /ย้ายไปโฟลเดอร์อื่น/ }))
     const dialog = screen.getByRole('dialog', { name: 'ย้ายฟอร์มไปโฟลเดอร์อื่น' })
     expect(within(dialog).getByText('อยู่ที่นี่').closest('label')).toHaveTextContent('เบิกค่าใช้จ่าย')
     fireEvent.click(within(dialog).getByLabelText(/เงินสดย่อย/))
@@ -104,5 +105,32 @@ describe('sub-folders', () => {
     await screen.findByText('ใบเบิก')
     expect(screen.queryByText('เงินสดย่อย')).not.toBeInTheDocument()
     expect(screen.queryByText('ว่าง')).not.toBeInTheDocument()
+  })
+})
+
+describe('the folder page, laid out', () => {
+  it('a sub-folder is drawn like a folder on the first page, with its form count', async () => {
+    show('/group/main')
+    const card = (await screen.findByText('เงินสดย่อย')).closest('[role=button]')!
+    expect(within(card as HTMLElement).getByLabelText('1 ฟอร์ม')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /โฟลเดอร์ย่อย/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /ฟอร์ม/ })).toBeInTheDocument()
+  })
+
+  it('one search finds sub-folders and forms alike', async () => {
+    show('/group/main')
+    await screen.findByText('เงินสดย่อย')
+    fireEvent.change(screen.getByLabelText('ค้นหา'), { target: { value: 'เงินสด' } })
+    expect(screen.getByText('เงินสดย่อย')).toBeInTheDocument()
+    expect(screen.queryByText('ใบเบิก')).not.toBeInTheDocument()
+  })
+
+  it('a form card keeps settings in sight and the rest under ⋯', async () => {
+    show('/group/main')
+    await screen.findByText('ใบเบิก')
+    expect(screen.getByRole('button', { name: 'ตั้งค่าฟอร์ม' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'ลบฟอร์ม' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'ตัวเลือกของ ใบเบิก' }))
+    expect(screen.getAllByRole('menuitem').map(m => m.textContent)).toEqual(['เปลี่ยนชื่อฟอร์ม', 'ทำสำเนาฟอร์ม', 'ย้ายไปโฟลเดอร์อื่น', 'ลบฟอร์ม'])
   })
 })

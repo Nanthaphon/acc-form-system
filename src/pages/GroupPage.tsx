@@ -12,6 +12,9 @@ import { listGroups, renameGroup, createGroup, deleteGroup, setGroupActive } fro
 import { listForms, createForm, duplicateForm, renameForm, deleteForm, setFormActive, moveForm } from '../data/formSettings'
 import { folderOpen, parentOf, subfoldersAvailable, subfoldersOf } from '../shared/folders'
 import MoveFormDialog from '../components/MoveFormDialog'
+import FolderCard from '../components/FolderCard'
+import { RowMenu } from '../components/RowActions'
+import type { RowMenuItem } from '../components/RowActions'
 import { filterAndSortForms, formDisplayName, FORM_SORT_LABELS } from '../shared/formSort'
 import type { FormSortKey, SortDir } from '../shared/formSort'
 import { formatDate } from '../shared/date'
@@ -82,6 +85,8 @@ export default function GroupPage() {
   const subfolders = parent ? [] : subfoldersOf(groups, groupId)
     .filter(sf => isAdmin || (isActive(sf) && groupActive && formsIn(sf.id).length > 0))
   const canAddSubfolder = isAdmin && !!group && !parent && subfoldersAvailable(groups)
+  const needle = query.trim().toLowerCase()
+  const shownSubfolders = needle ? subfolders.filter(sf => sf.name.toLowerCase().includes(needle)) : subfolders
   const shownForms = filterAndSortForms(groupForms, query, sort.key, sort.dir)
 
   async function onRenameGroup() {
@@ -171,6 +176,33 @@ export default function GroupPage() {
   const showCreated = sort.key === 'createdAt'
   const nextDir: SortDir = sort.dir === 'asc' ? 'desc' : 'asc'
 
+  // The ⋯ menu of a form: what is done now and then, out of the card's way.
+  const formMenu = (form: FormSettings): RowMenuItem[] => [
+    { label: 'เปลี่ยนชื่อฟอร์ม', icon: <Pencil size={16} />, onClick: () => onRenameForm(form) },
+    { label: 'ทำสำเนาฟอร์ม', icon: <CopyPlus size={16} />, onClick: () => onDuplicateForm(form) },
+    { label: 'ย้ายไปโฟลเดอร์อื่น', icon: <FolderInput size={16} />, onClick: () => setMoving(form) },
+    { label: 'ลบฟอร์ม', icon: <Trash2 size={16} />, onClick: () => onDeleteForm(form), danger: true },
+  ]
+  // Settings, the one a card is most often opened for, stays in sight.
+  const formActions = (form: FormSettings) => (
+    <span className="flex items-center gap-1" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+      <ActionIconButton label="ตั้งค่าฟอร์ม" icon={<Settings size={16} />} onClick={() => nav(`/form/${form.formType}/edit`)} />
+      <RowMenu items={formMenu(form)} label={`ตัวเลือกของ ${formDisplayName(form)}`} />
+    </span>
+  )
+  const activeLabel = (form: FormSettings) => (
+    <span className={`whitespace-nowrap text-xs font-medium ${isActive(form) ? 'text-olive-600' : 'text-stone-400'}`}>{isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}</span>
+  )
+  const sectionTitle = (title: string, n: number) => (
+    <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-700">
+      {title}<span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">{n}</span>
+    </h2>
+  )
+  const empty = (text: string) => (
+    <div className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-500">{text}</div>
+  )
+  const hasAnything = groupForms.length > 0 || subfolders.length > 0
+
   return (
     <div>
       <PageHeader
@@ -197,203 +229,163 @@ export default function GroupPage() {
         )}
       />
 
-      {/* Sub-folders, before the forms kept in this folder itself */}
-      {subfolders.length > 0 && (
-        <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {subfolders.map(sf => {
-            const count = formsIn(sf.id).length
-            return (
-              <div
-                key={sf.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => nav(`/group/${sf.id}`)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${sf.id}`) } }}
-                className={`relative cursor-pointer rounded-xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-md ${isAdmin && !isActive(sf) ? 'opacity-60' : ''}`}
-              >
-                {/* laid out like a form card, with a folder's colour */}
-                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-ochre-50 text-ochre-600"><Folder size={20} /></div>
-                <div className="font-medium text-stone-900">{sf.name}</div>
-                <div className="text-sm text-stone-500">โฟลเดอร์ย่อย · {count} ฟอร์ม</div>
-                {isAdmin && (
-                  <div className="mt-3 flex items-center gap-2" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                    <Switch on={isActive(sf)} onChange={() => onToggleSubfolder(sf)} />
-                    <span className={`text-xs font-medium ${isActive(sf) ? 'text-olive-600' : 'text-stone-400'}`}>{isActive(sf) ? 'เปิด' : 'ปิด'}</span>
-                  </div>
-                )}
-                {isAdmin && (
-                  <div className="absolute right-2 top-2 flex gap-1">
-                    <ActionIconButton label="เปลี่ยนชื่อโฟลเดอร์" icon={<Pencil size={16} />}
-                      onClick={e => { e.preventDefault(); e.stopPropagation(); onRenameSubfolder(sf) }} />
-                    <ActionIconButton label="ลบโฟลเดอร์" tone="red" icon={<Trash2 size={16} />}
-                      onClick={e => { e.preventDefault(); e.stopPropagation(); onDeleteSubfolder(sf) }} />
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Search + sort */}
-      {groupForms.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+      {/* One bar for the whole page: the search finds sub-folders and forms alike */}
+      {hasAnything && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1 sm:max-w-sm">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="ค้นหาชื่อฟอร์ม / รหัสฟอร์ม"
+              placeholder={subfolders.length > 0 ? 'ค้นหาโฟลเดอร์ / ชื่อฟอร์ม / รหัสฟอร์ม' : 'ค้นหาชื่อฟอร์ม / รหัสฟอร์ม'}
+              aria-label="ค้นหา"
               className={`${ui.input} pl-9`}
             />
           </div>
-          <label className="ml-auto flex items-center gap-2 text-sm text-stone-500">
-            เรียงตาม
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             <select
               value={sort.key}
               onChange={e => setSort(s => ({ ...s, key: e.target.value as FormSortKey }))}
-              className={ui.input}
+              aria-label="เรียงตาม"
+              title="เรียงตาม"
+              className={ui.input + ' !w-auto'}
             >
-              {(Object.keys(FORM_SORT_LABELS) as FormSortKey[]).map(k => <option key={k} value={k}>{FORM_SORT_LABELS[k]}</option>)}
+              {(Object.keys(FORM_SORT_LABELS) as FormSortKey[]).map(k => <option key={k} value={k}>เรียงตาม{FORM_SORT_LABELS[k]}</option>)}
             </select>
-          </label>
-          <button
-            type="button"
-            onClick={() => setSort(s => ({ ...s, dir: nextDir }))}
-            title={sort.dir === 'asc' ? 'เรียงจากน้อยไปมาก (Ascending) — คลิกเพื่อสลับ' : 'เรียงจากมากไปน้อย (Descending) — คลิกเพื่อสลับ'}
-            aria-label={sort.dir === 'asc' ? 'เรียงจากน้อยไปมาก' : 'เรียงจากมากไปน้อย'}
-            className={ui.btnSecondary}
-          >
-            {sort.dir === 'asc' ? <ArrowUpNarrowWide size={16} /> : <ArrowDownWideNarrow size={16} />}
-            {dirLabel(sort.key, sort.dir)}
-          </button>
-          <div className="flex overflow-hidden rounded-xl border border-stone-200/60 bg-white">
-            {([['card', LayoutGrid, 'มุมมองการ์ด'], ['list', List, 'มุมมองรายการ']] as const).map(([v, Icon, label]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setView(v)}
-                aria-label={label}
-                aria-pressed={view === v}
-                title={label}
-                className={`flex h-[42px] w-11 items-center justify-center transition-colors ${view === v ? 'bg-clay-600 text-white' : 'text-stone-500 hover:bg-stone-50'}`}
-              >
-                <Icon size={16} />
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={() => setSort(s => ({ ...s, dir: nextDir }))}
+              title={sort.dir === 'asc' ? 'เรียงจากน้อยไปมาก — คลิกเพื่อสลับ' : 'เรียงจากมากไปน้อย — คลิกเพื่อสลับ'}
+              aria-label={sort.dir === 'asc' ? 'เรียงจากน้อยไปมาก' : 'เรียงจากมากไปน้อย'}
+              className={`${ui.btnSecondary} whitespace-nowrap`}
+            >
+              {sort.dir === 'asc' ? <ArrowUpNarrowWide size={16} /> : <ArrowDownWideNarrow size={16} />}
+              {dirLabel(sort.key, sort.dir)}
+            </button>
+            <div className="flex overflow-hidden rounded-xl border border-stone-200/60 bg-white">
+              {([['card', LayoutGrid, 'มุมมองการ์ด'], ['list', List, 'มุมมองรายการ']] as const).map(([v, Icon, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  aria-label={label}
+                  aria-pressed={view === v}
+                  title={label}
+                  className={`flex h-[42px] w-11 items-center justify-center transition-colors ${view === v ? 'bg-clay-600 text-white' : 'text-stone-500 hover:bg-stone-50'}`}
+                >
+                  <Icon size={16} />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {view === 'card' && shownForms.length > 0 && (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {shownForms.map(form => {
-          const stamp = showCreated ? form.createdAt : form.updatedAt
-          return (
-            <div
-              key={form.formType}
-              role="button"
-              tabIndex={0}
-              onClick={() => nav(`/form/${form.formType}`)}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/form/${form.formType}`) } }}
-              className={`relative cursor-pointer rounded-xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-md ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
-            >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileText size={20} /></div>
-              <div className="font-medium text-stone-900">{formDisplayName(form)}</div>
-              <div className="text-sm text-stone-500">{form.formCode}</div>
-              {!!stamp && (
-                <div className="mt-1 text-xs text-stone-400">{showCreated ? 'สร้างเมื่อ' : 'แก้ไขล่าสุด'} {formatDate(stamp)}</div>
-              )}
-              {isAdmin && (
-                <div className="mt-3 flex items-center gap-2">
-                  <Switch on={isActive(form)} onChange={() => onToggleForm(form)} />
-                  <span className={`text-xs font-medium ${isActive(form) ? 'text-olive-600' : 'text-stone-400'}`}>{isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}</span>
-                </div>
-              )}
-              {isAdmin && (
-                <div className="absolute right-2 top-2 flex gap-1">
-                  <ActionIconButton
-                    label="ตั้งค่าฟอร์ม"
-                    icon={<Settings size={16} />}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); nav(`/form/${form.formType}/edit`) }}
-                  />
-                  <ActionIconButton
-                    label="เปลี่ยนชื่อฟอร์ม"
-                    icon={<Pencil size={16} />}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRenameForm(form) }}
-                  />
-                  <ActionIconButton
-                    label="ทำสำเนาฟอร์ม"
-                    icon={<CopyPlus size={16} />}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDuplicateForm(form) }}
-                  />
-                  <ActionIconButton
-                    label="ย้ายไปโฟลเดอร์อื่น"
-                    icon={<FolderInput size={16} />}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMoving(form) }}
-                  />
-                  <ActionIconButton
-                    label="ลบฟอร์ม"
-                    tone="red"
-                    icon={<Trash2 size={16} />}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteForm(form) }}
-                  />
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+      {/* Sub-folders first, the same cards as the folders on the first page */}
+      {shownSubfolders.length > 0 && (
+        <section className="mb-7">
+          {sectionTitle('โฟลเดอร์ย่อย', shownSubfolders.length)}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+            {shownSubfolders.map(sf => (
+              <FolderCard
+                key={sf.id}
+                name={sf.name}
+                count={formsIn(sf.id).length}
+                active={isActive(sf)}
+                isAdmin={isAdmin}
+                noun="โฟลเดอร์"
+                onOpen={() => nav(`/group/${sf.id}`)}
+                onToggle={() => onToggleSubfolder(sf)}
+                onRename={() => onRenameSubfolder(sf)}
+                onDelete={() => onDeleteSubfolder(sf)}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
-      {view === 'list' && shownForms.length > 0 && (
-        <div className={ui.tableWrap}>
-          <ul className="divide-y divide-stone-100">
-            {shownForms.map(form => {
-              const stamp = showCreated ? form.createdAt : form.updatedAt
-              return (
-                <li
-                  key={form.formType}
-                  className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-stone-50 ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
-                >
-                  <button
-                    type="button"
+      {(groupForms.length > 0 || !hasAnything) && (
+        <section>
+          {subfolders.length > 0 && sectionTitle('ฟอร์ม', shownForms.length)}
+
+          {view === 'card' && shownForms.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+              {shownForms.map(form => {
+                const stamp = showCreated ? form.createdAt : form.updatedAt
+                return (
+                  <div
+                    key={form.formType}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => nav(`/form/${form.formType}`)}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/form/${form.formType}`) } }}
+                    className={`flex cursor-pointer flex-col rounded-xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-md ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileText size={18} /></span>
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-stone-900">{formDisplayName(form)}</span>
-                      <span className="block truncate text-xs text-stone-500">
-                        {form.formCode}
-                        {!!stamp && ` · ${showCreated ? 'สร้างเมื่อ' : 'แก้ไขล่าสุด'} ${formatDate(stamp)}`}
-                      </span>
-                    </span>
-                  </button>
-                  {isAdmin && (
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Switch on={isActive(form)} onChange={() => onToggleForm(form)} />
-                      <span className={`hidden text-xs font-medium sm:inline ${isActive(form) ? 'text-olive-600' : 'text-stone-400'}`}>
-                        {isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}
-                      </span>
-                      <ActionIconButton label="ตั้งค่าฟอร์ม" icon={<Settings size={16} />} onClick={() => nav(`/form/${form.formType}/edit`)} />
-                      <ActionIconButton label="เปลี่ยนชื่อฟอร์ม" icon={<Pencil size={16} />} onClick={() => onRenameForm(form)} />
-                      <ActionIconButton label="ทำสำเนาฟอร์ม" icon={<CopyPlus size={16} />} onClick={() => onDuplicateForm(form)} />
-                      <ActionIconButton label="ย้ายไปโฟลเดอร์อื่น" icon={<FolderInput size={16} />} onClick={() => setMoving(form)} />
-                      <ActionIconButton label="ลบฟอร์ม" tone="red" icon={<Trash2 size={16} />} onClick={() => onDeleteForm(form)} />
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileText size={20} /></div>
+                      {isAdmin && formActions(form)}
                     </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
+                    <div className="font-medium text-stone-900">{formDisplayName(form)}</div>
+                    <div className="text-sm text-stone-500">{form.formCode || '—'}</div>
+                    {!!stamp && (
+                      <div className="mt-1 text-xs text-stone-500">{showCreated ? 'สร้างเมื่อ' : 'แก้ไขล่าสุด'} {formatDate(stamp)}</div>
+                    )}
+                    {isAdmin && (
+                      <div className="mt-auto flex items-center gap-2 pt-3" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                        <Switch on={isActive(form)} onChange={() => onToggleForm(form)} />
+                        {activeLabel(form)}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
-      {groupForms.length === 0 && subfolders.length === 0 && (
-        <div className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
-          ยังไม่มีฟอร์มในกลุ่มนี้
-        </div>
+          {view === 'list' && shownForms.length > 0 && (
+            <div className={ui.tableWrap}>
+              <ul className="divide-y divide-stone-100">
+                {shownForms.map(form => {
+                  const stamp = showCreated ? form.createdAt : form.updatedAt
+                  return (
+                    <li
+                      key={form.formType}
+                      className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-stone-50 ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => nav(`/form/${form.formType}`)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileText size={18} /></span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-stone-900">{formDisplayName(form)}</span>
+                          <span className="block truncate text-xs text-stone-500">
+                            {form.formCode}
+                            {!!stamp && ` · ${showCreated ? 'สร้างเมื่อ' : 'แก้ไขล่าสุด'} ${formatDate(stamp)}`}
+                          </span>
+                        </span>
+                      </button>
+                      {isAdmin && (
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Switch on={isActive(form)} onChange={() => onToggleForm(form)} />
+                          <span className="hidden w-[4.5rem] sm:inline">{activeLabel(form)}</span>
+                          {formActions(form)}
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
+          {!hasAnything && empty('ยังไม่มีฟอร์มในกลุ่มนี้')}
+          {groupForms.length > 0 && shownForms.length === 0 && shownSubfolders.length === 0 && empty(`ไม่พบโฟลเดอร์หรือฟอร์มที่ตรงกับ “${query}”`)}
+          {groupForms.length > 0 && shownForms.length === 0 && shownSubfolders.length > 0 && (
+            <p className="text-sm text-stone-500">ไม่มีฟอร์มที่ตรงกับ “{query}”</p>
+          )}
+        </section>
       )}
 
       {moving && (
@@ -404,11 +396,6 @@ export default function GroupPage() {
           onMove={to => onMoveForm(moving, to)}
           onClose={() => setMoving(null)}
         />
-      )}
-      {groupForms.length > 0 && shownForms.length === 0 && (
-        <div className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
-          ไม่พบฟอร์มที่ตรงกับ “{query}”
-        </div>
       )}
     </div>
   )

@@ -67,7 +67,8 @@ describe('GroupPage duplicate', () => {
   it('copies a form under the name given, and opens the copy to be set up', async () => {
     vi.mocked(uiPrompt).mockResolvedValueOnce('alpha 2')
     await show()
-    fireEvent.click(screen.getAllByRole('button', { name: 'ทำสำเนาฟอร์ม' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'ตัวเลือกของ alpha' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /ทำสำเนาฟอร์ม/ }))
     await waitFor(() => expect(duplicateForm).toHaveBeenCalledWith(expect.objectContaining({ formType: 'f1' }), 'alpha 2'))
     expect(vi.mocked(uiPrompt).mock.calls[0][1]).toMatchObject({ defaultValue: 'alpha (สำเนา)' })
     expect(await screen.findByText('หน้าตั้งค่าฟอร์ม')).toBeInTheDocument()
