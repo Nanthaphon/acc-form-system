@@ -17,12 +17,12 @@ const sheets = (c: HTMLElement) => [...c.querySelectorAll<HTMLElement>('.doc-pag
 describe('the sheet\'s heading and foot', () => {
   it('prints the day the document was made beside the form code', () => {
     const { container } = render(<ExpenseClaimPreview company={null} header={header} items={rows(2)} docNumber="X" settings={settings} createdAt={created} />)
-    expect(sheets(container)[0].textContent).toMatch(/วันที่สร้างเอกสาร 30\/10\/2026\s*GAC69-005/)
+    expect(sheets(container)[0].textContent).toMatch(/วันที่ 30\/10\/2026\s*GAC69-005/)
   })
 
   it('prints no date where none is given', () => {
     const { container } = render(<ExpenseClaimPreview company={null} header={header} items={rows(2)} docNumber="X" settings={settings} />)
-    expect(container.textContent).not.toContain('วันที่สร้างเอกสาร')
+    expect(container.textContent).not.toMatch(/วันที่ \d/)
     expect(container.textContent).toContain('GAC69-005')
   })
 

@@ -209,10 +209,10 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
               </div>
             </div>
             <div className="mt-2 border-t-2 border-black" />
-            {/* วันที่สร้างเอกสาร + รหัสฟอร์ม, at the right under the rule */}
+            {/* วันที่ (the day the document was made) + รหัสฟอร์ม, at the right under the rule */}
             {(settings.formCode || createdAt) && (
               <div className="mt-1 flex justify-end gap-8">
-                {createdAt ? <span>วันที่สร้างเอกสาร {formatDate(createdAt)}</span> : null}
+                {createdAt ? <span>วันที่ {formatDate(createdAt)}</span> : null}
                 {settings.formCode && <span>{settings.formCode}</span>}
               </div>
             )}
