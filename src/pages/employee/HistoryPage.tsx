@@ -52,7 +52,7 @@ export default function HistoryPage() {
   const formOf = (ft: string) => forms.find(f => f.formType === ft)
   const formName = (ft: string) => { const f = formOf(ft); return f?.name || f?.title || '—' }
   const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
-  const filtered = applyFilters(rows, filters, { formGroup, formName })
+  const filtered = applyFilters(rows, filters, { formGroup, formName, groups: groups })
   // The filter offers only the folders and forms this person may use (and any
   // their own documents were made on).
   const choices = filterChoices(forms, groups, {

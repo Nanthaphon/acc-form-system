@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UserProfile } from '../types/schema'
@@ -34,7 +34,7 @@ describe('sidebar', () => {
   it('shows an employee the plain wording and no admin menus', () => {
     show('employee')
     expect(screen.getByRole('link', { name: /^ประวัติ$/ })).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /ผู้ดูแลระบบ/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^ผู้ดูแลระบบ/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /ประวัติพิมพ์ทั้งหมดในระบบ/ })).not.toBeInTheDocument()
   })
 })
@@ -94,5 +94,33 @@ describe('แจ้งปัญหา', () => {
     support.available = true
     show('admin', '/admin/support')
     expect(screen.queryByRole('button', { name: 'แจ้งปัญหาถึงผู้ดูแลระบบ' })).not.toBeInTheDocument()
+  })
+})
+
+describe('sidebar groups', () => {
+  beforeEach(() => { try { localStorage.clear() } catch { /* blocked */ }; Object.assign(support, { mine: 0, inbox: 2, available: true }) })
+
+  it('folds the admin menus away, keeping what waits on them in sight', () => {
+    show('admin')
+    const head = screen.getByRole('button', { name: /^ผู้ดูแลระบบ/ })
+    expect(screen.getByRole('link', { name: /ข้อมูลพนักงาน/ })).toBeInTheDocument()
+    fireEvent.click(head)
+    expect(head).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('link', { name: /ข้อมูลพนักงาน/ })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('รอดำเนินการ 2 รายการ')).toBeInTheDocument()
+  })
+
+  it('never folded while one of its pages is open', () => {
+    localStorage.setItem('sidebar:adminClosed', '1')
+    show('admin', '/admin/employees')
+    expect(screen.getByRole('link', { name: /ข้อมูลพนักงาน/ })).toBeInTheDocument()
+  })
+
+  it('the person\'s own page, password and sign-out sit at the foot', () => {
+    show('employee')
+    expect(screen.getByRole('link', { name: 'ข้อมูลของฉัน' })).toHaveAttribute('href', '/profile')
+    expect(screen.getByRole('link', { name: 'เปลี่ยนรหัสผ่าน' })).toHaveAttribute('href', '/change-password')
+    expect(screen.getByRole('button', { name: 'ออกจากระบบ' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^ผู้ดูแลระบบ/ })).not.toBeInTheDocument()
   })
 })

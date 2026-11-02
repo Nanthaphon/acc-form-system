@@ -4,6 +4,7 @@ import { statusMeta } from '../data/submissions'
 import type { Filters } from '../shared/submissionFilter'
 import { emptyFilters } from '../shared/submissionFilter'
 import DateInput from './DateInput'
+import { folderIn, folderPath } from '../shared/folders'
 import { ui } from './ui'
 
 const STATUSES: SubmissionStatus[] = ['done', 'pending', 'signed', 'void']
@@ -25,14 +26,15 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, fo
   // in more than one folder, so with no folder picked a repeated name says
   // which folder it is from.
   const folderOf = (f: FormSettings) => formGroup?.(f.formType) ?? f.groupId
-  const formChoices = value.groupId ? forms.filter(f => folderOf(f) === value.groupId) : forms
+  const within = (f: FormSettings, folder: string) => (groups ? folderIn(groups, folderOf(f), folder) : folderOf(f) === folder)
+  const formChoices = value.groupId ? forms.filter(f => within(f, value.groupId)) : forms
   const nameOf = (f: FormSettings) => f.name || f.title
   const repeated = new Set(formChoices.map(nameOf).filter((n, i, all) => all.indexOf(n) !== i))
-  const folderName = (id?: string) => groups?.find(g => g.id === id)?.name
+  const folderName = (id?: string) => (groups ? folderPath(groups, id) : '') || undefined
   const formLabel = (f: FormSettings) =>
     repeated.has(nameOf(f)) && folderName(folderOf(f)) ? `${nameOf(f)} (${folderName(folderOf(f))})` : nameOf(f)
   const pickFolder = (groupId: string) => {
-    const keepForm = !value.formType || !groupId || forms.some(f => f.formType === value.formType && folderOf(f) === groupId)
+    const keepForm = !value.formType || !groupId || forms.some(f => f.formType === value.formType && within(f, groupId))
     set({ groupId, ...(keepForm ? {} : { formType: '' }) })
   }
   return (
@@ -49,7 +51,8 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, fo
       {groups && groups.length > 0 && (
         <select className={cls} aria-label="โฟลเดอร์" value={value.groupId} onChange={e => pickFolder(e.target.value)}>
           <option value="">— ทุกโฟลเดอร์ —</option>
-          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+          {/* sub-folders indented under the folder they are in */}
+          {groups.map(g => <option key={g.id} value={g.id}>{g.parentId && groups.some(p => p.id === g.parentId) ? `   └ ${g.name}` : g.name}</option>)}
         </select>
       )}
       <select className={cls} aria-label="ฟอร์ม" value={value.formType} onChange={e => set({ formType: e.target.value })}>

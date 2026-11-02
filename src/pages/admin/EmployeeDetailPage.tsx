@@ -97,7 +97,7 @@ export default function EmployeeDetailPage() {
   )
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? folders[0]?.id
-  const filtered = applyFilters(subs, filters, { formGroup, formName })
+  const filtered = applyFilters(subs, filters, { formGroup, formName, groups: folders })
   const viewerIsSuper = isSuperAdmin(me)
   // Only the Super Admin may edit the Super Admin's account, rename usernames and set others' passwords.
   const canEdit = !isSuperAdmin(profile) || viewerIsSuper

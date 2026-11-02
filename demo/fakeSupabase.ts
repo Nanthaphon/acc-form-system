@@ -151,8 +151,10 @@ const db: Record<string, any[]> = {
     { id: 'dx', name: 'Design Experience', sortOrder: 2, createdAt: t('2026-08-01') },
   ],
   form_groups: [
-    { id: GROUP_MAIN, name: 'เบิกค่าใช้จ่าย', sortOrder: 1, createdAt: t('2026-08-01'), active: true },
-    { id: GROUP_DX, name: 'เบิกค่าใช้จ่าย (DX)', sortOrder: 2, createdAt: t('2026-10-02'), active: true },
+    { id: GROUP_MAIN, name: 'เบิกค่าใช้จ่าย', sortOrder: 1, createdAt: t('2026-08-01'), active: true, parentId: null },
+    { id: GROUP_DX, name: 'เบิกค่าใช้จ่าย (DX)', sortOrder: 2, createdAt: t('2026-10-02'), active: true, parentId: null },
+    // a sub-folder (supabase/2026-11-02b-subfolders.sql)
+    { id: 'g-cash', name: 'เงินทดรอง / เงินสดย่อย', sortOrder: 3, createdAt: t('2026-11-02'), active: true, parentId: GROUP_MAIN },
   ],
   form_settings: [
     claimForm('f-claim', GROUP_MAIN, []),
@@ -166,8 +168,8 @@ const db: Record<string, any[]> = {
         { key: 'wht', label: 'ภาษีหัก ณ ที่จ่าย', type: 'calc', width: 23, calc: { op: 'whtRow', a: 'gross' } },
         { key: 'net', label: 'จำนวนเงินสุทธิ', type: 'calc', width: 25, isTotal: true, calc: { op: 'subtract', operands: ['gross', 'wht'] } },
       ] },
-    simpleForm('f-advance', 'ใบขอเบิกเงินทดรองจ่าย', 'ใบขอเบิกเงินทดรองจ่าย', 'GAC-6704-001', '2026-08-05'),
-    simpleForm('f-petty', 'ใบเบิกเงินสดย่อย', 'ใบเบิกเงินสดย่อย', 'GAC-6704-002', '2026-08-06'),
+    { ...simpleForm('f-advance', 'ใบขอเบิกเงินทดรองจ่าย', 'ใบขอเบิกเงินทดรองจ่าย', 'GAC-6704-001', '2026-08-05'), groupId: 'g-cash' },
+    { ...simpleForm('f-petty', 'ใบเบิกเงินสดย่อย', 'ใบเบิกเงินสดย่อย', 'GAC-6704-002', '2026-08-06'), groupId: 'g-cash' },
     simpleForm('f-return', 'ใบรับเงินคืนเข้าบริษัท', 'ใบรับเงินคืน', 'GAC6709-008', '2026-08-20'),
     simpleForm('f-report', 'แบบฟอร์มรายงานการทำงาน', 'ใบรายงานการทำงาน', 'GACK769-005', '2026-08-21'),
     simpleForm('f-training', 'แบบฟอร์มการอบรม', 'ใบสรุปรายงานการอบรม', 'GACK769-006', '2026-08-22'),

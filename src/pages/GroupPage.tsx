@@ -2,14 +2,16 @@ import { uiAlert, uiConfirm, uiPrompt } from '../components/dialog/dialogService
 import { dbErrorMessage } from '../shared/dbError'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowDownWideNarrow, ArrowUpNarrowWide, CopyPlus, FileText, Folder, LayoutGrid, List, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowUpNarrowWide, CopyPlus, FileText, Folder, FolderInput, FolderPlus, LayoutGrid, List, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-react'
 import ActionIconButton from '../components/ActionIconButton'
 import { PageHeader, ui } from '../components/ui'
 import { useAuth } from '../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../types/schema'
 import { isActive, canSeeForm } from '../types/schema'
-import { listGroups, renameGroup } from '../data/formGroups'
-import { listForms, createForm, duplicateForm, renameForm, deleteForm, setFormActive } from '../data/formSettings'
+import { listGroups, renameGroup, createGroup, deleteGroup, setGroupActive } from '../data/formGroups'
+import { listForms, createForm, duplicateForm, renameForm, deleteForm, setFormActive, moveForm } from '../data/formSettings'
+import { folderOpen, parentOf, subfoldersAvailable, subfoldersOf } from '../shared/folders'
+import MoveFormDialog from '../components/MoveFormDialog'
 import { filterAndSortForms, formDisplayName, FORM_SORT_LABELS } from '../shared/formSort'
 import type { FormSortKey, SortDir } from '../shared/formSort'
 import { formatDate } from '../shared/date'
@@ -50,6 +52,7 @@ export default function GroupPage() {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState(loadSortPref)
   const [view, setView] = useState<FormView>(loadViewPref)
+  const [moving, setMoving] = useState<FormSettings | null>(null)
 
   function reload() {
     listGroups().then(setGroups)
@@ -68,10 +71,17 @@ export default function GroupPage() {
   const firstGroupId = groups[0]?.id
   // Visibility is by ACCESS GROUP (not folder) — see canSeeForm.
   const canSee = (f: FormSettings) => canSeeForm(f, profile?.accessGroup, isAdmin)
-  const groupActive = !group || isActive(group)
-  const groupForms = forms.filter(f =>
-    (f.groupId ?? firstGroupId) === groupId && canSee(f) && (isAdmin || (isActive(f) && groupActive))
+  // A sub-folder is open to employees only while the folder it sits in is too.
+  const groupActive = !group || folderOpen(groups, groupId)
+  const formsIn = (id: string | undefined) => forms.filter(f =>
+    (f.groupId ?? firstGroupId) === id && canSee(f) && (isAdmin || (isActive(f) && folderOpen(groups, id)))
   )
+  const groupForms = formsIn(groupId).filter(() => isAdmin || groupActive)
+  // One level of sub-folders: a sub-folder holds forms only.
+  const parent = parentOf(groups, groupId)
+  const subfolders = parent ? [] : subfoldersOf(groups, groupId)
+    .filter(sf => isAdmin || (isActive(sf) && groupActive && formsIn(sf.id).length > 0))
+  const canAddSubfolder = isAdmin && !!group && !parent && subfoldersAvailable(groups)
   const shownForms = filterAndSortForms(groupForms, query, sort.key, sort.dir)
 
   async function onRenameGroup() {
@@ -80,6 +90,38 @@ export default function GroupPage() {
     if (!name || name === group.name) return
     try { await renameGroup(group.id, name); reload() }
     catch { uiAlert('เปลี่ยนชื่อกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+  }
+
+  async function onCreateSubfolder() {
+    if (!group) return
+    const name = (await uiPrompt('ตั้งชื่อโฟลเดอร์ย่อย', { title: `สร้างโฟลเดอร์ย่อยใน "${group.name}"`, placeholder: 'เช่น ค่าเดินทาง', confirmText: 'สร้าง' }))?.trim()
+    if (!name) return
+    try { await createGroup(name, group.id); reload() }
+    catch (e) { uiAlert(dbErrorMessage(e), { title: 'สร้างโฟลเดอร์ย่อยไม่สำเร็จ' }) }
+  }
+
+  async function onRenameSubfolder(sf: FormGroup) {
+    const name = (await uiPrompt('ตั้งชื่อโฟลเดอร์ใหม่', { title: 'เปลี่ยนชื่อโฟลเดอร์ย่อย', defaultValue: sf.name, confirmText: 'บันทึก' }))?.trim()
+    if (!name || name === sf.name) return
+    try { await renameGroup(sf.id, name); reload() }
+    catch { uiAlert('เปลี่ยนชื่อโฟลเดอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+  }
+
+  async function onDeleteSubfolder(sf: FormGroup) {
+    if (forms.some(f => f.groupId === sf.id)) { uiAlert('โฟลเดอร์นี้ยังมีฟอร์มอยู่ — ย้ายหรือลบฟอร์มข้างในก่อน'); return }
+    if (!(await uiConfirm(`ลบโฟลเดอร์ "${sf.name}" ?`, { tone: 'danger', confirmText: 'ลบ' }))) return
+    try { await deleteGroup(sf.id); reload() }
+    catch { uiAlert('ลบโฟลเดอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+  }
+
+  async function onToggleSubfolder(sf: FormGroup) {
+    try { await setGroupActive(sf.id, !isActive(sf)); reload() }
+    catch { uiAlert('เปลี่ยนสถานะโฟลเดอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
+  }
+
+  async function onMoveForm(form: FormSettings, to: string) {
+    try { await moveForm(form.formType, to); setMoving(null); reload() }
+    catch (e) { uiAlert(dbErrorMessage(e), { title: 'ย้ายฟอร์มไม่สำเร็จ' }) }
   }
 
   async function onCreateForm() {
@@ -132,19 +174,66 @@ export default function GroupPage() {
   return (
     <div>
       <PageHeader
-        onBack={() => nav('/')}
+        onBack={() => nav(parent ? `/group/${parent.id}` : '/')}
         icon={<Folder size={20} />}
         title={group?.name ?? 'กลุ่มฟอร์ม'}
-        subtitle={`${groupForms.length} ฟอร์ม`}
+        subtitle={[
+          parent && `ใน ${parent.name}`,
+          subfolders.length > 0 && `${subfolders.length} โฟลเดอร์`,
+          `${groupForms.length} ฟอร์ม`,
+        ].filter(Boolean).join(' · ')}
         actions={isAdmin && (
           <>
-            {group && <ActionIconButton label="เปลี่ยนชื่อกลุ่ม" icon={<Pencil size={16} />} onClick={onRenameGroup} />}
+            {group && <ActionIconButton label={parent ? 'เปลี่ยนชื่อโฟลเดอร์' : 'เปลี่ยนชื่อกลุ่ม'} icon={<Pencil size={16} />} onClick={onRenameGroup} />}
+            {canAddSubfolder && (
+              <button onClick={onCreateSubfolder} className={ui.btnSecondary}>
+                <FolderPlus size={16} /> โฟลเดอร์ย่อย
+              </button>
+            )}
             <button onClick={onCreateForm} className={ui.btnPrimary}>
               <Plus size={16} /> สร้างฟอร์ม
             </button>
           </>
         )}
       />
+
+      {/* Sub-folders, before the forms kept in this folder itself */}
+      {subfolders.length > 0 && (
+        <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {subfolders.map(sf => {
+            const count = formsIn(sf.id).length
+            return (
+              <div
+                key={sf.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => nav(`/group/${sf.id}`)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nav(`/group/${sf.id}`) } }}
+                className={`relative cursor-pointer rounded-xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-md ${isAdmin && !isActive(sf) ? 'opacity-60' : ''}`}
+              >
+                {/* laid out like a form card, with a folder's colour */}
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-ochre-50 text-ochre-600"><Folder size={20} /></div>
+                <div className="font-medium text-stone-900">{sf.name}</div>
+                <div className="text-sm text-stone-500">โฟลเดอร์ย่อย · {count} ฟอร์ม</div>
+                {isAdmin && (
+                  <div className="mt-3 flex items-center gap-2" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                    <Switch on={isActive(sf)} onChange={() => onToggleSubfolder(sf)} />
+                    <span className={`text-xs font-medium ${isActive(sf) ? 'text-olive-600' : 'text-stone-400'}`}>{isActive(sf) ? 'เปิด' : 'ปิด'}</span>
+                  </div>
+                )}
+                {isAdmin && (
+                  <div className="absolute right-2 top-2 flex gap-1">
+                    <ActionIconButton label="เปลี่ยนชื่อโฟลเดอร์" icon={<Pencil size={16} />}
+                      onClick={e => { e.preventDefault(); e.stopPropagation(); onRenameSubfolder(sf) }} />
+                    <ActionIconButton label="ลบโฟลเดอร์" tone="red" icon={<Trash2 size={16} />}
+                      onClick={e => { e.preventDefault(); e.stopPropagation(); onDeleteSubfolder(sf) }} />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Search + sort */}
       {groupForms.length > 0 && (
@@ -239,6 +328,11 @@ export default function GroupPage() {
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDuplicateForm(form) }}
                   />
                   <ActionIconButton
+                    label="ย้ายไปโฟลเดอร์อื่น"
+                    icon={<FolderInput size={16} />}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMoving(form) }}
+                  />
+                  <ActionIconButton
                     label="ลบฟอร์ม"
                     tone="red"
                     icon={<Trash2 size={16} />}
@@ -285,6 +379,7 @@ export default function GroupPage() {
                       <ActionIconButton label="ตั้งค่าฟอร์ม" icon={<Settings size={16} />} onClick={() => nav(`/form/${form.formType}/edit`)} />
                       <ActionIconButton label="เปลี่ยนชื่อฟอร์ม" icon={<Pencil size={16} />} onClick={() => onRenameForm(form)} />
                       <ActionIconButton label="ทำสำเนาฟอร์ม" icon={<CopyPlus size={16} />} onClick={() => onDuplicateForm(form)} />
+                      <ActionIconButton label="ย้ายไปโฟลเดอร์อื่น" icon={<FolderInput size={16} />} onClick={() => setMoving(form)} />
                       <ActionIconButton label="ลบฟอร์ม" tone="red" icon={<Trash2 size={16} />} onClick={() => onDeleteForm(form)} />
                     </div>
                   )}
@@ -295,10 +390,20 @@ export default function GroupPage() {
         </div>
       )}
 
-      {groupForms.length === 0 && (
+      {groupForms.length === 0 && subfolders.length === 0 && (
         <div className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">
           ยังไม่มีฟอร์มในกลุ่มนี้
         </div>
+      )}
+
+      {moving && (
+        <MoveFormDialog
+          form={moving}
+          groups={groups}
+          current={moving.groupId ?? firstGroupId}
+          onMove={to => onMoveForm(moving, to)}
+          onClose={() => setMoving(null)}
+        />
       )}
       {groupForms.length > 0 && shownForms.length === 0 && (
         <div className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-400">

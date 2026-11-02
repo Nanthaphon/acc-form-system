@@ -1,5 +1,6 @@
 import type { FormGroup, FormSettings, SubmissionSummary } from '../types/schema'
 import { canSeeForm, isActive } from '../types/schema'
+import { folderIn, folderOpen } from './folders'
 import { subStatus } from '../data/submissions'
 
 // The folders and forms a filter offers someone: those they may use — the
@@ -12,12 +13,11 @@ export function filterChoices(
 ): { forms: FormSettings[]; groups: FormGroup[] } {
   if (viewer.isAdmin) return { forms, groups }
   const folderOf = (f: FormSettings) => f.groupId ?? groups[0]?.id
-  const openFolders = new Set(groups.filter(isActive).map(g => g.id))
   const used = new Set(viewer.usedFormTypes ?? [])
   const shown = forms.filter(f => used.has(f.formType)
-    || (canSeeForm(f, viewer.accessGroup, false) && isActive(f) && openFolders.has(folderOf(f) ?? '')))
-  const withForms = new Set(shown.map(folderOf))
-  return { forms: shown, groups: groups.filter(g => withForms.has(g.id)) }
+    || (canSeeForm(f, viewer.accessGroup, false) && isActive(f) && folderOpen(groups, folderOf(f))))
+  // a folder is offered when a form is in it or in one of its sub-folders
+  return { forms: shown, groups: groups.filter(g => shown.some(f => folderIn(groups, folderOf(f), g.id))) }
 }
 
 export interface Filters {
@@ -55,16 +55,18 @@ export function dateBounds(f: Filters): [number, number] {
 export interface FilterLookups {
   formGroup?: (formType: string) => string | undefined   // a form's folder
   formName?: (formType: string) => string
+  groups?: FormGroup[]   // given: picking a folder takes in its sub-folders
 }
 
 export function applyFilters<T extends SubmissionSummary>(rows: T[], f: Filters, lookups: FilterLookups = {}): T[] {
-  const { formGroup, formName } = lookups
+  const { formGroup, formName, groups } = lookups
+  const inPicked = (folder: string | undefined) => (groups ? folderIn(groups, folder, f.groupId) : folder === f.groupId)
   const [dStart, dEnd] = dateBounds(f)
   const needle = f.q.trim().toLowerCase()
   return rows.filter(r => {
     if (f.emp && r.createdByEmployeeId !== f.emp) return false
     if (f.formType && r.formType !== f.formType) return false
-    if (f.groupId && formGroup && formGroup(r.formType) !== f.groupId) return false
+    if (f.groupId && formGroup && !inPicked(formGroup(r.formType))) return false
     if (f.status && subStatus(r) !== f.status) return false
     if (r.createdAt < dStart || r.createdAt > dEnd) return false
     if (needle) {

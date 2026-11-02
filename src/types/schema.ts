@@ -50,7 +50,8 @@ export interface FormColumn {
 // One row of the dynamic table, keyed by column.key
 export type ExpenseRow = Record<string, string | number>
 
-export interface FormGroup { id: string; name: string; sortOrder: number; createdAt: number; active?: boolean }
+// parentId: the first-page folder a sub-folder sits in (one level only); none = on the first page.
+export interface FormGroup { id: string; name: string; sortOrder: number; createdAt: number; active?: boolean; parentId?: string | null }
 
 // Access groups control form VISIBILITY (separate from folders/form_groups).
 // A form tagged with an access group is visible only to employees in the same

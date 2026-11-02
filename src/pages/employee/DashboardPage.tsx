@@ -11,6 +11,7 @@ import { listForms } from '../../data/formSettings'
 import Switch from '../../components/Switch'
 import FolderCardIcon from '../../components/FolderCardIcon'
 import ActionIconButton from '../../components/ActionIconButton'
+import { folderIn, folderOpen, subfoldersOf, topFolders } from '../../shared/folders'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
@@ -41,6 +42,7 @@ export default function DashboardPage() {
 
   async function onDeleteGroup(g: FormGroup) {
     if (formsForGroup(g).length > 0) { uiAlert('กลุ่มนี้ยังมีฟอร์มอยู่ — กรุณาลบฟอร์มในกลุ่มก่อน'); return }
+    if (subfoldersOf(groups, g.id).length > 0) { uiAlert('กลุ่มนี้ยังมีโฟลเดอร์ย่อยอยู่ — กรุณาลบโฟลเดอร์ย่อยก่อน'); return }
     if (!(await uiConfirm(`ลบกลุ่ม "${g.name}" ?`, { tone: 'danger', confirmText: 'ลบ' }))) return
     try { await deleteGroup(g.id); reload() }
     catch { uiAlert('ลบกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
@@ -51,10 +53,11 @@ export default function DashboardPage() {
     catch { uiAlert('เปลี่ยนสถานะกลุ่มไม่สำเร็จ กรุณาลองใหม่อีกครั้ง') }
   }
 
-  // Forms whose groupId matches — for the first group, also catch forms with no groupId.
+  // Forms in the folder or in one of its sub-folders — for the first folder,
+  // also catch forms with no groupId.
   const firstGroupId = groups[0]?.id
   function formsForGroup(g: FormGroup): FormSettings[] {
-    return forms.filter(f => (f.groupId ?? firstGroupId) === g.id)
+    return forms.filter(f => folderIn(groups, f.groupId ?? firstGroupId, g.id))
   }
 
   // Visibility is by ACCESS GROUP (not folder) — see canSeeForm.
@@ -62,14 +65,15 @@ export default function DashboardPage() {
   // Forms visible to the current viewer within a folder (non-admins also need
   // the form to be active).
   function visibleFormsForGroup(g: FormGroup): FormSettings[] {
-    return formsForGroup(g).filter(f => canSee(f) && (isAdmin || isActive(f)))
+    return formsForGroup(g).filter(f => canSee(f) && (isAdmin || (isActive(f) && folderOpen(groups, f.groupId ?? firstGroupId))))
   }
 
   // Folders are purely organizational: everyone sees all folders, except that a
   // non-admin's inactive folders — or folders with zero visible forms — are hidden.
+  // Sub-folders are shown inside their folder, not here.
   const visibleGroups = isAdmin
-    ? groups
-    : groups.filter(g => isActive(g) && visibleFormsForGroup(g).length > 0)
+    ? topFolders(groups)
+    : topFolders(groups).filter(g => isActive(g) && visibleFormsForGroup(g).length > 0)
 
   return (
     <div>

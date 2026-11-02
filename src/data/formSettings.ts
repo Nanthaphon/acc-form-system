@@ -122,6 +122,12 @@ export async function updateFormSettings(fs: FormSettings): Promise<string[]> {
 }
 
 // Turn a form on/off. When off, employees don't see it (maintenance mode).
+// Moves a form into another folder; its documents are untouched.
+export async function moveForm(formType: string, groupId: string): Promise<void> {
+  const { error } = await supabase.from('form_settings').update({ groupId, updatedAt: Date.now() }).eq('formType', formType)
+  if (error) throw error
+}
+
 export async function setFormActive(formType: string, active: boolean): Promise<void> {
   const { error } = await supabase.from('form_settings').update({ active }).eq('formType', formType)
   if (error) throw error
