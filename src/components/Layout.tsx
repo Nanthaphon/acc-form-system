@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import {
-  BookOpen, FileText, History, Inbox, KeyRound, ListChecks, LogOut, Megaphone,
+  BookOpen, FileText, Headset, History, Inbox, KeyRound, ListChecks, LogOut, Megaphone,
   PanelLeftClose, PanelLeftOpen, Printer, Tags, User, Users,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
@@ -11,6 +11,8 @@ import { usePendingSignCount } from '../shared/usePendingSignCount'
 import { roleLabel } from '../shared/roles'
 import NavCountBadge from './NavCountBadge'
 import { useUnreadAnnouncement } from '../shared/useUnreadAnnouncement'
+import { useSupportUnread } from '../shared/useSupportUnread'
+import SupportChatButton from './support/SupportChatButton'
 
 // Collapsing is a per-person habit, so it is remembered in this browser.
 const COLLAPSED_KEY = 'sidebar:collapsed'
@@ -23,7 +25,7 @@ const navLinkClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean 
   }`
 const iconBtn = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-clay-200 transition-colors hover:bg-white/[.08] hover:text-white'
 
-interface NavItem { to: string; icon: LucideIcon; label: string; end?: boolean; count?: number; dot?: boolean }
+interface NavItem { to: string; icon: LucideIcon; label: string; end?: boolean; count?: number; countLabel?: string; dot?: boolean }
 
 export default function Layout() {
   const { profile } = useAuth()
@@ -32,6 +34,8 @@ export default function Layout() {
   // one thing to go and look at, not a number of them.
   const unreadNews = useUnreadAnnouncement()
   const isAdmin = profile?.role === 'admin'
+  const support = useSupportUnread(profile?.uid, isAdmin)
+  const { pathname } = useLocation()
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(COLLAPSED_KEY) === '1' } catch { return false }
   })
@@ -49,13 +53,14 @@ export default function Layout() {
       { to: '/admin/prints', icon: Printer, label: 'ประวัติพิมพ์ทั้งหมดในระบบ' },
       { to: '/admin/access-groups', icon: Tags, label: 'จัดการสิทธิ์เข้าถึงฟอร์ม' },
       { to: '/admin/field-options', icon: ListChecks, label: 'Custom Field' },
+      { to: '/admin/support', icon: Headset, label: 'รับเรื่องแจ้งปัญหา', count: support.inbox, countLabel: `รอตอบ ${support.inbox} เรื่อง` },
     ] : []),
     { to: '/profile', icon: User, label: 'ข้อมูลของฉัน' },
     { to: '/manual', icon: BookOpen, label: 'คู่มือการใช้งาน' },
     { to: '/announcements', icon: Megaphone, label: 'ประกาศ', dot: unreadNews },
   ]
 
-  const navRow = ({ to, icon: Icon, label, end, count, dot }: NavItem) => (
+  const navRow = ({ to, icon: Icon, label, end, count, countLabel, dot }: NavItem) => (
     <NavLink key={to} to={to} end={end} className={navLinkClass(collapsed)} title={collapsed ? label : undefined}>
       {({ isActive }) => (
         <>
@@ -64,7 +69,7 @@ export default function Layout() {
             {/* Collapsed to icons only, the count rides on the icon itself. */}
             {collapsed && !!count && (
               <span className="absolute -right-2.5 -top-2">
-                <NavCountBadge count={count} active={isActive} label={`รอเซ็น ${count} ฉบับ`} />
+                <NavCountBadge count={count} active={isActive} label={countLabel ?? `รอเซ็น ${count} ฉบับ`} />
               </span>
             )}
             {dot && (
@@ -77,7 +82,7 @@ export default function Layout() {
           {!collapsed && (
             <>
               {label}
-              {!!count && <NavCountBadge count={count} active={isActive} label={`รอเซ็น ${count} ฉบับ`} />}
+              {!!count && <NavCountBadge count={count} active={isActive} label={countLabel ?? `รอเซ็น ${count} ฉบับ`} />}
             </>
           )}
         </>
@@ -129,9 +134,14 @@ export default function Layout() {
           )}
         </div>
       </aside>
-      <main className="min-w-0 flex-1 p-6 md:p-8">
+      {/* bottom padding: the chat button floats over the page's last line */}
+      <main className="min-w-0 flex-1 p-6 pb-24 md:p-8 md:pb-24">
         <Outlet />
       </main>
+      {/* Not on the inbox itself, where admins already answer — the button would sit over its reply box. */}
+      {profile && support.available && !pathname.startsWith('/admin/support') && (
+        <SupportChatButton uid={profile.uid} unread={support.mine} />
+      )}
     </div>
   )
 }

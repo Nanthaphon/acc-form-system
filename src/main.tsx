@@ -28,6 +28,7 @@ import AccessGroupsPage from './pages/admin/AccessGroupsPage'
 import FieldOptionsPage from './pages/admin/FieldOptionsPage'
 import ManualPage from './pages/ManualPage'
 import AnnouncementsPage from './pages/AnnouncementsPage'
+import SupportInboxPage from './pages/admin/SupportInboxPage'
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -54,6 +55,7 @@ const router = createBrowserRouter([
       { path: 'admin/prints', element: <RequireAdmin><PrintHistoryPage /></RequireAdmin> },
       { path: 'admin/access-groups', element: <RequireAdmin><AccessGroupsPage /></RequireAdmin> },
       { path: 'admin/field-options', element: <RequireAdmin><FieldOptionsPage /></RequireAdmin> },
+      { path: 'admin/support', element: <RequireAdmin><SupportInboxPage /></RequireAdmin> },
       { path: 'admin/form-settings', element: <RequireAdmin><FormSettingsPage /></RequireAdmin> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

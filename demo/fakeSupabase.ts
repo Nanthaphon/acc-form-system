@@ -254,6 +254,22 @@ const db: Record<string, any[]> = {
       totalsOf(9500, 'เก้าพันแปดร้อยแปดสิบบาทถ้วน'), SOMCHAI, '2026-10-09T09:00', { header: { ...claimHeader('ค่าใช้จ่ายตรวจงานสินธานี 5-10/10/69', '2026-10-09'), vat: true, whtRate: 3, whtScope: 'rows' } }),
   ],
   submission_versions: [],
+  support_tickets: [
+    { id: 'st-1', createdBy: SOMCHAI, reporterName: 'สมชาย ใจดี', subject: 'กดบันทึกแล้วขึ้นว่าบันทึกไม่ได้', page: '/form/f-claim',
+      status: 'doing', createdAt: t('2026-11-01T09:10'), lastMessageAt: t('2026-11-01T10:02'), lastByReporter: false,
+      lastPreview: 'แก้ให้แล้วครับ ลองบันทึกใหม่อีกครั้งได้เลย', messageCount: 2, reporterReadAt: t('2026-11-01T09:10'), staffReadAt: t('2026-11-01T10:02') },
+    { id: 'st-2', createdBy: 'u-anucha', reporterName: 'อนุชา พรหมมา', subject: 'เอกสารรอเซ็นไม่ขึ้นที่เมนูรอเซ็น', page: '/sign',
+      status: 'open', createdAt: t('2026-11-02T08:30'), lastMessageAt: t('2026-11-02T08:30'), lastByReporter: true,
+      lastPreview: 'เอกสารรอเซ็นไม่ขึ้นที่เมนูรอเซ็น หัวหน้าบอกว่าส่งมาแล้ว', messageCount: 1, reporterReadAt: t('2026-11-02T08:30'), staffReadAt: 0 },
+  ],
+  support_messages: [
+    { id: 'sm-1', ticketId: 'st-1', fromUid: SOMCHAI, fromName: 'สมชาย ใจดี', fromReporter: true,
+      body: 'กดบันทึกแล้วขึ้นว่าบันทึกไม่ได้ (invalid input syntax for type integer)', images: [], createdAt: t('2026-11-01T09:10') },
+    { id: 'sm-2', ticketId: 'st-1', fromUid: 'u-malee', fromName: 'มาลี ศรีสุข', fromReporter: false,
+      body: 'แก้ให้แล้วครับ ลองบันทึกใหม่อีกครั้งได้เลย', images: [], createdAt: t('2026-11-01T10:02') },
+    { id: 'sm-3', ticketId: 'st-2', fromUid: 'u-anucha', fromName: 'อนุชา พรหมมา', fromReporter: true,
+      body: 'เอกสารรอเซ็นไม่ขึ้นที่เมนูรอเซ็น หัวหน้าบอกว่าส่งมาแล้ว', images: [], createdAt: t('2026-11-02T08:30') },
+  ],
   field_options: [
     { id: 'o1', field: 'department', value: 'Field Operation', sortOrder: 1 },
     { id: 'o2', field: 'department', value: 'Accounting', sortOrder: 2 },
@@ -277,6 +293,31 @@ for (const s of db.submissions) {
 const KEY: Record<string, string> = {
   companies: 'id', profiles: 'uid', access_groups: 'id', form_groups: 'id', form_settings: 'formType',
   submissions: 'id', submission_versions: 'id', field_options: 'id',
+}
+
+// supabase/2026-11-02-support-chat.sql's triggers: who, when, and the
+// conversation's summary come from the session, not from what was sent.
+function supportTrigger(table: string, p: any): any {
+  const me = db.profiles.find((x: any) => x.uid === ME)
+  const name = me ? `${me.firstName} ${me.lastName}` : ''
+  const now = Date.now()
+  if (table === 'support_tickets') {
+    return { ...p, createdBy: ME, reporterName: name, status: 'open', createdAt: now, lastMessageAt: null, lastByReporter: true,
+      lastPreview: '', messageCount: 0, reporterReadAt: 0, staffReadAt: 0 }
+  }
+  if (table === 'support_messages') {
+    const tk = db.support_tickets.find((x: any) => x.id === p.ticketId)
+    const fromReporter = tk?.createdBy === ME
+    const m = { ...p, fromUid: ME, fromName: name, fromReporter, createdAt: now }
+    if (tk) Object.assign(tk, {
+      lastMessageAt: now, lastByReporter: fromReporter, lastPreview: (p.body || '[รูปภาพ]').slice(0, 140),
+      messageCount: tk.messageCount + 1,
+      ...(fromReporter ? { reporterReadAt: now } : { staffReadAt: now }),
+      status: fromReporter && tk.status === 'done' ? 'open' : !fromReporter && tk.status === 'open' ? 'doing' : tk.status,
+    })
+    return m
+  }
+  return p
 }
 
 // a ⊇ b, the way Postgres jsonb @> reads it
@@ -324,7 +365,7 @@ class Query {
     const key = KEY[this.table] ?? 'id'
     let out: any[]
     if (this.op === 'insert' || this.op === 'upsert') {
-      out = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((p: any) => {
+      out = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((p: any) => supportTrigger(this.table, p)).map((p: any) => {
         const row = { ...p, [key]: p[key] ?? `${this.table}-${Math.random().toString(36).slice(2, 8)}` }
         const i = rows.findIndex(r => r[key] === row[key])
         if (i >= 0) rows[i] = { ...rows[i], ...row }; else rows.push(row)
@@ -405,6 +446,11 @@ const rpc = async (name: string, args: any) => {
         s.voided = null
         for (const x of db.submissions) if (x.replaces?.id === s.id) x.replaces = null
       }
+      return { data: null, error: null }
+    }
+    case 'support_mark_read': {
+      const tk = db.support_tickets.find((x: any) => x.id === args.ticket)
+      if (tk) { if (tk.createdBy === ME) tk.reporterReadAt = Date.now(); else tk.staffReadAt = Date.now() }
       return { data: null, error: null }
     }
     default: return { data: null, error: null }
