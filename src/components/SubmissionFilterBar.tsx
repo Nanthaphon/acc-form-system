@@ -5,6 +5,8 @@ import { statusMeta } from '../data/submissions'
 import type { Filters } from '../shared/submissionFilter'
 import { emptyFilters } from '../shared/submissionFilter'
 import DateInput from './DateInput'
+import FilterSelect from './FilterSelect'
+import type { FilterOption } from './FilterSelect'
 import { folderIn, folderPath } from '../shared/folders'
 import { ui } from './ui'
 
@@ -25,17 +27,30 @@ interface Props {
 export default function SubmissionFilterBar({ value, onChange, forms, groups, formGroup, employees, resultCount, total, extra }: Props) {
   const cls = ui.inputSm
   const set = (patch: Partial<Filters>) => onChange({ ...value, ...patch })
-  // A folder picked narrows the forms to its own. Forms of the same name live
-  // in more than one folder, so with no folder picked a repeated name says
-  // which folder it is from.
+  // A folder picked narrows the forms to its own. The forms are listed under
+  // their folder's name, so two of the same name in different folders are told
+  // apart by where they sit.
   const folderOf = (f: FormSettings) => formGroup?.(f.formType) ?? f.groupId
   const within = (f: FormSettings, folder: string) => (groups ? folderIn(groups, folderOf(f), folder) : folderOf(f) === folder)
   const formChoices = value.groupId ? forms.filter(f => within(f, value.groupId)) : forms
   const nameOf = (f: FormSettings) => f.name || f.title
-  const repeated = new Set(formChoices.map(nameOf).filter((n, i, all) => all.indexOf(n) !== i))
   const folderName = (id?: string) => (groups ? folderPath(groups, id) : '') || undefined
-  const formLabel = (f: FormSettings) =>
-    repeated.has(nameOf(f)) && folderName(folderOf(f)) ? `${nameOf(f)} (${folderName(folderOf(f))})` : nameOf(f)
+  const folderRank = (f: FormSettings) => groups?.findIndex(g => g.id === folderOf(f)) ?? -1
+  const formOptions: FilterOption[] = [...formChoices]
+    .sort((a, b) => folderRank(a) - folderRank(b))
+    .map(f => ({ value: f.formType, label: nameOf(f), group: folderName(folderOf(f)) }))
+  const folderOptions: FilterOption[] = (groups ?? []).map(g => ({
+    value: g.id, label: g.name, indent: !!g.parentId && !!groups?.some(p => p.id === g.parentId),
+  }))
+  const statusOptions: FilterOption[] = STATUSES.map(st => ({ value: st, label: statusMeta(st).label }))
+  const employeeOptions: FilterOption[] = (employees ?? []).map(p => ({ value: p.employeeId, label: `${p.firstName} ${p.lastName} · ${p.employeeId}` }))
+  const dateOptions: FilterOption[] = [
+    { value: 'today', label: 'วันนี้' },
+    { value: 'thisMonth', label: 'เดือนนี้' },
+    { value: 'lastMonth', label: 'เดือนที่แล้ว' },
+    { value: 'thisYear', label: 'ปีนี้' },
+    { value: 'custom', label: 'กำหนดเอง…' },
+  ]
   // Nothing to clear while nothing is picked.
   const filtering = (Object.keys(emptyFilters) as (keyof Filters)[]).some(k => value[k] !== emptyFilters[k])
   const pickFolder = (groupId: string) => {
@@ -54,36 +69,16 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, fo
         />
       </div>
       {groups && groups.length > 0 && (
-        <select className={cls} aria-label="โฟลเดอร์" value={value.groupId} onChange={e => pickFolder(e.target.value)}>
-          <option value="">— ทุกโฟลเดอร์ —</option>
-          {/* sub-folders indented under the folder they are in */}
-          {groups.map(g => <option key={g.id} value={g.id}>{g.parentId && groups.some(p => p.id === g.parentId) ? `   └ ${g.name}` : g.name}</option>)}
-        </select>
+        <FilterSelect className="w-44" ariaLabel="โฟลเดอร์" allLabel="ทุกโฟลเดอร์" options={folderOptions} value={value.groupId} onChange={pickFolder} />
       )}
-      <select className={cls} aria-label="ฟอร์ม" value={value.formType} onChange={e => set({ formType: e.target.value })}>
-        <option value="">— ฟอร์มทั้งหมด —</option>
-        {formChoices.map(f => <option key={f.formType} value={f.formType}>{formLabel(f)}</option>)}
-      </select>
-      <select className={cls} value={value.status} onChange={e => set({ status: e.target.value })}>
-        <option value="">— สถานะทั้งหมด —</option>
-        {STATUSES.map(s => <option key={s} value={s}>{statusMeta(s).label}</option>)}
-      </select>
+      <FilterSelect className="w-60" ariaLabel="ฟอร์ม" allLabel="ฟอร์มทั้งหมด" options={formOptions} value={value.formType} onChange={v => set({ formType: v })} />
+      <FilterSelect className="w-40" ariaLabel="สถานะ" allLabel="สถานะทั้งหมด" options={statusOptions} value={value.status} onChange={v => set({ status: v })} />
       {employees && (
-        <select className={cls} value={value.emp} onChange={e => set({ emp: e.target.value })}>
-          <option value="">— พนักงานทั้งหมด —</option>
-          {employees.map(p => (
-            <option key={p.uid} value={p.employeeId}>{p.employeeId} — {p.firstName} {p.lastName}</option>
-          ))}
-        </select>
+        <FilterSelect className="w-56" ariaLabel="พนักงาน" allLabel="พนักงานทั้งหมด" options={employeeOptions} searchable value={value.emp} onChange={v => set({ emp: v })} />
       )}
-      <select className={cls} value={value.datePreset} onChange={e => set({ datePreset: e.target.value })}>
-        <option value="all">— ทุกวันที่ —</option>
-        <option value="today">วันนี้</option>
-        <option value="thisMonth">เดือนนี้</option>
-        <option value="lastMonth">เดือนที่แล้ว</option>
-        <option value="thisYear">ปีนี้</option>
-        <option value="custom">กำหนดเอง…</option>
-      </select>
+      {/* 'all' is how an unset date range is kept */}
+      <FilterSelect className="w-36" ariaLabel="ช่วงวันที่" allLabel="ทุกวันที่" options={dateOptions}
+        value={value.datePreset === 'all' ? '' : value.datePreset} onChange={v => set({ datePreset: v || 'all' })} />
       {value.datePreset === 'custom' && (
         <div className="flex items-center gap-2">
           <DateInput className={`${cls} w-36`} value={value.fromD} onChange={v => set({ fromD: v })} />
