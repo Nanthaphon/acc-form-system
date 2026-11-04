@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FileText, Pencil, PenLine, Printer, Trash2, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid } from '../../data/users'
-import { listMySubmissions, submissionAmount, deleteSubmission } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, isSigned } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
 import { listGroups } from '../../data/formGroups'
@@ -14,15 +14,17 @@ import type { UserProfile, SubmissionSummary, FormSettings, Company, AccessGroup
 import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
-import { canManageLogin, isSuperAdmin, roleLabel } from '../../shared/roles'
+import { canManageLogin, isSuperAdmin } from '../../shared/roles'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
-import ActionIconButton from '../../components/ActionIconButton'
+import { ActionGroup, ActionGroupItem, RowMenu } from '../../components/RowActions'
+import EmployeeSummaryCard from '../../components/EmployeeSummaryCard'
+import StatusBadge from '../../components/StatusBadge'
 import LoginInfo from '../../components/LoginInfo'
 import SignatureField from '../../components/SignatureField'
 import SetPasswordModal from '../../components/SetPasswordModal'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { Spinner } from '../../components/Spinner'
-import { Badge, PageHeader, ui } from '../../components/ui'
+import { PageHeader, ui } from '../../components/ui'
 import DocNumberCell from '../../components/DocNumberCell'
 import { formatMoney } from '../../shared/money'
 
@@ -31,20 +33,10 @@ const HEADERS = [
   { label: 'ฟอร์ม', cls: '' },
   { label: 'วันที่', cls: '' },
   { label: 'ยอด', cls: 'text-right' },
-  { label: 'พิมพ์ (ครั้ง)', cls: 'text-center' },
+  { label: 'สถานะ', cls: '' },
   { label: 'พิมพ์ล่าสุด', cls: '' },
-  { label: 'แก้ไข', cls: '' },
   { label: '', cls: '' },
 ]
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="mb-0.5 text-xs font-medium text-stone-500">{label}</div>
-      <div className="font-medium text-stone-900">{value || '-'}</div>
-    </div>
-  )
-}
 
 export default function EmployeeDetailPage() {
   const { uid } = useParams()
@@ -89,8 +81,6 @@ export default function EmployeeDetailPage() {
     const f = forms.find(x => x.formType === ft)
     return f?.name || f?.title || ft
   }
-  const companyName = (id: string) => companies.find(c => c.id === id)?.name || id
-  const accessGroupName = (id?: string) => id ? (groups.find(a => a.id === id)?.name || id) : ''
 
   if (!profile) return (
     <div className="flex items-center gap-2 p-4 text-sm text-stone-500"><Spinner size={16} /> กำลังโหลด...</div>
@@ -105,13 +95,20 @@ export default function EmployeeDetailPage() {
   // Admin touches the Super Admin's own account.
   const canManage = canManageLogin(me, profile)
   const canSetPassword = canManage && profile.uid !== me?.uid
+  const live = subs.filter(s => !s.voided)
+  const lastAt = subs.reduce((m, s) => Math.max(m, s.createdAt), 0)
+  const stats = [
+    { label: 'เอกสารทั้งหมด', value: `${live.length} ฉบับ` },
+    { label: 'ยอดรวม (บาท)', value: formatMoney(live.reduce((sum, s) => sum + submissionAmount(s), 0)) },
+    { label: 'ทำล่าสุด', value: lastAt ? formatDate(lastAt) : '—' },
+  ]
 
   return (
     <div>
       <PageHeader
         icon={<UserRound size={20} />}
         title="ข้อมูลพนักงาน"
-        subtitle={`${profile.firstName} ${profile.lastName} · ${roleLabel(profile)}`}
+        subtitle={`${profile.firstName} ${profile.lastName}`.trim()}
         onBack={() => nav('/admin/employees')}
         actions={canEdit && (
           <Link to={`/admin/employees/${profile.uid}/edit`} className={ui.btnPrimary}>
@@ -120,83 +117,99 @@ export default function EmployeeDetailPage() {
         )}
       />
 
-      <div className="space-y-6">
-        <LoginInfo
-          profile={profile}
-          onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined}
-          onChangeUsername={viewerIsSuper ? () => setChangingUsername(true) : undefined}
+      <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <EmployeeSummaryCard
+          person={profile}
+          companies={companies}
+          groups={groups}
         />
 
-        {/* Not everyone can manage a signature image on their own; an admin can
-            put one on the account so the person can sign documents online. */}
-        <div className={ui.card}>
-          <div className="mb-1 flex items-center gap-2">
-            <PenLine size={16} className="text-stone-400" />
-            <h2 className={ui.cardTitle}>ลายเซ็น</h2>
-          </div>
-          <p className="mb-4 text-xs text-stone-500">ใช้ตอนพนักงานคนนี้เซ็นเอกสารออนไลน์ · แนะนำรูปพื้นหลังโปร่ง</p>
-          <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
-        </div>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <LoginInfo
+            profile={profile}
+            onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined}
+            onChangeUsername={viewerIsSuper ? () => setChangingUsername(true) : undefined}
+          />
 
-        <div className={ui.card}>
-          <div className="grid grid-cols-2 gap-5 text-sm md:grid-cols-3">
-            <Info label="ชื่อ-นามสกุล" value={`${profile.firstName} ${profile.lastName}`} />
-            <Info label="ตำแหน่ง" value={profile.position} />
-            <Info label="แผนก" value={profile.department} />
-            <Info label="อีเมล" value={profile.email ?? ''} />
-            <Info label="บริษัท" value={companyName(profile.companyId)} />
-            <Info label="กลุ่ม (Access group)" value={accessGroupName(profile.accessGroup)} />
-            <Info label="สิทธิ์" value={roleLabel(profile)} />
+          {/* Not everyone can manage a signature image on their own; an admin can
+              put one on the account so the person can sign documents online. */}
+          <div className={ui.card}>
+            <div className="mb-1 flex items-center gap-2">
+              <PenLine size={16} className="text-stone-400" />
+              <h2 className={ui.cardTitle}>ลายเซ็น</h2>
+            </div>
+            <p className="mb-4 text-xs text-stone-500">ใช้ตอนเซ็นเอกสารออนไลน์ · แนะนำรูปพื้นหลังโปร่ง</p>
+            <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
           </div>
-        </div>
 
-        <div>
-          <h2 className={`${ui.cardTitle} mb-3 flex items-center gap-2`}>
-            <FileText size={16} className="text-stone-400" /> เอกสารที่พิมพ์ ({subs.length})
-          </h2>
-          <div className="mb-4">
-            <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} formGroup={formGroup} resultCount={filtered.length} />
-          </div>
-          <div className={ui.tableWrap}>
-            <table className={ui.table}>
-              <thead className={ui.thead}>
-                <tr>{HEADERS.map(h => <th key={h.label} className={`${ui.th} ${h.cls}`}>{h.label}</th>)}</tr>
-              </thead>
-              <tbody className={ui.tbody}>
-                {filtered.map(r => (
-                  <tr key={r.id} className={ui.tr}>
-                    <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}><DocNumberCell sub={r} /></td>
-                    <td className={`${ui.td} font-medium text-stone-900`}>{formName(r.formType)}</td>
-                    <td className={`${ui.td} whitespace-nowrap`}>{formatDate(r.createdAt)}</td>
-                    <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>
-                    <td className={`${ui.td} text-center tabular-nums`}>{r.printCount}</td>
-                    <td className={`${ui.td} whitespace-nowrap`}>{formatDateTime(r.lastPrintedAt)}</td>
-                    <td className={`${ui.td} whitespace-nowrap`}>
-                      {editLabel(r, vcounts)
-                        ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge>
-                        : <span className="text-stone-300">—</span>}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <ActionIconButton label="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />
-                        <ActionIconButton label="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
-                        <ActionIconButton label="ลบ" onClick={() => onDeleteSub(r)} tone="red" icon={<Trash2 size={16} />} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={HEADERS.length} className={ui.emptyCell}>
-                      {subs.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Their documents in three figures */}
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:col-span-2">
+            {stats.map(s => (
+              <div key={s.label} className={ui.card}>
+                <dt className="text-xs font-medium text-stone-500">{s.label}</dt>
+                <dd className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">{s.value}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </div>
+
+      <section className="mt-8">
+        <h2 className={`${ui.cardTitle} mb-3 flex items-center gap-2`}>
+          <FileText size={16} className="text-stone-400" /> เอกสารของ {profile.firstName || 'พนักงาน'}
+        </h2>
+        <div className="mb-4">
+          <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} formGroup={formGroup}
+            resultCount={filtered.length} total={subs.length} />
+        </div>
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
+            <thead className={ui.thead}>
+              <tr>{HEADERS.map(h => <th key={h.label} className={`${ui.th} ${h.cls}`}>{h.label}</th>)}</tr>
+            </thead>
+            <tbody className={ui.tbody}>
+              {filtered.map(r => (
+                <tr key={r.id} className={ui.tr}>
+                  <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}><DocNumberCell sub={r} /></td>
+                  <td className={`${ui.td} font-medium text-stone-900`}>{formName(r.formType)}</td>
+                  <td className={`${ui.td} whitespace-nowrap`}>{formatDate(r.createdAt)}</td>
+                  <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>
+                  <td className={`${ui.td} whitespace-nowrap`}>
+                    <span className="inline-flex items-center gap-2">
+                      <StatusBadge sub={r} />
+                      {editLabel(r, vcounts) && <span className="text-xs text-ochre-700" title="จำนวนครั้งที่แก้ไขหลังบันทึก">✎ {editLabel(r, vcounts)}</span>}
+                    </span>
+                  </td>
+                  <td className={`${ui.td} whitespace-nowrap`}>
+                    {r.printCount > 0
+                      ? <>{formatDateTime(r.lastPrintedAt)} <span className="text-xs text-stone-500">· {r.printCount} ครั้ง</span></>
+                      : <span className="text-stone-500">ยังไม่พิมพ์</span>}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2">
+                    <div className="flex items-center justify-end gap-2">
+                      <ActionGroup>
+                        {!r.voided && !isSigned(r) && <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
+                        <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
+                      </ActionGroup>
+                      <RowMenu
+                        items={[{ label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDeleteSub(r), danger: true }]}
+                        label={`ตัวเลือกเพิ่มเติม ${r.docNumber}`}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={HEADERS.length} className={ui.emptyCell}>
+                    {subs.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {settingPassword && <SetPasswordModal profile={profile} onClose={() => setSettingPassword(false)} onDone={loadProfile} />}
       {changingUsername && <ChangeUsernameModal profile={profile} onClose={() => setChangingUsername(false)} onDone={afterUsernameChange} />}
