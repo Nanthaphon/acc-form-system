@@ -1,8 +1,8 @@
-import { uiAlert } from '../../components/dialog/dialogService'
+import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useBlocker, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, showSeqColumn, isTextCol } from '../../types/schema'
@@ -87,7 +87,7 @@ function Section({ title, summary, defaultOpen, children }: {
       <summary className="flex cursor-pointer list-none items-center gap-3">
         <ChevronDown size={18} className="shrink-0 text-stone-400 transition-transform group-open:rotate-180" />
         <h2 className={`${ui.cardTitle} shrink-0`}>{title}</h2>
-        {summary && <span className="min-w-0 flex-1 truncate text-right text-xs text-stone-400">{summary}</span>}
+        {summary && <span className="min-w-0 flex-1 truncate text-right text-xs text-stone-500">{summary}</span>}
       </summary>
       <div className="mt-4">{children}</div>
     </details>
@@ -112,6 +112,10 @@ export default function FormSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  // The form as last loaded or saved, to tell whether anything on screen is
+  // still unsaved. Taken from the settings the next render holds (snapNext).
+  const [savedSnap, setSavedSnap] = useState<string | null>(null)
+  const snapNext = useRef(false)
 
   function loadCompanies() { listCompanies(true).then(setCompanies) } // logos are edited here
   useEffect(() => {
@@ -119,6 +123,7 @@ export default function FormSettingsPage() {
     getFormSettings(formType)
       .then(s => {
         // Widths are whole percent; one saved with a decimal is cut down here.
+        snapNext.current = true
         setSettings({
           ...s,
           seqWidth: s.seqWidth ? wholePctWidth(s.seqWidth) ?? null : s.seqWidth,
@@ -130,6 +135,28 @@ export default function FormSettingsPage() {
     loadCompanies()
     listAccessGroups().then(setGroups)
   }, [formType])
+
+  useEffect(() => {
+    if (!snapNext.current) return
+    snapNext.current = false
+    setSavedSnap(JSON.stringify(settings))
+  }, [settings])
+  const dirty = loaded && savedSnap !== null && JSON.stringify(settings) !== savedSnap
+
+  // Leaving with edits unsaved asks first — by a link inside the app, or by
+  // closing / reloading the tab.
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname)
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    uiConfirm('การแก้ไขที่ยังไม่บันทึกจะหายไป', { title: 'ออกจากหน้านี้โดยไม่บันทึก?', tone: 'danger', confirmText: 'ออกโดยไม่บันทึก', cancelText: 'อยู่ต่อ' })
+      .then(leave => (leave ? blocker.proceed() : blocker.reset()))
+  }, [blocker])
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
 
   function setField<K extends keyof FormSettings>(key: K, value: FormSettings[K]) {
     setSettings(s => ({ ...s, [key]: value }))
@@ -349,7 +376,8 @@ export default function FormSettingsPage() {
           { tone: 'success', title: firstGroupOnly ? 'บันทึกแล้ว' : undefined },
         )
       }
-      if (firstGroupOnly) setAccessGroups(selectedGroups.slice(0, 1))
+      if (firstGroupOnly) { snapNext.current = true; setAccessGroups(selectedGroups.slice(0, 1)) }
+      else setSavedSnap(JSON.stringify(settings))
     } catch (e) {
       uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })
     } finally {
@@ -424,6 +452,11 @@ export default function FormSettingsPage() {
             <button className={ui.btnSecondary} onClick={() => setShowPreview(p => !p)}>
               {showPreview ? <><Pencil size={16} /> กลับไปแก้ไข</> : <><Eye size={16} /> ดูตัวอย่าง</>}
             </button>
+            {dirty && (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-ochre-700" role="status">
+                <span className="h-2 w-2 rounded-full bg-ochre-500" /> ยังไม่บันทึก
+              </span>
+            )}
             <button className={ui.btnPrimary} onClick={save} disabled={saving}>
               <Save size={16} /> บันทึกฟอร์ม
             </button>
@@ -537,16 +570,25 @@ export default function FormSettingsPage() {
             : 'ฟอร์มนี้ยังไม่มีคอลัมน์ตัวเลข จึงยังไม่มียอดรวม'}
           {brokenCount > 0 && ` · มีสูตรที่อ้างคอลัมน์ไม่ครบ ${brokenCount} คอลัมน์`}
         </p>
-        {/* What the table will look like — the quickest way to check the result. */}
+        {/* The table's heading at the widths it prints — each column's share shown
+            under its name, so a width is checked by eye rather than by sums. */}
         <div className="scroll-slim overflow-x-auto rounded-lg border border-stone-200">
-          <table className="w-full text-left text-[11px]">
+          <table className="w-full table-fixed text-left text-[11px]">
             <thead>
               <tr className={ui.thead}>
-                <th className="px-2 py-1.5 font-medium text-stone-500" style={{ width: `${seqColumnWidth(settings)}px` }}>ลำดับ</th>
-                {columns.filter(c => !c.hidden).map(c => (
-                  <th key={c.key} className="whitespace-pre-line px-2 py-1.5 font-semibold text-stone-900">
-                    {c.label || <span className="font-normal text-stone-400">(ไม่มีชื่อ)</span>}
+                {showSeq && (
+                  <th className="border-r border-stone-100 px-2 py-1.5 align-top font-medium text-stone-500" style={{ width: `${(seqColumnWidth(settings) * 100) / PRINT_TABLE_MM}%` }}>
+                    ลำดับ
+                    <span className="block font-normal tabular-nums text-stone-500">{mmToPct(seqColumnWidth(settings))}%</span>
+                  </th>
+                )}
+                {visibleCols.map((c, k) => (
+                  <th key={c.key} className="whitespace-pre-line border-r border-stone-100 px-2 py-1.5 align-top font-semibold text-stone-900 last:border-r-0" style={{ width: `${(printedMm[k] * 100) / PRINT_TABLE_MM}%` }}>
+                    {c.label || <span className="font-normal text-stone-500">(ไม่มีชื่อ)</span>}
                     {c.type === 'calc' && <span className="ml-1 font-normal text-stone-500">ƒ</span>}
+                    <span className={`block font-normal tabular-nums ${c.width ? 'text-clay-700' : 'text-stone-500'}`}>
+                      {mmToPct(printedMm[k])}%{c.width ? '' : ' อัตโนมัติ'}
+                    </span>
                   </th>
                 ))}
               </tr>

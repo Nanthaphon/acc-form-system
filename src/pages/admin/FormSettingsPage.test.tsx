@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import FormSettingsPage from './FormSettingsPage'
 import { getFormSettings, updateFormSettings } from '../../data/formSettings'
 import type { FormSettings } from '../../types/schema'
@@ -35,7 +35,8 @@ vi.mock('../../components/dialog/dialogService', () => ({
   uiPrompt: vi.fn(() => Promise.resolve('')),
 }))
 
-const show = () => render(<MemoryRouter><FormSettingsPage /></MemoryRouter>)
+// A data router, as in the app: the page asks before leaving with unsaved edits.
+const show = () => render(<RouterProvider router={createMemoryRouter([{ path: '/', element: <FormSettingsPage /> }])} />)
 // Every section is a <details>; the one being edited is open, the rest are folded.
 const sectionFor = (title: string) => screen.getByText(title).closest('details') as HTMLDetailsElement
 
