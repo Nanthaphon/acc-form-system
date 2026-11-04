@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { RotateCcw, Search } from 'lucide-react'
 import type { FormSettings, FormGroup, UserProfile, SubmissionStatus } from '../types/schema'
 import { statusMeta } from '../data/submissions'
@@ -17,9 +18,11 @@ interface Props {
   formGroup?: (formType: string) => string | undefined   // a form's folder, as the page reckons it
   employees?: UserProfile[]   // when provided, show an employee filter
   resultCount: number
+  total?: number              // all there are, so a filtered count reads "12 จาก 110"
+  extra?: ReactNode           // the page's own tools, at the end of the bar (the column picker)
 }
 
-export default function SubmissionFilterBar({ value, onChange, forms, groups, formGroup, employees, resultCount }: Props) {
+export default function SubmissionFilterBar({ value, onChange, forms, groups, formGroup, employees, resultCount, total, extra }: Props) {
   const cls = ui.inputSm
   const set = (patch: Partial<Filters>) => onChange({ ...value, ...patch })
   // A folder picked narrows the forms to its own. Forms of the same name live
@@ -33,6 +36,8 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, fo
   const folderName = (id?: string) => (groups ? folderPath(groups, id) : '') || undefined
   const formLabel = (f: FormSettings) =>
     repeated.has(nameOf(f)) && folderName(folderOf(f)) ? `${nameOf(f)} (${folderName(folderOf(f))})` : nameOf(f)
+  // Nothing to clear while nothing is picked.
+  const filtering = (Object.keys(emptyFilters) as (keyof Filters)[]).some(k => value[k] !== emptyFilters[k])
   const pickFolder = (groupId: string) => {
     const keepForm = !value.formType || !groupId || forms.some(f => f.formType === value.formType && within(f, groupId))
     set({ groupId, ...(keepForm ? {} : { formType: '' }) })
@@ -86,12 +91,18 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, fo
           <DateInput className={`${cls} w-36`} value={value.toD} onChange={v => set({ toD: v })} />
         </div>
       )}
-      <button type="button" onClick={() => onChange(emptyFilters)} className={ui.btnGhost}>
-        <RotateCcw size={15} /> ล้างตัวกรอง
-      </button>
-      <span className="ml-auto whitespace-nowrap text-sm text-stone-500">
-        <span className="font-medium text-stone-900">{resultCount}</span> รายการ
-      </span>
+      {filtering && (
+        <button type="button" onClick={() => onChange(emptyFilters)} className={ui.btnGhost}>
+          <RotateCcw size={15} /> ล้างตัวกรอง
+        </button>
+      )}
+      <div className="ml-auto flex items-center gap-3">
+        <span className="whitespace-nowrap text-sm text-stone-500">
+          <span className="font-medium text-stone-900">{resultCount}</span>
+          {total !== undefined && total !== resultCount && <> จาก {total}</>} รายการ
+        </span>
+        {extra}
+      </div>
     </div>
   )
 }

@@ -120,13 +120,11 @@ export default function HistoryPage() {
       <PageHeader
         icon={<History size={20} />}
         title="ประวัติเอกสารของฉัน"
-        subtitle={`ทั้งหมด ${rows.length} รายการ`}
       />
       <div className="mb-4">
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={choices.forms} groups={choices.groups} formGroup={formGroup} resultCount={filtered.length} />
-      </div>
-      <div className="mb-3 flex justify-end">
-        <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={choices.forms} groups={choices.groups} formGroup={formGroup}
+          resultCount={filtered.length} total={rows.length}
+          extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>
       <div className={ui.tableWrap}>
         <table className={ui.table}>

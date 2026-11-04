@@ -39,3 +39,27 @@ describe('SubmissionFilterBar', () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ groupId: 'dx', formType: '' }))
   })
 })
+
+describe('the bar\'s count and tools', () => {
+  const bar = (value: Filters, resultCount: number, total?: number) =>
+    render(<SubmissionFilterBar value={value} onChange={vi.fn()} forms={forms} resultCount={resultCount} total={total}
+      extra={<button type="button">คอลัมน์</button>} />)
+
+  it('offers ล้างตัวกรอง only once something is picked', () => {
+    bar(emptyFilters, 110, 110)
+    expect(screen.queryByRole('button', { name: /ล้างตัวกรอง/ })).not.toBeInTheDocument()
+  })
+
+  it('a filtered count says out of how many, and the page\'s tools sit on the same bar', () => {
+    const { container } = bar({ ...emptyFilters, status: 'done' }, 12, 110)
+    expect(screen.getByRole('button', { name: /ล้างตัวกรอง/ })).toBeInTheDocument()
+    expect(container.textContent).toContain('12 จาก 110 รายการ')
+    expect(screen.getByRole('button', { name: 'คอลัมน์' })).toBeInTheDocument()
+  })
+
+  it('an unfiltered count is just the count', () => {
+    const { container } = bar(emptyFilters, 110, 110)
+    expect(container.textContent).toContain('110 รายการ')
+    expect(container.textContent).not.toContain('จาก')
+  })
+})

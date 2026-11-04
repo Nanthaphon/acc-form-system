@@ -2,6 +2,8 @@ import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArchiveRestore, Ban, Copy, Pencil, Printer, Trash2 } from 'lucide-react'
+import { ActionGroup, ActionGroupItem, RowMenu } from '../../components/RowActions'
+import type { RowMenuItem } from '../../components/RowActions'
 import { listAllSubmissions, submissionAmount, deleteSubmission, isSigned, voidingAvailable } from '../../data/submissions'
 import StatusBadge from '../../components/StatusBadge'
 import DocNumberCell from '../../components/DocNumberCell'
@@ -16,10 +18,9 @@ import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
-import ActionIconButton from '../../components/ActionIconButton'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
-import { Badge, PageHeader, ui } from '../../components/ui'
+import { PageHeader, ui } from '../../components/ui'
 import { formatMoney } from '../../shared/money'
 
 interface Column extends PickableColumn {
@@ -73,17 +74,27 @@ export default function PrintHistoryPage() {
     { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => <DocNumberCell sub={r} /> },
     {
       key: 'emp', label: 'พนักงาน', tdCls: 'whitespace-nowrap',
-      cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-stone-400">({r.createdByEmployeeId})</span></>,
+      cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-stone-500">({r.createdByEmployeeId})</span></>,
     },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
     { key: 'amount', label: 'ยอด', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => formatMoney(submissionAmount(r)) },
-    { key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap', cell: r => <StatusBadge sub={r} /> },
+    // How many times it was edited rides beside the status, rather than a column of dashes.
     {
-      key: 'edits', label: 'แก้ไข', tdCls: 'whitespace-nowrap',
-      cell: r => editLabel(r, vcounts) ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge> : <span className="text-stone-300">—</span>,
+      key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap',
+      cell: r => (
+        <span className="inline-flex items-center gap-2">
+          <StatusBadge sub={r} />
+          {editLabel(r, vcounts) && <span className="text-xs text-ochre-700" title="จำนวนครั้งที่แก้ไขหลังบันทึก">✎ {editLabel(r, vcounts)}</span>}
+        </span>
+      ),
     },
-    { key: 'prints', label: 'พิมพ์ (ครั้ง)', thCls: 'text-center', tdCls: 'text-center tabular-nums', cell: r => r.printCount },
-    { key: 'lastPrinted', label: 'พิมพ์ล่าสุด', tdCls: 'whitespace-nowrap', cell: r => formatDateTime(r.lastPrintedAt) },
+    // When it was last printed, and how many times in all.
+    {
+      key: 'lastPrinted', label: 'พิมพ์ล่าสุด', tdCls: 'whitespace-nowrap',
+      cell: r => r.printCount > 0
+        ? <>{formatDateTime(r.lastPrintedAt)} <span className="text-xs text-stone-500">· {r.printCount} ครั้ง</span></>
+        : <span className="text-stone-500">ยังไม่พิมพ์</span>,
+    },
   ]
   const shown = columns.filter(c => c.locked || !hidden.has(c.key))
 
@@ -92,13 +103,11 @@ export default function PrintHistoryPage() {
       <PageHeader
         icon={<Printer size={20} />}
         title="ประวัติการพิมพ์ทั้งหมดในระบบ"
-        subtitle={`ทั้งหมด ${rows.length} รายการ`}
       />
       <div className="mb-4">
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees} resultCount={filtered.length} />
-      </div>
-      <div className="mb-3 flex justify-end">
-        <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />
+        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees}
+          resultCount={filtered.length} total={rows.length}
+          extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>
       <div className={ui.tableWrap}>
         <table className={ui.table}>
@@ -109,23 +118,32 @@ export default function PrintHistoryPage() {
             </tr>
           </thead>
           <tbody className={ui.tbody}>
-            {filtered.map(r => (
-              <tr key={r.id} className={ui.tr}>
-                {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
-                <td className="whitespace-nowrap px-4 py-2">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {/* Signed or cancelled: no editing, and nothing in its place — "พิมพ์" already opens the document. */}
-                    {!r.voided && !isSigned(r) && <ActionIconButton showLabel label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={16} />} />}
-                    <ActionIconButton showLabel label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} tone="green" icon={<Printer size={16} />} />
-                    <ActionIconButton showLabel label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} tone="indigo" icon={<Copy size={16} />} />
-                    {r.voided
-                      ? <ActionIconButton showLabel label="กู้คืนเอกสารที่ยกเลิก" short="กู้คืน" onClick={async () => { if (await askAndUnvoid(r)) loadRows() }} icon={<ArchiveRestore size={16} />} />
-                      : voidingAvailable() && <ActionIconButton showLabel label="ยกเลิกเอกสาร — เก็บไว้ในระบบ ขึ้นว่ายกเลิก" short="ยกเลิก" onClick={async () => { if (await askAndVoid(r)) loadRows() }} tone="red" icon={<Ban size={16} />} />}
-                    <ActionIconButton showLabel label="ลบเอกสาร" short="ลบ" onClick={() => onDelete(r)} tone="red" icon={<Trash2 size={16} />} />
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filtered.map(r => {
+              // The everyday actions side by side; cancelling and deleting wait behind ⋯,
+              // as on ประวัติ — a red ลบ on every line drew the eye to the one to avoid.
+              const more: RowMenuItem[] = [
+                ...(r.voided
+                  ? [{ label: 'กู้คืนเอกสารที่ยกเลิก', icon: <ArchiveRestore size={16} />, onClick: async () => { if (await askAndUnvoid(r)) loadRows() } }]
+                  : voidingAvailable() ? [{ label: 'ยกเลิกเอกสาร', icon: <Ban size={16} />, onClick: async () => { if (await askAndVoid(r)) loadRows() }, danger: true }] : []),
+                { label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDelete(r), danger: true },
+              ]
+              return (
+                <tr key={r.id} className={ui.tr}>
+                  {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
+                  <td className="whitespace-nowrap px-4 py-2">
+                    <div className="flex items-center justify-end gap-2">
+                      <ActionGroup>
+                        {/* Signed or cancelled: no editing — "พิมพ์" opens the document. */}
+                        {!r.voided && !isSigned(r) && <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
+                        <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
+                        <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
+                      </ActionGroup>
+                      <RowMenu items={more} label={`ตัวเลือกเพิ่มเติม ${r.docNumber}`} />
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={shown.length + 1} className={ui.emptyCell}>
