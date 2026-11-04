@@ -484,7 +484,8 @@ const client: any = {
     signInWithPassword: async () => ({ data: { session: null, user: null }, error: { message: 'demo' } }),
     signOut: async () => ({ error: null }),
     updateUser: async () => ({ data: { user }, error: null }),
-    signUp: async () => ({ data: { user: null }, error: null }),
+    // A new employee's account: an id for the profile row that follows.
+    signUp: async () => ({ data: { user: { id: `u-new-${Math.random().toString(36).slice(2, 8)}` } }, error: null }),
   },
   storage: {
     from: () => ({

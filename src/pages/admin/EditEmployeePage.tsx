@@ -1,7 +1,7 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AtSign, IdCard, Lock, Save } from 'lucide-react'
+import { AtSign, IdCard, KeyRound, Lock, Save, ShieldCheck, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid, updateProfile } from '../../data/users'
 import { listCompanies } from '../../data/companies'
@@ -12,6 +12,7 @@ import { dbErrorMessage } from '../../shared/dbError'
 import { emailProblem, normalizeEmail } from '../../shared/emailAddress'
 import { isSuperAdmin, roleLabel, ROLE_OPTIONS } from '../../shared/roles'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
+import EmployeeSummaryCard from '../../components/EmployeeSummaryCard'
 import { PageHeader, ui } from '../../components/ui'
 import type { Company, UserProfile, AccessGroup } from '../../types/schema'
 
@@ -76,21 +77,34 @@ export default function EditEmployeePage() {
   }
 
   if (!f) return (
-    <div className="mx-auto max-w-2xl animate-pulse space-y-3">
-      <div className="h-7 w-48 rounded bg-stone-200" />
-      <div className="h-64 rounded-xl bg-stone-100" />
+    <div className="animate-pulse space-y-4">
+      <div className="h-10 w-72 rounded-lg bg-stone-200" />
+      <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="h-80 rounded-2xl bg-stone-100" />
+        <div className="h-80 rounded-2xl bg-stone-100" />
+      </div>
     </div>
   )
 
   const fullName = `${f.firstName} ${f.lastName}`.trim()
+  const hint = 'mt-1 text-[11px] text-stone-500'
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <PageHeader
         icon={<IdCard size={20} />}
         title="แก้ไขข้อมูลพนักงาน"
-        subtitle={`${fullName || 'พนักงาน'} · ชื่อผู้ใช้ ${f.employeeId}`}
+        subtitle={fullName || 'พนักงาน'}
         onBack={() => nav('/admin/employees')}
+        // Save stays in sight at the top, however far down the form is filled.
+        actions={
+          <>
+            <button type="button" onClick={() => nav('/admin/employees')} className={ui.btnSecondary}>ยกเลิก</button>
+            <button type="submit" form="employee-form" disabled={saving || readOnly} className={ui.btnPrimary}>
+              <Save size={16} /> {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
+          </>
+        }
       />
 
       {readOnly && (
@@ -99,90 +113,94 @@ export default function EditEmployeePage() {
         </div>
       )}
 
-      <form onSubmit={submit}>
-        <fieldset disabled={readOnly} className="space-y-6">
-          {/* ข้อมูลส่วนตัว */}
-          <div className={ui.card}>
-            <h2 className={`${ui.cardTitle} mb-4`}>ข้อมูลส่วนตัว</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className={ui.label}>รหัสพนักงาน (ชื่อผู้ใช้)</label>
-                <div className="flex gap-2">
-                  <input className={`${ui.input} font-mono`} value={f.employeeId} disabled />
-                  {viewerIsSuper && (
-                    <button type="button" className={`${ui.btnSecondary} shrink-0`} onClick={() => setChangingUsername(true)}>
-                      <AtSign size={16} /> เปลี่ยน
-                    </button>
+      <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <EmployeeSummaryCard person={f} companies={companies} groups={groups} />
+
+        <form id="employee-form" onSubmit={submit}>
+          <fieldset disabled={readOnly} className="space-y-6">
+            {/* เข้าสู่ระบบ */}
+            <section className={ui.card}>
+              <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><KeyRound size={16} className="text-stone-400" /> ข้อมูลเข้าสู่ระบบ</h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className={ui.label}>รหัสพนักงาน (ชื่อผู้ใช้)</label>
+                  <div className="flex gap-2">
+                    <input className={`${ui.input} font-mono`} value={f.employeeId} disabled />
+                    {viewerIsSuper && (
+                      <button type="button" className={`${ui.btnSecondary} shrink-0`} onClick={() => setChangingUsername(true)}>
+                        <AtSign size={16} /> เปลี่ยน
+                      </button>
+                    )}
+                  </div>
+                  <p className={hint}>{viewerIsSuper ? 'ใช้เข้าสู่ระบบ · เปลี่ยนแล้วมีผลทันที' : 'เปลี่ยนได้เฉพาะ Super Admin'}</p>
+                </div>
+                <div>
+                  <label className={ui.label}>อีเมล</label>
+                  <input type="email" className={ui.input} placeholder="สำหรับแจ้งเตือนเอกสารรอเซ็น" value={f.email ?? ''} onChange={e => set('email', e.target.value)} />
+                </div>
+              </div>
+            </section>
+
+            {/* ข้อมูลส่วนตัว */}
+            <section className={ui.card}>
+              <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><UserRound size={16} className="text-stone-400" /> ข้อมูลส่วนตัว</h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                <div>
+                  <label className={ui.label}>ชื่อ</label>
+                  <input className={ui.input} placeholder="ชื่อจริง" value={f.firstName} onChange={e => set('firstName', e.target.value)} />
+                </div>
+                <div>
+                  <label className={ui.label}>นามสกุล</label>
+                  <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} />
+                </div>
+                <div className="md:col-span-2 2xl:col-span-1">
+                  <label className={ui.label}>ตำแหน่ง</label>
+                  <OptionInput className={ui.input} placeholder="เช่น หัวหน้าฝ่ายบัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
+                </div>
+              </div>
+            </section>
+
+            {/* สังกัด & สิทธิ์ */}
+            <section className={ui.card}>
+              <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><ShieldCheck size={16} className="text-stone-400" /> สังกัดและสิทธิ์การใช้งาน</h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className={ui.label}>บริษัท</label>
+                  <select className={ui.input} value={f.companyId} onChange={e => set('companyId', e.target.value)}>
+                    <option value="">— เลือกบริษัท —</option>
+                    {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={ui.label}>แผนก</label>
+                  <OptionInput className={ui.input} placeholder="เช่น Payroll" value={f.department} options={lists.department} onChange={v => set('department', v)} />
+                </div>
+                <div>
+                  <label className={ui.label}>กลุ่มการเข้าถึง</label>
+                  <select className={ui.input} value={f.accessGroup ?? ''} onChange={e => set('accessGroup', e.target.value)}>
+                    <option value="">— ไม่ระบุ —</option>
+                    {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                  <p className={hint}>กำหนดว่าเห็นฟอร์มไหนบ้าง</p>
+                </div>
+                <div>
+                  <label className={ui.label}>สิทธิ์การใช้งาน</label>
+                  {targetIsSuper || isSelf ? (
+                    <>
+                      <select className={ui.input} disabled><option>{roleLabel(f)}</option></select>
+                      <p className={hint}>{targetIsSuper ? 'สิทธิ์ของ Super Admin เปลี่ยนไม่ได้' : 'เปลี่ยนสิทธิ์ของตัวเองไม่ได้'}</p>
+                    </>
+                  ) : (
+                    <select className={ui.input} value={f.role} onChange={e => set('role', e.target.value)}>
+                      {ROLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-stone-400">{viewerIsSuper ? 'ใช้เข้าสู่ระบบ · เปลี่ยนแล้วมีผลทันที' : 'เปลี่ยนได้เฉพาะ Super Admin'}</p>
               </div>
-              <div>
-                <label className={ui.label}>ชื่อ</label>
-                <input className={ui.input} placeholder="ชื่อจริง" value={f.firstName} onChange={e => set('firstName', e.target.value)} />
-              </div>
-              <div>
-                <label className={ui.label}>นามสกุล</label>
-                <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} />
-              </div>
-                <div>
-                <label className={ui.label}>ตำแหน่ง</label>
-                <OptionInput className={ui.input} placeholder="เช่น หัวหน้าฝ่ายบัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
-              </div>
-              <div>
-                <label className={ui.label}>อีเมล</label>
-                <input type="email" className={ui.input} placeholder="สำหรับแจ้งเตือนเอกสารรอเซ็น" value={f.email ?? ''} onChange={e => set('email', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          {/* สังกัด & สิทธิ์ */}
-          <div className={ui.card}>
-            <h2 className={`${ui.cardTitle} mb-4`}>สังกัดและสิทธิ์การใช้งาน</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={ui.label}>แผนก</label>
-                <OptionInput className={ui.input} placeholder="เช่น Payroll" value={f.department} options={lists.department} onChange={v => set('department', v)} />
-              </div>
-              <div>
-                <label className={ui.label}>บริษัท</label>
-                <select className={ui.input} value={f.companyId} onChange={e => set('companyId', e.target.value)}>
-                  <option value="">— เลือกบริษัท —</option>
-                  {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={ui.label}>กลุ่มการเข้าถึง</label>
-                <select className={ui.input} value={f.accessGroup ?? ''} onChange={e => set('accessGroup', e.target.value)}>
-                  <option value="">— ไม่ระบุ —</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={ui.label}>สิทธิ์การใช้งาน</label>
-                {targetIsSuper || isSelf ? (
-                  <>
-                    <select className={ui.input} disabled><option>{roleLabel(f)}</option></select>
-                    <p className="mt-1 text-[11px] text-stone-400">{targetIsSuper ? 'สิทธิ์ของ Super Admin เปลี่ยนไม่ได้' : 'เปลี่ยนสิทธิ์ของตัวเองไม่ได้'}</p>
-                  </>
-                ) : (
-                  <select className={ui.input} value={f.role} onChange={e => set('role', e.target.value)}>
-                    {ROLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                )}
-              </div>
-            </div>
-          </div>
-        </fieldset>
-
-        {/* Outside the fieldset so "cancel" still works when the form is read-only. */}
-        <div className="mt-6 flex items-center gap-2.5">
-          <button type="submit" disabled={saving || readOnly} className={ui.btnPrimary}>
-            <Save size={16} /> {saving ? 'กำลังบันทึก...' : 'บันทึก'}
-          </button>
-          <button type="button" onClick={() => nav('/admin/employees')} className={ui.btnSecondary}>ยกเลิก</button>
-        </div>
-      </form>
+            </section>
+          </fieldset>
+        </form>
+      </div>
 
       {changingUsername && <ChangeUsernameModal profile={f} onClose={() => setChangingUsername(false)} onDone={afterUsernameChange} />}
     </div>

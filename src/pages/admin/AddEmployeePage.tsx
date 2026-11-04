@@ -1,7 +1,7 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, KeyRound, Save, UserPlus } from 'lucide-react'
+import { CheckCircle2, KeyRound, Save, ShieldCheck, UserPlus, UserRound } from 'lucide-react'
 import { Spinner } from '../../components/Spinner'
 import { Credential } from '../../components/LoginInfo'
 import { PageHeader, ui } from '../../components/ui'
@@ -11,6 +11,7 @@ import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import { loadOptionLists, NO_OPTIONS } from '../../data/fieldOptions'
 import OptionInput from '../../components/OptionInput'
+import EmployeeSummaryCard from '../../components/EmployeeSummaryCard'
 import { ROLE_OPTIONS } from '../../shared/roles'
 import { emailProblem, normalizeEmail } from '../../shared/emailAddress'
 import type { Company, AccessGroup, Role } from '../../types/schema'
@@ -69,130 +70,139 @@ export default function AddEmployeePage() {
   }
   function addAnother() { setF(EMPTY); setMustChange(true); setCreated(null) }
 
-  const header = (
-    <PageHeader
-      icon={<UserPlus size={20} />}
-      title="เพิ่มพนักงาน"
-      subtitle="ชื่อผู้ใช้ = รหัสพนักงาน · รหัสผ่านเริ่มต้น = รหัสพนักงาน"
-      onBack={() => nav('/admin/employees')}
-    />
-  )
+  const hint = 'mt-1 text-[11px] text-stone-500'
+  const summary = <EmployeeSummaryCard person={{ ...f, employeeId: username }} companies={companies} groups={groups} />
 
   // After saving: the login details to hand to the new employee.
   if (created) return (
-    <div className="mx-auto max-w-2xl">
-      {header}
-      <div className={ui.card}>
-        <div className="mb-5 flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-olive-50 text-olive-600"><CheckCircle2 size={22} /></span>
-          <div>
-            <h2 className={ui.cardTitle}>เพิ่ม {created.name} แล้ว</h2>
-            <p className={ui.hint}>ส่งข้อมูลเข้าสู่ระบบนี้ให้พนักงาน</p>
+    <div>
+      <PageHeader icon={<UserPlus size={20} />} title="เพิ่มพนักงาน" onBack={() => nav('/admin/employees')} />
+      <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        {summary}
+        <div className={ui.card}>
+          <div className="mb-5 flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-olive-50 text-olive-600"><CheckCircle2 size={22} /></span>
+            <div>
+              <h2 className={ui.cardTitle}>เพิ่ม {created.name} แล้ว</h2>
+              <p className={ui.hint}>ส่งข้อมูลเข้าสู่ระบบนี้ให้พนักงาน</p>
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Credential label="ชื่อผู้ใช้" value={created.employeeId} />
-          <Credential label="รหัสผ่าน" value={created.employeeId} />
-        </div>
-        <p className="mt-3 text-xs text-stone-500">
-          {created.mustChange ? 'ระบบจะให้เปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งแรก' : 'ไม่บังคับเปลี่ยนรหัสผ่าน · เปลี่ยนเองได้ที่เมนู “เปลี่ยนรหัสผ่าน”'}
-        </p>
-        <div className="mt-5 flex flex-wrap gap-2.5">
-          <button className={ui.btnPrimary} onClick={addAnother}><UserPlus size={16} /> เพิ่มอีกคน</button>
-          <button className={ui.btnSecondary} onClick={() => nav('/admin/employees')}>กลับไปหน้ารายชื่อ</button>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Credential label="ชื่อผู้ใช้" value={created.employeeId} />
+            <Credential label="รหัสผ่าน" value={created.employeeId} />
+          </div>
+          <p className="mt-3 text-xs text-stone-500">
+            {created.mustChange ? 'ระบบจะให้เปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งแรก' : 'ไม่บังคับเปลี่ยนรหัสผ่าน · เปลี่ยนเองได้ที่เมนู “เปลี่ยนรหัสผ่าน”'}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2.5">
+            <button className={ui.btnPrimary} onClick={addAnother}><UserPlus size={16} /> เพิ่มอีกคน</button>
+            <button className={ui.btnSecondary} onClick={() => nav('/admin/employees')}>กลับไปหน้ารายชื่อ</button>
+          </div>
         </div>
       </div>
     </div>
   )
 
   return (
-    <div className="mx-auto max-w-2xl">
-      {header}
-      <form onSubmit={submit} className="space-y-6">
-        {/* ข้อมูลเข้าสู่ระบบ */}
-        <div className={ui.card}>
-          <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><KeyRound size={16} className="text-stone-400" /> ข้อมูลเข้าสู่ระบบ</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={ui.label}>รหัสพนักงาน (ชื่อผู้ใช้)</label>
-              <input className={`${ui.input} font-mono`} placeholder="เช่น 1010122" autoFocus value={f.employeeId} onChange={e => set('employeeId', e.target.value)} />
-              <p className="mt-1 text-[11px] text-stone-400">อย่างน้อย {MIN_ID} ตัวอักษร · แก้ไขภายหลังไม่ได้</p>
-            </div>
-            <div>
-              <label className={ui.label}>รหัสผ่านเริ่มต้น</label>
-              <div className={`${ui.input} bg-stone-50 font-mono`}>
-                {username || <span className="font-sans text-stone-400">เหมือนรหัสพนักงาน</span>}
+    <div>
+      <PageHeader
+        icon={<UserPlus size={20} />}
+        title="เพิ่มพนักงาน"
+        subtitle="ชื่อผู้ใช้และรหัสผ่านเริ่มต้น = รหัสพนักงาน"
+        onBack={() => nav('/admin/employees')}
+        // Save stays in sight at the top, however far down the form is filled.
+        actions={
+          <>
+            <button type="button" onClick={() => nav('/admin/employees')} className={ui.btnSecondary}>ยกเลิก</button>
+            <button type="submit" form="employee-form" disabled={saving} className={ui.btnPrimary}>
+              {saving ? <><Spinner size={16} /> กำลังบันทึก...</> : <><Save size={16} /> บันทึก</>}
+            </button>
+          </>
+        }
+      />
+      <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        {summary}
+
+        <form id="employee-form" onSubmit={submit} className="space-y-6">
+          {/* ข้อมูลเข้าสู่ระบบ */}
+          <section className={ui.card}>
+            <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><KeyRound size={16} className="text-stone-400" /> ข้อมูลเข้าสู่ระบบ</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              <div>
+                <label className={ui.label}>รหัสพนักงาน (ชื่อผู้ใช้)</label>
+                <input className={`${ui.input} font-mono`} placeholder="เช่น 1010122" autoFocus value={f.employeeId} onChange={e => set('employeeId', e.target.value)} />
+                <p className={hint}>อย่างน้อย {MIN_ID} ตัวอักษร</p>
               </div>
-              <p className="mt-1 text-[11px] text-stone-400">ตั้งให้อัตโนมัติ = รหัสพนักงาน</p>
+              <div>
+                <label className={ui.label}>รหัสผ่านเริ่มต้น</label>
+                <div className={`${ui.input} bg-stone-50 font-mono`}>
+                  {username || <span className="font-sans text-stone-500">เหมือนรหัสพนักงาน</span>}
+                </div>
+                <p className={hint}>ตั้งให้อัตโนมัติ = รหัสพนักงาน</p>
+              </div>
+              <div className="md:col-span-2 2xl:col-span-1">
+                <label className={ui.label}>อีเมล</label>
+                <input type="email" className={ui.input} placeholder="สำหรับแจ้งเตือนเอกสารรอเซ็น" value={f.email} onChange={e => set('email', e.target.value)} />
+              </div>
             </div>
-          </div>
-          <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
-            <input type="checkbox" checked={mustChange} onChange={e => setMustChange(e.target.checked)} />
-            ให้เปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งแรก
-          </label>
-        </div>
+            <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-stone-700">
+              <input type="checkbox" checked={mustChange} onChange={e => setMustChange(e.target.checked)} />
+              ให้เปลี่ยนรหัสผ่านเมื่อเข้าใช้ครั้งแรก
+            </label>
+          </section>
 
-        {/* ข้อมูลส่วนตัว */}
-        <div className={ui.card}>
-          <h2 className={`${ui.cardTitle} mb-4`}>ข้อมูลส่วนตัว</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={ui.label}>ชื่อ</label>
-              <input className={ui.input} placeholder="ชื่อจริง" value={f.firstName} onChange={e => set('firstName', e.target.value)} />
+          {/* ข้อมูลส่วนตัว */}
+          <section className={ui.card}>
+            <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><UserRound size={16} className="text-stone-400" /> ข้อมูลส่วนตัว</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              <div>
+                <label className={ui.label}>ชื่อ</label>
+                <input className={ui.input} placeholder="ชื่อจริง" value={f.firstName} onChange={e => set('firstName', e.target.value)} />
+              </div>
+              <div>
+                <label className={ui.label}>นามสกุล</label>
+                <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} />
+              </div>
+              <div className="md:col-span-2 2xl:col-span-1">
+                <label className={ui.label}>ตำแหน่ง</label>
+                <OptionInput className={ui.input} placeholder="เช่น เจ้าหน้าที่บัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
+              </div>
             </div>
-            <div>
-              <label className={ui.label}>นามสกุล</label>
-              <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} />
-            </div>
-            <div>
-              <label className={ui.label}>ตำแหน่ง</label>
-              <OptionInput className={ui.input} placeholder="เช่น เจ้าหน้าที่บัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
-            </div>
-            <div>
-              <label className={ui.label}>อีเมล</label>
-              <input type="email" className={ui.input} placeholder="สำหรับแจ้งเตือนเอกสารรอเซ็น" value={f.email} onChange={e => set('email', e.target.value)} />
-            </div>
-          </div>
-        </div>
+          </section>
 
-        {/* สังกัด & สิทธิ์ */}
-        <div className={ui.card}>
-          <h2 className={`${ui.cardTitle} mb-4`}>สังกัดและสิทธิ์การใช้งาน</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={ui.label}>แผนก</label>
-              <OptionInput className={ui.input} placeholder="เช่น Payroll" value={f.department} options={lists.department} onChange={v => set('department', v)} />
+          {/* สังกัด & สิทธิ์ */}
+          <section className={ui.card}>
+            <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><ShieldCheck size={16} className="text-stone-400" /> สังกัดและสิทธิ์การใช้งาน</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className={ui.label}>บริษัท</label>
+                <select className={ui.input} value={f.companyId} onChange={e => set('companyId', e.target.value)}>
+                  <option value="">— เลือกบริษัท —</option>
+                  {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={ui.label}>แผนก</label>
+                <OptionInput className={ui.input} placeholder="เช่น Payroll" value={f.department} options={lists.department} onChange={v => set('department', v)} />
+              </div>
+              <div>
+                <label className={ui.label}>กลุ่มการเข้าถึง</label>
+                <select className={ui.input} value={f.accessGroup} onChange={e => set('accessGroup', e.target.value)}>
+                  <option value="">— ไม่ระบุ —</option>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+                <p className={hint}>กำหนดว่าเห็นฟอร์มไหนบ้าง</p>
+              </div>
+              <div>
+                <label className={ui.label}>สิทธิ์การใช้งาน</label>
+                <select className={ui.input} value={f.role} onChange={e => set('role', e.target.value)}>
+                  {ROLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className={ui.label}>บริษัท</label>
-              <select className={ui.input} value={f.companyId} onChange={e => set('companyId', e.target.value)}>
-                <option value="">— เลือกบริษัท —</option>
-                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={ui.label}>กลุ่มการเข้าถึง</label>
-              <select className={ui.input} value={f.accessGroup} onChange={e => set('accessGroup', e.target.value)}>
-                <option value="">— ไม่ระบุ —</option>
-                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={ui.label}>สิทธิ์การใช้งาน</label>
-              <select className={ui.input} value={f.role} onChange={e => set('role', e.target.value)}>
-                {ROLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <button type="submit" disabled={saving} className={ui.btnPrimary}>
-            {saving ? <><Spinner size={16} /> กำลังบันทึก...</> : <><Save size={16} /> บันทึก</>}
-          </button>
-          <button type="button" onClick={() => nav('/admin/employees')} className={ui.btnSecondary}>ยกเลิก</button>
-        </div>
-      </form>
+          </section>
+        </form>
+      </div>
     </div>
   )
 }
