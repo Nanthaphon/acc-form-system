@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { ALargeSmall, Link2, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react'
-import ActionIconButton from '../../components/ActionIconButton'
 import type { ExpenseHeader, ExpenseRow, FormColumn, HeaderField } from '../../types/schema'
 import { emptyRow, EXPENSE_CLAIM_DEFAULT_COLUMNS, isTextCol, sectionTitles, SEQ_COLUMN_WIDTH } from '../../types/schema'
 import { computeRow, computeColumnTotals, isRowTicked, rowHasNumbers, round2, lineTaxBase, tableWht, taxBases, taxSubtotal, taxSummary, whtBaseColumn, whtInTable, visibleColumns, fillTableLayout, rowWhtRate, rowRetRate, ACTION_COL_PX, TICK_COL_PX, WHT_PRESETS, RET_PRESETS, ROW_VAT_KEY, ROW_WHT_KEY, ROW_WHT_RATE_KEY, ROW_RET_RATE_KEY, TICK, UNTICK } from './calc'
@@ -185,11 +184,9 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
   const vcols = visibleColumns(cols)
   // Each column as wide as it prints, so what is typed wraps as it will on paper.
   const layout = fillTableLayout(showSeq ? seqWidth : 0, vcols, textSizeScale(textSize))
-  // The columns are ruled top to bottom, header to total, as on the sheet. The
-  // row rules stay faint; the column rules take the header's shade. The first
-  // column carries the table's left edge.
-  const COL_RULE = 'border-r border-r-stone-200'
-  const firstCol = (ci: number) => !showSeq && ci === 0
+  // The columns are ruled top to bottom, header to total, as on the sheet, in
+  // a faint shade; the rounded frame around the table draws its outer edge.
+  const COL_RULE = 'border-r border-r-stone-100'
   const hasColumns = vcols.length > 0
   const computed = items.map(r => computeRow(cols, r))
   const columnTotals = computeColumnTotals(cols, items)
@@ -242,7 +239,12 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
     ro.observe(el)
     return () => ro.disconnect()
   }, [hasColumns])
-  const zoom = boxWidth > 0 ? Math.min(TABLE_ZOOM_MAX, Math.max(1, Math.floor((boxWidth / tablePx) * 1000) / 1000)) : 1
+  // The frame's 1px edge on either side is not the table's room.
+  const room = Math.max(0, boxWidth - 2)
+  const zoom = room > 0 ? Math.min(TABLE_ZOOM_MAX, Math.max(1, Math.floor((room / tablePx) * 1000) / 1000)) : 1
+  // Room the zoom cannot take up goes to the last (delete) column, so the
+  // table spans the card while every column keeps its printed width.
+  const spareLastPx = room > 0 ? Math.max(0, Math.floor(room / zoom - tablePx)) : 0
   // Lines where อื่นๆ was picked and the rate is still being typed, as "wht:3".
   const [otherRateRows, setOtherRateRows] = useState<Set<string>>(new Set())
   const setRowRate = (kind: 'wht' | 'ret', i: number, rate: number) => {
@@ -373,19 +375,20 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
           </div>
         ) : (
           <>
-            <div ref={tableBox} className="scroll-slim overflow-x-auto">
+            <div ref={tableBox}>
+            <div className="scroll-slim overflow-x-auto rounded-lg border border-stone-200 bg-white">
               <table
-                className={`mx-auto table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`}
-                style={{ width: `${tablePx}px`, zoom }}
+                className={`table-fixed border-separate border-spacing-0 text-xs leading-[1.9]`}
+                style={{ width: `${tablePx + spareLastPx}px`, zoom }}
               >
                 <thead>
                   <tr>
-                    {showSeq && <th style={{ width: seqPx }} className={`border-x border-b border-stone-200 bg-stone-50 px-1.5 py-2.5 text-center text-xs font-medium text-stone-500`}>#</th>}
+                    {showSeq && <th style={{ width: seqPx }} className="border-b border-r border-stone-200 border-r-stone-100 bg-stone-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-stone-500">#</th>}
                     {vcols.map((col, ci) => (
                       <th
                         key={col.key}
                         style={{ width: colPx[ci] }}
-                        className={`whitespace-pre-line break-words border-b border-r ${firstCol(ci) ? 'border-l' : ''} border-stone-200 bg-stone-50 px-1.5 py-2.5 text-[11px] font-medium text-stone-600 ${
+                        className={`whitespace-pre-line break-words border-b border-r border-stone-200 border-r-stone-100 bg-stone-50 px-2 py-2.5 text-[11px] font-medium text-stone-600 ${
                           isTextCol(col.type) ? 'text-left' : 'text-right'
                         }`}
                       >
@@ -394,19 +397,19 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                       </th>
                     ))}
                     {tickCols.map(t => (
-                      <th key={t.key} style={{ width: TICK_COL_PX }} className={`whitespace-pre-line border-b border-r border-clay-100 bg-clay-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-clay-700`}>
+                      <th key={t.key} style={{ width: TICK_COL_PX }} className="whitespace-pre-line border-b border-r border-stone-200 border-r-clay-100 bg-clay-50 px-1.5 py-2.5 text-center text-[11px] font-medium text-clay-700">
                         {t.label}
                       </th>
                     ))}
-                    <th style={{ width: ACTION_COL_PX }} className="border-b border-stone-200 bg-stone-50 px-1 py-2.5"></th>
+                    <th style={{ width: ACTION_COL_PX + spareLastPx }} className="border-b border-stone-200 bg-stone-50 px-1 py-2.5"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((row, i) => (
-                    <tr key={i} className="hover:bg-stone-50/60">
-                      {showSeq && <td className={`border-b border-stone-100 ${COL_RULE} border-l border-l-stone-200 p-2 text-center text-stone-400`}>{i + 1}</td>}
-                      {vcols.map((col, ci) => (
-                        <td key={col.key} className={`border-b border-stone-100 ${COL_RULE} ${firstCol(ci) ? 'border-l border-l-stone-200' : ''} p-1`}>
+                    <tr key={i} className="group transition-colors hover:bg-stone-50/70">
+                      {showSeq && <td className={`border-b border-stone-100 ${COL_RULE} p-2 text-center text-stone-500`}>{i + 1}</td>}
+                      {vcols.map(col => (
+                        <td key={col.key} className={`border-b border-stone-100 ${COL_RULE} p-1.5`}>
                           {col.type === 'calc' ? (
                             <div className="truncate px-1 text-right font-medium text-stone-900">
                               {rowHasNumbers(cols, row) ? fmt(Number(computed[i][col.key]) || 0) : ''}
@@ -518,43 +521,51 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                           </td>
                         )
                       })}
-                      <td className="border-b border-stone-100 px-1 py-1.5 text-center">
-                        <ActionIconButton
-                          label="ลบรายการ"
-                          tone="red"
-                          icon={<Trash2 size={16} />}
+                      <td className="border-b border-stone-100 px-1 py-1.5 text-right">
+                        {/* quiet until the row is pointed at, so a long table is not a column of red bins */}
+                        <button
+                          type="button"
+                          title="ลบรายการ"
+                          aria-label="ลบรายการ"
                           onClick={() => onItemsChange(items.filter((_, x) => x !== i))}
-                        />
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-400 transition-colors hover:bg-rose-50 hover:text-brick-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay-600/30 group-hover:text-stone-600"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
+                  {/* A new line is added right under the last one */}
+                  <tr>
+                    <td colSpan={(showSeq ? 1 : 0) + vcols.length + tickCols.length + 1} className="border-b border-stone-200 p-1.5">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-clay-700 transition-colors hover:bg-clay-50"
+                        onClick={() => {
+                          // A table withholding every line at one rate gives the new line that rate too.
+                          const all = inTable || (whtByRow && whtEachLine) ? tableWht(items, header.whtRate || 0) : null
+                          const fresh = all?.kind === 'all' ? { ...emptyRow(cols), [ROW_WHT_RATE_KEY]: all.rate } : emptyRow(cols)
+                          onItemsChange([...items, fresh])
+                        }}
+                      >
+                        <Plus size={16} /> เพิ่มรายการ
+                      </button>
+                    </td>
+                  </tr>
                   {/* Totals row */}
-                  <tr className="font-semibold text-stone-900">
-                    {showSeq && <td className="border-x border-t border-stone-200 px-2.5 py-2.5"></td>}
+                  <tr className="bg-stone-50 font-semibold text-stone-900">
+                    {showSeq && <td className={`${COL_RULE} px-2.5 py-2.5`}></td>}
                     {vcols.map((col, idx) => (
-                      <td key={col.key} className={`border-r border-t ${firstCol(idx) ? 'border-l' : ''} border-stone-200 px-2.5 py-2.5 ${isTextCol(col.type) ? 'text-left' : 'text-right'}`}>
+                      <td key={col.key} className={`${COL_RULE} px-2.5 py-2.5 ${isTextCol(col.type) ? 'text-left' : 'text-right'}`}>
                         {idx === 0 ? 'รวม' : isTextCol(col.type) ? '' : fmt(columnTotals[col.key] ?? 0)}
                       </td>
                     ))}
-                    {tickCols.map(t => <td key={t.key} className="border-r border-t border-stone-200 bg-clay-50/40"></td>)}
-                    <td className="border-t border-stone-200"></td>
+                    {tickCols.map(t => <td key={t.key} className={`${COL_RULE} bg-clay-50/40`}></td>)}
+                    <td></td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            {/* Under the table's own left edge, wherever the table sits. */}
-            <div className="mx-auto max-w-full" style={{ width: tablePx * zoom }}>
-              <button
-                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-dashed border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:border-clay-400 hover:text-clay-600"
-                onClick={() => {
-                  // A table withholding every line at one rate gives the new line that rate too.
-                  const all = inTable || (whtByRow && whtEachLine) ? tableWht(items, header.whtRate || 0) : null
-                  const fresh = all?.kind === 'all' ? { ...emptyRow(cols), [ROW_WHT_RATE_KEY]: all.rate } : emptyRow(cols)
-                  onItemsChange([...items, fresh])
-                }}
-              >
-                <Plus size={16} /> เพิ่มรายการ
-              </button>
             </div>
           </>
         )}
