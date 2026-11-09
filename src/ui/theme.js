@@ -1,15 +1,15 @@
 // Unified design tokens — keep the whole app on one visual language.
-// Harbor (teal) — minimal, สบายตา
+// Harbor (navy) — minimal, สบายตา
 
 // ── Companies — ใช้กับ employee และ asset records ──
 export const COMPANIES = ['Globe Syndicate', 'Besthrm'];
 
 export const BRAND = {
-  primary:      '#2B6777',  // teal — สีหลัก (ปุ่ม/ไฮไลท์/สถานะ active)
-  primaryDark:  '#225462',  // hover / pressed
-  primaryDeep:  '#1A414C',  // เข้มสุด (ฐาน sidebar)
-  primarySoft:  '#DFEAEF',  // teal อ่อนมาก — พื้นหลังไฮไลท์
-  primaryRing:  'rgba(43,103,119,0.15)', // focus ring
+  primary:      '#1E4E8C',  // navy — สีหลัก (ปุ่ม/ไฮไลท์/สถานะ active)
+  primaryDark:  '#183F72',  // hover / pressed
+  primaryDeep:  '#13325A',  // เข้มสุด (ฐาน sidebar)
+  primarySoft:  '#DCE6F4',  // navy อ่อนมาก — พื้นหลังไฮไลท์
+  primaryRing:  'rgba(30,78,140,0.15)', // focus ring
 };
 
 // Status colors — used sparingly for badges/indicators

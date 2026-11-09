@@ -21,7 +21,7 @@ const ADMIN_CLOSED_KEY = 'sidebar:adminClosed'
 const navLinkClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg py-2 text-sm transition-colors ${collapsed ? 'justify-center px-2' : 'px-3.5'} ${
     isActive
-      ? 'bg-clay-600 text-white shadow-[0_4px_14px_rgba(43,103,119,0.35)]'
+      ? 'bg-clay-600 text-white shadow-[0_4px_14px_rgba(30,78,140,0.35)]'
       : 'text-clay-200 hover:bg-white/[.06] hover:text-white'
   }`
 const iconBtn = 'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-clay-200 transition-colors hover:bg-white/[.08] hover:text-white'

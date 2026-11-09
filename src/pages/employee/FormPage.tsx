@@ -425,7 +425,7 @@ export default function FormPage() {
           onClick={() => setShowPreview(p => !p)}
           title={showPreview ? 'กลับไปแก้ไข' : 'ดูตัวอย่างเอกสาร'}
           aria-label={showPreview ? 'กลับไปแก้ไข' : 'ดูตัวอย่างเอกสาร'}
-          className="no-print fixed right-6 top-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-clay-600 text-white shadow-[0_8px_22px_rgba(43,103,119,0.45)] ring-4 ring-white/70 transition hover:bg-clay-700 hover:shadow-[0_12px_28px_rgba(43,103,119,0.55)] focus:outline-none focus:ring-clay-600/30"
+          className="no-print fixed right-6 top-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-clay-600 text-white shadow-[0_8px_22px_rgba(30,78,140,0.45)] ring-4 ring-white/70 transition hover:bg-clay-700 hover:shadow-[0_12px_28px_rgba(30,78,140,0.55)] focus:outline-none focus:ring-clay-600/30"
         >
           {showPreview ? <Pencil size={20} /> : <Eye size={20} />}
         </button>

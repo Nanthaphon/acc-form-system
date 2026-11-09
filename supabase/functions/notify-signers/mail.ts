@@ -78,7 +78,7 @@ export function buildMail(m: MailInput): { subject: string; html: string } {
         row('ผู้เบิก', m.requesterName)}${
         m.amount !== null ? row('จำนวนเงิน', `${formatBaht(m.amount)} บาท`) : ''}
       </table>
-      <a href="${escapeHtml(link)}" style="display:inline-block;background:#2B6777;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">เปิดเอกสารรอเซ็น</a>
+      <a href="${escapeHtml(link)}" style="display:inline-block;background:#1E4E8C;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">เปิดเอกสารรอเซ็น</a>
       <p style="margin:24px 0 0;color:#64757D;font-size:13px">อีเมลนี้ส่งอัตโนมัติจากระบบ Acc Documents — ไม่ต้องตอบกลับ</p>
     </td></tr>
   </table>

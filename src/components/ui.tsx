@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 // The app's single theme. Every page builds from these tokens and components so
 // cards, buttons, fields and tables look the same everywhere.
 //
-// Palette: the Harbor set defined in tailwind.config.js — clay (teal) for
+// Palette: the Harbor set defined in tailwind.config.js — clay (navy) for
 // anything the user acts on, stone for surfaces and text, olive/ochre/brick
 // where a colour has to carry meaning. Those names deliberately do not
 // describe the colours, so the whole app can be re-toned by editing the
@@ -64,7 +64,7 @@ export function PageHeader({ icon, title, subtitle, onBack, actions }: {
 }
 
 // A tone name says what a badge MEANS, not what colour it is: `blue` is the
-// brand teal, `green` the sea green, `red` the brick.
+// brand navy, `green` the sea green, `red` the brick.
 const BADGE_TONES = {
   gray: 'bg-stone-100 text-stone-600',
   blue: 'bg-clay-50 text-clay-700',

@@ -9,9 +9,9 @@
    และป้ายสถานะก็คนละสีกับในระบบ                                        */
 
 export const P = {
-  brand:      '#2B6777',   // clay-600
-  brandDark:  '#225462',   // clay-700
-  brandPale:  '#C8D8E4',   // clay-200
+  brand:      '#1E4E8C',   // clay-600
+  brandDark:  '#183F72',   // clay-700
+  brandPale:  '#C2D3EB',   // clay-200
   surface:    '#F7F9FA',   // sand-50
   surfaceAlt: '#F2F2F2',   // sand-100
   ink:        '#162024',   // stone-900

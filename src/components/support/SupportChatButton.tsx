@@ -112,7 +112,7 @@ export default function SupportChatButton({ uid, unread }: { uid: string; unread
         aria-label={open ? 'ปิดแชทแจ้งปัญหา' : 'แจ้งปัญหาถึงผู้ดูแลระบบ'}
         title="แจ้งปัญหาถึงผู้ดูแลระบบ"
         aria-expanded={open}
-        className="fixed bottom-6 right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-clay-600 text-white shadow-[0_8px_24px_-4px_rgba(43,103,119,0.55)] transition-transform hover:scale-105 hover:bg-clay-700 focus:outline-none focus:ring-4 focus:ring-clay-600/30 sm:right-6"
+        className="fixed bottom-6 right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-clay-600 text-white shadow-[0_8px_24px_-4px_rgba(30,78,140,0.55)] transition-transform hover:scale-105 hover:bg-clay-700 focus:outline-none focus:ring-4 focus:ring-clay-600/30 sm:right-6"
       >
         {open ? <X size={24} /> : <MessageCircleQuestion size={26} />}
         {!open && unread > 0 && (

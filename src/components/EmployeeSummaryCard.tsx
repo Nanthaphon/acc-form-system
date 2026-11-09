@@ -28,7 +28,7 @@ export default function EmployeeSummaryCard({ person, companies, groups, footer 
   return (
     <div className={`${ui.card} lg:sticky lg:top-6`}>
       <div className="flex flex-col items-center text-center">
-        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-600 text-2xl font-semibold text-white shadow-[0_8px_20px_-8px_rgba(43,103,119,0.6)]">
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-clay-600 text-2xl font-semibold text-white shadow-[0_8px_20px_-8px_rgba(30,78,140,0.6)]">
           {initials}
         </span>
         <h2 className="mt-4 text-lg font-semibold text-stone-900">{name || 'ยังไม่ได้ใส่ชื่อ'}</h2>

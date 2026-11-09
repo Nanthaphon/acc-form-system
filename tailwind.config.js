@@ -7,22 +7,22 @@ export default {
   theme: {
     extend: {
       // Harbor palette, from IT Asset Management (see UI-KIT-SETUP.md).
-      // The names do not describe the colours: `clay` is teal, `olive` is
+      // The names do not describe the colours: `clay` is navy, `olive` is
       // sea green. That is deliberate — the theme can be re-toned without
       // touching class names in a thousand places.
       colors: {
-        // teal — the brand colour (buttons / highlights / sidebar), base #2B6777
+        // navy (กรมท่า) — the brand colour (buttons / highlights / sidebar), base #1E4E8C
         clay: {
-          50: '#F1F6F8',
-          100: '#DFEAEF',
-          200: '#C8D8E4',
-          300: '#9FBDCB',
-          400: '#6E97A9',
-          500: '#427C91',
-          600: '#2B6777',  // white text on this = 6.35:1, passes WCAG AA
-          700: '#225462',
-          800: '#1A414C',
-          900: '#12303A',  // darkest — sidebar background
+          50: '#EEF3FA',
+          100: '#DCE6F4',
+          200: '#C2D3EB',
+          300: '#98B3DA',
+          400: '#6A8EC4',
+          500: '#3F6BA8',
+          600: '#1E4E8C',  // white text on this = 8.3:1, passes WCAG AA
+          700: '#183F72',
+          800: '#13325A',
+          900: '#0F2742',  // darkest — sidebar background
         },
         // surfaces — cool light greys
         sand: {
@@ -31,7 +31,7 @@ export default {
           200: '#E6EAEC',
           300: '#D3DADE',
         },
-        // ochre — "in progress" status (muted amber, reads clearly against teal)
+        // ochre — "in progress" status (muted amber, reads clearly against navy)
         ochre: {
           50: '#FBF3E4',
           100: '#F5E7C6',
@@ -71,7 +71,7 @@ export default {
           700: '#8F372F',
         },
         // stone — overrides Tailwind's warm grey with a cool one, so every
-        // text-stone-* / border-stone-* in the kit matches teal without edits.
+        // text-stone-* / border-stone-* in the kit matches navy without edits.
         stone: {
           50: '#F7F9FA',
           100: '#EFF3F5',
