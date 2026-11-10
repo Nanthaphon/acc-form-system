@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Acc Documents — ภาพรวมระบบ</title>
+<!--
+  ภาพสรุประบบ Acc Documents หนึ่งหน้า (A4 แนวนอน)
+  แก้ข้อความได้ในไฟล์นี้โดยตรง แล้วสร้างภาพใหม่ด้วยคำสั่งใน README.md ในโฟลเดอร์เดียวกัน
+  ป้าย "รอเปิดใช้" = ทำเสร็จแล้วแต่ยังไม่เปิดในระบบจริง — เปิดแล้วให้ลบป้ายออก
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --navy-900: #0F2742; --navy-800: #13325A; --navy-700: #183F72; --navy-600: #1E4E8C;
+    --navy-500: #3F6BA8; --navy-200: #C2D3EB; --navy-100: #DCE6F4; --navy-50: #EEF3FA;
+    --ink: #162024; --ink-2: #374449; --muted: #4A5A61; --line: #DCE3EA; --bg: #F5F8FB;
+    --green: #2C7A5B; --green-50: #E7F4EE; --amber: #8A6520; --amber-50: #FBF3E4;
+    --violet: #5B3FA8; --violet-50: #F1ECFB; --rose: #A23B32; --rose-50: #FBEAE8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #fff; }
+  body { font-family: 'Bai Jamjuree', sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .page { position: relative; width: 1754px; height: 1240px; padding: 34px 40px 26px; background: var(--bg); overflow: hidden; }
+  svg.links { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .page > *:not(svg) { position: relative; z-index: 1; }
+
+  /* header */
+  .head { display: grid; grid-template-columns: 1fr 470px; gap: 32px; align-items: start; }
+  .brand { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 600; color: var(--navy-700); letter-spacing: .2px; }
+  .brand img { width: 40px; height: 40px; border-radius: 10px; background: #fff; padding: 4px; box-shadow: 0 2px 8px rgba(15,39,66,.15); }
+  .brand .sep { width: 1px; height: 18px; background: var(--navy-200); }
+  .brand .scope { color: var(--muted); font-weight: 500; }
+  h1 { margin-top: 12px; font-size: 44px; line-height: 1.15; font-weight: 700; color: var(--navy-900); }
+  .sub { margin-top: 6px; font-size: 24px; font-weight: 600; color: var(--navy-600); }
+  .problem { background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--navy-600); border-radius: 12px; padding: 14px 18px; }
+  .problem h3 { font-size: 16px; font-weight: 700; color: var(--navy-700); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+  .problem ul { list-style: none; display: grid; gap: 3px; }
+  .problem li { font-size: 15px; color: var(--ink-2); line-height: 1.4; padding-left: 14px; position: relative; }
+  .problem li::before { content: ''; position: absolute; left: 0; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--navy-500); }
+
+  /* roles legend */
+  .roles { margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 15px; }
+  .roles .lbl { font-weight: 700; color: var(--navy-800); margin-right: 4px; }
+  .role { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .role i, .role svg { width: 15px; height: 15px; }
+  .r-emp { background: var(--navy-100); color: var(--navy-800); }
+  .r-sig { background: var(--green-50); color: var(--green); }
+  .r-acc { background: var(--amber-50); color: var(--amber); }
+  .r-it  { background: var(--violet-50); color: var(--violet); }
+  .roles .desc { color: var(--muted); font-size: 14px; margin-right: 10px; }
+
+  /* four columns */
+  .cols { margin-top: 16px; display: grid; grid-template-columns: 445px 450px 325px 1fr; column-gap: 36px; }
+  .sec { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 16px 0 6px; border-radius: 999px; background: var(--navy-900); color: #fff; font-weight: 700; font-size: 18px; }
+  .sec .n { width: 36px; height: 36px; border-radius: 50%; background: var(--navy-600); display: grid; place-items: center; font-size: 16px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+  .stack { margin-top: 12px; display: grid; gap: 9px; }
+
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 3px rgba(15,39,66,.05); }
+  .feat { height: 116px; padding: 11px 14px; display: grid; grid-template-columns: 50px 1fr; gap: 12px; align-items: start; }
+  .ico { width: 50px; height: 50px; border-radius: 12px; background: var(--navy-50); color: var(--navy-600); display: grid; place-items: center; position: relative; }
+  .ico svg { width: 25px; height: 25px; }
+  .ico .k { position: absolute; top: -7px; left: -7px; width: 22px; height: 22px; border-radius: 50%; background: var(--navy-600); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; border: 2px solid #fff; }
+  .feat h4 { font-size: 17px; font-weight: 700; color: var(--navy-900); line-height: 1.25; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .feat p { margin-top: 4px; font-size: 15px; line-height: 1.38; color: var(--ink-2); }
+  .tags { display: inline-flex; gap: 4px; }
+  .tags .role { padding: 1px 7px; font-size: 11.5px; }
+  .soon { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 6px; font-size: 11.5px; font-weight: 600; background: #fff; color: var(--rose); border: 1px dashed #D9928A; white-space: nowrap; }
+
+  /* centre */
+  .hub-wrap { margin-top: 12px; display: grid; gap: 10px; }
+  .hub-row { height: 214px; display: grid; place-items: center; }
+  .hub { width: 196px; height: 196px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #2B62AA, var(--navy-800) 70%); color: #fff; display: grid; place-items: center; text-align: center; box-shadow: 0 0 0 8px var(--navy-100), 0 0 0 9px var(--navy-200), 0 14px 30px -10px rgba(15,39,66,.55); }
+  .hub svg { width: 34px; height: 34px; margin: 0 auto 4px; opacity: .95; }
+  .hub b { display: block; font-size: 21px; line-height: 1.2; }
+  .hub small { display: block; margin-top: 3px; font-size: 13px; color: var(--navy-200); }
+  .box { padding: 12px 15px; }
+  .box h5 { font-size: 15px; font-weight: 700; color: var(--navy-800); margin-bottom: 7px; display: flex; align-items: center; gap: 7px; }
+  .box h5 svg { width: 17px; height: 17px; color: var(--navy-600); }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .tile { background: var(--navy-50); border-radius: 8px; padding: 7px 10px; font-size: 14px; line-height: 1.32; color: var(--ink-2); }
+  .tile b { color: var(--navy-800); font-weight: 600; }
+  .views { display: grid; gap: 5px; }
+  .view { display: grid; grid-template-columns: 104px 1fr; gap: 8px; align-items: center; font-size: 14px; line-height: 1.3; color: var(--ink-2); }
+  .view .role { justify-content: center; font-size: 12.5px; padding: 3px 6px; }
+  .act { display: grid; gap: 4px; }
+  .act div { display: grid; grid-template-columns: 18px 1fr; gap: 6px; font-size: 14px; line-height: 1.32; color: var(--ink-2); }
+  .act svg { width: 16px; height: 16px; color: var(--green); margin-top: 1px; }
+  .act b { color: var(--ink); font-weight: 600; }
+
+  /* benefits */
+  .ben { height: 116px; padding: 12px 14px; display: grid; grid-template-columns: 34px 1fr; gap: 11px; align-items: center; }
+  .ben .k { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--navy-600); color: var(--navy-600); font-weight: 700; font-size: 15px; display: grid; place-items: center; }
+  .ben p { font-size: 15.5px; line-height: 1.38; color: var(--ink); font-weight: 500; }
+  .ben p span { display: block; font-size: 13.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+  /* value */
+  .val { height: 177px; padding: 16px 18px; background: linear-gradient(160deg, #fff 55%, var(--navy-50)); }
+  .val .top { display: flex; align-items: center; gap: 12px; }
+  .val .ico { width: 48px; height: 48px; border-radius: 50%; background: var(--navy-700); color: #fff; flex: none; }
+  .val h4 { font-size: 18.5px; font-weight: 700; color: var(--navy-900); line-height: 1.25; }
+  .val p { margin-top: 10px; font-size: 15px; line-height: 1.45; color: var(--ink-2); }
+
+  /* flow + access */
+  .flow { margin-top: 14px; height: 70px; border-radius: 999px; background: #fff; border: 2px solid var(--navy-200); display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; padding: 0 26px; }
+  .step { display: flex; align-items: center; gap: 11px; position: relative; }
+  .step .c { width: 44px; height: 44px; border-radius: 50%; background: var(--navy-600); color: #fff; display: grid; place-items: center; flex: none; }
+  .step .c svg { width: 21px; height: 21px; }
+  .step b { display: block; font-size: 18px; color: var(--navy-900); line-height: 1.15; }
+  .step small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.25; }
+  .step:not(:last-child)::after { content: '›'; position: absolute; right: 14px; top: 50%; transform: translateY(-54%); font-size: 34px; font-weight: 700; color: var(--navy-500); }
+  .access { margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 22px; height: 44px; border-radius: 12px; background: var(--navy-900); color: #fff; font-size: 16.5px; font-weight: 600; }
+  .access span { display: inline-flex; align-items: center; gap: 8px; }
+  .access svg { width: 18px; height: 18px; color: var(--navy-200); }
+  .access .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--navy-500); }
+  .nw { white-space: nowrap; }
+  /* print / PDF: one A4 landscape sheet (1754px of design = 297mm) */
+  @page { size: A4 landscape; margin: 0; }
+  @media print { html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { zoom: 0.64; } }
+  .note { margin-top: 7px; text-align: center; font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page" id="page">
+  <svg class="links" id="links"></svg>
+
+  <!-- ===== หัวภาพ ===== -->
+  <header class="head">
+    <div>
+      <div class="brand">
+        <img src="../../public/logo.webp" alt="">
+        <span>ACC DOCUMENTS</span><span class="sep"></span>
+        <span class="scope">ระบบเอกสารเบิกจ่ายออนไลน์ · Globe Syndicate</span>
+      </div>
+      <h1>เอกสารเบิกจ่ายของทุกแผนก อยู่ในระบบเดียว</h1>
+      <p class="sub">จากฟอร์มที่พนักงานกรอก สู่เอกสารที่เซ็นอนุมัติ ติดตามสถานะ และตรวจย้อนหลังได้</p>
+    </div>
+    <div class="problem">
+      <h3><i data-lucide="circle-help"></i> สร้างมาแก้ปัญหาอะไร</h3>
+      <ul>
+        <li>ฟอร์มเบิกเป็นไฟล์ Excel / กระดาษ หลายแบบ คำนวณและเขียนจำนวนเงินเอง</li>
+        <li>ต้องเดินเอกสารไปขอเซ็น และไม่รู้ว่าเอกสารค้างอยู่ที่ใคร</li>
+        <li>หาเอกสารย้อนหลังยาก ไม่รู้ว่าฉบับไหนถูกแก้หรือพิมพ์ไปแล้ว</li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- ===== ใครใช้งาน ===== -->
+  <div class="roles">
+    <span class="lbl">ผู้ใช้งาน</span>
+    <span class="role r-emp"><i data-lucide="user"></i>พนักงาน</span><span class="desc">กรอก ส่งเซ็น ดูของตนเอง</span>
+    <span class="role r-sig"><i data-lucide="pen-line"></i>หัวหน้า / ผู้อนุมัติ</span><span class="desc">เซ็นเอกสารที่ส่งมาให้</span>
+    <span class="role r-acc"><i data-lucide="calculator"></i>ฝ่ายบัญชี (Account Admin)</span><span class="desc">ดูทุกฉบับ ตั้งค่าฟอร์มและพนักงาน</span>
+    <span class="role r-it"><i data-lucide="shield-check"></i>IT (Super Admin)</span><span class="desc">ดูแลบัญชีผู้ใช้และระบบ</span>
+  </div>
+
+  <!-- ===== 4 ส่วน ===== -->
+  <div class="cols">
+    <!-- 01 -->
+    <section>
+      <div class="sec"><span class="n">01</span>ฟีเจอร์และสิ่งที่ผู้ใช้ทำได้</div>
+      <div class="stack">
+        <div class="card feat" data-f="1"><div class="ico"><span class="k">1</span><i data-lucide="file-pen-line"></i></div><div>
+          <h4>เลือกฟอร์มและกรอกเอกสาร <span class="tags"><span class="role r-emp">พนักงาน</span></span></h4>
+          <p>เลือกฟอร์มตามโฟลเดอร์ กรอกรายการ ระบบคำนวณยอดรวม VAT หัก ณ ที่จ่าย และจำนวนเงินตัวอักษรให้</p></div></div>
+        <div class="card feat" data-f="2"><div class="ico"><span class="k">2</span><i data-lucide="printer"></i></div><div>
+          <h4>แนบหลักฐาน บันทึกและพิมพ์ <span class="tags"><span class="role r-emp">พนักงาน</span></span></h4>
+          <p>แนบใบเสร็จได้ 5 ไฟล์ บันทึกแล้วได้เลขที่เอกสารอัตโนมัติ พิมพ์หรือบันทึก PDF ตามแบบฟอร์มบริษัท</p></div></div>
+        <div class="card feat" data-f="3"><div class="ico"><span class="k">3</span><i data-lucide="signature"></i></div><div>
+          <h4>เซ็นและส่งเซ็นออนไลน์ <span class="tags"><span class="role r-emp">พนักงาน</span><span class="role r-sig">ผู้อนุมัติ</span></span></h4>
+          <p>ผู้เบิกเซ็นตอนบันทึก เลือกหัวหน้า/ผู้อนุมัติ ผู้ถูกเลือกเซ็นจาก<span class="nw">เมนู</span> "รอเซ็น" <span class="soon">แจ้งเตือนอีเมล · รอเปิดใช้</span></p></div></div>
+        <div class="card feat" data-f="4"><div class="ico"><span class="k">4</span><i data-lucide="history"></i></div><div>
+          <h4>ประวัติ แก้ไข และคัดลอก <span class="tags"><span class="role r-emp">พนักงาน</span><span class="role r-acc">บัญชี</span></span></h4>
+          <p>ค้นเอกสารตามฟอร์ม สถานะ วันที่ แก้ไขก่อนเซ็นครบ หรือ<span class="nw">คัดลอก</span>เป็นฉบับใหม่ <span class="soon">ยกเลิก/ออกฉบับแก้ · รอเปิดใช้</span></p></div></div>
+        <div class="card feat" data-f="5"><div class="ico"><span class="k">5</span><i data-lucide="settings-2"></i></div><div>
+          <h4>ตั้งค่าฟอร์มและพนักงาน <span class="tags"><span class="role r-acc">บัญชี</span><span class="role r-it">IT</span></span></h4>
+          <p>สร้างฟอร์ม คอลัมน์ สูตรคำนวณ ช่องลายเซ็น โฟลเดอร์ กำหนดว่าใครเห็นฟอร์มไหน เพิ่ม/นำเข้าพนักงาน</p></div></div>
+        <div class="card feat" data-f="6"><div class="ico"><span class="k">6</span><i data-lucide="message-circle-question"></i></div><div>
+          <h4>แจ้งปัญหาและประกาศ <span class="tags"><span class="role r-emp">ทุกคน</span></span></h4>
+          <p>แชทแจ้งปัญหาพร้อมภาพหน้าจอถึงผู้ดูแล ผู้ดูแลตอบกลับในแชท และหน้าประกาศบอกสิ่งที่อัปเดต</p></div></div>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section>
+      <div class="sec"><span class="n">02</span>ภาพรวมที่ระบบเชื่อมให้เห็น</div>
+      <div class="hub-wrap">
+        <div class="hub-row"><div class="hub" id="hub"><div>
+          <i data-lucide="folder-kanban"></i>
+          <b>ภาพรวม<br>เอกสารเบิกจ่าย</b>
+          <small>ทุกฉบับ · ทุกสถานะ</small>
+        </div></div></div>
+
+        <div class="card box">
+          <h5><i data-lucide="layout-dashboard"></i>ข้อมูลที่เห็นได้ในระบบ</h5>
+          <div class="tiles">
+            <div class="tile"><b>สถานะ</b> <span class="nw">บันทึกแล้ว</span> · <span class="nw">รอลายเซ็น (1/3)</span> · <span class="nw">เซ็นครบ</span></div>
+            <div class="tile"><b>ค้างที่ใคร</b> ลายเซ็นแต่ละช่อง <span class="nw">เซ็นแล้วหรือยัง</span></div>
+            <div class="tile"><b>ยอดเงิน</b> ต่อเอกสาร และรวมต่อพนักงาน</div>
+            <div class="tile"><b>แยกดู</b> ตามฟอร์ม โฟลเดอร์ พนักงาน</div>
+            <div class="tile"><b>ช่วงเวลา</b> <span class="nw">วันนี้</span> · <span class="nw">เดือนนี้</span> · <span class="nw">เดือนก่อน</span> · <span class="nw">ปีนี้</span></div>
+            <div class="tile"><b>หลักฐาน</b> ไฟล์แนบ ประวัติแก้ไข จำนวนครั้งที่พิมพ์</div>
+          </div>
+        </div>
+
+        <div class="card box">
+          <h5><i data-lucide="eye"></i>ใครเห็นอะไร</h5>
+          <div class="views">
+            <div class="view"><span class="role r-emp">พนักงาน</span>เอกสารของตนเอง และสถานะลายเซ็น</div>
+            <div class="view"><span class="role r-sig">ผู้อนุมัติ</span>เอกสารที่ส่งมาให้เซ็น พร้อมรายการและไฟล์แนบ</div>
+            <div class="view"><span class="role r-acc">ฝ่ายบัญชี</span>เอกสารทุกฉบับ ประวัติแก้ไข การพิมพ์ และเรื่องแจ้งปัญหา</div>
+          </div>
+        </div>
+
+        <div class="card box">
+          <h5><i data-lucide="move-right"></i>เห็นแล้วทำอะไรต่อ</h5>
+          <div class="act">
+            <div><i data-lucide="check"></i><span><b>ติดตามตรงคน</b> — รู้ว่าเอกสารรอลายเซ็นของใคร</span></div>
+            <div><i data-lucide="check"></i><span><b>ตรวจก่อนจ่าย</b> — เทียบรายการกับใบเสร็จที่แนบมา</span></div>
+            <div><i data-lucide="check"></i><span><b>แก้ที่ต้นทาง</b> — ปรับฟอร์มหรือปิดฟอร์มที่ต้องแก้ ทุกคนใช้ฉบับล่าสุด</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section>
+      <div class="sec"><span class="n">03</span>ประโยชน์ต่อการทำงาน</div>
+      <div class="stack">
+        <div class="card ben" data-b="1"><span class="k">1</span><p>ไม่ต้องคำนวณยอด และเขียน<span class="nw" style="display:inline;font-size:inherit;color:inherit;margin:0">จำนวนเงินตัวอักษร</span>เอง<span>ลดตัวเลขผิดก่อนถึงฝ่ายบัญชี</span></p></div>
+        <div class="card ben" data-b="2"><span class="k">2</span><p>ไม่ต้องจัดหน้าเอกสารเอง<span>ทุกฉบับมี<b class="nw" style="font-weight:500">เลขที่</b> และอยู่ในประวัติเสมอ</span></p></div>
+        <div class="card ben" data-b="3"><span class="k">3</span><p>ลดการเดินเอกสารไปขอเซ็น<span>เห็นว่าค้างที่ใคร โดยไม่ต้องถามต่อกัน</span></p></div>
+        <div class="card ben" data-b="4"><span class="k">4</span><p>หาเอกสารเก่าเจอในไม่กี่คลิก<span>ไม่ต้องกรอกใหม่ทั้งฉบับ — คัดลอกแล้วแก้</span></p></div>
+        <div class="card ben" data-b="5"><span class="k">5</span><p>แก้ฟอร์มครั้งเดียว ใช้ได้ทุกคนทันที<span>ไม่ต้องส่งไฟล์ฟอร์มใหม่ทีละแผนก</span></p></div>
+        <div class="card ben" data-b="6"><span class="k">6</span><p>แจ้งปัญหาพร้อมภาพในที่เดียว<span>ลดการถามตอบผ่านแชทส่วนตัว</span></p></div>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section>
+      <div class="sec"><span class="n">04</span>คุณค่าต่อธุรกิจ</div>
+      <div class="stack" style="gap:12px">
+        <div class="card val"><div class="top"><div class="ico"><i data-lucide="badge-check"></i></div><h4>เอกสารเป็นมาตรฐานเดียวกัน</h4></div>
+          <p>ทุกแผนกและทุกบริษัทในเครือใช้แบบฟอร์มและสูตรคำนวณชุดเดียวกัน</p></div>
+        <div class="card val"><div class="top"><div class="ico"><i data-lucide="file-search"></i></div><h4>ตรวจสอบย้อนหลังได้</h4></div>
+          <p>เลขที่เอกสาร ลายเซ็น ประวัติการแก้ไข และการพิมพ์ ถูกเก็บไว้ประกอบการทบทวน</p></div>
+        <div class="card val"><div class="top"><div class="ico"><i data-lucide="clock-3"></i></div><h4>เวลาของฝ่ายบัญชี</h4></div>
+          <p>ลดงานตรวจตัวเลขและตามเอกสาร เหลือเวลาตรวจความถูกต้องของรายจ่าย</p></div>
+        <div class="card val"><div class="top"><div class="ico"><i data-lucide="lock-keyhole"></i></div><h4>ควบคุมการเข้าถึง</h4></div>
+          <p>กำหนดได้ว่าใครเห็นฟอร์มไหน ใครเซ็น และใครแก้ไขหรือตั้งค่าได้</p></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== วงจรการทำงาน ===== -->
+  <div class="flow">
+    <div class="step"><span class="c"><i data-lucide="file-pen-line"></i></span><span><b>กรอก</b><small>เลือกฟอร์ม แนบใบเสร็จ</small></span></div>
+    <div class="step"><span class="c"><i data-lucide="printer"></i></span><span><b>บันทึกและพิมพ์</b><small>ได้เลขที่ เข้าประวัติ</small></span></div>
+    <div class="step"><span class="c"><i data-lucide="send"></i></span><span><b>ส่งเซ็น</b><small>เลือกผู้อนุมัติ</small></span></div>
+    <div class="step"><span class="c"><i data-lucide="signature"></i></span><span><b>อนุมัติ</b><small>เซ็นจากเมนูรอเซ็น</small></span></div>
+    <div class="step"><span class="c"><i data-lucide="file-search"></i></span><span><b>ตรวจและติดตาม</b><small>ฝ่ายบัญชีดูทุกฉบับ</small></span></div>
+  </div>
+  <div class="access">
+    <span><i data-lucide="globe"></i>ใช้งานผ่านเว็บเบราว์เซอร์ acc-form-system.vercel.app</span><span class="dot"></span>
+    <span><i data-lucide="key-round"></i>เข้าด้วยรหัสพนักงาน</span><span class="dot"></span>
+    <span><i data-lucide="monitor"></i>ไม่ต้องติดตั้งโปรแกรม</span>
+  </div>
+  <p class="note">ผลลัพธ์ขึ้นกับความครบถ้วนของข้อมูลที่กรอกและการเซ็นตามลำดับ · ระบบจัดทำและติดตามเอกสาร ไม่ได้โอนเงินหรือเชื่อมระบบบัญชี · ป้าย "รอเปิดใช้" = ทำเสร็จแล้ว รอเปิดในระบบจริง</p>
+</div>
+
+<script>
+  lucide.createIcons({ attrs: { 'stroke-width': 1.9 } })
+  // Thin connectors: each feature → the centre, the centre → its matching benefit.
+  function draw() {
+    const page = document.getElementById('page').getBoundingClientRect()
+    const hub = document.getElementById('hub').getBoundingClientRect()
+    const svg = document.getElementById('links')
+    svg.setAttribute('viewBox', `0 0 ${page.width} ${page.height}`)
+    svg.setAttribute('width', page.width); svg.setAttribute('height', page.height)
+    const hx1 = hub.left - page.left, hx2 = hub.right - page.left, hy = hub.top - page.top + hub.height / 2
+    const lines = [], dots = []
+    const dot = (x, y, r = 4) => dots.push(`<circle cx="${x}" cy="${y}" r="${r}" fill="#1E4E8C"/>`)
+    // one side: stubs from the cards to a bus line in the gap, and the bus to the hub
+    function side(sel, edge, hubX) {
+      const ys = [], cards = [...document.querySelectorAll(sel)]
+      let busX = 0
+      cards.forEach(el => {
+        const r = el.getBoundingClientRect(), x = (edge === 'right' ? r.right : r.left) - page.left, y = r.top - page.top + r.height / 2
+        busX = edge === 'right' ? x + 18 : x - 18
+        lines.push(`M${x} ${y} H${busX}`); dot(x, y); ys.push(y)
+      })
+      lines.push(`M${busX} ${Math.min(...ys, hy)} V${Math.max(...ys, hy)}`, `M${busX} ${hy} H${hubX}`)
+      dot(busX, hy, 5)
+    }
+    side('[data-f]', 'right', hx1)
+    side('[data-b]', 'left', hx2)
+    svg.innerHTML = `<g fill="none" stroke="#3F6BA8" stroke-width="2" stroke-opacity=".5" stroke-linecap="round"><path d="${lines.join(' ')}"/></g>${dots.join('')}`
+  }
+  document.fonts.ready.then(draw)
+</script>
+</body>
+</html>
