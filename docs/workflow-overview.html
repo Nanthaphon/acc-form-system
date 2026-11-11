@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acc Documents — ผัง Workflow การทำงาน</title>
+<!--
+  ผัง Workflow แบบ Swimlane ของระบบ Acc Documents อ่านจากโค้ดจริง (ณ 11/11/2026)
+  ผังวาดจากข้อมูลใน <script> ด้านล่าง: แก้ข้อความ/ตำแหน่งกล่องได้ที่ DIAGRAMS
+  ตำแหน่งกล่อง = (lane, col) · ลูกศร = from/to + ด้านที่ออก/เข้า (l r t b)
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1E4E8C; --navy-d: #0F2742; --navy-50: #EEF3FA; --navy-100: #DCE6F4; --navy-200: #C2D3EB;
+    --ink: #162024; --ink2: #374449; --muted: #4A5A61; --line: #D3DCE5; --bg: #F5F8FB;
+    --green: #2C7A5B; --green-50: #E7F4EE; --amber: #8A6520; --amber-50: #FBF3E4; --rose: #A23B32; --rose-50: #FBEAE8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Bai Jamjuree', sans-serif; color: var(--ink); background: var(--bg); }
+  .wrap { max-width: 1900px; margin: 0 auto; padding: 28px 28px 60px; }
+  h1 { margin: 0; font-size: 30px; color: var(--navy-d); }
+  .lead { margin: 6px 0 0; font-size: 16px; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1.25fr 1fr; gap: 18px; margin-top: 18px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .card h2 { margin: 0 0 10px; font-size: 18px; color: var(--navy-d); }
+  .card h3 { margin: 12px 0 6px; font-size: 15px; color: var(--navy); }
+  .card p, .card li { font-size: 14.5px; line-height: 1.55; color: var(--ink2); }
+  .card ul { margin: 0; padding-left: 20px; }
+  .roles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .role { border-radius: 10px; padding: 9px 12px; font-size: 14px; line-height: 1.45; background: var(--navy-50); }
+  .role b { display: block; color: var(--navy-d); font-size: 15px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; font-size: 14px; color: var(--ink2); }
+  .legend svg { vertical-align: middle; margin-right: 6px; }
+  .ok { color: var(--green); font-weight: 600; } .ask { color: var(--rose); font-weight: 600; }
+  nav.toc { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
+  nav.toc a { text-decoration: none; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 14px; color: var(--navy-d); font-weight: 600; }
+  nav.toc a:hover { border-color: var(--navy); }
+  section.dg { margin-top: 26px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px 20px; }
+  section.dg > h2 { margin: 0; font-size: 21px; color: var(--navy-d); display: flex; align-items: center; gap: 10px; }
+  section.dg > h2 .n { background: var(--navy); color: #fff; border-radius: 8px; padding: 2px 10px; font-size: 16px; }
+  section.dg > p.d { margin: 6px 0 12px; font-size: 14.5px; color: var(--muted); }
+  .canvas { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .canvas svg { display: block; min-width: 1100px; width: 100%; height: auto; }
+  .below { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-top: 14px; }
+  .refs { font-size: 13px; line-height: 1.55; color: var(--ink2); margin: 0; padding-left: 0; list-style: none; counter-reset: r; }
+  .refs li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; padding: 3px 0; border-bottom: 1px dashed #E3E9EF; }
+  .refs li .k { width: 20px; height: 20px; border-radius: 50%; background: var(--navy); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; margin-top: 1px; }
+  .refs code { font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; color: var(--navy-d); background: var(--navy-50); padding: 0 4px; border-radius: 4px; }
+  .box h4 { margin: 0 0 6px; font-size: 14.5px; }
+  .box ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.55; color: var(--ink2); }
+  .box.q { background: var(--rose-50); border-radius: 10px; padding: 10px 14px; }
+  .box.q h4 { color: var(--rose); }
+  .box.n { background: var(--navy-50); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
+  .box.n h4 { color: var(--navy-d); }
+  /* node text inside the svg */
+  .nt { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font-family: 'Bai Jamjuree', sans-serif; font-size: 13.5px; line-height: 1.3; color: var(--ink); padding: 0 6px; }
+  .nt.dec { font-size: 12.5px; padding: 0 22px; font-weight: 600; color: var(--navy-d); }
+  .nt.term { font-weight: 600; color: #fff; }
+  .nt.term.end { color: var(--navy-d); }
+  .nt small { display: block; font-size: 11px; color: var(--rose); font-weight: 600; margin-top: 2px; }
+  .nt em { font-style: normal; font-weight: 700; color: var(--navy); }
+  @media (max-width: 1100px) { .grid2, .below { grid-template-columns: 1fr; } .roles { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Acc Documents — ผัง Workflow การทำงานจริงของระบบ</h1>
+  <p class="lead">ระบบเอกสารเบิกจ่ายออนไลน์ของ Globe Syndicate: พนักงานกรอกฟอร์มเบิก ระบบออกเลขที่และคำนวณยอด ส่งให้หัวหน้า/ผู้อนุมัติเซ็นออนไลน์ หรือพิมพ์ไปเซ็นด้วยปากกา และฝ่ายบัญชีดูเอกสารทุกฉบับ — อ่านจากโค้ดในโปรเจกต์ ณ 11/11/2026</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>ใครใช้งาน (บทบาทที่มีจริงในโค้ด)</h2>
+      <div class="roles">
+        <div class="role"><b>พนักงาน</b>ผู้ใช้ทั่วไป (role = employee) — เห็นเฉพาะฟอร์มของกลุ่มตนเอง และเอกสารของตนเอง</div>
+        <div class="role"><b>หัวหน้า / ผู้อนุมัติ</b>ไม่ใช่สิทธิ์แยก — คือพนักงานคนใดก็ได้ที่เจ้าของเอกสารเลือกให้เซ็นในช่องลายเซ็น จึงเห็นเอกสารนั้นได้</div>
+        <div class="role"><b>ฝ่ายบัญชี (Account Admin)</b>role = admin — เห็นเอกสารทุกฉบับ ตั้งค่าฟอร์ม จัดการพนักงาน ยกเลิก/ลบเอกสาร ตอบเรื่องแจ้งปัญหา</div>
+        <div class="role"><b>IT (Super Admin)</b>admin ที่ติด isSuperAdmin — ทำได้ทุกอย่างของ admin + เปลี่ยนชื่อผู้ใช้ และแก้บัญชี Super Admin</div>
+      </div>
+      <h3>งานหลักของระบบ</h3>
+      <ul>
+        <li><b>ผัง 1</b> เพิ่มพนักงานและเข้าสู่ระบบครั้งแรก</li>
+        <li><b>ผัง 2</b> กรอก บันทึก และพิมพ์เอกสารเบิก</li>
+        <li><b>ผัง 3</b> ส่งเซ็นและอนุมัติออนไลน์</li>
+        <li><b>ผัง 4</b> แก้ไข คัดลอก และยกเลิกเอกสาร</li>
+        <li><b>ผัง 5</b> แจ้งปัญหาถึงผู้ดูแลระบบ</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>วิธีอ่านผัง</h2>
+      <div class="legend">
+        <span><svg width="46" height="22"><ellipse cx="23" cy="11" rx="21" ry="9" fill="#1E4E8C"/></svg>จุดเริ่ม</span>
+        <span><svg width="46" height="22"><ellipse cx="23" cy="11" rx="21" ry="9" fill="#fff" stroke="#1E4E8C" stroke-width="2"/></svg>จุดจบ</span>
+        <span><svg width="40" height="24"><rect x="2" y="3" width="36" height="18" rx="4" fill="#fff" stroke="#8FA7C4" stroke-width="1.5"/></svg>ขั้นตอน</span>
+        <span><svg width="34" height="26"><polygon points="17,2 32,13 17,24 2,13" fill="#FBF3E4" stroke="#B9902F" stroke-width="1.5"/></svg>จุดตัดสินใจ</span>
+        <span><svg width="40" height="24"><rect x="2" y="3" width="36" height="18" rx="4" fill="#fff" stroke="#A23B32" stroke-width="1.5" stroke-dasharray="4 3"/></svg>มีในโค้ด แต่ยังไม่เปิดในระบบจริง</span>
+        <span><svg width="22" height="22"><circle cx="11" cy="11" r="9" fill="#1E4E8C"/><text x="11" y="15" font-size="11" fill="#fff" text-anchor="middle" font-family="sans-serif">1</text></svg>เลขอ้างอิงไฟล์/บรรทัด ใต้ผัง</span>
+      </div>
+      <h3>สิ่งที่ยืนยันจากโค้ด กับสิ่งที่ต้องถามเพิ่ม</h3>
+      <ul>
+        <li><span class="ok">ยืนยันจากโค้ด</span> — ทุกกล่องในผังมีเลขอ้างอิงไปยังไฟล์และบรรทัดที่ทำสิ่งนั้น</li>
+        <li><span class="ask">ต้องถามเพิ่ม</span> — อยู่ในกรอบสีชมพูใต้แต่ละผัง เป็นเรื่องที่โค้ดตอบไม่ได้ หรือพฤติกรรมที่อาจไม่ตรงกับที่ตั้งใจ</li>
+        <li>ตรวจระบบจริงแล้ว (11/11/2026): <b>แจ้งเตือนอีเมล</b> ยังไม่ได้ deploy ฟังก์ชัน และ <b>ยกเลิกเอกสาร</b> ยังไม่ได้รัน SQL — แสดงเป็นกรอบเส้นประ</li>
+      </ul>
+    </div>
+  </div>
+
+  <nav class="toc">
+    <a href="#d0">ภาพรวม</a><a href="#d1">1 · เพิ่มพนักงานและเข้าสู่ระบบ</a><a href="#d2">2 · กรอก บันทึก พิมพ์</a>
+    <a href="#d3">3 · ส่งเซ็นและอนุมัติ</a><a href="#d4">4 · แก้ไข คัดลอก ยกเลิก</a><a href="#d5">5 · แจ้งปัญหา</a>
+  </nav>
+
+  <div id="diagrams"></div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Layout: lanes are rows, columns run left → right. A node sits at (lane, col).
+// Edges leave/enter a side (l r t b) and are routed at right angles; `via`
+// points (px) steer them round other boxes. ch(l) = a channel under lane l.
+// ---------------------------------------------------------------------------
+const LABEL_W = 150, COL_W = 176, LANE_H = 160
+const SIZE = { step: [154, 84], dec: [164, 104], start: [156, 64], end: [156, 64] }
+const X = c => LABEL_W + c * COL_W + COL_W / 2
+const Y = l => l * LANE_H + LANE_H / 2
+const ch = l => (l + 1) * LANE_H - 15   // a horizontal channel along the bottom of lane l
+
+const DIAGRAMS = [
+  {
+    id: 'd0', n: 'ภาพรวม', title: 'ภาพรวมการใช้งานทั้งระบบ',
+    desc: 'ตั้งแต่ผู้ดูแลเตรียมระบบ จนเอกสารเซ็นครบและฝ่ายบัญชีตรวจ — รายละเอียดแต่ละช่วงอยู่ในผัง 1–5',
+    lanes: ['ฝ่ายบัญชี / IT<br>(ผู้ดูแลระบบ)', 'พนักงาน', 'หัวหน้า /<br>ผู้อนุมัติ', 'ระบบ'],
+    nodes: [
+      { id: 's', lane: 0, col: 0, type: 'start', text: 'เริ่ม' },
+      { id: 'a', lane: 0, col: 1, text: 'ตั้งค่าฟอร์ม โฟลเดอร์ สิทธิ์เห็นฟอร์ม และเพิ่มพนักงาน <em>ผัง 1</em>', refs: [1] },
+      { id: 'b', lane: 1, col: 2, text: 'เข้าสู่ระบบด้วยรหัสพนักงาน <em>ผัง 1</em>', refs: [2] },
+      { id: 'c', lane: 1, col: 3, text: 'เลือกฟอร์ม กรอก แนบใบเสร็จ กด “บันทึกและพิมพ์” <em>ผัง 2</em>', refs: [3] },
+      { id: 'd', lane: 3, col: 4, text: 'ออกเลขที่ บันทึก สถานะ “บันทึกแล้ว” หรือ “ผู้เบิกเซ็นแล้ว”', refs: [4] },
+      { id: 'q', lane: 1, col: 5, type: 'dec', text: 'ต้องให้ใครเซ็นในระบบ?' },
+      { id: 'pe', lane: 1, col: 6, type: 'end', text: 'จบ: พิมพ์ไปเซ็นด้วยปากกา' },
+      { id: 'e', lane: 3, col: 5, text: 'สถานะ “รอลายเซ็น (x/n)” ขึ้นในเมนูรอเซ็นของผู้เซ็น <em>ผัง 3</em>', refs: [5] },
+      { id: 'f', lane: 2, col: 6, text: 'เปิดเอกสาร ตรวจรายการและไฟล์แนบ แล้วเซ็น <em>ผัง 3</em>', refs: [6] },
+      { id: 'g', lane: 3, col: 7, text: 'เซ็นครบทุกช่อง → สถานะ “เซ็นครบ”', refs: [4] },
+      { id: 'h', lane: 0, col: 8, text: 'ดูเอกสารทุกฉบับ สถานะ ประวัติแก้ไขและการพิมพ์', refs: [7] },
+      { id: 'z', lane: 0, col: 9, type: 'end', text: 'จบ' },
+    ],
+    edges: [
+      { f: 's', fp: 'r', t: 'a', tp: 'l' },
+      { f: 'a', fp: 'b', t: 'b', tp: 'l', via: [[X(1), Y(1)]] },
+      { f: 'b', fp: 'r', t: 'c', tp: 'l' },
+      { f: 'c', fp: 'b', t: 'd', tp: 'l', via: [[X(3), Y(3)]] },
+      { f: 'd', fp: 't', t: 'q', tp: 'l', via: [[X(4), Y(1)]] },
+      { f: 'q', fp: 'r', t: 'pe', tp: 'l', label: 'ไม่ต้อง' },
+      { f: 'q', fp: 'b', t: 'e', tp: 't', label: 'ส่งเซ็น' },
+      { f: 'e', fp: 'r', t: 'f', tp: 'b', via: [[X(6), Y(3)]] },
+      { f: 'f', fp: 'r', t: 'g', tp: 't', via: [[X(7), Y(2)]] },
+      { f: 'g', fp: 'r', t: 'h', tp: 'b', via: [[X(8), Y(3)]] },
+      { f: 'h', fp: 'r', t: 'z', tp: 'l' },
+    ],
+    refs: [
+      'ตั้งค่าฟอร์ม <code>src/pages/admin/FormSettingsPage.tsx:339</code> · เพิ่มพนักงาน <code>src/pages/admin/AddEmployeePage.tsx:63</code> · เฉพาะ admin <code>src/auth/RequireAdmin.tsx:12</code>',
+      '<code>src/pages/LoginPage.tsx:18</code> · <code>src/data/auth.ts:11</code>',
+      '<code>src/pages/employee/FormPage.tsx:152</code> (saveAndPrint)',
+      'สถานะจากลายเซ็น <code>src/data/submissions.ts:246</code> · ป้าย “ผู้เบิกเซ็นแล้ว” <code>src/data/submissions.ts:262</code>',
+      'ส่งเซ็น <code>src/components/AssignSignersModal.tsx:80</code> · นับรอเซ็น <code>src/data/submissions.ts:199</code>',
+      'เซ็น <code>src/pages/SignInboxPage.tsx:36</code> · ผู้เซ็นเปิดดูได้ <code>supabase/signature-system.sql:52</code>',
+      'ประวัติพิมพ์ทั้งหมด <code>src/pages/admin/PrintHistoryPage.tsx</code> · admin เห็นทุกฉบับ <code>supabase/schema.sql:112</code>',
+    ],
+    notes: ['เส้นทางย่อย: แก้ไข/คัดลอก/ยกเลิก ดูผัง 4 · แจ้งปัญหาได้ทุกหน้า ดูผัง 5'],
+    asks: [
+      'หลัง “เซ็นครบ” ขั้นต่อไป (จ่ายเงิน/บันทึกบัญชี) เกิดนอกระบบ — โค้ดไม่มีสถานะ “จ่ายแล้ว” หรือ “ปิดงาน” ต้องการให้มีไหม',
+      'ใครเป็นผู้อนุมัติในแต่ละฟอร์ม ไม่ได้ผูกตายตัวในโค้ด — ผู้เบิกเลือกเองทุกครั้ง ถูกต้องตามที่ต้องการไหม',
+    ],
+  },
+  {
+    id: 'd1', n: 'ผัง 1', title: 'เพิ่มพนักงานและเข้าสู่ระบบครั้งแรก',
+    desc: 'ผู้ดูแลเพิ่มพนักงาน ระบบสร้างบัญชีให้ พนักงานเข้าสู่ระบบ และถูกบังคับตั้งรหัสผ่านใหม่ถ้าจำเป็น',
+    lanes: ['ฝ่ายบัญชี / IT', 'พนักงาน', 'ระบบ'],
+    nodes: [
+      { id: 's', lane: 0, col: 0, type: 'start', text: 'เริ่ม: มีพนักงานใหม่' },
+      { id: 'a', lane: 0, col: 1, text: 'เพิ่มพนักงานทีละคน หรือนำเข้าจากไฟล์', refs: [1] },
+      { id: 'b', lane: 2, col: 2, text: 'สร้างบัญชี ชื่อผู้ใช้ = รหัสพนักงาน รหัสผ่านเริ่มต้น = รหัสพนักงาน', refs: [2] },
+      { id: 'p', lane: 0, col: 3, text: 'พนักงานลืมรหัส: ตั้งรหัสชั่วคราวให้', refs: [6] },
+      { id: 'c', lane: 1, col: 3, text: 'กรอกรหัสพนักงานและรหัสผ่าน', refs: [3] },
+      { id: 'q1', lane: 2, col: 4, type: 'dec', text: 'รหัสถูกต้อง?', refs: [3] },
+      { id: 'q2', lane: 2, col: 5, type: 'dec', text: 'ต้องเปลี่ยนรหัสผ่านก่อนใช้?', refs: [4] },
+      { id: 'd', lane: 1, col: 5, text: 'ตั้งรหัสผ่านใหม่', refs: [5] },
+      { id: 'e', lane: 2, col: 6, text: 'เข้าหน้าหลัก เห็นเมนูตามสิทธิ์', refs: [7] },
+      { id: 'z', lane: 1, col: 7, type: 'end', text: 'จบ: เริ่มใช้งาน' },
+    ],
+    edges: [
+      { f: 's', fp: 'r', t: 'a', tp: 'l' },
+      { f: 'a', fp: 'b', t: 'b', tp: 'l', via: [[X(1), Y(2)]] },
+      { f: 'b', fp: 't', t: 'c', tp: 'l', via: [[X(2), Y(1)]] },
+      { f: 'p', fp: 'b', t: 'c', tp: 't', label: 'รหัสชั่วคราว' },
+      { f: 'c', fp: 'r', t: 'q1', tp: 't', via: [[X(4), Y(1)]] },
+      { f: 'q1', fp: 'b', t: 'c', tp: 'b', label: 'ไม่ถูก — แจ้ง “รหัสไม่ถูกต้อง”', via: [[X(4), ch(2)], [X(3), ch(2)]] },
+      { f: 'q1', fp: 'r', t: 'q2', tp: 'l', label: 'ถูก' },
+      { f: 'q2', fp: 't', t: 'd', tp: 'b', label: 'ใช่' },
+      { f: 'q2', fp: 'r', t: 'e', tp: 'l', label: 'ไม่' },
+      { f: 'd', fp: 'r', t: 'e', tp: 't', via: [[X(6), Y(1)]] },
+      { f: 'e', fp: 'r', t: 'z', tp: 'b', via: [[X(7), Y(2)]] },
+    ],
+    refs: [
+      'ทีละคน <code>src/pages/admin/AddEmployeePage.tsx:63</code> · นำเข้า <code>src/pages/admin/ImportCsvPage.tsx</code>',
+      '<code>src/data/users.ts:15-19</code> (signUp ด้วยรหัสผ่าน = employeeId)',
+      '<code>src/pages/LoginPage.tsx:18-27</code> — ผิดขึ้น “รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง”',
+      '<code>src/auth/RequireAuth.tsx:16-17</code> (mustChangePassword → /change-password)',
+      '<code>src/pages/ChangePasswordPage.tsx:21</code> · <code>src/data/auth.ts:19</code>',
+      '<code>src/data/users.ts:69</code> · <code>supabase/2026-10-02-admin-set-password.sql:15-33</code> (admin ตั้งได้ ยกเว้นบัญชี Super Admin)',
+      'เมนูแอดมินเฉพาะ role admin <code>src/components/Layout.tsx</code> · <code>src/auth/RequireAdmin.tsx:12</code>',
+    ],
+    notes: ['รหัสผ่านต้องยาวอย่างน้อย 6 ตัว จึงกำหนดรหัสพนักงานขั้นต่ำ 6 ตัว (AddEmployeePage.tsx:19)'],
+    asks: ['ไม่มีหน้า “ลืมรหัสผ่าน” ให้พนักงานรีเซ็ตเอง — ต้องติดต่อผู้ดูแลทุกครั้ง ตั้งใจแบบนี้ไหม'],
+  },
+  {
+    id: 'd2', n: 'ผัง 2', title: 'กรอก บันทึก และพิมพ์เอกสารเบิก',
+    desc: 'ปุ่มเดียว “บันทึกและพิมพ์” — ระบบบันทึกก่อนเสมอ เอกสารที่พิมพ์ทุกฉบับจึงมีเลขที่และอยู่ในประวัติ',
+    lanes: ['พนักงาน', 'ระบบ'],
+    nodes: [
+      { id: 's', lane: 0, col: 0, type: 'start', text: 'เริ่ม: เปิดเมนูแบบฟอร์มเบิกจ่าย' },
+      { id: 'a', lane: 1, col: 1, text: 'แสดงเฉพาะโฟลเดอร์และฟอร์มที่กลุ่มของตนเห็น และเปิดใช้อยู่', refs: [1] },
+      { id: 'b', lane: 0, col: 2, text: 'เลือกฟอร์ม กรอกรายการ แนบใบเสร็จ (ระบบคำนวณยอดให้)', refs: [2] },
+      { id: 'c', lane: 0, col: 3, text: 'กด “บันทึกและพิมพ์”', refs: [3] },
+      { id: 'q1', lane: 1, col: 4, type: 'dec', text: 'ยอดรวม > 0 และชื่อ ตำแหน่งครบ?', refs: [4] },
+      { id: 'd', lane: 1, col: 5, text: 'ออกเลขที่ (นับใหม่ทุกเดือน) บันทึกเอกสาร เวอร์ชัน 1 และไฟล์แนบ', refs: [5] },
+      { id: 'q2', lane: 1, col: 6, type: 'dec', text: 'ใส่ลายเซ็นตัวเอง และมีลายเซ็นแล้ว?', refs: [6] },
+      { id: 'e', lane: 1, col: 7, text: 'แปะลายเซ็นช่องผู้เบิก สถานะ “ผู้เบิกเซ็นแล้ว”', refs: [6, 7] },
+      { id: 'f', lane: 1, col: 8, text: 'เปิดหน้าพิมพ์ นับจำนวนครั้งที่พิมพ์', refs: [8] },
+      { id: 'g', lane: 0, col: 8, text: 'พิมพ์ หรือบันทึกเป็น PDF' },
+      { id: 'z', lane: 0, col: 9, type: 'end', text: 'จบ: เอกสารอยู่ในหน้าประวัติ' },
+    ],
+    edges: [
+      { f: 's', fp: 'b', t: 'a', tp: 'l', via: [[X(0), Y(1)]] },
+      { f: 'a', fp: 't', t: 'b', tp: 'l', via: [[X(1), Y(0)]] },
+      { f: 'b', fp: 'r', t: 'c', tp: 'l' },
+      { f: 'c', fp: 'r', t: 'q1', tp: 't', via: [[X(4), Y(0)]] },
+      { f: 'q1', fp: 'b', t: 'b', tp: 'b', label: 'ไม่ครบ — แจ้งให้กรอกเพิ่ม', via: [[X(4), ch(1)], [X(2), ch(1)]] },
+      { f: 'q1', fp: 'r', t: 'd', tp: 'l', label: 'ครบ' },
+      { f: 'd', fp: 'r', t: 'q2', tp: 'l' },
+      { f: 'q2', fp: 'r', t: 'e', tp: 'l', label: 'ใช่' },
+      { f: 'q2', fp: 'b', t: 'f', tp: 'b', label: 'ไม่ — สถานะ “บันทึกแล้ว”', via: [[X(6), ch(1)], [X(8), ch(1)]] },
+      { f: 'e', fp: 'r', t: 'f', tp: 'l' },
+      { f: 'f', fp: 't', t: 'g', tp: 'b' },
+      { f: 'g', fp: 'r', t: 'z', tp: 'l' },
+    ],
+    refs: [
+      'สิทธิ์เห็นฟอร์ม <code>src/types/schema.ts:121</code> · โฟลเดอร์ <code>src/pages/employee/DashboardPage.tsx:72</code> · ฟอร์มในโฟลเดอร์ <code>src/pages/GroupPage.tsx:79-82</code>',
+      'คำนวณ <code>src/features/expense-claim/calc.ts:51</code>, <code>:365</code> · ดราฟ <code>src/pages/employee/FormPage.tsx:130</code>',
+      '<code>src/pages/employee/FormPage.tsx:152</code> (กดซ้ำระหว่างบันทึกไม่ได้ บรรทัด 153)',
+      '<code>src/pages/employee/FormPage.tsx:159-167</code> — ยอดรวมต้อง > 0 เฉพาะฟอร์มที่มีคอลัมน์ตัวเลข',
+      '<code>src/data/submissions.ts:13-29</code> (next_doc_number ต่อฟอร์ม/เดือน) · ไฟล์แนบ <code>src/pages/employee/FormPage.tsx:283-299</code>',
+      '<code>src/pages/employee/FormPage.tsx:201-213</code> · <code>src/data/submissions.ts:114</code>',
+      '<code>src/data/submissions.ts:246-250</code>, <code>:262-269</code>',
+      '<code>src/pages/employee/FormPage.tsx:317-324</code> · <code>supabase/2026-09-18-integrity.sql:34</code>',
+    ],
+    notes: ['บันทึกแล้วแต่แนบไฟล์หรือใส่ลายเซ็นไม่สำเร็จ ระบบแจ้งให้กด “บันทึกและพิมพ์” ซ้ำ (FormPage.tsx:211, :297) — เอกสารไม่ซ้ำ เพราะครั้งต่อไปเป็นการแก้ฉบับเดิม'],
+    asks: ['พนักงานต้องอัปโหลดลายเซ็นเองก่อน ถ้ายังไม่มี เอกสารจะบันทึกเป็น “บันทึกแล้ว” โดยไม่มีลายเซ็นผู้เบิก — ต้องการบังคับให้มีลายเซ็นก่อนบันทึกไหม'],
+  },
+  {
+    id: 'd3', n: 'ผัง 3', title: 'ส่งเซ็นและอนุมัติออนไลน์',
+    desc: 'เจ้าของเอกสารเลือกคนเซ็นแต่ละช่อง ผู้ถูกเลือกเซ็นจากเมนู “ฟอร์มเอกสารรอเซ็น” จนครบ — ช่องที่ไม่ได้เลือกใคร เว้นไว้เซ็นบนกระดาษ',
+    lanes: ['เจ้าของเอกสาร<br>(พนักงาน)', 'ระบบ', 'ผู้ที่ถูกเลือก<br>ให้เซ็น'],
+    nodes: [
+      { id: 's', lane: 0, col: 0, type: 'start', text: 'เริ่ม: เอกสารบันทึกแล้ว' },
+      { id: 'a', lane: 0, col: 1, text: 'หน้าประวัติ กด “เซ็น / ส่งเซ็น”', refs: [1] },
+      { id: 'b', lane: 0, col: 2, text: 'เลือกคนเซ็นแต่ละช่อง (ไม่เลือก = เซ็นบนกระดาษ)', refs: [2] },
+      { id: 'q0', lane: 1, col: 3, type: 'dec', text: 'ผู้ส่งเป็นเจ้าของเอกสาร?', refs: [3] },
+      { id: 'x', lane: 0, col: 3, type: 'end', text: 'จบ: ระบบไม่รับ' },
+      { id: 'c', lane: 1, col: 4, text: 'บันทึกผู้เซ็น สถานะ “รอลายเซ็น (x/n)” ขึ้นเมนูรอเซ็นพร้อมตัวเลข', refs: [4] },
+      { id: 'm', lane: 1, col: 5, soon: true, text: 'ส่งอีเมลแจ้งผู้เซ็น<small>รอเปิดใช้ — ยังไม่ deploy</small>', refs: [5] },
+      { id: 'd', lane: 2, col: 5, text: 'เปิดเอกสาร ดูรายการและไฟล์แนบ (ดูอย่างเดียว)', refs: [6] },
+      { id: 'e', lane: 2, col: 6, text: 'กด “เซ็น” ในช่องของตน แล้วยืนยัน', refs: [7] },
+      { id: 'q1', lane: 1, col: 7, type: 'dec', text: 'มีลายเซ็น และถูกเลือกให้เซ็น?', refs: [8] },
+      { id: 'u', lane: 2, col: 7, text: 'อัปโหลดลายเซ็นที่ “ข้อมูลของฉัน”', refs: [8] },
+      { id: 'f', lane: 1, col: 8, text: 'แปะลายเซ็น ล็อกเนื้อหาเอกสาร', refs: [9] },
+      { id: 'q2', lane: 1, col: 9, type: 'dec', text: 'ทุกช่องที่ส่งเซ็นแล้ว?', refs: [10] },
+      { id: 'z', lane: 0, col: 9, type: 'end', text: 'จบ: สถานะ “เซ็นครบ”' },
+    ],
+    edges: [
+      { f: 's', fp: 'r', t: 'a', tp: 'l' },
+      { f: 'a', fp: 'r', t: 'b', tp: 'l' },
+      { f: 'b', fp: 'b', t: 'q0', tp: 'l', via: [[X(2), Y(1)]] },
+      { f: 'q0', fp: 't', t: 'x', tp: 'b', label: 'ไม่ใช่' },
+      { f: 'q0', fp: 'r', t: 'c', tp: 'l', label: 'ใช่' },
+      { f: 'c', fp: 'r', t: 'm', tp: 'l' },
+      { f: 'c', fp: 'b', t: 'd', tp: 'l', via: [[X(4), Y(2)]] },
+      { f: 'd', fp: 'r', t: 'e', tp: 'l' },
+      { f: 'e', fp: 't', t: 'q1', tp: 'l', via: [[X(6), Y(1)]] },
+      { f: 'q1', fp: 'b', t: 'u', tp: 't', label: 'ไม่' },
+      { f: 'u', fp: 'b', t: 'e', tp: 'b', via: [[X(7), ch(2) - 14], [X(6), ch(2) - 14]] },
+      { f: 'q1', fp: 'r', t: 'f', tp: 'l', label: 'ใช่' },
+      { f: 'f', fp: 'r', t: 'q2', tp: 'l' },
+      { f: 'q2', fp: 't', t: 'z', tp: 'b', label: 'ครบ' },
+      { f: 'q2', fp: 'b', t: 'd', tp: 'b', label: 'ยัง — รอคนถัดไป', via: [[X(9), ch(2)], [X(5), ch(2)]] },
+    ],
+    refs: [
+      'ปุ่มเด่นเมื่อยังมีช่องว่าง <code>src/pages/employee/HistoryPage.tsx:70-71</code>, <code>:149</code>',
+      '<code>src/components/AssignSignersModal.tsx:80-110</code>',
+      '<code>supabase/2026-10-01-signature-integrity.sql:49-55</code> — “only the creator can assign signers”',
+      '<code>src/data/submissions.ts:87</code> · สถานะ <code>:246</code>, <code>:262</code> · ตัวเลขเมนู <code>:199</code>',
+      '<code>src/data/notify.ts:15</code> · ฟังก์ชัน <code>supabase/functions/notify-signers</code> — เรียกบนระบบจริงได้ 404 (ยังไม่ deploy)',
+      'รายการรอเซ็น <code>src/pages/SignInboxPage.tsx:25-33</code> · ดูอย่างเดียว <code>src/pages/SubmissionPreviewPage.tsx:46</code> · สิทธิ์อ่าน <code>supabase/signature-system.sql:52-59</code>',
+      '<code>src/pages/SignInboxPage.tsx:36-43</code>',
+      '<code>src/pages/SignInboxPage.tsx:37-39</code> · <code>supabase/2026-10-01-signature-integrity.sql:28-46</code> (no signature / not assigned)',
+      '<code>supabase/2026-10-01-signature-integrity.sql:101-111</code> (protect_signed_content)',
+      '<code>src/data/submissions.ts:246-250</code>',
+      'ยกเลิกการส่งเซ็น <code>src/pages/employee/HistoryPage.tsx:153</code> · <code>src/data/submissions.ts:133</code> · <code>supabase/signature-system.sql:102-105</code>',
+    ],
+    notes: [
+      'เจ้าของกด “ยกเลิกการส่งให้เซ็น” ได้ระหว่างรอ → ลายเซ็นทั้งหมดถูกล้าง กลับเป็น “บันทึกแล้ว” [11]',
+      'ผู้เซ็นเอาลายเซ็นของตัวเองออกได้ และเจ้าของเอาออกได้ (unsign_document) — ช่องนั้นกลับไปรอ',
+      'ผู้เซ็นเรียงลำดับไม่บังคับ: ทุกคนที่ถูกเลือกเซ็นได้พร้อมกัน',
+    ],
+    asks: [
+      '<b>ไม่มีปุ่ม “ไม่อนุมัติ / ส่งกลับให้แก้”</b> — ผู้เซ็นทำได้แค่เซ็น ถ้าเอกสารผิดต้องแจ้งผู้เบิกนอกระบบ ต้องการเพิ่มไหม',
+      'ไม่บังคับลำดับการเซ็น (หัวหน้าก่อน ผู้อนุมัติหลัง) — ต้องการให้เรียงตามลำดับไหม',
+      'แจ้งเตือนอีเมลพร้อมในโค้ด แต่ยังไม่ deploy — จะเปิดใช้เมื่อไร',
+    ],
+  },
+  {
+    id: 'd4', n: 'ผัง 4', title: 'แก้ไข คัดลอก และยกเลิกเอกสาร',
+    desc: 'เอกสารที่คนอื่นเซ็นแล้วถูกล็อก แก้ในฉบับเดิมไม่ได้ — ต้องทำเป็นฉบับใหม่ และยกเลิกฉบับเดิม (เมื่อเปิดใช้ระบบยกเลิกแล้ว)',
+    lanes: ['พนักงาน<br>(เจ้าของ)', 'ระบบ', 'ฝ่ายบัญชี<br>(Account Admin)'],
+    nodes: [
+      { id: 's', lane: 0, col: 0, type: 'start', text: 'เริ่ม: พบว่าเอกสารที่บันทึกแล้วผิด' },
+      { id: 'q0', lane: 1, col: 1, type: 'dec', text: 'คนอื่นที่ไม่ใช่ผู้เบิก เซ็นแล้ว?', refs: [1] },
+      { id: 'a', lane: 0, col: 2, text: 'กด “แก้ไข” แก้ในเอกสารเดิม', refs: [2] },
+      { id: 'b', lane: 1, col: 3, text: 'ถ้าผู้เบิกเซ็นไว้: เอาออก บันทึก แล้วเซ็นกลับ — เก็บเวอร์ชันใหม่ เลขที่เดิม', refs: [2] },
+      { id: 'z1', lane: 0, col: 4, type: 'end', text: 'จบ: แก้ในฉบับเดิมแล้ว' },
+      { id: 'q1', lane: 1, col: 5, type: 'dec', text: 'เปิดใช้การยกเลิกเอกสารแล้ว?', refs: [3] },
+      { id: 'cp', lane: 0, col: 5, type: 'end', text: 'จบ: คัดลอกเป็นฉบับใหม่ (ฉบับเดิมยังอยู่)', refs: [5] },
+      { id: 'c', lane: 0, col: 6, soon: true, text: 'กด “แก้ไข” = ทำฉบับใหม่ แล้วระบุเหตุผล<small>รอเปิดใช้</small>', refs: [4] },
+      { id: 'd', lane: 1, col: 7, soon: true, text: 'เลขที่ใหม่ ฉบับเดิมขึ้น “ยกเลิก” พร้อมเหตุผล<small>รอเปิดใช้</small>', refs: [4] },
+      { id: 'z2', lane: 0, col: 8, type: 'end', text: 'จบ: ใช้ฉบับใหม่' },
+      { id: 's2', lane: 2, col: 2, type: 'start', text: 'เริ่ม: ฝ่ายบัญชีพบเอกสารผิด' },
+      { id: 'k', lane: 2, col: 3, text: 'เมนู ⋯ “ยกเลิกเอกสาร” (ใส่เหตุผล) หรือ “ลบเอกสาร” ถาวร', refs: [6] },
+      { id: 'z3', lane: 2, col: 4, type: 'end', text: 'จบ: ขึ้น “ยกเลิก” หรือถูกลบ' },
+    ],
+    edges: [
+      { f: 's', fp: 'b', t: 'q0', tp: 'l', via: [[X(0), Y(1)]] },
+      { f: 'q0', fp: 't', t: 'a', tp: 'l', label: 'ยัง', via: [[X(1), Y(0)]] },
+      { f: 'a', fp: 'b', t: 'b', tp: 'l', via: [[X(2), Y(1)]] },
+      { f: 'b', fp: 't', t: 'z1', tp: 'l', via: [[X(3), Y(0)]] },
+      { f: 'q0', fp: 'b', t: 'q1', tp: 'b', label: 'เซ็นแล้ว (ถูกล็อก)', via: [[X(1), ch(1)], [X(5), ch(1)]] },
+      { f: 'q1', fp: 't', t: 'cp', tp: 'b', label: 'ยัง' },
+      { f: 'q1', fp: 'r', t: 'c', tp: 'b', label: 'แล้ว', via: [[X(6), Y(1)]] },
+      { f: 'c', fp: 'r', t: 'd', tp: 't', via: [[X(7), Y(0)]] },
+      { f: 'd', fp: 'r', t: 'z2', tp: 'b', via: [[X(8), Y(1)]] },
+      { f: 's2', fp: 'r', t: 'k', tp: 'l' },
+      { f: 'k', fp: 'r', t: 'z3', tp: 'l' },
+    ],
+    refs: [
+      '<code>src/pages/employee/HistoryPage.tsx:146</code> (frozen) · ล็อกในฐานข้อมูล <code>supabase/2026-10-01-signature-integrity.sql:101-111</code>',
+      'ปุ่ม <code>src/pages/employee/HistoryPage.tsx:168</code> · เอาลายเซ็นออก/เซ็นกลับ <code>src/pages/employee/FormPage.tsx:184</code>, <code>:233-246</code> · เวอร์ชัน <code>src/data/submissions.ts:32-50</code>',
+      '<code>src/pages/employee/HistoryPage.tsx:147</code>, <code>:165-167</code> · <code>src/data/submissions.ts:153-157</code> — บนระบบจริงยังไม่มีฟังก์ชัน void_submission (ยังไม่รัน SQL)',
+      'เหตุผล <code>src/pages/employee/FormPage.tsx:170-178</code> · ยกเลิกฉบับเดิม <code>:187</code>, <code>:220-231</code> · <code>supabase/2026-10-28-void-documents.sql:25</code>',
+      'คัดลอก <code>src/pages/employee/HistoryPage.tsx:170</code> · <code>src/pages/employee/FormPage.tsx:33</code>',
+      '<code>src/pages/admin/PrintHistoryPage.tsx:126-128</code> · กู้คืน <code>src/components/voidDocument.ts:26</code>',
+      'พนักงานลบเองได้เมื่อยังไม่ได้ส่งให้ใครเซ็น หรือมีแค่ลายเซ็นตนเอง <code>src/pages/employee/HistoryPage.tsx:154-158</code>',
+    ],
+    notes: ['พนักงานลบเอกสารของตนเองได้ ถ้ายังไม่ได้ส่งให้คนอื่นเซ็น [7]', 'ฝ่ายบัญชีกู้คืนเอกสารที่ยกเลิกไปได้ [6]'],
+    asks: [
+      'ระบบยกเลิกเอกสารยังไม่เปิด (ต้องรัน <code>supabase/2026-10-28-void-documents.sql</code>) — ระหว่างนี้เอกสารที่เซ็นแล้วแต่ผิด จะมีทั้งฉบับเดิมและฉบับคัดลอกในระบบ',
+      'ฝ่ายบัญชี “ลบถาวร” เอกสารที่เซ็นแล้วได้ — ตั้งใจให้ลบได้ หรือควรให้ยกเลิกอย่างเดียว',
+    ],
+  },
+  {
+    id: 'd5', n: 'ผัง 5', title: 'แจ้งปัญหาถึงผู้ดูแลระบบ',
+    desc: 'ปุ่มแชทมุมขวาล่างทุกหน้า — สถานะเรื่อง ใหม่ → กำลังดำเนินการ → เสร็จแล้ว',
+    lanes: ['ผู้ใช้<br>(ทุกคน)', 'ระบบ', 'ผู้ดูแลระบบ<br>(admin)'],
+    nodes: [
+      { id: 's', lane: 0, col: 0, type: 'start', text: 'เริ่ม: พบปัญหาในการใช้งาน' },
+      { id: 'a', lane: 0, col: 1, text: 'กดปุ่มแชท พิมพ์ปัญหา แนบหรือวางภาพหน้าจอ แล้วส่ง', refs: [1] },
+      { id: 'b', lane: 1, col: 2, text: 'เปิดเรื่องใหม่ สถานะ “ใหม่” ตัวเลขขึ้นที่เมนูรับเรื่องแจ้งปัญหา', refs: [2, 3] },
+      { id: 'c', lane: 2, col: 3, text: 'เปิดเรื่อง อ่าน และตอบในแชท', refs: [4] },
+      { id: 'd', lane: 1, col: 4, text: 'ตอบครั้งแรก → “กำลังดำเนินการ” ตัวเลขขึ้นที่ปุ่มแชทของผู้ใช้', refs: [2, 3] },
+      { id: 'e', lane: 0, col: 5, text: 'อ่านคำตอบ คุยต่อในเรื่องเดิมได้', refs: [1] },
+      { id: 'q', lane: 2, col: 6, type: 'dec', text: 'แก้ปัญหาเสร็จแล้ว?' },
+      { id: 'f', lane: 2, col: 7, text: 'เปลี่ยนสถานะเป็น “เสร็จแล้ว”', refs: [4] },
+      { id: 'z', lane: 2, col: 8, type: 'end', text: 'จบ: เรื่องเสร็จแล้ว' },
+    ],
+    edges: [
+      { f: 's', fp: 'r', t: 'a', tp: 'l' },
+      { f: 'a', fp: 'b', t: 'b', tp: 'l', via: [[X(1), Y(1)]] },
+      { f: 'b', fp: 'b', t: 'c', tp: 'l', via: [[X(2), Y(2)]] },
+      { f: 'c', fp: 't', t: 'd', tp: 'l', via: [[X(3), Y(1)]] },
+      { f: 'd', fp: 't', t: 'e', tp: 'l', via: [[X(4), Y(0)]] },
+      { f: 'e', fp: 'b', t: 'q', tp: 'l', via: [[X(5), Y(2)]] },
+      { f: 'q', fp: 'b', t: 'c', tp: 'b', label: 'ยัง — คุยต่อ', via: [[X(6), ch(2)], [X(3), ch(2)]] },
+      { f: 'q', fp: 'r', t: 'f', tp: 'l', label: 'เสร็จ' },
+      { f: 'f', fp: 'r', t: 'z', tp: 'l' },
+    ],
+    refs: [
+      '<code>src/components/support/SupportChatButton.tsx</code> · ส่ง <code>src/components/support/SupportThread.tsx:110-117</code>',
+      'สร้างเรื่อง <code>supabase/2026-11-02-support-chat.sql:53</code> · สถานะอัตโนมัติ <code>:97-114</code> (บรรทัด 108–109)',
+      'ตัวเลขแจ้งเตือน <code>src/shared/useSupportUnread.ts</code> · <code>src/data/support.ts</code> (isUnread)',
+      'หน้ารับเรื่อง <code>src/pages/admin/SupportInboxPage.tsx</code> · เปลี่ยนสถานะ <code>:70-75</code>',
+    ],
+    notes: ['ผู้ใช้เขียนกลับในเรื่องที่ “เสร็จแล้ว” → ระบบเปิดเรื่องกลับเป็น “ใหม่” เอง (support-chat.sql:108)', 'ผู้ดูแลลบเรื่องได้ (ข้อความและรูปถูกลบด้วย)'],
+    asks: ['ผู้ดูแลทุกคน (Account Admin และ IT) เห็นและตอบได้ทุกเรื่อง — ต้องการแยกว่าเรื่องไหนให้ใครรับไหม'],
+  },
+]
+
+// ----------------------------- rendering ------------------------------------
+const esc = s => s
+function nodeBox(n) { const [w, h] = SIZE[n.type || 'step']; return { x: X(n.col) - w / 2, y: Y(n.lane) - h / 2, w, h } }
+function port(n, side) {
+  const b = nodeBox(n)
+  return side === 'l' ? [b.x, b.y + b.h / 2] : side === 'r' ? [b.x + b.w, b.y + b.h / 2]
+    : side === 't' ? [b.x + b.w / 2, b.y] : [b.x + b.w / 2, b.y + b.h]
+}
+const DIR = { l: [-1, 0], r: [1, 0], t: [0, -1], b: [0, 1] }
+// Right-angled path through start → steps → end.
+function route(e, nodes) {
+  const a = nodes[e.f], b = nodes[e.t]
+  const p0 = port(a, e.fp), p9 = port(b, e.tp)
+  const s1 = [p0[0] + DIR[e.fp][0] * 14, p0[1] + DIR[e.fp][1] * 14]
+  const e1 = [p9[0] + DIR[e.tp][0] * 14, p9[1] + DIR[e.tp][1] * 14]
+  const pts = [p0, s1, ...(e.via || []), e1, p9]
+  const out = [pts[0]]
+  let horiz = e.fp === 'l' || e.fp === 'r'
+  for (let i = 1; i < pts.length; i++) {
+    const p = out[out.length - 1], q = pts[i]
+    if (p[0] !== q[0] && p[1] !== q[1]) {
+      const corner = horiz ? [p[0], q[1]] : [q[0], p[1]]
+      out.push(corner)
+    }
+    out.push(q)
+    const last = out[out.length - 2]
+    horiz = last[1] === q[1]
+  }
+  // drop zero-length points
+  return out.filter((p, i) => i === 0 || p[0] !== out[i - 1][0] || p[1] !== out[i - 1][1])
+}
+function labelSpot(pts, e) {
+  // the longest segment among the first three, at its middle
+  let best = null, len = -1
+  for (let i = 0; i < Math.min(pts.length - 1, 4); i++) {
+    const l = Math.abs(pts[i + 1][0] - pts[i][0]) + Math.abs(pts[i + 1][1] - pts[i][1])
+    if (l > len) { len = l; best = i }
+  }
+  const [a, b] = [pts[best], pts[best + 1]]
+  return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+}
+function render(d) {
+  const cols = Math.max(...d.nodes.map(n => n.col)) + 1
+  const W = LABEL_W + cols * COL_W + 20, H = d.lanes.length * LANE_H + 4
+  const nodes = Object.fromEntries(d.nodes.map(n => [n.id, n]))
+  let g = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${d.title}">
+  <defs><marker id="ar-${d.id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3B5F8F"/></marker></defs>`
+  // lanes
+  d.lanes.forEach((name, i) => {
+    g += `<rect x="0" y="${i * LANE_H}" width="${W}" height="${LANE_H}" fill="${i % 2 ? '#F7FAFC' : '#FFFFFF'}"/>`
+    g += `<rect x="0" y="${i * LANE_H}" width="${LABEL_W - 10}" height="${LANE_H}" fill="${i % 2 ? '#13325A' : '#0F2742'}"/>`
+    g += `<foreignObject x="0" y="${i * LANE_H}" width="${LABEL_W - 10}" height="${LANE_H}"><div xmlns="http://www.w3.org/1999/xhtml" class="nt term" style="font-size:14px;padding:0 10px">${name}</div></foreignObject>`
+    if (i) g += `<line x1="0" x2="${W}" y1="${i * LANE_H}" y2="${i * LANE_H}" stroke="#C9D5E2" stroke-width="1.2"/>`
+  })
+  // edges (under the boxes)
+  const labels = []
+  d.edges.forEach(e => {
+    const pts = route(e, nodes)
+    g += `<path d="M${pts.map(p => p.join(' ')).join(' L')}" fill="none" stroke="#3B5F8F" stroke-width="1.8" marker-end="url(#ar-${d.id})"/>`
+    if (e.label) labels.push([labelSpot(pts, e), e.label])
+  })
+  // nodes
+  d.nodes.forEach(n => {
+    const b = nodeBox(n), t = n.type || 'step'
+    if (t === 'start') g += `<ellipse cx="${b.x + b.w / 2}" cy="${b.y + b.h / 2}" rx="${b.w / 2}" ry="${b.h / 2}" fill="#1E4E8C"/>`
+    else if (t === 'end') g += `<ellipse cx="${b.x + b.w / 2}" cy="${b.y + b.h / 2}" rx="${b.w / 2}" ry="${b.h / 2}" fill="#fff" stroke="#1E4E8C" stroke-width="2.2"/>`
+    else if (t === 'dec') g += `<polygon points="${b.x + b.w / 2},${b.y} ${b.x + b.w},${b.y + b.h / 2} ${b.x + b.w / 2},${b.y + b.h} ${b.x},${b.y + b.h / 2}" fill="#FBF3E4" stroke="#B9902F" stroke-width="1.6"/>`
+    else g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="9" fill="#fff" stroke="${n.soon ? '#A23B32' : '#8FA7C4'}" stroke-width="1.6" ${n.soon ? 'stroke-dasharray="5 4"' : ''}/>`
+    const cls = t === 'dec' ? 'nt dec' : t === 'start' ? 'nt term' : t === 'end' ? 'nt term end' : 'nt'
+    g += `<foreignObject x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}"><div xmlns="http://www.w3.org/1999/xhtml" class="${cls}"><div>${n.text}</div></div></foreignObject>`
+    ;(n.refs || []).forEach((r, k) => {
+      const cx = b.x + b.w - 6 - (n.refs.length - 1 - k) * 19, cy = b.y + (t === 'dec' ? b.h / 2 - 34 : 2)
+      g += `<circle cx="${cx}" cy="${cy}" r="9" fill="#1E4E8C" stroke="#fff" stroke-width="1.5"/><text x="${cx}" y="${cy + 3.8}" font-size="10.5" font-weight="700" fill="#fff" text-anchor="middle" font-family="sans-serif">${r}</text>`
+    })
+  })
+  // edge labels on top
+  labels.forEach(([[x, y], text]) => {
+    const w = Math.max(36, [...text].length * 6.4 + 14)
+    g += `<rect x="${x - w / 2}" y="${y - 11}" width="${w}" height="22" rx="11" fill="#fff" stroke="#3B5F8F" stroke-width="1"/>`
+    g += `<text x="${x}" y="${y + 4.5}" font-size="12" font-weight="600" fill="#0F2742" text-anchor="middle" font-family="'Bai Jamjuree', sans-serif">${text}</text>`
+  })
+  return g + '</svg>'
+}
+
+const host = document.getElementById('diagrams')
+DIAGRAMS.forEach(d => {
+  const sec = document.createElement('section')
+  sec.className = 'dg'; sec.id = d.id
+  sec.innerHTML = `
+    <h2><span class="n">${d.n}</span>${d.title}</h2>
+    <p class="d">${d.desc}</p>
+    <div class="canvas">${render(d)}</div>
+    <div class="below">
+      <div><div class="box"><h4>อ้างอิงในโค้ด (ยืนยันจากโค้ด)</h4><ol class="refs">${d.refs.map((r, i) => `<li><span class="k">${i + 1}</span><span>${r}</span></li>`).join('')}</ol></div></div>
+      <div>
+        ${d.notes?.length ? `<div class="box n"><h4>เงื่อนไขอื่นที่พบในโค้ด</h4><ul>${d.notes.map(x => `<li>${x}</li>`).join('')}</ul></div>` : ''}
+        ${d.asks?.length ? `<div class="box q"><h4>ต้องถามเพิ่ม</h4><ul>${d.asks.map(x => `<li>${x}</li>`).join('')}</ul></div>` : ''}
+      </div>
+    </div>`
+  host.appendChild(sec)
+})
+// The diagrams are drawn after the page loads, so a link to one (#d3) is followed here.
+if (location.hash) document.querySelector(location.hash)?.scrollIntoView()
+</script>
+</body>
+</html>
