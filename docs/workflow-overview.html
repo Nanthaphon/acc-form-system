@@ -54,6 +54,16 @@
   .nt small { display: block; font-size: 11px; color: var(--rose); font-weight: 600; margin-top: 2px; }
   .nt em { font-style: normal; font-weight: 700; color: var(--navy); }
   @media (max-width: 1100px) { .roles { grid-template-columns: 1fr 1fr; } }
+  /* print / PDF: A4 landscape — the header with the overview on page 1, then one diagram a page */
+  @page { size: A4 landscape; margin: 8mm; }
+  @media print {
+    body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .wrap { max-width: none; padding: 0; zoom: 0.57; }
+    nav.toc { display: none; }
+    section.dg { break-inside: avoid; }
+    section.dg:not(#d0) { break-before: page; margin-top: 0; }
+    .canvas { overflow: visible; }
+  }
 </style>
 </head>
 <body>
