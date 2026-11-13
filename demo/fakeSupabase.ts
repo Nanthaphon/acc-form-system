@@ -126,7 +126,8 @@ const sub = (id: string, formType: string, docNumber: string, header: any, items
   createdAt: t(created), updatedAt: t(created), printCount: 0, lastPrintedAt: null, signatures: [], attachments: [], ...extra,
 })
 
-const db: Record<string, any[]> = {
+// ข้อมูลตั้งต้นของโหมดเดโม — ใช้เมื่อยังไม่เคยใช้ หรือเพิ่งกด "เริ่มใหม่"
+const seed: Record<string, any[]> = {
   companies: [
     { id: 'globe', name: 'บริษัท โกลบ ซินดิเคท (ประเทศไทย) จำกัด', headerName: null, shortName: 'Globe Syndicate', logo: null,
       address: '1252/1 อาคารทรูทาวเวอร์ อาคาร 2 ชั้น 6 ถนนพัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพฯ' },
@@ -301,16 +302,55 @@ const db: Record<string, any[]> = {
   ],
 }
 // Version history: every document has its first version; s-1 was edited once.
-for (const s of db.submissions) {
+for (const s of seed.submissions) {
   // s-1 started with one row; the second was added in version 2
   const first = s.id === 's-1' ? { items: s.items.slice(0, 1), totals: totalsOf(11000, 'หนึ่งหมื่นหนึ่งพันบาทถ้วน') } : s
-  db.submission_versions.push({ id: `v-${s.id}-1`, submissionId: s.id, version: 1, header: s.header, items: first.items, totals: first.totals,
+  seed.submission_versions.push({ id: `v-${s.id}-1`, submissionId: s.id, version: 1, header: s.header, items: first.items, totals: first.totals,
     editedBy: s.createdBy, editedByName: `${s.header.firstName} ${s.header.lastName}`, editedAt: s.createdAt })
 }
 {
-  const s1 = db.submissions[0]
-  db.submission_versions.push({ id: 'v-s-1-2', submissionId: 's-1', version: 2, header: s1.header, items: s1.items, totals: s1.totals,
+  const s1 = seed.submissions[0]
+  seed.submission_versions.push({ id: 'v-s-1-2', submissionId: 's-1', version: 2, header: s1.header, items: s1.items, totals: s1.totals,
     editedBy: SOMCHAI, editedByName: 'สมชาย ใจดี', editedAt: s1.updatedAt })
+}
+
+// โหมดเดโมเก็บข้อมูลไว้ในเบราว์เซอร์เครื่องนี้ ไม่ส่งออกไปไหน รีเฟรชหรือปิด
+// เบราว์เซอร์แล้วกลับมาก็ยังอยู่ จึงลองใช้งานยาว ๆ ได้เหมือนระบบจริง
+// — ล้างได้ที่ปุ่ม "เริ่มใหม่" บนป้ายสีน้ำตาลล่างจอ
+const STORE_KEY = 'demo:db'
+// ขยับวันที่นี้เมื่อแก้ข้อมูลตั้งต้นด้านบน เครื่องที่เก็บของเก่าไว้จะเริ่มใหม่เอง
+const DATA_VERSION = '2026-11-13'
+
+function loadSaved(): Record<string, any[]> | null {
+  try {
+    const raw = localStorage.getItem(STORE_KEY)
+    if (!raw) return null
+    const saved = JSON.parse(raw)
+    return saved?.version === DATA_VERSION && saved.db ? saved.db : null
+  } catch { return null }   // ที่เก็บถูกปิดไว้ หรือข้อมูลเสีย — เริ่มจากของตั้งต้น
+}
+
+const db: Record<string, any[]> = loadSaved() ?? structuredClone(seed)
+
+let saveSoon: ReturnType<typeof setTimeout> | null = null
+function writeNow() {
+  if (saveSoon) { clearTimeout(saveSoon); saveSoon = null }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify({ version: DATA_VERSION, db })) }
+  catch { console.warn('[เดโม] เก็บข้อมูลไม่ได้ (ที่เก็บเต็มหรือถูกปิด) — ยังใช้ต่อได้ แต่รีเฟรชแล้วจะหาย') }
+}
+// รวมการเขียนหลายครั้งติด ๆ กันให้เหลือครั้งเดียว…
+function save() {
+  if (saveSoon) clearTimeout(saveSoon)
+  saveSoon = setTimeout(writeNow, 150)
+}
+// …แต่ถ้ากำลังจะออกจากหน้า เขียนทันที ไม่งั้นสิ่งที่เพิ่งทำจะหายไปกับการเปลี่ยนหน้า
+window.addEventListener('pagehide', () => { if (saveSoon) writeNow() })
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveSoon) writeNow() })
+
+// ปุ่ม "เริ่มใหม่" บนป้ายโหมดเดโมเรียกตัวนี้ (ดู src/components/EnvBanner.tsx)
+;(window as any).__demoReset = () => {
+  try { localStorage.removeItem(STORE_KEY) } catch { /* ปิดไว้ก็ไม่เป็นไร */ }
+  location.reload()
 }
 
 const KEY: Record<string, string> = {
@@ -402,6 +442,7 @@ class Query {
     for (const [c, asc] of [...this.orders].reverse()) {
       out = [...out].sort((a, b) => (a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0) * (asc ? 1 : -1))
     }
+    if (this.op !== 'select') save()
     out = out.slice(0, this.max).map(r => structuredClone(r))
     if (this.head) return { data: null, count: out.length, error: null }
     if (this.mode === 'single') return out.length ? { data: out[0], error: null } : { data: null, error: { code: 'PGRST116', message: 'no rows' } }
@@ -416,6 +457,10 @@ class Query {
 let seq = 4
 const rpc = async (name: string, args: any) => {
   await new Promise(r => setTimeout(r, 30))
+  try { return rpcRun(name, args) } finally { save() }
+}
+
+const rpcRun = (name: string, args: any) => {
   switch (name) {
     case 'list_signers':
       return { data: Object.values(people).filter(p => p.uid !== ME).map(p => ({ uid: p.uid, name: p.name })), error: null }
