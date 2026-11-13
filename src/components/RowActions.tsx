@@ -10,7 +10,10 @@ import { MoreHorizontal } from 'lucide-react'
 //   RowMenu (⋯)   — the rare and the destructive, out of the way until asked for
 // A row of five equal buttons said nothing about which one mattered.
 
-const itemClass = 'inline-flex h-8 min-w-[4.5rem] items-center justify-center gap-1.5 whitespace-nowrap px-2.5 text-xs font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900 focus:outline-none focus-visible:bg-clay-50'
+// Icons alone: three words on every line of a long table said the same three
+// things over and over. What each one does is on the tooltip and read out to a
+// screen reader by its aria-label.
+const itemClass = 'inline-flex h-8 w-9 items-center justify-center text-stone-600 transition-colors hover:bg-stone-50 hover:text-clay-700 focus:outline-none focus-visible:bg-clay-50'
 
 export function ActionGroup({ children }: { children: ReactNode }) {
   return (
@@ -20,13 +23,12 @@ export function ActionGroup({ children }: { children: ReactNode }) {
   )
 }
 
-export function ActionGroupItem({ label, short, icon, to, onClick }: {
-  label: string; short: string; icon: ReactNode; to?: string; onClick?: () => void
+export function ActionGroupItem({ label, icon, to, onClick }: {
+  label: string; icon: ReactNode; to?: string; onClick?: () => void
 }) {
-  const content = <>{icon}<span>{short}</span></>
   return to
-    ? <Link to={to} className={itemClass} title={label} aria-label={label}>{content}</Link>
-    : <button type="button" onClick={onClick} className={itemClass} title={label} aria-label={label}>{content}</button>
+    ? <Link to={to} className={itemClass} title={label} aria-label={label}>{icon}</Link>
+    : <button type="button" onClick={onClick} className={itemClass} title={label} aria-label={label}>{icon}</button>
 }
 
 // Fixed width, so the groups beside it line up down the table whether or not

@@ -41,7 +41,7 @@ describe('FieldOptionsPage', () => {
   it('shows one field at a time, as tabs that carry their counts', async () => {
     await show()
     const tabs = screen.getAllByRole('tab').map(t => t.textContent)
-    expect(tabs).toEqual(['แผนก3', 'ตำแหน่ง1'])
+    expect(tabs).toEqual(['แผนก3', 'ตำแหน่ง1', 'สถานะเอกสาร0'])
     expect(screen.getByRole('tab', { name: /แผนก/ })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByText('เจ้าหน้าที่บัญชี')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: /ตำแหน่ง/ }))

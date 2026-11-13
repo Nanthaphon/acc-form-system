@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Ban, Copy, FilePen, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
+import { Ban, ChevronDown, ChevronRight, Copy, FilePen, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning, voidingAvailable } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
@@ -21,6 +21,7 @@ import StatusBadge from '../../components/StatusBadge'
 import DocNumberCell from '../../components/DocNumberCell'
 import { askAndVoid } from '../../components/voidDocument'
 import { ActionGroup, ActionGroupItem, PrimaryAction, PrimarySlot, RowMenu, RowMenuSlot } from '../../components/RowActions'
+import { chainRows, chainLength } from '../../shared/revisionChain'
 import type { RowMenuItem } from '../../components/RowActions'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import ColumnPicker from '../../components/ColumnPicker'
@@ -39,6 +40,10 @@ export default function HistoryPage() {
   const [forms, setForms] = useState<FormSettings[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
+  const [open, setOpen] = useState<Set<string>>(new Set())
+  function toggleOpen(id: string) {
+    setOpen(o => { const n = new Set(o); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
   const [signers, setSigners] = useState<Signer[]>([])
   const [groups, setGroups] = useState<FormGroup[]>([])
   const [signModal, setSignModal] = useState<SubmissionSummary | null>(null)
@@ -53,6 +58,8 @@ export default function HistoryPage() {
   const formName = (ft: string) => { const f = formOf(ft); return f?.name || f?.title || '—' }
   const myName = () => profile ? `${profile.firstName} ${profile.lastName}` : ''
   const filtered = applyFilters(rows, filters, { formGroup, formName, groups: groups })
+  // A corrected document and the rounds before it are one line, folded.
+  const chains = chainRows(filtered, rows)
   // The filter offers only the folders and forms this person may use (and any
   // their own documents were made on).
   const choices = filterChoices(forms, groups, {
@@ -135,7 +142,7 @@ export default function HistoryPage() {
             </tr>
           </thead>
           <tbody className={ui.tbody}>
-            {filtered.map(r => {
+            {chains.map(({ latest: r, older }) => {
               // A cancelled document is a record: it can be looked at, printed
               // and copied, nothing more.
               const voided = !!r.voided
@@ -157,17 +164,38 @@ export default function HistoryPage() {
                   : !canVoid ? []
                   : [{ label: 'ยกเลิกเอกสาร', icon: <Ban size={16} />, onClick: async () => { if (await askAndVoid(r)) load() }, danger: true }]),
               ]
+              const showing = open.has(r.id)
               return (
-                <tr key={r.id} className={ui.tr}>
-                  {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
+                <Fragment key={r.id}>
+                <tr className={ui.tr}>
+                  {shown.map((c, i) => (
+                    <td key={c.key} className={`${ui.td} ${c.tdCls}`}>
+                      {i === 0 && older.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => toggleOpen(r.id)}
+                            aria-expanded={showing}
+                            title={showing ? 'ซ่อนฉบับก่อนหน้า' : `ดูฉบับก่อนหน้า ${older.length} ฉบับ`}
+                            aria-label={showing ? 'ซ่อนฉบับก่อนหน้า' : `ดูฉบับก่อนหน้า ${older.length} ฉบับ`}
+                            className="inline-flex h-6 items-center gap-0.5 rounded-md border border-stone-200 bg-white pl-0.5 pr-1.5 text-[11px] font-medium text-stone-600 transition-colors hover:border-clay-300 hover:text-clay-700"
+                          >
+                            {showing ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            {chainLength({ latest: r, older })} ฉบับ
+                          </button>
+                          {c.cell(r)}
+                        </span>
+                      ) : c.cell(r)}
+                    </td>
+                  ))}
                   <td className="whitespace-nowrap px-4 py-2">
                     <div className="flex items-center justify-end gap-2">
                       <ActionGroup>
                         {voided || (frozen && !canVoid) ? null : frozen
-                          ? <ActionGroupItem label="แก้ไขเป็นฉบับใหม่ — ฉบับนี้จะถูกยกเลิก" short="แก้ไข" to={`/form/${r.formType}?revise=${r.id}`} icon={<FilePen size={15} />} />
-                          : <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
-                        <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
-                        <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
+                          ? <ActionGroupItem label="แก้ไขเป็นฉบับใหม่ — ฉบับนี้จะถูกยกเลิก" to={`/form/${r.formType}?revise=${r.id}`} icon={<FilePen size={15} />} />
+                          : <ActionGroupItem label="แก้ไขเอกสาร" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
+                        <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
+                        <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
                       </ActionGroup>
                       {primary
                         ? <PrimaryAction label="เซ็นเอง หรือส่งให้คนอื่นเซ็น" short="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Signature size={15} />} />
@@ -176,9 +204,23 @@ export default function HistoryPage() {
                     </div>
                   </td>
                 </tr>
+                {showing && older.map((o, i) => (
+                  <tr key={o.id} className="bg-stone-50/70">
+                    <td colSpan={shown.length + 1} className="px-4 py-2">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-6 text-xs text-stone-500">
+                        <span className="text-stone-400">{i === older.length - 1 ? 'ฉบับแรก' : `ฉบับก่อนหน้า ${older.length - i}`}</span>
+                        <span className="font-mono text-[13px] line-through decoration-stone-400">{o.docNumber}</span>
+                        <span>{formatDate(o.createdAt)}</span>
+                        {o.voided?.reason && <span className="truncate" title={o.voided.reason}>เหตุผล: {o.voided.reason}</span>}
+                        <ActionGroupItem label={`ดูเอกสารฉบับ ${o.docNumber}`} to={`/submission/${o.id}/preview`} icon={<Printer size={15} />} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                </Fragment>
               )
             })}
-            {filtered.length === 0 && (
+            {chains.length === 0 && (
               <tr>
                 <td colSpan={shown.length + 1} className={ui.emptyCell}>
                   {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}

@@ -13,7 +13,7 @@ import type { FieldOption, OptionField } from '../../data/fieldOptions'
 
 type Usage = Record<OptionField, Map<string, number>>
 type Sort = 'name' | 'usage'
-const NO_USAGE: Usage = { department: new Map(), position: new Map() }
+const NO_USAGE: Usage = { department: new Map(), position: new Map(), docStatus: new Map() }
 
 function writeError(e: unknown): string {
   if ((e as { code?: string } | null)?.code === '23505') return 'มีตัวเลือกนี้อยู่แล้ว'

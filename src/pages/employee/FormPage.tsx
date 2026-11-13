@@ -22,6 +22,7 @@ import OwnSignatureToggle from '../../components/OwnSignatureToggle'
 import { Spinner } from '../../components/Spinner'
 import { formatDateTime } from '../../shared/date'
 import { clearFormDraft, draftStillCurrent, formDraftKey, readFormDraft, writeFormDraft } from '../../shared/formDraft'
+import { reviseDocNumber } from '../../shared/docNumber'
 
 // The form's content as one comparable string — a draft is whatever differs
 // from what the form held when it finished loading.
@@ -169,7 +170,7 @@ export default function FormPage() {
     // Why the original is being replaced — kept on it as it is cancelled.
     let reviseReason = ''
     if (revising) {
-      const typed = await uiPrompt(`เมื่อบันทึก จะได้เอกสารเลขที่ใหม่ และ ${revising.docNumber} จะขึ้นว่า "ยกเลิก"`, {
+      const typed = await uiPrompt(`เมื่อบันทึก จะได้เอกสารเลขที่ ${reviseDocNumber(revising.docNumber)} และ ${revising.docNumber} จะขึ้นว่า "ยกเลิก" — ยังเปิดดูฉบับเดิมได้จากหน้าประวัติ`, {
         title: 'เหตุผลที่แก้ไข', placeholder: 'เช่น กรอกยอดผิด', confirmText: 'บันทึกฉบับใหม่', cancelText: 'กลับไปแก้ต่อ',
       })
       if (typed === null) return
@@ -267,7 +268,10 @@ export default function FormPage() {
         const created = await createSubmission({
           formType: settings.formType, header, items, totals,
           createdBy: profile!.uid, createdByEmployeeId: profile!.employeeId,
-        }, settings.formCode || '', editor)
+          // Correcting a signed document: the new one carries that document's
+          // number with the round of correction (…-R1), so the two read as one
+          // document put right rather than two claims.
+        }, settings.formCode || '', editor, revising ? reviseDocNumber(revising.docNumber) : undefined)
         subId = created.id
         settleDraft()
         setSavedId(created.id); setDocNumber(created.docNumber); setCreatedAt(created.createdAt || Date.now())
@@ -393,7 +397,7 @@ export default function FormPage() {
           <div className="flex items-start gap-2 rounded-lg border border-clay-200 bg-clay-50 px-4 py-3 text-sm text-clay-800">
             <FilePen size={16} className="mt-0.5 shrink-0" />
             <span>
-              กำลังแก้ไข <span className="font-mono font-medium">{revising.docNumber}</span> เป็นฉบับใหม่ — กด “บันทึกและพิมพ์” แล้วจะได้เลขที่ใหม่
+              กำลังแก้ไข <span className="font-mono font-medium">{revising.docNumber}</span> เป็นฉบับแก้ไข — กด “บันทึกและพิมพ์” แล้วจะได้เลขที่ <span className="font-mono font-medium">{reviseDocNumber(revising.docNumber)}</span>
               และ {revising.docNumber} จะขึ้นว่า “ยกเลิก” (ยังเก็บไว้ดูได้) · ไฟล์แนบเดิมติดมาด้วย
             </span>
           </div>
@@ -464,7 +468,7 @@ export default function FormPage() {
         </fieldset>
       </div>
       <div className={showPreview ? '' : 'hidden print:block'}>
-        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sheetSigs} voided={!!voided} createdAt={createdAt ?? Date.now()} />
+        <ExpenseClaimPreview company={company} header={header} items={items} docNumber={docNumber} settings={settings} signatures={sheetSigs} voided={!!voided} replacedBy={voided?.replacedByNumber} createdAt={createdAt ?? Date.now()} />
       </div>
       {!frozen && isMine && requesterBlock && (
         <div className="no-print mt-4">

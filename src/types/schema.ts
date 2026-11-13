@@ -315,6 +315,9 @@ export interface Submission {
   attachments?: Attachment[]         // files attached to this document (stored in the 'attachments' bucket)
   voided?: VoidInfo | null           // cancelled — kept as a record, nothing more to do with it
   replaces?: { id: string; docNumber: string } | null  // the cancelled document this one corrects
+  // A note the admin puts on a document — เอกสารผิด, ไม่ได้ใช้, whatever the
+  // office decides. It says nothing to the system: nothing is locked by it.
+  docStatus?: string | null
 }
 
 // A document as the lists load it: no item rows or attachments, and its

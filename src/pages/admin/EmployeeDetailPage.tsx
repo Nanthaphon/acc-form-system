@@ -188,8 +188,8 @@ export default function EmployeeDetailPage() {
                   <td className="whitespace-nowrap px-4 py-2">
                     <div className="flex items-center justify-end gap-2">
                       <ActionGroup>
-                        {!r.voided && !isSigned(r) && <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
-                        <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
+                        {!r.voided && !isSigned(r) && <ActionGroupItem label="แก้ไขเอกสาร" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
+                        <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
                       </ActionGroup>
                       <RowMenu
                         items={[{ label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDeleteSub(r), danger: true }]}

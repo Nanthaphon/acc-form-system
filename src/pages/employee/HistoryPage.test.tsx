@@ -34,20 +34,26 @@ const rowOf = async (docNumber: string) => (await screen.findByText(docNumber)).
 const show = () => render(<MemoryRouter><HistoryPage /></MemoryRouter>)
 
 describe('HistoryPage — cancelled and corrected documents', () => {
-  it('tells the cancelled copy from its correction', async () => {
+  // The cancelled copy is folded into the document that replaced it, so the
+  // list shows one line per claim rather than the wrong one beside the right one.
+  it('folds the cancelled copy under its correction', async () => {
     show()
+    expect(await screen.findByText('EX-0002')).toBeInTheDocument()
+    expect(screen.queryByText('EX-0001')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /ดูฉบับก่อนหน้า/ }))
     const old = await rowOf('EX-0001')
-    expect(within(old).getByText('ยกเลิก')).toBeInTheDocument()
-    expect(within(old).getByText('แก้เป็น EX-0002')).toBeInTheDocument()
+    expect(within(old).getByText(/กรอกยอดผิด/)).toBeInTheDocument()
+    expect(within(old).getByRole('link', { name: /ดูเอกสารฉบับ EX-0001/ })).toHaveAttribute('href', '/submission/a/preview')
     expect(within(await rowOf('EX-0002')).getByText('แทน EX-0001')).toBeInTheDocument()
   })
 
-  it('offers nothing but viewing and copying on a cancelled document', async () => {
+  it('offers nothing but looking at a cancelled copy', async () => {
     show()
+    fireEvent.click(await screen.findByRole('button', { name: /ดูฉบับก่อนหน้า/ }))
     const old = await rowOf('EX-0001')
     expect(within(old).queryByRole('link', { name: /แก้ไข/ })).toBeNull()
     expect(within(old).queryByRole('button', { name: /ตัวเลือกเพิ่มเติม/ })).toBeNull()
-    expect(within(old).getByRole('link', { name: /พิมพ์/ })).toBeInTheDocument()
+    expect(within(old).getByRole('link', { name: /ดูเอกสารฉบับ/ })).toBeInTheDocument()
   })
 
   // Signed by someone else, it cannot change: แก้ไข makes the corrected copy.

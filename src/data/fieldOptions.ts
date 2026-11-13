@@ -4,11 +4,13 @@ import { supabase } from '../lib/supabase'
 // no values stays free text, so a list only ever narrows a field once an
 // admin has decided it should (supabase/2026-09-25-field-options.sql).
 
-export type OptionField = 'department' | 'position'
+export type OptionField = 'department' | 'position' | 'docStatus'
 
 export const OPTION_FIELDS: { key: OptionField; label: string }[] = [
   { key: 'department', label: 'แผนก' },
   { key: 'position', label: 'ตำแหน่ง' },
+  // The words the admin may put on a document in the history pages.
+  { key: 'docStatus', label: 'สถานะเอกสาร' },
 ]
 
 export interface FieldOption {
@@ -21,7 +23,7 @@ export interface FieldOption {
 
 export type OptionLists = Record<OptionField, string[]>
 
-export const NO_OPTIONS: OptionLists = { department: [], position: [] }
+export const NO_OPTIONS: OptionLists = { department: [], position: [], docStatus: [] }
 
 /** True when the error only means the migration above has not been run yet. */
 export function isMissingTable(e: unknown): boolean {
@@ -47,7 +49,7 @@ export async function listFieldOptions(): Promise<FieldOption[]> {
 export async function loadOptionLists(): Promise<OptionLists> {
   try {
     const rows = await listFieldOptions()
-    const lists: OptionLists = { department: [], position: [] }
+    const lists: OptionLists = { department: [], position: [], docStatus: [] }
     for (const r of rows) lists[r.field]?.push(r.value)
     return lists
   } catch {
@@ -77,7 +79,7 @@ export async function deleteFieldOption(id: string): Promise<void> {
  *  in use but not on the list, which is how an admin finds what to add. */
 export async function fieldUsage(): Promise<Record<OptionField, Map<string, number>>> {
   const { data } = await supabase.from('profiles').select('department,position')
-  const usage: Record<OptionField, Map<string, number>> = { department: new Map(), position: new Map() }
+  const usage: Record<OptionField, Map<string, number>> = { department: new Map(), position: new Map(), docStatus: new Map() }
   for (const p of (data ?? []) as Record<OptionField, string | null>[]) {
     for (const { key } of OPTION_FIELDS) {
       const v = (p[key] ?? '').trim()

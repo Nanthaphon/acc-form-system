@@ -11,7 +11,7 @@ import type { AutoValues } from '../../shared/bodyTemplate'
 import { FEATURES } from '../../shared/features'
 import { textSizeScale } from '../../shared/textSize'
 
-interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[]; voided?: boolean
+interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[]; voided?: boolean; replacedBy?: string | null
   /** When the document was made — printed beside the form code. Left out, no date is printed. */
   createdAt?: number | null }
 
@@ -60,7 +60,7 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
   )
 }
 
-export default function ExpenseClaimPreview({ company, header: given, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures, voided, createdAt }: Props) {
+export default function ExpenseClaimPreview({ company, header: given, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures, voided, replacedBy, createdAt }: Props) {
   const cols = settings.columns
   // Withholding worked out in the table's own columns is not taken off again below it.
   const header = taxHeader(cols, given)
@@ -187,8 +187,13 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
             {/* A cancelled document still prints — as a record — but can never
                 pass for a live claim. */}
             {voided && (
-              <div aria-hidden className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
-                <span className="-rotate-[30deg] select-none whitespace-nowrap rounded-lg border-[6px] border-brick-600/45 px-10 py-2 text-[96px] font-bold leading-none text-brick-600/45">ยกเลิก</span>
+              <div aria-hidden className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 overflow-hidden">
+                {/* Faint enough to read the document through, large enough that
+                    a photocopy of it still says so. */}
+                <span className="-rotate-[30deg] select-none whitespace-nowrap rounded-lg border-[6px] border-brick-600/25 px-10 py-2 text-[104px] font-bold leading-none text-brick-600/25">ยกเลิก</span>
+                <span className="-rotate-[30deg] max-w-[62%] select-none text-center text-[22px] font-semibold leading-snug text-brick-600/30">
+                  เอกสารฉบับนี้ไม่ใช้แล้ว{replacedBy ? ` — ใช้ฉบับ ${replacedBy} แทน` : ''}
+                </span>
               </div>
             )}
             {/* Header band */}

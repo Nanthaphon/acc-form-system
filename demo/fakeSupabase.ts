@@ -240,6 +240,24 @@ const db: Record<string, any[]> = {
         signedBy('requester', 'ผู้เบิก', people.anucha, SIG_ANUCHA, '2026-09-20T10:02'),
         signedBy('head', 'หัวหน้าแผนก', people.me, SIG_ME, '2026-09-21T09:15'),
       ] }),
+    sub('s-rev0', 'f-claim', 'GAC69-005-202609-0006',
+      claimHeader('ค่าเดินทางตรวจงานสาขาระยอง (ยอดผิด)', '2026-09-12', people.anucha),
+      claimItems([['2026-09-10', 'PC-0410', 'สมหมาย ใจงาม', 2, 1500, 'ไทยพาณิชย์', 'J2609-012']]),
+      totalsOf(3000, 'สามพันบาทถ้วน'), 'u-anucha', '2026-09-12T09:10',
+      { signatures: [
+          signedBy('requester', 'ผู้เบิก', people.anucha, SIG_ANUCHA, '2026-09-12T09:12'),
+          signedBy('head', 'หัวหน้าแผนก', people.me, SIG_ME, '2026-09-12T15:40'),
+        ],
+        voided: {
+          at: t('2026-09-13T09:00'), byUid: 'u-anucha', byName: 'อนุชา พรหมมา', reason: 'กรอกจำนวนวันผิด (ไปจริง 3 วัน)',
+          pending: [], replacedById: 's-rev1', replacedByNumber: 'GAC69-005-202609-0006-R1',
+        } }),
+    sub('s-rev1', 'f-claim', 'GAC69-005-202609-0006-R1',
+      claimHeader('ค่าเดินทางตรวจงานสาขาระยอง', '2026-09-13', people.anucha),
+      claimItems([['2026-09-10', 'PC-0410', 'สมหมาย ใจงาม', 3, 1500, 'ไทยพาณิชย์', 'J2609-012']]),
+      totalsOf(4500, 'สี่พันห้าร้อยบาทถ้วน'), 'u-anucha', '2026-09-13T09:05',
+      { replaces: { id: 's-rev0', docNumber: 'GAC69-005-202609-0006' },
+        signatures: [signedBy('requester', 'ผู้เบิก', people.anucha, SIG_ANUCHA, '2026-09-13T09:06')] }),
     sub('s-7', 'f-receipt', 'GACK769-007-202610-0001',
       { subject: '', categories: [], companyId: 'globe', firstName: 'มาลี', lastName: 'ศรีสุข', position: 'เจ้าหน้าที่บัญชี', job: 'J2610-002',
         fields: { docDate: '2026-10-04', 'tpl:ตั้งแต่วันที่': '2026-10-03', 'tpl:ถึงวันที่': '2026-10-03' } },
@@ -277,6 +295,9 @@ const db: Record<string, any[]> = {
     { id: 'o2', field: 'department', value: 'Accounting', sortOrder: 2 },
     { id: 'o3', field: 'position', value: 'Field Supervisor', sortOrder: 1 },
     { id: 'o4', field: 'position', value: 'เจ้าหน้าที่ประสานงาน', sortOrder: 2 },
+    { id: 'o5', field: 'docStatus', value: 'เอกสารผิด', sortOrder: 1 },
+    { id: 'o6', field: 'docStatus', value: 'ไม่ได้ใช้', sortOrder: 2 },
+    { id: 'o7', field: 'docStatus', value: 'รอตรวจสอบ', sortOrder: 3 },
   ],
 }
 // Version history: every document has its first version; s-1 was edited once.
@@ -448,6 +469,11 @@ const rpc = async (name: string, args: any) => {
         s.voided = null
         for (const x of db.submissions) if (x.replaces?.id === s.id) x.replaces = null
       }
+      return { data: null, error: null }
+    }
+    case 'set_doc_status': {
+      const s = db.submissions.find(x => x.id === args.sub_id)
+      if (s) s.docStatus = (args.status ?? '').trim() || null
       return { data: null, error: null }
     }
     case 'support_mark_read': {

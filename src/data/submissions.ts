@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Submission, SubmissionSummary, SubmissionStatus, DocSignature, SignatureBlock } from '../types/schema'
-import { formatDocNumber } from '../shared/docNumber'
+import { formatDocNumber, reviseDocNumber } from '../shared/docNumber'
 import { addVersion } from './versions'
 import { deleteAttachmentFiles } from './attachments'
 import { notifyPendingSignChanged } from '../shared/pendingSignBus'
@@ -10,14 +10,33 @@ export interface Editor { uid: string; name: string }
 export type SubmissionDraft = Omit<Submission,
   'id' | 'docNumber' | 'createdAt' | 'updatedAt' | 'printCount' | 'lastPrintedAt'>
 
-export async function createSubmission(dr: SubmissionDraft, docPrefix: string, editor?: Editor): Promise<Submission> {
+// Is this number already on a document? Only a correction asks, and only to
+// make sure the round it is about to take is free.
+async function docNumberTaken(docNumber: string): Promise<boolean> {
+  const { data } = await supabase.from('submissions').select('id').eq('docNumber', docNumber).limit(1)
+  return (data?.length ?? 0) > 0
+}
+
+// `keepNumber` is the number a correction is to carry — the replaced
+// document's, with its round of correction (…-R1). It spends none of the
+// month's running numbers: the corrected document is the same document put
+// right, not another claim.
+export async function createSubmission(dr: SubmissionDraft, docPrefix: string, editor?: Editor, keepNumber?: string): Promise<Submission> {
   const now = Date.now()
   const d = new Date(now)
-  // Reset the running number each month: use a per-form, per-month counter key.
-  const period = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
-  const { data: seq, error } = await supabase.rpc('next_doc_number', { form_type: `${dr.formType}:${period}` })
-  if (error) throw error
-  const docNumber = formatDocNumber(docPrefix, d, seq as number)
+  let docNumber: string
+  if (keepNumber) {
+    docNumber = keepNumber
+    // Corrected twice from the same original (two tabs, a failed save): take
+    // the next round rather than put the number on two documents.
+    for (let i = 0; i < 20 && await docNumberTaken(docNumber); i++) docNumber = reviseDocNumber(docNumber)
+  } else {
+    // Reset the running number each month: use a per-form, per-month counter key.
+    const period = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
+    const { data: seq, error } = await supabase.rpc('next_doc_number', { form_type: `${dr.formType}:${period}` })
+    if (error) throw error
+    docNumber = formatDocNumber(docPrefix, d, seq as number)
+  }
   const row = { ...dr, docNumber, createdAt: now, updatedAt: now, printCount: 0, lastPrintedAt: null }
   const { data, error: e2 } = await supabase.from('submissions').insert(row).select().single()
   if (e2) throw e2
@@ -145,6 +164,17 @@ export async function voidSubmission(subId: string, reason: string, replacedBy?:
   if (error) throw voidError(error)
   notifyPendingSignChanged() // anyone still asked to sign it no longer is
 }
+// The admin's own note on a document (เอกสารผิด / ไม่ได้ใช้ / …), or null to
+// take it off. It marks the document on the lists and changes nothing else.
+export async function setDocStatus(subId: string, status: string | null): Promise<void> {
+  const { error } = await supabase.rpc('set_doc_status', { sub_id: subId, status })
+  if (error) {
+    const missing = error.code === 'PGRST202' || error.code === '42883' || /could not find the function/i.test(error.message ?? '')
+    if (missing) { hasDocStatus = false; throw new Error('ยังตั้งสถานะไม่ได้ — ผู้ดูแลระบบต้องรันสคริปต์ supabase/2026-11-13-doc-status.sql ก่อน') }
+    throw error
+  }
+}
+
 // Cancelled by mistake: an admin brings it back.
 export async function unvoidSubmission(subId: string): Promise<void> {
   const { error } = await supabase.rpc('unvoid_submission', { sub_id: subId })
@@ -175,16 +205,21 @@ export function voidingAvailable(): boolean { return hasVoidCols }
 // returns the array without the images; until that SQL has been run, fall back
 // to the full column.
 let hasLightSigs = true
+// docStatus arrives with supabase/2026-11-13-doc-status.sql; until it is run
+// the lists load without it and the screens offer no way to set one.
+let hasDocStatus = true
+export function docStatusAvailable(): boolean { return hasDocStatus }
 
 function listQuery(cols: string) { return supabase.from('submissions').select(cols) }
 type ListQuery = ReturnType<typeof listQuery>
 
 async function listRows(refine: (q: ListQuery) => ListQuery): Promise<SubmissionSummary[]> {
   for (;;) {
-    const cols = `${LIST_COLS}${hasVoidCols ? ',voided,replaces' : ''},signatures${hasLightSigs ? ':signatures_light' : ''}`
+    const cols = `${LIST_COLS}${hasVoidCols ? ',voided,replaces' : ''}${hasDocStatus ? ',docStatus' : ''},signatures${hasLightSigs ? ':signatures_light' : ''}`
     const { data, error } = await refine(listQuery(cols))
     if (!error) return (data ?? []) as unknown as SubmissionSummary[]
     // A column or function not installed yet: drop it and ask again.
+    if (error.code === '42703' && /docStatus/i.test(error.message ?? '') && hasDocStatus) { hasDocStatus = false; continue }
     if (error.code === '42703' && /void|replaces/i.test(error.message ?? '') && hasVoidCols) { hasVoidCols = false; continue }
     if (error.code === '42703' && hasLightSigs) { hasLightSigs = false; continue }
     if (error.code === '42703' && hasVoidCols) { hasVoidCols = false; continue }

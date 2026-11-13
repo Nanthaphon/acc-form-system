@@ -356,7 +356,7 @@ describe('correcting a document others have signed', () => {
   it('makes a new document with the receipts, and cancels the original in its favour', async () => {
     vi.mocked(createSubmission).mockResolvedValueOnce({ id: 'new1', docNumber: 'EX-0008' } as Submission)
     openRevise()
-    expect(await screen.findByText(/เป็นฉบับใหม่/)).toBeInTheDocument()
+    expect(await screen.findByText(/เป็นฉบับแก้ไข/)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByDisplayValue('ค่าเดินทาง')).not.toBeDisabled())
     fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
     await waitFor(() => expect(print).toHaveBeenCalledTimes(1))
@@ -372,7 +372,7 @@ describe('correcting a document others have signed', () => {
     vi.mocked(createSubmission).mockResolvedValueOnce({ id: 'new1', docNumber: 'EX-0008' } as Submission)
     vi.mocked(voidSubmission).mockRejectedValueOnce(new Error('network'))
     openRevise()
-    await screen.findByText(/เป็นฉบับใหม่/)
+    await screen.findByText(/เป็นฉบับแก้ไข/)
     await waitFor(() => expect(screen.getByDisplayValue('ค่าเดินทาง')).not.toBeDisabled())
     fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
     await waitFor(() => expect(uiAlert).toHaveBeenCalledWith(expect.stringContaining('ลองใหม่'), expect.objectContaining({ title: 'ยกเลิกฉบับเดิมไม่สำเร็จ' })))
@@ -386,7 +386,7 @@ describe('correcting a document others have signed', () => {
   it('saves nothing until a reason is given', async () => {
     uiPrompt.mockResolvedValueOnce(null)
     openRevise()
-    await screen.findByText(/เป็นฉบับใหม่/)
+    await screen.findByText(/เป็นฉบับแก้ไข/)
     fireEvent.click(screen.getByRole('button', { name: /บันทึกและพิมพ์/ }))
     await waitFor(() => expect(uiPrompt).toHaveBeenCalled())
     expect(createSubmission).not.toHaveBeenCalled()

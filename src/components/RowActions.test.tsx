@@ -5,13 +5,14 @@ import { Pencil, Send, Trash2, RotateCcw } from 'lucide-react'
 import { ActionGroup, ActionGroupItem, PrimaryAction, RowMenu } from './RowActions'
 
 describe('ActionGroup', () => {
-  it('joins the everyday actions, each a labelled link', () => {
+  // Icons alone: the words are the tooltip and the label a screen reader reads.
+  it('joins the everyday actions as icons that still say what they do', () => {
     render(<MemoryRouter><ActionGroup>
-      <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to="/submission/1" icon={<Pencil />} />
+      <ActionGroupItem label="แก้ไขเอกสาร" to="/submission/1" icon={<Pencil />} />
     </ActionGroup></MemoryRouter>)
     const edit = screen.getByRole('link', { name: 'แก้ไขเอกสาร' })
     expect(edit).toHaveAttribute('href', '/submission/1')
-    expect(edit).toHaveTextContent('แก้ไข')
+    expect(edit).toHaveTextContent('')
   })
 })
 

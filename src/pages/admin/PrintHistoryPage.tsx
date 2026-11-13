@@ -1,10 +1,13 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArchiveRestore, Ban, Copy, Pencil, Printer, Trash2 } from 'lucide-react'
+import { ArchiveRestore, Ban, ChevronDown, ChevronRight, Copy, FilePen, Pencil, Printer, Trash2 } from 'lucide-react'
 import { ActionGroup, ActionGroupItem, RowMenu } from '../../components/RowActions'
 import type { RowMenuItem } from '../../components/RowActions'
-import { listAllSubmissions, submissionAmount, deleteSubmission, isSigned, voidingAvailable } from '../../data/submissions'
+import { listAllSubmissions, submissionAmount, deleteSubmission, isSigned, voidingAvailable, docStatusAvailable } from '../../data/submissions'
+import { loadOptionLists } from '../../data/fieldOptions'
+import DocStatusPicker from '../../components/DocStatusPicker'
+import { chainRows, chainLength } from '../../shared/revisionChain'
 import StatusBadge from '../../components/StatusBadge'
 import DocNumberCell from '../../components/DocNumberCell'
 import { askAndUnvoid, askAndVoid } from '../../components/voidDocument'
@@ -36,6 +39,8 @@ export default function PrintHistoryPage() {
   const [groups, setGroups] = useState<FormGroup[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
+  const [statuses, setStatuses] = useState<string[]>([])
+  const [open, setOpen] = useState<Set<string>>(new Set())
   const { hidden, toggle, reset } = useHiddenColumns('cols:printHistory')
 
   function loadRows() { listAllSubmissions().then(setRows) }
@@ -45,7 +50,16 @@ export default function PrintHistoryPage() {
     listForms().then(setForms)
     listGroups().then(setGroups)
     getVersionCounts().then(setVcounts)
+    loadOptionLists().then(l => setStatuses(l.docStatus))
   }, [])
+
+  // Keep the row in hand rather than reloading the whole list for one word.
+  function statusChanged(id: string, status: string | null) {
+    setRows(rs => rs.map(r => (r.id === id ? { ...r, docStatus: status } : r)))
+  }
+  function toggleOpen(id: string) {
+    setOpen(o => { const n = new Set(o); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
 
   async function onDelete(r: SubmissionSummary) {
     if (!(await uiConfirm(`ลบถาวร ยกเลิกไม่ได้`, { title: `ลบเอกสาร "${r.docNumber || 'ไม่มีเลขที่'}" ?`, tone: 'danger', confirmText: 'ลบ' }))) return
@@ -64,6 +78,9 @@ export default function PrintHistoryPage() {
 
   const formGroup = (ft: string) => forms.find(f => f.formType === ft)?.groupId ?? groups[0]?.id
   const filtered = applyFilters(rows, filters, { formGroup, formName, groups: groups })
+  // Every round of a corrected document is one line, with the rounds before it
+  // folded underneath — the wrong copies no longer sit between the right ones.
+  const chains = chainRows(filtered, rows)
 
   const columns: Column[] = [
     {
@@ -85,6 +102,7 @@ export default function PrintHistoryPage() {
         <span className="inline-flex items-center gap-2">
           <StatusBadge sub={r} />
           {editLabel(r, vcounts) && <span className="text-xs text-ochre-700" title="จำนวนครั้งที่แก้ไขหลังบันทึก">✎ {editLabel(r, vcounts)}</span>}
+          {docStatusAvailable() && <DocStatusPicker sub={r} options={statuses} onChanged={st => statusChanged(r.id, st)} />}
         </span>
       ),
     },
@@ -118,7 +136,7 @@ export default function PrintHistoryPage() {
             </tr>
           </thead>
           <tbody className={ui.tbody}>
-            {filtered.map(r => {
+            {chains.map(({ latest: r, older }) => {
               // The everyday actions side by side; cancelling and deleting wait behind ⋯,
               // as on ประวัติ — a red ลบ on every line drew the eye to the one to avoid.
               const more: RowMenuItem[] = [
@@ -127,24 +145,67 @@ export default function PrintHistoryPage() {
                   : voidingAvailable() ? [{ label: 'ยกเลิกเอกสาร', icon: <Ban size={16} />, onClick: async () => { if (await askAndVoid(r)) loadRows() }, danger: true }] : []),
                 { label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDelete(r), danger: true },
               ]
+              const showing = open.has(r.id)
+              // A document others have signed is no longer changed in place: it
+              // is corrected by a new one in its stead, carrying its number and
+              // the round of correction (…-R1).
+              const corrects = isSigned(r) && voidingAvailable()
               return (
-                <tr key={r.id} className={ui.tr}>
-                  {shown.map(c => <td key={c.key} className={`${ui.td} ${c.tdCls}`}>{c.cell(r)}</td>)}
-                  <td className="whitespace-nowrap px-4 py-2">
-                    <div className="flex items-center justify-end gap-2">
-                      <ActionGroup>
-                        {/* Signed or cancelled: no editing — "พิมพ์" opens the document. */}
-                        {!r.voided && !isSigned(r) && <ActionGroupItem label="แก้ไขเอกสาร" short="แก้ไข" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
-                        <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" short="พิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
-                        <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" short="คัดลอก" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
-                      </ActionGroup>
-                      <RowMenu items={more} label={`ตัวเลือกเพิ่มเติม ${r.docNumber}`} />
-                    </div>
-                  </td>
-                </tr>
+                <Fragment key={r.id}>
+                  <tr className={ui.tr}>
+                    {shown.map((c, i) => (
+                      <td key={c.key} className={`${ui.td} ${c.tdCls}`}>
+                        {i === 0 && older.length > 0 ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => toggleOpen(r.id)}
+                              aria-expanded={showing}
+                              title={showing ? 'ซ่อนฉบับก่อนหน้า' : `ดูฉบับก่อนหน้า ${older.length} ฉบับ`}
+                              aria-label={showing ? 'ซ่อนฉบับก่อนหน้า' : `ดูฉบับก่อนหน้า ${older.length} ฉบับ`}
+                              className="inline-flex h-6 items-center gap-0.5 rounded-md border border-stone-200 bg-white pl-0.5 pr-1.5 text-[11px] font-medium text-stone-600 transition-colors hover:border-clay-300 hover:text-clay-700"
+                            >
+                              {showing ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                              {chainLength({ latest: r, older })} ฉบับ
+                            </button>
+                            {c.cell(r)}
+                          </span>
+                        ) : c.cell(r)}
+                      </td>
+                    ))}
+                    <td className="whitespace-nowrap px-4 py-2">
+                      <div className="flex items-center justify-end gap-2">
+                        <ActionGroup>
+                          {/* Cancelled: nothing to change. Signed: corrected as a new round. */}
+                          {!r.voided && (corrects
+                            ? <ActionGroupItem label="แก้ไขเป็นฉบับแก้ไข (R) — ฉบับนี้จะถูกยกเลิก" to={`/form/${r.formType}?revise=${r.id}`} icon={<FilePen size={15} />} />
+                            : <ActionGroupItem label="แก้ไขเอกสาร" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />)}
+                          <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
+                          <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
+                        </ActionGroup>
+                        <RowMenu items={more} label={`ตัวเลือกเพิ่มเติม ${r.docNumber}`} />
+                      </div>
+                    </td>
+                  </tr>
+                  {showing && older.map((o, i) => (
+                    <tr key={o.id} className="bg-stone-50/70">
+                      <td colSpan={shown.length + 1} className="px-4 py-2">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-6 text-xs text-stone-500">
+                          <span className="text-stone-400">{i === older.length - 1 ? 'ฉบับแรก' : `ฉบับก่อนหน้า ${older.length - i}`}</span>
+                          <span className="font-mono text-[13px] text-stone-500 line-through decoration-stone-400">{o.docNumber}</span>
+                          <StatusBadge sub={o} />
+                          <span>{formatDate(o.createdAt)}</span>
+                          <span className="tabular-nums">{formatMoney(submissionAmount(o))}</span>
+                          {o.voided?.reason && <span className="truncate" title={o.voided.reason}>เหตุผล: {o.voided.reason}</span>}
+                          <ActionGroupItem label={`ดูเอกสารฉบับ ${o.docNumber}`} to={`/submission/${o.id}/preview`} icon={<Printer size={15} />} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
               )
             })}
-            {filtered.length === 0 && (
+            {chains.length === 0 && (
               <tr>
                 <td colSpan={shown.length + 1} className={ui.emptyCell}>
                   {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
