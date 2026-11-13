@@ -9,7 +9,8 @@ React 18 + TS + Vite + Tailwind · Supabase (Postgres + RLS + RPC) · UI ภา�
 npm test          # vitest ทั้งชุด (~50 ไฟล์) — รันก่อน commit เสมอ
 npm run build     # tsc -b && vite build — รันก่อน commit เสมอ (จับ import ที่ไม่ได้ใช้)
 npm run dev       # เว็บจริง ฐานข้อมูลจริง (พอร์ต 5174)
-npm run dev:both  # เปิดระบบจริง (5174) + ระบบทดสอบ (5175) พร้อมกัน สลับด้วยการเปลี่ยนแท็บ
+npm run dev:both  # เปิดระบบจริง (5174) + ระบบทดสอบ cloud (5175) พร้อมกัน สลับด้วยการเปลี่ยนแท็บ
+npm run local:start  # ฐานข้อมูลจริงในเครื่อง (Supabase local บน Docker) แล้วเปิดด้วย npm run dev:local (5176)
 npm run dev:demo  # โหมดเดโม ข้อมูลสมมติ เก็บใน localStorage ของเบราว์เซอร์ (demo/fakeSupabase.ts, ?demo=admin|super|…)
 npm run staging:sql  # รวมไฟล์ supabase/*.sql เป็นไฟล์เดียว สำหรับตั้งฐานข้อมูลทดสอบใหม่
 npm run lint      # oxlint

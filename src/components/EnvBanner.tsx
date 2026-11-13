@@ -8,6 +8,7 @@ const ENV = (import.meta.env.VITE_APP_ENV as string | undefined) ?? ''
 const TEXT: Record<string, string> = {
   demo: 'โหมดเดโม — ข้อมูลสมมติ เก็บไว้ในเบราว์เซอร์นี้เท่านั้น',
   staging: 'ระบบทดสอบ — ไม่ใช่ข้อมูลจริง',
+  local: 'ฐานข้อมูลในเครื่อง — ไม่ใช่ข้อมูลจริง',
 }
 
 // The demo keeps what is typed into it (demo/fakeSupabase), so a trial can run

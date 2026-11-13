@@ -29,3 +29,7 @@ supabase/_staging-setup.generated.sql
 # ไฟล์สำรองฐานข้อมูลจริง (มีข้อมูลพนักงานและเอกสาร) และ URI ที่มีรหัสผ่าน
 backups/
 .env.backup.local
+.env.localdb
+supabase/.temp
+supabase/.branches
+supabase/migrations/00000000000000_full_schema.sql

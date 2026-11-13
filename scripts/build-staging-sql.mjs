@@ -13,14 +13,17 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const DIR = 'supabase'
-const OUT = path.join(DIR, '_staging-setup.generated.sql')
+// --out <ไฟล์> เพื่อเขียนที่อื่น (ใช้ตอนสร้าง migration ของฐานข้อมูลในเครื่อง)
+const argOut = process.argv.indexOf('--out')
+const OUT = argOut > -1 && process.argv[argOut + 1] ? process.argv[argOut + 1] : path.join(DIR, '_staging-setup.generated.sql')
 
 // ของเก่าที่ถูกแทนที่ไปแล้ว และตัวถอนการติดตั้ง — ไม่ต้องรันบนฐานข้อมูลใหม่
-const SKIP = new Set(['teardown-approval.sql', path.basename(OUT)])
+const SKIP = new Set(['teardown-approval.sql', 'seed.sql', path.basename(OUT)])
 // ต้องมาก่อนไฟล์ตามวันที่ ตามลำดับที่ระบบนี้โตขึ้นมาจริง ๆ
 const FIRST = ['schema.sql', 'approval-migration.sql', 'signature-system.sql']
 
-const all = fs.readdirSync(DIR).filter(f => f.endsWith('.sql') && !SKIP.has(f))
+// ไฟล์ขึ้นต้นด้วย _ คือไฟล์ที่สคริปต์นี้สร้างเอง ไม่ใช่ต้นทาง
+const all = fs.readdirSync(DIR).filter(f => f.endsWith('.sql') && !f.startsWith('_') && !SKIP.has(f))
 const dated = all.filter(f => /^\d{4}-\d{2}-\d{2}/.test(f)).sort()
 const seeds = all.filter(f => f.startsWith('seed-')).sort()
 const order = [...FIRST.filter(f => all.includes(f)), ...dated, ...seeds]
@@ -43,6 +46,7 @@ const body = order.map(f => {
   return `${line}\n-- supabase/${f}\n${line}\n${fs.readFileSync(path.join(DIR, f), 'utf8').trimEnd()}\n`
 }).join('\n')
 
+fs.mkdirSync(path.dirname(OUT), { recursive: true })
 fs.writeFileSync(OUT, header + body)
 const kb = Math.round(fs.statSync(OUT).size / 1024)
 console.log(`เขียนแล้ว: ${OUT} (${order.length} ไฟล์ · ${kb} KB)`)
