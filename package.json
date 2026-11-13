@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "staging:sql": "node scripts/build-staging-sql.mjs",
-    "dev:both": "node scripts/dev-both.mjs"
+    "dev:both": "node scripts/dev-both.mjs",
+    "backup": "node scripts/backup.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

@@ -25,3 +25,7 @@ dist-ssr
 
 # ไฟล์ SQL รวมสำหรับตั้งฐานข้อมูลทดสอบ — สร้างใหม่ได้เสมอด้วย npm run staging:sql
 supabase/_staging-setup.generated.sql
+
+# ไฟล์สำรองฐานข้อมูลจริง (มีข้อมูลพนักงานและเอกสาร) และ URI ที่มีรหัสผ่าน
+backups/
+.env.backup.local
