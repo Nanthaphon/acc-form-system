@@ -4,15 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 5174 --strictPort",
     "dev:demo": "vite --config demo/vite.config.mjs",
-    "dev:staging": "vite --mode staging",
+    "dev:staging": "vite --mode staging --port 5175 --strictPort",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "staging:sql": "node scripts/build-staging-sql.mjs"
+    "staging:sql": "node scripts/build-staging-sql.mjs",
+    "dev:both": "node scripts/dev-both.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

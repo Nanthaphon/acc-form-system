@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { assertStagingIsSeparate } from './envGuard'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const anon = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -7,10 +8,8 @@ const anon = import.meta.env.VITE_SUPABASE_ANON_KEY
 // .env.local — the real database — under a page that believes it is a test.
 // The same goes for a staging file that sets the flag but leaves out (or
 // mistypes) the URL: Vite then takes the real one from .env.local.
-const PRODUCTION_REF = 'wrujttmqawcvcrqqhcno'
-if (import.meta.env.MODE === 'staging' && (import.meta.env.VITE_APP_ENV !== 'staging' || String(url ?? '').includes(PRODUCTION_REF))) {
-  throw new Error('ยังไม่ได้ตั้งค่าระบบทดสอบ — คัดลอก .env.staging.example เป็น .env.staging.local แล้วใส่ URL และ key ของ project ทดสอบ (docs/environments.md)')
-}
+// It used to throw, which left a white page; envGuard says what to do instead.
+assertStagingIsSeparate(url, import.meta.env.VITE_APP_ENV, import.meta.env.MODE)
 
 export const supabase = createClient(url, anon)
 
