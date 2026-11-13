@@ -37,4 +37,5 @@ npm run lint      # oxlint
 - เพิ่ม/แก้ฟีเจอร์ที่ผู้ใช้เห็น → เขียนประกาศใน `announcements.ts` ด้วย
 - การพิมพ์คิดเป็นมิลลิเมตรจริง: พื้นที่ตารางบน A4 = 190 มม. · กระดาษสูง 276 มม. (`PRINT_TABLE_MM`, `PRINT_SHEET_MM`)
   ค่าคงที่ความสูงทั้งหมดวัดจากแผ่นจริง อย่าเดาเอง ถ้าจะแก้ให้วัดใหม่
+- ก่อนปล่อยขึ้นเว็บจริง: ทำตาม docs/release-checklist.md (branch แยก → CI เขียว → SQL ที่ staging ก่อน → สำรองข้อมูล → merge)
 - เอกสารเพิ่มเติม: `docs/environments.md` (เดโม/staging/จริง) · `docs/app-overview/README.md`

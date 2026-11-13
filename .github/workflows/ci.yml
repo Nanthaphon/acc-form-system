@@ -1,0 +1,40 @@
+# ตรวจงานอัตโนมัติทุกครั้งที่ push และทุก Pull Request
+#
+# ที่นี่คือด่านที่กันของเสียไม่ให้ขึ้นเว็บจริง: ถ้า lint / เทสต์ / build พัง
+# GitHub จะขึ้นกากบาทแดงให้เห็นก่อน merge เข้า main (ซึ่ง Vercel จะ deploy ทันที)
+#
+# ไม่มีความลับหรือ URL ฐานข้อมูลใด ๆ ในงานนี้ — build ใช้ค่าสมมติ เพราะแค่
+# ตรวจว่าโค้ดคอมไพล์ผ่าน ไม่ได้ต่อฐานข้อมูลจริง
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: ติดตั้ง dependency ตาม package-lock
+        run: npm ci
+
+      - name: ตรวจสไตล์โค้ด (oxlint)
+        run: npm run lint
+
+      - name: เทสต์ทั้งชุด (vitest)
+        run: npm test
+
+      - name: build (tsc + vite)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-key
