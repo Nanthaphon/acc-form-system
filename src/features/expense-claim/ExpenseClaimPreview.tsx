@@ -2,13 +2,13 @@ import type { Company, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } fro
 import { EXPENSE_CLAIM_DEFAULTS, formSignatureBlocks, seqColumnWidth, showSeqColumn } from '../../types/schema'
 import type { SignatureBlock as SigBlock, DocSignature } from '../../types/schema'
 import { isTextCol } from '../../types/schema'
-import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, taxBases, taxSummary, tickedRowCount, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM, ROW_VAT_KEY, taxHeader, taxSubtotal, whtInTable, whtNettedInTable } from './calc'
+import { computeRow, computeColumnTotals, grandTotal, paginateRows, printBodyMm, rowHasNumbers, rowHeightMm, rowLines, visibleColumns, printWidthsMm, retLines, whtLines, PRINT_TABLE_MM } from './calc'
+import { documentSummary } from './summary'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as money } from '../../shared/money'
 import { formatDate, formatIsoDate } from '../../shared/date'
 import { parseTemplate, formatTemplateValue, blankFor, autoValue } from '../../shared/bodyTemplate'
 import type { AutoValues } from '../../shared/bodyTemplate'
-import { FEATURES } from '../../shared/features'
 import { textSizeScale } from '../../shared/textSize'
 
 interface Props { company: Company | null; header: ExpenseHeader; items: ExpenseRow[]; docNumber: string; settings?: FormSettings; signatures?: DocSignature[]; voided?: boolean; replacedBy?: string | null
@@ -62,8 +62,8 @@ function SignatureBlock({ label, sig }: { label: string; sig?: DocSignature }) {
 
 export default function ExpenseClaimPreview({ company, header: given, items, settings = EXPENSE_CLAIM_DEFAULTS, signatures, voided, replacedBy, createdAt }: Props) {
   const cols = settings.columns
-  // Withholding worked out in the table's own columns is not taken off again below it.
-  const header = taxHeader(cols, given)
+  // The figures under the table — shared with the Excel export (see summary).
+  const { header, tax, bases, scopes, tableWht, taxedAgain, onNet, hasTax, lines: summaryLines } = documentSummary(cols, given, items)
   const vcols = visibleColumns(cols)
   const computed = items.map(r => computeRow(cols, r))
   // Print a figure only once the row holds one: a row left empty stays empty,
@@ -74,25 +74,9 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
     return filled ? money(Number(raw) || 0) : ' '
   }
   const columnTotals = computeColumnTotals(cols, items)
-  // Held back for now — see shared/features and the note in the form.
-  const scopes = FEATURES.taxPerRow ? { vat: header.vatScope, wht: header.whtScope, ret: header.retentionScope } : {}
-  const onNet = FEATURES.taxOnNet ? { vat: header.vatOnNet, whtRate: header.whtOnNetRate } : undefined
-  const bases = taxBases(cols, items, scopes)
-  const tax = taxSummary(taxSubtotal(cols, items), header.vat, header.whtRate, header.retentionRate, bases, onNet)
-  // Withholding the table worked out goes in the summary as one line, when there is a summary.
-  const tableWht = whtInTable(cols) && tax.whtAmount > 0
-  const taxedAgain = !!onNet?.vat || !!onNet?.whtRate
-  // A tax charged line by line prints what it was worked out from, so the sheet
-  // can be checked against its own ticks without adding them up by hand.
-  const chargedOn = (byRow: boolean, base: number, key: string) =>
-    byRow ? ` (ฐาน ${money(base)} · ${tickedRowCount(items, key)} รายการ)` : ''
   // Which lines a tax was charged on is chosen on the fill-in screen and kept
   // with the document, but not printed: the sheet keeps its own columns, and
   // the summary says what each tax was worked out from and on how many lines.
-  // Withholding the table took but its own total does not show (the total
-  // column is the amount before it) is explained in the summary too — or the
-  // sheet's รวมทั้งสิ้น and its amount in words would not agree.
-  const hasTax = !!header.vat || !!header.whtRate || !!header.retentionRate || (tableWht && !whtNettedInTable(cols))
   const bahtWords = bahtText(tax.netTotal)
   // What the paragraphs' automatic fields print — the same figures as the rest of the sheet.
   const auto: AutoValues = { company: company?.name, amount: tax.netTotal, requester: `${header.firstName} ${header.lastName}`, position: header.position }
@@ -310,25 +294,11 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
             {/* VAT / หัก ณ ที่จ่าย / ยอดสุทธิ — figures for the whole document, so on its last sheet */}
             {hasTax && isLast && (
               <div className="mt-2 ml-auto w-56 text-[10px]">
-                <div className="flex justify-between"><span>ยอดรวม (ก่อนภาษี)</span><span>{money(tax.subtotal)}</span></div>
-                {header.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7%{chargedOn(scopes.vat === 'rows', bases.vat, ROW_VAT_KEY)}</span><span>{money(tax.vatAmount)}</span></div>}
-                {tableWht && <div className="flex justify-between"><span>หัก ณ ที่จ่าย (ตามรายการ)</span><span>-{money(tax.whtAmount)}</span></div>}
-                {!!header.whtRate && scopes.wht !== 'rows' && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {header.whtRate}%</span><span>-{money(tax.whtAmount)}</span></div>}
-                {!!header.whtRate && scopes.wht === 'rows' && whtLines(bases, header.whtRate).map(l => (
-                  <div key={l.rate} className="flex justify-between"><span>หัก ณ ที่จ่าย {l.rate}% (ฐาน {money(l.base)} · {l.count} รายการ)</span><span>-{money(l.amount)}</span></div>
+                {summaryLines.map((l, li) => (
+                  <div key={li} className={`flex justify-between${l.rule ? ' border-t border-black' : ''}${l.bold ? ' font-bold' : ''}`}>
+                    <span>{l.label}</span><span>{l.minus ? '-' : ''}{money(l.amount)}</span>
+                  </div>
                 ))}
-                {!!header.retentionRate && scopes.ret !== 'rows' && <div className="flex justify-between"><span>หัก {header.retentionRate}% ค่าประกันงาน</span><span>-{money(tax.retentionAmount)}</span></div>}
-                {!!header.retentionRate && scopes.ret === 'rows' && retLines(bases).map(l => (
-                  <div key={l.rate} className="flex justify-between"><span>หัก {l.rate}% ค่าประกันงาน (ฐาน {money(l.base)} · {l.count} รายการ)</span><span>-{money(l.amount)}</span></div>
-                ))}
-                {taxedAgain && (
-                  <>
-                    <div className="flex justify-between border-t border-black"><span>ยอดหลังภาษีชั้นแรก</span><span>{money(tax.netAfterTax)}</span></div>
-                    {!!onNet?.vat && <div className="flex justify-between"><span>ภาษีมูลค่าเพิ่ม 7% (จากยอดสุทธิ)</span><span>{money(tax.vatOnNetAmount)}</span></div>}
-                    {!!onNet?.whtRate && <div className="flex justify-between"><span>หัก ณ ที่จ่าย {onNet.whtRate}% (จากยอดสุทธิ)</span><span>-{money(tax.whtOnNetAmount)}</span></div>}
-                  </>
-                )}
-                <div className="flex justify-between border-t border-black font-bold"><span>ยอดสุทธิ</span><span>{money(tax.netTotal)}</span></div>
               </div>
             )}
 

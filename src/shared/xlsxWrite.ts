@@ -1,4 +1,5 @@
-// Just enough .xlsx writing to build the employee import template.
+// Just enough .xlsx writing to build the employee import template and to
+// export a document (see features/expense-claim/excelExport).
 //
 // The template has to carry this system's own lists — its departments, its
 // companies, its groups — in its dropdowns, and those lists change from one
@@ -8,18 +9,51 @@
 // What it can do is exactly what the template uses: several sheets of text,
 // a small fixed set of cell styles, column widths and column styles, a frozen
 // header row, and data validation (dropdown lists and a minimum length).
-// Anything else — formulas, numbers, dates, comments, images — is out of
-// scope on purpose.
+// A document export adds real numbers (money with two decimals), real dates
+// (a date serial shown dd/mm/yyyy, so Excel can never swap day and month),
+// SUM formulas carrying their own result, and ruled table cells.
+// Anything else — comments, images, charts — is out of scope on purpose.
 
 export type Style =
   | 'body' | 'head' | 'headLeft' | 'req' | 'text' | 'reqText'
+  // Ruled table cells of an exported document
+  | 'cell' | 'cellHead' | 'cellMoney' | 'cellDate' | 'cellNum' | 'totalLabel' | 'totalMoney'
+  // Loose cells of an exported document
+  | 'bold' | 'title' | 'date' | 'money' | 'moneyBold' | 'labelRight' | 'labelRightBold'
 
 // Index into <cellXfs> below. The order here and there must match.
 const STYLE_INDEX: Record<Style, number> = {
   body: 0, head: 1, headLeft: 2, req: 3, text: 4, reqText: 5,
+  cell: 6, cellHead: 7, cellMoney: 8, cellDate: 9, cellNum: 10, totalLabel: 11, totalMoney: 12,
+  bold: 13, title: 14, date: 15, money: 16, moneyBold: 17, labelRight: 18, labelRightBold: 19,
 }
 
-export interface Cell { v: string; s?: Style }
+/**
+ * One cell. A string `v` is always stored as text — Excel never reads it as a
+ * number or a date, so an account number keeps its leading zeros. A number
+ * `v` is a real number (dates are numbers too: see excelDate). `f` is a
+ * formula; `v` then is its result, kept so the file reads right before Excel
+ * recalculates it.
+ */
+export interface Cell { v: string | number; s?: Style; f?: string }
+
+/** "yyyy-mm-dd" or a Date → Excel's date serial (days since 30 Dec 1899). Null when it is not a date. */
+export function excelDate(value: string | Date): number | null {
+  let y: number, m: number, d: number
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null
+    y = value.getFullYear(); m = value.getMonth() + 1; d = value.getDate()
+  } else {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+    if (!match) return null
+    y = Number(match[1]); m = Number(match[2]); d = Number(match[3])
+  }
+  const utc = Date.UTC(y, m - 1, d)
+  const check = new Date(utc)
+  // 2026-02-31 is not a day: refused rather than rolled over into March.
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) return null
+  return Math.round((utc - Date.UTC(1899, 11, 30)) / 86_400_000)
+}
 
 export interface Validation {
   /** Cell range the rule covers, e.g. "D2:D1000". */
@@ -39,6 +73,10 @@ export interface Sheet {
   rows: (Cell | string | null | undefined)[][]
   rowHeights?: Record<number, number>
   freezeFirstRow?: boolean
+  /** Keep this many rows at the top in view while scrolling. */
+  freezeRows?: number
+  /** Print on A4, scaled to fit the page's width. */
+  fitToWidth?: boolean
   validations?: Validation[]
   /** Kept out of the tab bar. Still there for anything that refers to it. */
   hidden?: boolean
@@ -72,39 +110,68 @@ const YELLOW = 'FFFFF3CD'
 // Fonts, fills and the combinations of them (cellXfs) the Style names map to.
 // Tahoma, because it is the Thai face Excel on Windows renders without
 // substituting another font.
+// Number formats: 4 is Excel's own "#,##0.00"; 164 is a day-first date that
+// reads the same whatever the computer's regional settings are.
+const DATE_FMT = 164
+const GREY = 'FFEFEFEF'
 const STYLES = HEAD +
   `<styleSheet xmlns="${MAIN}">` +
-  '<fonts count="2">' +
+  `<numFmts count="1"><numFmt numFmtId="${DATE_FMT}" formatCode="dd/mm/yyyy"/></numFmts>` +
+  '<fonts count="4">' +
     '<font><sz val="10"/><name val="Tahoma"/></font>' +
     '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Tahoma"/></font>' +
+    '<font><b/><sz val="10"/><name val="Tahoma"/></font>' +
+    '<font><b/><sz val="14"/><name val="Tahoma"/></font>' +
   '</fonts>' +
   // The first two fills are required by the format and never used directly.
-  '<fills count="4">' +
+  '<fills count="5">' +
     '<fill><patternFill patternType="none"/></fill>' +
     '<fill><patternFill patternType="gray125"/></fill>' +
     `<fill><patternFill patternType="solid"><fgColor rgb="${NAVY}"/><bgColor indexed="64"/></patternFill></fill>` +
     `<fill><patternFill patternType="solid"><fgColor rgb="${YELLOW}"/><bgColor indexed="64"/></patternFill></fill>` +
+    `<fill><patternFill patternType="solid"><fgColor rgb="${GREY}"/><bgColor indexed="64"/></patternFill></fill>` +
   '</fills>' +
-  '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+  '<borders count="2">' +
+    '<border><left/><right/><top/><bottom/><diagonal/></border>' +
+    '<border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right>' +
+    '<top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border>' +
+  '</borders>' +
   '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-  '<cellXfs count="6">' +
+  '<cellXfs count="20">' +
     /* body     */ '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
     /* head     */ '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
     /* headLeft */ '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>' +
     /* req      */ '<xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/>' +
     /* text     */ '<xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
     /* reqText  */ '<xf numFmtId="49" fontId="0" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFill="1"/>' +
+    /* cell       */ '<xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+    /* cellHead   */ '<xf numFmtId="0" fontId="2" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+    /* cellMoney  */ '<xf numFmtId="4" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment vertical="top"/></xf>' +
+    /* cellDate   */ `<xf numFmtId="${DATE_FMT}" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>` +
+    /* cellNum    */ '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>' +
+    /* totalLabel */ '<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right"/></xf>' +
+    /* totalMoney */ '<xf numFmtId="4" fontId="2" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>' +
+    /* bold       */ '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+    /* title      */ '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+    /* date       */ `<xf numFmtId="${DATE_FMT}" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="left"/></xf>` +
+    /* money      */ '<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+    /* moneyBold  */ '<xf numFmtId="4" fontId="2" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>' +
+    /* labelRight */ '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="right"/></xf>' +
+    /* labelRightBold */ '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="right"/></xf>' +
   '</cellXfs>' +
   '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
   '</styleSheet>'
 
 function sheetXml(sheet: Sheet, selected: boolean): string {
   const parts: string[] = [HEAD, `<worksheet xmlns="${MAIN}" xmlns:r="${REL}">`]
+  if (sheet.fitToWidth) parts.push('<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>')
 
   parts.push(`<sheetViews><sheetView workbookViewId="0"${selected ? ' tabSelected="1"' : ''}>`)
-  if (sheet.freezeFirstRow) {
-    parts.push('<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>')
-    parts.push('<selection pane="bottomLeft" activeCell="A2" sqref="A2"/>')
+  const frozen = sheet.freezeRows ?? (sheet.freezeFirstRow ? 1 : 0)
+  if (frozen > 0) {
+    const top = `A${frozen + 1}`
+    parts.push(`<pane ySplit="${frozen}" topLeftCell="${top}" activePane="bottomLeft" state="frozen"/>`)
+    parts.push(`<selection pane="bottomLeft" activeCell="${top}" sqref="${top}"/>`)
   }
   parts.push('</sheetView></sheetViews>')
   parts.push('<sheetFormatPr defaultRowHeight="15"/>')
@@ -130,6 +197,10 @@ function sheetXml(sheet: Sheet, selected: boolean): string {
       const cell: Cell = typeof raw === 'string' ? { v: raw } : raw
       const ref = `${columnLetter(c)}${r + 1}`
       const s = cell.s ? ` s="${STYLE_INDEX[cell.s]}"` : ''
+      if (cell.f) return `<c r="${ref}"${s}><f>${esc(cell.f)}</f><v>${Number(cell.v) || 0}</v></c>`
+      if (typeof cell.v === 'number') {
+        return Number.isFinite(cell.v) ? `<c r="${ref}"${s}><v>${cell.v}</v></c>` : (s ? `<c r="${ref}"${s}/>` : '')
+      }
       if (cell.v === '') return s ? `<c r="${ref}"${s}/>` : ''
       return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${esc(cell.v)}</t></is></c>`
     }).join('')
@@ -152,6 +223,7 @@ function sheetXml(sheet: Sheet, selected: boolean): string {
   }
 
   parts.push('<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>')
+  if (sheet.fitToWidth) parts.push('<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>')
   parts.push('</worksheet>')
   return parts.join('')
 }

@@ -10,6 +10,7 @@ import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import { loadOptionLists } from '../../data/fieldOptions'
 import { dbErrorMessage } from '../../shared/dbError'
+import { saveFile } from '../../shared/saveFile'
 import type { Company } from '../../types/schema'
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { Spinner } from '../../components/Spinner'
@@ -25,16 +26,6 @@ const SHEET = 'พนักงาน'
 async function loadLists(): Promise<ImportLists> {
   const [companies, groups, options] = await Promise.all([listCompanies(), listAccessGroups(), loadOptionLists()])
   return { companies, groups, departments: options.department, positions: options.position }
-}
-
-function saveFile(bytes: Uint8Array, name: string, type: string) {
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  a.click()
-  // Revoked a moment later: revoking at once can cancel the download itself.
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 export default function ImportCsvPage() {

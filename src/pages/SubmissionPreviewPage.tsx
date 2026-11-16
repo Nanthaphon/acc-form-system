@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Ban, Eye, FileText, Printer } from 'lucide-react'
+import { Ban, Eye, FileSpreadsheet, FileText, Printer } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import ExpenseClaimPreview from '../features/expense-claim/ExpenseClaimPreview'
 import { getSubmission, incrementPrint } from '../data/submissions'
@@ -12,6 +12,9 @@ import AttachmentsField from '../components/AttachmentsField'
 import { Spinner } from '../components/Spinner'
 import { PageHeader, ui } from '../components/ui'
 import { formatDateTime } from '../shared/date'
+import { dbErrorMessage } from '../shared/dbError'
+import { saveFile } from '../shared/saveFile'
+import { uiAlert } from '../components/dialog/dialogService'
 
 export default function SubmissionPreviewPage() {
   const { id } = useParams()
@@ -20,6 +23,7 @@ export default function SubmissionPreviewPage() {
   const [sub, setSub] = useState<Submission | null>(null)
   const [settings, setSettings] = useState<FormSettings | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -38,6 +42,24 @@ export default function SubmissionPreviewPage() {
     window.print()
   }
 
+  // Built on request. The builder is loaded only here, so the rest of the app does not carry it.
+  async function onExportExcel() {
+    if (!sub || !settings) return
+    setExporting(true)
+    try {
+      const x = await import('../features/expense-claim/excelExport')
+      const bytes = await x.buildDocumentXlsx({
+        company, header: sub.header, items: sub.items, docNumber: sub.docNumber, settings,
+        signatures: sub.signatures, voided: !!sub.voided, replacedBy: sub.voided?.replacedByNumber, createdAt: sub.createdAt,
+      })
+      saveFile(bytes, x.excelFileName(sub.docNumber), x.XLSX_MIME)
+    } catch (e) {
+      uiAlert('สร้างไฟล์ Excel ไม่สำเร็จ: ' + dbErrorMessage(e))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   if (!sub || !settings) return (
     <div className="flex items-center gap-2 p-4 text-sm text-stone-500"><Spinner size={16} /> กำลังโหลด...</div>
   )
@@ -53,7 +75,12 @@ export default function SubmissionPreviewPage() {
           title={`ดูตัวอย่าง — ${sub.docNumber}`}
           onBack={() => nav(-1)}
           actions={canPrint
-            ? <button type="button" onClick={onPrint} className={ui.btnPrimary}><Printer size={16} /> พิมพ์ / บันทึก PDF</button>
+            ? <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={onExportExcel} disabled={exporting} className={ui.btnSecondary}>
+                  {exporting ? <Spinner size={16} /> : <FileSpreadsheet size={16} />} ส่งออก Excel
+                </button>
+                <button type="button" onClick={onPrint} className={ui.btnPrimary}><Printer size={16} /> พิมพ์ / บันทึก PDF</button>
+              </div>
             : <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-2 text-sm font-medium text-stone-500"><Eye size={16} /> ดูอย่างเดียว</span>}
         />
       </div>
