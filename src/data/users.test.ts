@@ -70,6 +70,16 @@ describe('createEmployee', () => {
     await expect(createEmployee(row('1010001'))).rejects.toThrow('2026-11-16-orphan-login.sql')
   })
 
+  it('adds the person without the email when the database has no email column yet', async () => {
+    signUp.mockResolvedValueOnce(CREATED('u1'))
+    insert
+      .mockResolvedValueOnce({ error: { code: 'PGRST204', message: "Could not find the 'email' column of 'profiles' in the schema cache" } })
+      .mockResolvedValueOnce({ error: null })
+    expect(await createEmployee({ ...row('1010001'), email: 'a@b.co' })).toBe('u1')
+    expect(insert.mock.calls[1][0]).not.toHaveProperty('email')
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
   it('undoes its login when the profile cannot be saved, so the ID stays usable', async () => {
     signUp.mockResolvedValueOnce(CREATED('u1'))
     insert.mockResolvedValue({ error: { message: 'new row violates row-level security policy' } })

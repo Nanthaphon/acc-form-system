@@ -18,7 +18,8 @@ const argOut = process.argv.indexOf('--out')
 const OUT = argOut > -1 && process.argv[argOut + 1] ? process.argv[argOut + 1] : path.join(DIR, '_staging-setup.generated.sql')
 
 // ของเก่าที่ถูกแทนที่ไปแล้ว และตัวถอนการติดตั้ง — ไม่ต้องรันบนฐานข้อมูลใหม่
-const SKIP = new Set(['teardown-approval.sql', 'seed.sql', path.basename(OUT)])
+// 2026-11-16b-clear-orphan-logins.sql: ล้างข้อมูลค้างบนฐานข้อมูลจริงครั้งเดียว ฐานใหม่ไม่มีอะไรให้ล้าง
+const SKIP = new Set(['teardown-approval.sql', 'seed.sql', '2026-11-16b-clear-orphan-logins.sql', path.basename(OUT)])
 // ต้องมาก่อนไฟล์ตามวันที่ ตามลำดับที่ระบบนี้โตขึ้นมาจริง ๆ
 const FIRST = ['schema.sql', 'approval-migration.sql', 'signature-system.sql']
 

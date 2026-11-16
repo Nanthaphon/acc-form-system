@@ -85,7 +85,14 @@ export async function createEmployee(e: NewEmployee): Promise<string> {
     ...(e.email ? { email: e.email } : {}),
     mustChangePassword: e.mustChangePassword ?? true, createdAt: Date.now(),
   }
-  const { error: e2 } = await supabase.from('profiles').insert(profile)
+  let { error: e2 } = await supabase.from('profiles').insert(profile)
+  // A database without the email column (supabase/2026-10-26-employee-email.sql
+  // not run) refused the whole row whenever an email was typed — and left the
+  // login behind. The person is added without it instead.
+  if (e2 && e.email && (e2.code === 'PGRST204' || /'email' column/i.test(e2.message ?? ''))) {
+    const { email: _skip, ...withoutEmail } = profile
+    ;({ error: e2 } = await supabase.from('profiles').insert(withoutEmail))
+  }
   if (e2) {
     // Undo step 1, so the ID is not left taken by a login nobody can see.
     await releaseOrphanLogin(e.employeeId).catch(() => undefined)
