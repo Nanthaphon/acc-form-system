@@ -63,7 +63,7 @@ export default function AddEmployeePage() {
       await createEmployee(emp)
       setCreated({ employeeId: username, name: `${f.firstName} ${f.lastName}`.trim(), mustChange })
     } catch (err: any) {
-      uiAlert('เพิ่มพนักงานไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
+      uiAlert(err?.message || 'เกิดข้อผิดพลาด', { title: 'เพิ่มพนักงานไม่สำเร็จ' })
     } finally {
       setSaving(false)
     }

@@ -30,6 +30,16 @@ export interface Announcement {
 // every change in it, one line each. `admin` marks what only admins see.
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    version: '2.2',
+    date: '2026-11-16',
+    title: 'เพิ่มพนักงานที่เคยเพิ่มไม่สำเร็จได้แล้ว',
+    note: 'ผู้ดูแลระบบต้องรันสคริปต์ supabase/2026-11-16-orphan-login.sql ก่อนจึงจะใช้ได้',
+    items: [
+      { kind: 'fix', admin: true, text: 'รหัสพนักงานที่เคยเพิ่มแล้วล้มกลางทาง เพิ่มซ้ำไม่ได้ (ขึ้นว่า “User already registered”) — ตอนนี้เพิ่มได้ตามปกติ และถ้าบันทึกไม่สำเร็จ ระบบจะไม่จองรหัสนั้นค้างไว้อีก' },
+      { kind: 'better', admin: true, text: 'เพิ่มพนักงานด้วยรหัสที่มีคนใช้แล้ว ระบบบอกเป็นภาษาไทยว่าเป็นของใคร (ตัวพิมพ์เล็ก/ใหญ่ถือเป็นรหัสเดียวกัน)' },
+    ],
+  },
+  {
     version: '2.1',
     date: '2026-11-13',
     title: 'แก้เอกสารที่เซ็นครบแล้วได้ — ออกเป็นฉบับแก้ไข R1',

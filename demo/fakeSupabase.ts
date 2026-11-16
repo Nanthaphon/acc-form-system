@@ -465,6 +465,8 @@ const rpcRun = (name: string, args: any) => {
     case 'list_signers':
       return { data: Object.values(people).filter(p => p.uid !== ME).map(p => ({ uid: p.uid, name: p.name })), error: null }
     case 'next_doc_number': return { data: ++seq, error: null }
+    // No login is ever left behind here: the employee ID is always free.
+    case 'release_orphan_login': return { data: 'free', error: null }
     case 'assign_signers': {
       const s = db.submissions.find(x => x.id === args.sub_id)
       if (s) s.signatures = [...(s.signatures ?? []).filter((x: any) => x.status === 'signed'), ...args.assignments]

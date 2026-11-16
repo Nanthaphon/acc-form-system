@@ -12,12 +12,65 @@ export interface NewEmployee {
   mustChangePassword?: boolean   // ask for a new password on first login (default true)
 }
 
+// Supabase Auth answers a second sign-up for one email with this.
+export function isAlreadyRegistered(e: unknown): boolean {
+  const err = (e ?? {}) as { code?: string; message?: string }
+  return err.code === 'user_already_exists' || err.code === 'email_exists' || /already (been )?registered/i.test(err.message ?? '')
+}
+const isMissingRpc = (e: { code?: string; message?: string } | null) =>
+  !!e && (e.code === 'PGRST202' || e.code === '42883' || /could not find the function/i.test(e.message ?? ''))
+
+// The ID as a LIKE pattern that matches only itself (case aside).
+const exactLike = (s: string) => s.replace(/[\\%_]/g, c => '\\' + c)
+
+/** Someone in the employee list already using this ID. Case is ignored:
+ *  "ACC001" and "acc001" are one login email, so one account. */
+async function findEmployeeById(employeeId: string): Promise<{ employeeId: string; name: string } | null> {
+  const { data, error } = await supabase.from('profiles')
+    .select('employeeId,firstName,lastName').ilike('employeeId', exactLike(employeeId))
+  if (error) return null // cannot look: sign-up still refuses a real duplicate
+  const p = ((data ?? []) as { employeeId: string; firstName?: string; lastName?: string }[])
+    .find(r => String(r.employeeId).toLowerCase() === employeeId.toLowerCase())
+  return p ? { employeeId: String(p.employeeId), name: `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() } : null
+}
+
+function alreadyEmployee(employeeId: string, p: { employeeId: string; name: string }): Error {
+  const who = p.name || 'พนักงานคนอื่น'
+  const taken = p.employeeId === employeeId
+    ? `รหัสพนักงาน ${employeeId} เป็นของ ${who} อยู่แล้ว`
+    : `รหัสพนักงาน ${employeeId} ซ้ำกับ ${p.employeeId} ของ ${who} (ตัวพิมพ์เล็ก/ใหญ่ถือเป็นรหัสเดียวกัน)`
+  return new Error(`${taken} — ใช้รหัสอื่น หรือแก้ข้อมูลคนเดิมที่หน้ารายชื่อพนักงาน`)
+}
+
+/** A login account with this ID but no employee profile — left behind when an
+ *  earlier add failed halfway — is deleted so the ID can be used again.
+ *  'missing': the database has not run supabase/2026-11-16-orphan-login.sql. */
+async function releaseOrphanLogin(employeeId: string): Promise<'free' | 'taken' | 'released' | 'missing'> {
+  const { data, error } = await supabase.rpc('release_orphan_login', { employee_id: employeeId })
+  if (isMissingRpc(error)) return 'missing'
+  if (error) throw error
+  return data as 'free' | 'taken' | 'released'
+}
+
 export async function createEmployee(e: NewEmployee): Promise<string> {
+  const existing = await findEmployeeById(e.employeeId)
+  if (existing) throw alreadyEmployee(e.employeeId, existing)
+
   // 1) create the auth user on the SECONDARY client (default password = employeeId)
-  const { data, error } = await supabaseSecondary.auth.signUp({
+  const signUp = () => supabaseSecondary.auth.signUp({
     email: employeeIdToEmail(e.employeeId),
     password: e.employeeId,
   })
+  let { data, error } = await signUp()
+  if (error && isAlreadyRegistered(error)) {
+    const freed = await releaseOrphanLogin(e.employeeId)
+    if (freed === 'missing') throw new Error(
+      `รหัสพนักงาน ${e.employeeId} มีบัญชีเข้าสู่ระบบค้างอยู่จากการเพิ่มที่ไม่สำเร็จครั้งก่อน — ` +
+      'ให้ผู้ดูแลระบบรันไฟล์ supabase/2026-11-16-orphan-login.sql ใน Supabase SQL Editor หนึ่งครั้ง แล้วกดบันทึกอีกครั้ง')
+    if (freed === 'taken') throw new Error(
+      `รหัสพนักงาน ${e.employeeId} มีบัญชีเข้าสู่ระบบอยู่แล้ว — ใช้รหัสอื่น หรือค้นหาคนเดิมในหน้ารายชื่อพนักงาน`)
+    ;({ data, error } = await signUp())
+  }
   if (error) throw error
   const uid = data.user!.id
   await supabaseSecondary.auth.signOut()
@@ -33,7 +86,11 @@ export async function createEmployee(e: NewEmployee): Promise<string> {
     mustChangePassword: e.mustChangePassword ?? true, createdAt: Date.now(),
   }
   const { error: e2 } = await supabase.from('profiles').insert(profile)
-  if (e2) throw e2
+  if (e2) {
+    // Undo step 1, so the ID is not left taken by a login nobody can see.
+    await releaseOrphanLogin(e.employeeId).catch(() => undefined)
+    throw e2
+  }
   return uid
 }
 
