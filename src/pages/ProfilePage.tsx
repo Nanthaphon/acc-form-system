@@ -11,6 +11,7 @@ import type { OptionField } from '../data/fieldOptions'
 import OptionInput from '../components/OptionInput'
 import { roleLabel } from '../shared/roles'
 import { emailProblem, normalizeEmail } from '../shared/emailAddress'
+import { dbErrorMessage, EMAIL_NOT_SAVED } from '../shared/dbError'
 import type { Company } from '../types/schema'
 
 const labelCls = 'mb-1.5 block text-xs font-medium text-stone-500'
@@ -43,12 +44,22 @@ export default function ProfilePage() {
       return
     }
     setSaving(true)
+    const f = form!
     try {
-      await updateProfile(form!.uid, form!.email === undefined ? form! : { ...form!, email: normalizeEmail(form!.email) || null })
+      // Only what this page edits — not the whole row (role, signature image,
+      // super-admin and password flags…), which the database guards.
+      const { emailSkipped } = await updateProfile(f.uid, {
+        firstName: f.firstName, lastName: f.lastName, position: f.position,
+        department: f.department, defaultJob: f.defaultJob, bankAccount: f.bankAccount,
+        companyId: f.companyId,
+        // undefined when the database has no email column: an untouched field sends nothing.
+        ...(f.email !== undefined ? { email: normalizeEmail(f.email) || null } : {}),
+      })
       await refresh()
-      uiAlert('บันทึกข้อมูลแล้ว', { tone: 'success' })
-    } catch {
-      uiAlert('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+      if (emailSkipped) uiAlert(EMAIL_NOT_SAVED, { title: 'บันทึกแล้ว ยกเว้นอีเมล' })
+      else uiAlert('บันทึกข้อมูลแล้ว', { tone: 'success' })
+    } catch (e) {
+      uiAlert(dbErrorMessage(e), { title: 'บันทึกไม่สำเร็จ' })
     } finally {
       setSaving(false)
     }

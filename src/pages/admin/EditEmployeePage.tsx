@@ -8,7 +8,7 @@ import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import { loadOptionLists, NO_OPTIONS } from '../../data/fieldOptions'
 import OptionInput from '../../components/OptionInput'
-import { dbErrorMessage } from '../../shared/dbError'
+import { dbErrorMessage, EMAIL_NOT_SAVED } from '../../shared/dbError'
 import { emailProblem, normalizeEmail } from '../../shared/emailAddress'
 import { isSuperAdmin, roleLabel, ROLE_OPTIONS } from '../../shared/roles'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
@@ -59,7 +59,7 @@ export default function EditEmployeePage() {
     }
     setSaving(true)
     try {
-      await updateProfile(uid, {
+      const { emailSkipped } = await updateProfile(uid, {
         firstName: f.firstName, lastName: f.lastName, position: f.position,
         department: f.department, companyId: f.companyId, defaultJob: f.defaultJob,
         bankAccount: f.bankAccount, accessGroup: f.accessGroup,
@@ -67,7 +67,8 @@ export default function EditEmployeePage() {
         ...(f.email !== undefined ? { email: normalizeEmail(f.email) || null } : {}),
         ...(targetIsSuper || isSelf ? {} : { role: f.role }),
       })
-      uiAlert('บันทึกข้อมูลพนักงานแล้ว', { tone: 'success' })
+      if (emailSkipped) uiAlert(EMAIL_NOT_SAVED, { title: 'บันทึกแล้ว ยกเว้นอีเมล' })
+      else uiAlert('บันทึกข้อมูลพนักงานแล้ว', { tone: 'success' })
       nav('/admin/employees')
     } catch (err) {
       uiAlert(dbErrorMessage(err), { title: 'บันทึกไม่สำเร็จ' })

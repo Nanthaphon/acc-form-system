@@ -139,9 +139,34 @@ export async function adminChangeUsername(uid: string, newUsername: string): Pro
   const { error } = await supabase.rpc('admin_change_username', { target: uid, new_username: newUsername })
   if (error) throw error
 }
-export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<void> {
-  const { error } = await supabase.from('profiles').update(patch).eq('uid', uid)
+/** The database refused `col` because it has no such column yet. */
+export function isMissingColumn(e: { code?: string; message?: string } | null | undefined, col: string): boolean {
+  if (!e) return false
+  const msg = e.message ?? ''
+  // PGRST204: "Could not find the 'email' column of 'profiles' in the schema cache"
+  // 42703:    'column "email" of relation "profiles" does not exist' / 'column profiles.email does not exist'
+  return (e.code === 'PGRST204' || e.code === '42703') &&
+    (msg.includes(`'${col}' column`) || msg.includes(`"${col}"`) || msg.includes(`.${col} `))
+}
+
+/** emailSkipped: an email was typed, but the database has no email column yet
+ *  (supabase/2026-10-26-employee-email.sql not run) — everything else was
+ *  saved, the email was not. */
+export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<{ emailSkipped: boolean }> {
+  const run = (p: Partial<UserProfile>) => supabase.from('profiles').update(p).eq('uid', uid)
+  let { error } = await run(patch)
+  // Without the email column the whole row was refused, so typing an email on
+  // the profile page made "บันทึก" fail outright. Save the rest without it.
+  if (error && 'email' in patch && isMissingColumn(error, 'email')) {
+    const { email, ...rest } = patch
+    if (Object.keys(rest).length > 0) {
+      const { error: again } = await run(rest)
+      if (again) throw again
+    }
+    return { emailSkipped: !!email }
+  }
   if (error) throw error
+  return { emailSkipped: false }
 }
 // Fully removes an employee: their login account, profile, and submissions.
 // Runs a SECURITY DEFINER RPC (delete_employee) that checks admin + deletes the auth user.

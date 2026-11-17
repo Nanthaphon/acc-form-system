@@ -16,3 +16,9 @@ export function dbErrorMessage(e: unknown): string {
   }
   return msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'
 }
+
+// A profile save that went through without the email: the database has no email
+// column yet (updateProfile → emailSkipped).
+export const EMAIL_NOT_SAVED =
+  'ข้อมูลอื่นบันทึกเรียบร้อยแล้ว แต่ยังเก็บอีเมลไม่ได้ เพราะฐานข้อมูลยังไม่รองรับอีเมล — ' +
+  'ผู้ดูแลระบบต้องรันไฟล์ supabase/2026-10-26-employee-email.sql ใน Supabase SQL Editor หนึ่งครั้ง แล้วกรอกอีเมลใหม่'
