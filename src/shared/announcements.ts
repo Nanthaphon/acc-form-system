@@ -30,6 +30,14 @@ export interface Announcement {
 // every change in it, one line each. `admin` marks what only admins see.
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    version: '2.4',
+    date: '2026-11-18',
+    title: 'ประวัติการพิมพ์ทั้งหมด แบ่งหน้าละ 10 รายการ',
+    items: [
+      { kind: 'better', text: 'หน้า “ประวัติการพิมพ์ทั้งหมดในระบบ” แสดงหน้าละ 10 รายการ มีปุ่ม ก่อนหน้า / เลขหน้า / ถัดไป ใต้ตาราง · ค้นหาหรือเปลี่ยนตัวกรองแล้วกลับไปหน้า 1 · ลบหรือยกเลิกเอกสารแล้วยังอยู่หน้าเดิม', admin: true },
+    ],
+  },
+  {
     version: '2.3',
     date: '2026-11-17',
     title: 'ส่งออกเอกสารเป็นไฟล์ Excel',

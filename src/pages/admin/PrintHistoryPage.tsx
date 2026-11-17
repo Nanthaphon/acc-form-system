@@ -20,6 +20,8 @@ import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
+import { usePagination } from '../../shared/usePagination'
+import Pagination from '../../components/Pagination'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
@@ -31,6 +33,8 @@ interface Column extends PickableColumn {
   tdCls: string
   cell: (r: SubmissionSummary) => ReactNode
 }
+
+const PAGE_SIZE = 10
 
 export default function PrintHistoryPage() {
   const [rows, setRows] = useState<SubmissionSummary[]>([])
@@ -81,6 +85,13 @@ export default function PrintHistoryPage() {
   // Every round of a corrected document is one line, with the rounds before it
   // folded underneath — the wrong copies no longer sit between the right ones.
   const chains = chainRows(filtered, rows)
+  // Ten lines a page. A filter change starts again from page 1; deleting or
+  // cancelling keeps the page open (or steps back one if it was the last line).
+  const pager = usePagination(chains, PAGE_SIZE)
+  // Counted in lines, as the table and the pager count them — a corrected
+  // document and its earlier rounds are one line.
+  const allLines = chainRows(rows).length
+  function changeFilters(f: Filters) { setFilters(f); pager.setPage(1) }
 
   const columns: Column[] = [
     {
@@ -123,8 +134,8 @@ export default function PrintHistoryPage() {
         title="ประวัติการพิมพ์ทั้งหมดในระบบ"
       />
       <div className="mb-4">
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees}
-          resultCount={filtered.length} total={rows.length}
+        <SubmissionFilterBar value={filters} onChange={changeFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees}
+          resultCount={chains.length} total={allLines}
           extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>
       <div className={ui.tableWrap}>
@@ -136,7 +147,7 @@ export default function PrintHistoryPage() {
             </tr>
           </thead>
           <tbody className={ui.tbody}>
-            {chains.map(({ latest: r, older }) => {
+            {pager.pageItems.map(({ latest: r, older }) => {
               // The everyday actions side by side; cancelling and deleting wait behind ⋯,
               // as on ประวัติ — a red ลบ on every line drew the eye to the one to avoid.
               const more: RowMenuItem[] = [
@@ -215,6 +226,7 @@ export default function PrintHistoryPage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={pager.page} pageCount={pager.pageCount} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} />
     </div>
   )
 }
