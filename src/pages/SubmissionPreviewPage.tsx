@@ -15,6 +15,7 @@ import { formatDateTime } from '../shared/date'
 import { dbErrorMessage } from '../shared/dbError'
 import { saveFile } from '../shared/saveFile'
 import { uiAlert } from '../components/dialog/dialogService'
+import { loadChunk } from '../shared/loadChunk'
 
 export default function SubmissionPreviewPage() {
   const { id } = useParams()
@@ -47,7 +48,7 @@ export default function SubmissionPreviewPage() {
     if (!sub || !settings) return
     setExporting(true)
     try {
-      const x = await import('../features/expense-claim/excelExport')
+      const x = await loadChunk(() => import('../features/expense-claim/excelExport'))
       const bytes = await x.buildDocumentXlsx({
         company, header: sub.header, items: sub.items, docNumber: sub.docNumber, settings,
         signatures: sub.signatures, voided: !!sub.voided, replacedBy: sub.voided?.replacedByNumber, createdAt: sub.createdAt,

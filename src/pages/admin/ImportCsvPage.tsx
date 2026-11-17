@@ -15,6 +15,7 @@ import type { Company } from '../../types/schema'
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { Spinner } from '../../components/Spinner'
 import { ui } from '../../components/ui'
+import { loadChunk } from '../../shared/loadChunk'
 
 const PREVIEW_ROWS = 8
 // The sheet the template asks people to fill in. Named rather than taken as
@@ -82,7 +83,7 @@ export default function ImportCsvPage() {
   async function downloadTemplate() {
     setBuilding(true)
     try {
-      const [lists, template] = await Promise.all([loadLists(), import('../../shared/employeeTemplate')])
+      const [lists, template] = await Promise.all([loadLists(), loadChunk(() => import('../../shared/employeeTemplate'))])
       saveFile(await template.buildEmployeeTemplate(lists), 'employees-template.xlsx', template.TEMPLATE_MIME)
     } catch (e) {
       uiAlert('สร้างไฟล์ไม่สำเร็จ: ' + dbErrorMessage(e))
