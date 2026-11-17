@@ -23,6 +23,7 @@ import { Spinner } from '../../components/Spinner'
 import { formatDateTime } from '../../shared/date'
 import { clearFormDraft, draftStillCurrent, formDraftKey, readFormDraft, writeFormDraft } from '../../shared/formDraft'
 import { reviseDocNumber } from '../../shared/docNumber'
+import { cleanHeader, cleanRow } from '../../shared/cleanText'
 
 // The form's content as one comparable string — a draft is whatever differs
 // from what the form held when it finished loading.
@@ -260,13 +261,15 @@ export default function FormPage() {
         baseline.current = snapshot(header, items)
         setRestoredAt(null); setDraftSavedAt(null)
       }
+      // Stored without the blank space pasted values carry at their ends.
+      const stored = { header: cleanHeader(header), items: items.map(cleanRow) }
       if (savedId) {
         const existing = await getSubmission(savedId)
-        if (existing) await updateSubmission(savedId, { ...existing, header, items, totals }, editor)
+        if (existing) await updateSubmission(savedId, { ...existing, ...stored, totals }, editor)
         settleDraft()
       } else {
         const created = await createSubmission({
-          formType: settings.formType, header, items, totals,
+          formType: settings.formType, ...stored, totals,
           createdBy: profile!.uid, createdByEmployeeId: profile!.employeeId,
           // Correcting a signed document: the new one carries that document's
           // number with the round of correction (…-R1), so the two read as one

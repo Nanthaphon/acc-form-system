@@ -8,7 +8,10 @@
 //   setting can swap the day and the month;
 // - amounts are real numbers shown with two decimals, and the totals are SUM
 //   formulas that carry the document's own figure;
-// - the workbook is UTF-8 XML in Tahoma, so Thai reads as Thai.
+// - the workbook is UTF-8 XML in Tahoma, so Thai reads as Thai;
+// - every text is cut clean of the blank space it picked up on the way in
+//   (a pasted "0582832579␣␣␣␣" is written as 0582832579), and a column of
+//   codes or account numbers is wide enough that none breaks across lines.
 // Columns are the form's own visible columns, in its order.
 
 import type { Company, DocSignature, ExpenseHeader, ExpenseRow, FormColumn, FormSettings } from '../../types/schema'
@@ -20,6 +23,7 @@ import { autoValue, blankFor, formatTemplateValue, parseTemplate } from '../../s
 import type { AutoValues } from '../../shared/bodyTemplate'
 import { computeColumnTotals, computeRow, printWidthsMm, rowHasNumbers, visibleColumns, PRINT_TABLE_MM } from './calc'
 import { documentSummary } from './summary'
+import { cleanText } from '../../shared/cleanText'
 
 export interface ExcelDocument {
   company: Company | null
@@ -39,8 +43,26 @@ const DEFAULT_ADDRESS =
 
 type Row = (Cell | string | null | undefined)[]
 
-const text = (v: unknown): string => String(v ?? '')
-const filled = (v: unknown): boolean => text(v).trim() !== ''
+const text = cleanText
+const filled = (v: unknown): boolean => text(v) !== ''
+
+// Every text cell cut clean — the one pass that covers the heading, the table,
+// the paragraphs and the signatures alike.
+function cleanCell(c: Cell | string | null | undefined): Cell | string | null | undefined {
+  if (typeof c === 'string') return cleanText(c)
+  if (c && typeof c.v === 'string' && !c.f) return { ...c, v: cleanText(c.v) }
+  return c
+}
+
+// The longest run a cell cannot break at — codes, account numbers, e-mail
+// addresses (Latin letters, digits, signs) with no space to wrap on. Thai text
+// is left out: it wraps on its own and would only stretch the column.
+const MAX_UNBROKEN = 30
+function unbrokenLength(c: Cell | string | null | undefined): number {
+  const v = typeof c === 'string' ? c : c?.v
+  if (typeof v !== 'string') return 0
+  return Math.max(0, ...v.split(/\s+/).filter(t => /^[\x21-\x7E]+$/.test(t)).map(t => t.length))
+}
 
 // A date from the document: a real date when it is one, else the text as typed.
 function dateCell(raw: unknown, style: 'cellDate' | 'date', textStyle?: 'cell'): Cell {
@@ -178,10 +200,20 @@ export function documentSheet(doc: ExcelDocument): Sheet {
   if (widths.length) widths[0] = Math.max(widths[0], 14)
   else widths.push(14)
 
+  const clean = rows.map(r => r.map(cleanCell))
+  // A column never narrower than its longest code: "0582832579" split into
+  // "058283257 / 9" reads as a different account.
+  for (let r = firstDataRow - 1; r < lastDataRow; r++) {
+    clean[r].forEach((c, i) => {
+      const len = Math.min(MAX_UNBROKEN, unbrokenLength(c))
+      if (len && i < widths.length) widths[i] = Math.max(widths[i], len + 2)
+    })
+  }
+
   return {
     name: sheetName(doc.docNumber),
     cols: widths.map(width => ({ width })),
-    rows,
+    rows: clean,
     fitToWidth: true,
   }
 }
@@ -189,7 +221,7 @@ export function documentSheet(doc: ExcelDocument): Sheet {
 // One cell of the table, typed by its column.
 function tableCell(cols: FormColumn[], row: ExpenseRow, col: FormColumn): Cell {
   const raw = row[col.key]
-  if (col.type === 'date') return filled(raw) ? dateCell(text(raw).trim(), 'cellDate', 'cell') : { v: '', s: 'cell' }
+  if (col.type === 'date') return filled(raw) ? dateCell(text(raw), 'cellDate', 'cell') : { v: '', s: 'cell' }
   if (isTextCol(col.type)) return { v: text(raw), s: 'cell' }
   // A figure only once the row holds one — an empty row stays empty, as it prints.
   const has = col.type === 'calc' ? rowHasNumbers(cols, row) : filled(raw)

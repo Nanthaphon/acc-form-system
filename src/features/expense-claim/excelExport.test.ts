@@ -142,3 +142,44 @@ describe('the .xlsx file', () => {
     expect(grid[headRow + 1].slice(0, 6)).toEqual(['1', '46344', 'HATPC26050364', 'นายสุรชัย จอมแปง', 'SCB', '0062446613'])
   })
 })
+
+describe('blank space picked up on the way in', () => {
+  // As pasted from a bank list: trailing spaces, a non-breaking space, a zero-width mark.
+  const padded: ExcelDocument = {
+    ...doc,
+    header: { ...header, firstName: '  กนกวรรณ ', lastName: 'พิลานนท์\u00A0', position: 'PcMs Specialist   ', job: '\tHaier ' },
+    items: [
+      { reqDate: ' 2026-11-17 ', pcCode: 'pc1305161   ', pcName: ' นายพักดี สีฉะสม  ', bank: 'KBANK ', account: '0582832579          ', days: 10, unit: 150 },
+      { reqDate: '2026-11-17', pcCode: '\u200Bpc1504071', pcName: 'นายกำจร การขาย', bank: 'KBANK', account: '5832234798\u00A0\u00A0', days: 10, unit: 150 },
+    ],
+  }
+  const s = documentSheet(padded)
+  const at = (r: number, c: number) => asCell(s.rows[r][c])
+
+  it('cuts every text cell clean, leading zeros kept as text', () => {
+    expect(at(headRow + 1, 5)).toEqual({ v: '0582832579', s: 'cell' })
+    expect(at(headRow + 2, 5)).toEqual({ v: '5832234798', s: 'cell' })
+    expect(at(headRow + 1, 2)).toEqual({ v: 'pc1305161', s: 'cell' })
+    expect(at(headRow + 2, 2)).toEqual({ v: 'pc1504071', s: 'cell' })
+    expect(at(headRow + 1, 3)).toEqual({ v: 'นายพักดี สีฉะสม', s: 'cell' })
+    expect(at(headRow + 1, 4)?.v).toBe('KBANK')
+    expect(at(headRow + 1, 1)).toEqual({ v: excelDate('2026-11-17'), s: 'cellDate' })
+    const texts = s.rows.flat().map(c => asCell(c)?.v).filter((v): v is string => typeof v === 'string' && v !== '')
+    for (const t of texts) expect(t).toBe(t.replace(/^[\s\u200B\uFEFF]+|[\s\u200B\uFEFF]+$/g, ''))
+    expect(texts).toEqual(expect.arrayContaining(['กนกวรรณ', 'พิลานนท์', 'PcMs Specialist', 'Haier']))
+  })
+
+  it('keeps the account column wide enough that no number breaks across lines', () => {
+    const narrow = documentSheet({ ...padded, settings: { ...settings, columns: cols.map(c => c.key === 'account' ? { ...c, width: 1 } : c) } })
+    expect(narrow.cols![5].width).toBeGreaterThanOrEqual('0582832579'.length + 2)
+  })
+
+  it('writes no padding into the file', async () => {
+    const b = await buildDocumentXlsx(padded)
+    const xml = await readPart(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer, 'xl/worksheets/sheet1.xml')
+    expect(xml).toContain('<t xml:space="preserve">0582832579</t>')
+    expect(xml).toContain('<t xml:space="preserve">5832234798</t>')
+    expect(xml).not.toMatch(/<t xml:space="preserve">[^<]*[\s\u00A0\u200B]<\/t>/)
+    expect(xml).not.toMatch(/<t xml:space="preserve">[\s\u00A0\u200B]/)
+  })
+})
