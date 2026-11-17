@@ -104,13 +104,21 @@ describe('ประวัติทั้งหมด — สถานะที�
   })
 })
 
-describe('ประวัติทั้งหมด — แบ่งหน้าละ 10 รายการ', () => {
+describe('ประวัติทั้งหมด — แบ่งหน้า', () => {
   const many = (n: number) => Array.from({ length: n }, (_, i) => doc(`m${i + 1}`, `GAC-${String(i + 1).padStart(4, '0')}`))
   let data: SubmissionSummary[] = []
   const lines = () => screen.getAllByText(/^GAC-\d{4}$/).map(e => e.textContent)
-  const pageBtn = (n: number) => screen.getByRole('button', { name: `หน้า ${n}` })
+  const pager = () => screen.getByRole('navigation', { name: 'เลือกหน้า' })
+  const go = (name: string) => fireEvent.click(within(pager()).getByRole('button', { name }))
+  const deleteRow = async (docNumber: string) => {
+    const row = (await screen.findByText(docNumber)).closest('tr') as HTMLElement
+    fireEvent.click(within(row).getByRole('button', { name: /ตัวเลือกเพิ่มเติม/ }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: /ลบเอกสาร/ }))
+    await waitFor(() => expect(screen.queryByText(docNumber)).toBeNull())
+  }
 
   beforeEach(() => {
+    localStorage.clear()
     data = many(25)
     vi.mocked(listAllSubmissions).mockImplementation(() => Promise.resolve(data))
     vi.mocked(deleteSubmission).mockImplementation(async id => { data = data.filter(r => r.id !== id) })
@@ -118,64 +126,72 @@ describe('ประวัติทั้งหมด — แบ่งหน้�
   })
   afterEach(() => { vi.mocked(listAllSubmissions).mockImplementation(() => Promise.resolve(rows)) })
 
-  it('แสดง 10 รายการแรก พร้อมบอกว่าแสดงช่วงไหนจากทั้งหมด', async () => {
+  it('แสดงหน้าละ 10 รายการ พร้อมบอกช่วงที่แสดงจากทั้งหมด', async () => {
     show()
     await screen.findByText('GAC-0001')
     expect(lines()).toHaveLength(10)
-    expect(screen.getByRole('navigation', { name: 'เลือกหน้า' })).toHaveTextContent('แสดง 1–10 จาก 25 รายการ')
-    expect(pageBtn(1)).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('button', { name: /ก่อนหน้า/ })).toBeDisabled()
+    expect(pager()).toHaveTextContent('1–10 จาก 25')
+    expect(within(pager()).getByRole('combobox', { name: 'แสดงต่อหน้า' })).toHaveValue('10')
+    expect(within(pager()).getByRole('button', { name: 'หน้าแรก' })).toBeDisabled()
+    expect(within(pager()).getByRole('button', { name: 'หน้าก่อนหน้า' })).toBeDisabled()
   })
 
-  it('กดเลขหน้า / ถัดไป / ก่อนหน้า แล้วเปลี่ยนรายการ', async () => {
+  it('กด ถัดไป / หน้าสุดท้าย / ก่อนหน้า / หน้าแรก', async () => {
     show()
     await screen.findByText('GAC-0001')
-    fireEvent.click(pageBtn(3))
-    expect(lines()).toEqual(['GAC-0021', 'GAC-0022', 'GAC-0023', 'GAC-0024', 'GAC-0025'])
-    expect(screen.getByText(/แสดง/).closest('p')).toHaveTextContent('แสดง 21–25 จาก 25 รายการ')
-    expect(screen.getByRole('button', { name: /ถัดไป/ })).toBeDisabled()
-    fireEvent.click(screen.getByRole('button', { name: /ก่อนหน้า/ }))
+    go('หน้าถัดไป')
     expect(lines()[0]).toBe('GAC-0011')
-    fireEvent.click(screen.getByRole('button', { name: /ถัดไป/ }))
-    expect(lines()[0]).toBe('GAC-0021')
+    go('หน้าสุดท้าย')
+    expect(lines()).toEqual(['GAC-0021', 'GAC-0022', 'GAC-0023', 'GAC-0024', 'GAC-0025'])
+    expect(pager()).toHaveTextContent('21–25 จาก 25')
+    expect(within(pager()).getByRole('button', { name: 'หน้าถัดไป' })).toBeDisabled()
+    go('หน้าก่อนหน้า')
+    expect(lines()[0]).toBe('GAC-0011')
+    go('หน้าแรก')
+    expect(lines()[0]).toBe('GAC-0001')
   })
 
-  it('ค้นหาแล้วกลับไปหน้า 1', async () => {
+  it('เลือกจำนวนต่อหน้าได้ และจำไว้ครั้งหน้า', async () => {
+    const { unmount } = show()
+    await screen.findByText('GAC-0001')
+    go('หน้าถัดไป')
+    fireEvent.change(within(pager()).getByRole('combobox', { name: 'แสดงต่อหน้า' }), { target: { value: '25' } })
+    expect(lines()).toHaveLength(25)
+    expect(pager()).toHaveTextContent('1–25 จาก 25')
+    unmount()
     show()
     await screen.findByText('GAC-0001')
-    fireEvent.click(pageBtn(2))
+    expect(lines()).toHaveLength(25)
+  })
+
+  it('ค้นหาแล้วกลับไปหน้าแรก', async () => {
+    show()
+    await screen.findByText('GAC-0001')
+    go('หน้าถัดไป')
     fireEvent.change(screen.getByPlaceholderText(/ค้นหา/), { target: { value: 'GAC-00' } })
-    expect(pageBtn(1)).toHaveAttribute('aria-current', 'page')
     expect(lines()[0]).toBe('GAC-0001')
   })
 
   it('ลบเอกสารแล้วยังอยู่หน้าเดิม', async () => {
     show()
     await screen.findByText('GAC-0001')
-    fireEvent.click(pageBtn(2))
-    const row = (await screen.findByText('GAC-0012')).closest('tr') as HTMLElement
-    fireEvent.click(within(row).getByRole('button', { name: /ตัวเลือกเพิ่มเติม/ }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: /ลบเอกสาร/ }))
-    await waitFor(() => expect(screen.queryByText('GAC-0012')).toBeNull())
-    expect(pageBtn(2)).toHaveAttribute('aria-current', 'page')
+    go('หน้าถัดไป')
+    await deleteRow('GAC-0012')
     expect(lines()[0]).toBe('GAC-0011')
+    expect(pager()).toHaveTextContent('11–20 จาก 24')
   })
 
   it('ลบรายการสุดท้ายของหน้าสุดท้าย แล้วถอยไปหน้าก่อน', async () => {
     data = many(21)
     show()
     await screen.findByText('GAC-0001')
-    fireEvent.click(pageBtn(3))
-    const row = (await screen.findByText('GAC-0021')).closest('tr') as HTMLElement
-    fireEvent.click(within(row).getByRole('button', { name: /ตัวเลือกเพิ่มเติม/ }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: /ลบเอกสาร/ }))
-    await waitFor(() => expect(screen.queryByText('GAC-0021')).toBeNull())
+    go('หน้าสุดท้าย')
+    await deleteRow('GAC-0021')
     expect(lines()[0]).toBe('GAC-0011')
-    expect(pageBtn(2)).toHaveAttribute('aria-current', 'page')
-    expect(screen.queryByRole('button', { name: 'หน้า 3' })).toBeNull()
+    expect(pager()).toHaveTextContent('11–20 จาก 20')
   })
 
-  it('ไม่ถึง 10 รายการ ไม่มีตัวเลื่อนหน้า', async () => {
+  it('ไม่ถึง 10 รายการ ไม่มีแถบแบ่งหน้า', async () => {
     data = many(4)
     show()
     await screen.findByText('GAC-0001')

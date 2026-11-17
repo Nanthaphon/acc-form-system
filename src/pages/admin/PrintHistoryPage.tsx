@@ -34,8 +34,6 @@ interface Column extends PickableColumn {
   cell: (r: SubmissionSummary) => ReactNode
 }
 
-const PAGE_SIZE = 10
-
 export default function PrintHistoryPage() {
   const [rows, setRows] = useState<SubmissionSummary[]>([])
   const [employees, setEmployees] = useState<UserProfile[]>([])
@@ -87,7 +85,7 @@ export default function PrintHistoryPage() {
   const chains = chainRows(filtered, rows)
   // Ten lines a page. A filter change starts again from page 1; deleting or
   // cancelling keeps the page open (or steps back one if it was the last line).
-  const pager = usePagination(chains, PAGE_SIZE)
+  const pager = usePagination(chains, { pageSize: 10, storageKey: 'pageSize:printHistory' })
   // Counted in lines, as the table and the pager count them — a corrected
   // document and its earlier rounds are one line.
   const allLines = chainRows(rows).length
@@ -138,7 +136,8 @@ export default function PrintHistoryPage() {
           resultCount={chains.length} total={allLines}
           extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>
-      <div className={ui.tableWrap}>
+      <div className={ui.tableCard}>
+      <div className={ui.tableScroll}>
         <table className={ui.table}>
           <thead className={ui.thead}>
             <tr>
@@ -226,7 +225,9 @@ export default function PrintHistoryPage() {
           </tbody>
         </table>
       </div>
-      <Pagination page={pager.page} pageCount={pager.pageCount} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} />
+      <Pagination page={pager.page} pageCount={pager.pageCount} pageSize={pager.pageSize} from={pager.from} to={pager.to} total={pager.total}
+        onPage={pager.setPage} onPageSize={pager.setPageSize} />
+      </div>
     </div>
   )
 }

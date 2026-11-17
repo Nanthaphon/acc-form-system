@@ -25,6 +25,10 @@ export const ui = {
   btnGhost: 'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900',
   // tables
   tableWrap: 'scroll-slim overflow-x-auto rounded-2xl border border-stone-200/60 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04),0_20px_50px_-28px_rgba(22,32,36,0.20)]',
+  // the same card when something sits under the table inside it (a pager):
+  // the card holds the frame, tableScroll scrolls the table alone
+  tableCard: 'overflow-hidden rounded-2xl border border-stone-200/60 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04),0_20px_50px_-28px_rgba(22,32,36,0.20)]',
+  tableScroll: 'scroll-slim overflow-x-auto',
   table: 'w-full text-sm',
   thead: 'border-b border-stone-200/60 text-stone-500',
   th: 'whitespace-nowrap px-4 py-3 text-left text-xs font-medium',
