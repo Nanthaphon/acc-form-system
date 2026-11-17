@@ -52,7 +52,11 @@ npm run lint      # oxlint
     ไฟล์ที่น่าจะเกี่ยว และสิ่งที่ตกลงกันไว้แล้ว
   - ผู้ใช้ขอหลายเรื่องในข้อความเดียว → สร้างงานละเรื่อง
 - ทำต่อใน session เดิมได้เฉพาะ: แก้/ปรับงานที่ session นี้เพิ่งทำ, ตอบคำถาม, deploy งานของ session นี้
-- session ใหม่เปิดใน worktree แยก (branch ของตัวเอง) — ก่อนเริ่มงาน:
-  ก๊อป `.env.local` จาก `C:\Dev\Acc Form Project` มาไว้ใน worktree แล้วรัน `npm install`
-- deploy จาก worktree เมื่อผู้ใช้สั่ง: `git pull --rebase origin main` ก่อน (session อื่นอาจ push ไปแล้ว)
-  รันเทสต์ + build อีกรอบ แล้วจึง `git push origin HEAD:main`
+- **ไม่ใช้ worktree** — ทำงานในโฟลเดอร์หลัก `C:\Dev\Acc Form Project` บน branch `main` เสมอ
+  (ผู้ใช้เปิด `npm run dev` จากโฟลเดอร์นี้ แก้แล้วต้องเห็นที่ localhost ทันที)
+  - session ใหม่ที่สร้างให้: `use_worktree: false` (ใช้โฟลเดอร์เดียวกัน)
+  - หลาย session ใช้โฟลเดอร์เดียวกัน → แก้เฉพาะไฟล์ของงานตัวเอง · `git add` เฉพาะไฟล์ที่ตัวเองแก้ (ห้าม `git add -A`)
+    ห้ามสลับ branch · ห้าม stash/reset ของคนอื่น
+  - ถ้า session ไหนถูกเปิดใน worktree ไปแล้ว: งานเสร็จให้ merge เข้า `main` ในโฟลเดอร์หลัก (`git merge --ff-only`) ทันที
+- deploy เมื่อผู้ใช้สั่ง: `git pull --rebase origin main` ก่อน (session อื่นอาจ push ไปแล้ว)
+  รันเทสต์ + build อีกรอบ แล้วจึง `git push origin main`
