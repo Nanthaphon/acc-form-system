@@ -66,8 +66,7 @@ export function withoutCentral<T extends Partial<UserProfile>>(patch: T, p: Pick
 }
 
 
-/** When the last sync that changed something ran (ms), or null. The automatic
- *  run every 10 minutes logs only when it did something. */
+/** When the last sync ran (ms), or null. */
 export async function lastSyncAt(): Promise<number | null> {
   try {
     const { data, error } = await supabase.from('employee_sync_runs').select('ranAt').order('ranAt', { ascending: false }).limit(1)
