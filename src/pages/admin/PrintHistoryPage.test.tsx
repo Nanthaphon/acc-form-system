@@ -112,8 +112,7 @@ describe('ประวัติทั้งหมด — แบ่งหน้�
   const go = (name: string) => fireEvent.click(within(pager()).getByRole('button', { name }))
   const deleteRow = async (docNumber: string) => {
     const row = (await screen.findByText(docNumber)).closest('tr') as HTMLElement
-    fireEvent.click(within(row).getByRole('button', { name: /ตัวเลือกเพิ่มเติม/ }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: /ลบเอกสาร/ }))
+    fireEvent.click(within(row).getByRole('button', { name: /ลบเอกสาร/ }))
     await waitFor(() => expect(screen.queryByText(docNumber)).toBeNull())
   }
 

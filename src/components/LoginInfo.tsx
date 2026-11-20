@@ -3,7 +3,7 @@ import { AtSign, KeyRound } from 'lucide-react'
 import type { UserProfile } from '../types/schema'
 import { PASSWORD_STATE, passwordState } from '../shared/roles'
 import CopyButton from './CopyButton'
-import { Badge, ui } from './ui'
+import { Badge, SectionTitle, ui } from './ui'
 
 // One login detail in a copyable box (a hidden password shows dots, no copy).
 export function Credential({ label, value, hidden, badge, note }: {
@@ -43,7 +43,7 @@ export default function LoginInfo({ profile, onSetPassword, onChangeUsername }: 
   return (
     <div className={ui.card}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h2 className={`${ui.cardTitle} flex items-center gap-2`}><KeyRound size={16} className="text-stone-400" /> ข้อมูลเข้าสู่ระบบ</h2>
+        <SectionTitle icon={<KeyRound size={16} />}>ข้อมูลเข้าสู่ระบบ</SectionTitle>
         <div className="flex flex-wrap gap-2">
           {onChangeUsername && (
             <button className={ui.btnSecondary} onClick={onChangeUsername}><AtSign size={16} /> แก้ชื่อผู้ใช้</button>
@@ -60,12 +60,8 @@ export default function LoginInfo({ profile, onSetPassword, onChangeUsername }: 
           value={profile.employeeId}
           hidden={st !== 'default'}
           badge={<Badge tone={meta.tone}>{meta.label}</Badge>}
-          note={meta.hint}
         />
       </div>
-      {!onSetPassword && st !== 'default' && (
-        <p className="mt-3 text-xs text-stone-500">ถ้าพนักงานลืมรหัสผ่าน ให้ผู้ดูแลระบบตั้งรหัสใหม่ให้</p>
-      )}
     </div>
   )
 }

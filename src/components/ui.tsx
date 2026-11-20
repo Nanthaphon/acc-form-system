@@ -77,6 +77,17 @@ const BADGE_TONES = {
   red: 'bg-rose-50 text-brick-600',
 } as const
 
+// A card or section heading: the same icon tile in front of every one, so a
+// page of sections reads as one set.
+export function SectionTitle({ icon, children, className = '' }: { icon: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <h2 className={`flex items-center gap-2.5 text-[15px] font-semibold text-stone-900 ${className}`}>
+      <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600">{icon}</span>
+      {children}
+    </h2>
+  )
+}
+
 export function Badge({ tone = 'gray', children }: { tone?: keyof typeof BADGE_TONES; children: ReactNode }) {
   return <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium ${BADGE_TONES[tone]}`}>{children}</span>
 }

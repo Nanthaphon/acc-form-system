@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Ban, CircleCheck, Clock3, FileCheck2, UserRound } from 'lucide-react'
-import type { ReactNode } from 'react'
-import type { SubmissionStatus, SubmissionSummary } from '../types/schema'
+import { Ban, Clock3, UserRound } from 'lucide-react'
+import type { SubmissionSummary } from '../types/schema'
 import { subStatus, statusMeta, statusLabel } from '../data/submissions'
 import { formatDateTime } from '../shared/date'
 
@@ -10,14 +9,6 @@ interface TooltipPos {
   x: number
   y: number
   placement: 'top' | 'bottom'
-}
-
-// One icon per status, so the four read apart at a glance, not by colour alone.
-const STATUS_ICON: Record<SubmissionStatus, ReactNode> = {
-  done: <FileCheck2 size={13} strokeWidth={2.2} />,
-  pending: <Clock3 size={13} strokeWidth={2.2} />,
-  signed: <CircleCheck size={13} strokeWidth={2.2} />,
-  void: <Ban size={13} strokeWidth={2.2} />,
 }
 
 function pendingCountText(count: number): string {
@@ -53,7 +44,7 @@ export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
       onMouseLeave={hasTip ? hide : undefined}
       className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${meta.className}${hasTip ? ' cursor-help' : ''}`}
     >
-      {STATUS_ICON[st]}
+      <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
       {statusLabel(sub)}
       {hasTip && pos && createPortal(
         <div

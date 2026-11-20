@@ -2,8 +2,8 @@ import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArchiveRestore, Ban, ChevronDown, ChevronRight, Copy, FilePen, Pencil, Printer, Trash2 } from 'lucide-react'
-import { ActionGroup, ActionGroupItem, RowMenu } from '../../components/RowActions'
-import type { RowMenuItem } from '../../components/RowActions'
+import { ActionGroup, ActionGroupItem } from '../../components/RowActions'
+import ActionIconButton from '../../components/ActionIconButton'
 import { listAllSubmissions, submissionAmount, deleteSubmission, isSigned, voidingAvailable, docStatusAvailable } from '../../data/submissions'
 import { loadOptionLists } from '../../data/fieldOptions'
 import DocStatusPicker from '../../components/DocStatusPicker'
@@ -151,14 +151,6 @@ export default function PrintHistoryPage() {
           </thead>
           <tbody className={ui.tbody}>
             {pager.pageItems.map(({ latest: r, older }) => {
-              // The everyday actions side by side; cancelling and deleting wait behind ⋯,
-              // as on ประวัติ — a red ลบ on every line drew the eye to the one to avoid.
-              const more: RowMenuItem[] = [
-                ...(r.voided
-                  ? [{ label: 'กู้คืนเอกสารที่ยกเลิก', icon: <ArchiveRestore size={16} />, onClick: async () => { if (await askAndUnvoid(r)) loadRows() } }]
-                  : voidingAvailable() ? [{ label: 'ยกเลิกเอกสาร', icon: <Ban size={16} />, onClick: async () => { if (await askAndVoid(r)) loadRows() }, danger: true }] : []),
-                { label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDelete(r), danger: true },
-              ]
               const showing = open.has(r.id)
               // A document others have signed is no longer changed in place: it
               // is corrected by a new one in its stead, carrying its number and
@@ -196,8 +188,11 @@ export default function PrintHistoryPage() {
                             : <ActionGroupItem label="แก้ไขเอกสาร" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />)}
                           <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
                           <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
+                          {r.voided
+                            ? <ActionGroupItem label="กู้คืนเอกสารที่ยกเลิก" onClick={async () => { if (await askAndUnvoid(r)) loadRows() }} icon={<ArchiveRestore size={15} />} />
+                            : voidingAvailable() && <ActionGroupItem label="ยกเลิกเอกสาร" onClick={async () => { if (await askAndVoid(r)) loadRows() }} icon={<Ban size={15} />} />}
                         </ActionGroup>
-                        <RowMenu items={more} label={`ตัวเลือกเพิ่มเติม ${r.docNumber}`} />
+                        <ActionIconButton label={`ลบเอกสาร ${r.docNumber}`} tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
                       </div>
                     </td>
                   </tr>
