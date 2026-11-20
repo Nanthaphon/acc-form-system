@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import AssignSignersModal from './AssignSignersModal'
-import { assignSigners, signDocument, unsignDocument } from '../data/submissions'
+import { assignSigners, signBlockAsSelf, signDocument, unsignDocument } from '../data/submissions'
 import { notifySigners } from '../data/notify'
 import { uiAlert } from './dialog/dialogService'
 import type { DocSignature, FormSettings, SubmissionSummary } from '../types/schema'
@@ -11,8 +11,10 @@ vi.mock('../data/submissions', () => ({
   assignSigners: vi.fn(() => Promise.resolve()),
   signDocument: vi.fn(() => Promise.resolve()),
   unsignDocument: vi.fn(() => Promise.resolve()),
+  signBlockAsSelf: vi.fn(() => Promise.resolve()),
+  canRemoveSignature: (sig: { status: string; assignedUid: string }, me: string, owner: string) => sig.status === 'signed' && (sig.assignedUid === me || owner === me),
 }))
-vi.mock('./dialog/dialogService', () => ({ uiAlert: vi.fn() }))
+vi.mock('./dialog/dialogService', () => ({ uiAlert: vi.fn(), uiConfirm: vi.fn(() => Promise.resolve(true)) }))
 vi.mock('../data/notify', async importOriginal => ({
   ...(await importOriginal<typeof import('../data/notify')>()),
   notifySigners: vi.fn(() => Promise.resolve({ sent: 1, noEmail: [], failed: [] })),
@@ -23,11 +25,11 @@ const signers = [{ uid: 'boss', name: 'ไกรธัช จิระกรธ�
 const mine = (status: 'signed' | 'pending'): DocSignature =>
   ({ blockId: 'maker', blockLabel: 'ผู้จัดทำเอกสาร', assignedUid: 'u1', assignedName: 'นันทพล นายาต', status, ...(status === 'signed' ? { signedAt: 1 } : {}) })
 
-const show = (signatures: DocSignature[] = [], signature: string | null = 'data:image/png;base64,AA') => render(
+const show = (signatures: DocSignature[] = [], signature: string | null = 'data:image/png;base64,AA', canSignAny = false) => render(
   <MemoryRouter>
     <AssignSignersModal
-      submission={{ id: 's1', docNumber: 'GAC-0011', signatures } as unknown as SubmissionSummary}
-      settings={settings} signers={signers} currentUid="u1" currentName="นันทพล นายาต" currentSignature={signature}
+      submission={{ id: 's1', docNumber: 'GAC-0011', createdBy: 'u1', signatures } as unknown as SubmissionSummary}
+      settings={settings} signers={signers} currentUid="u1" currentName="นันทพล นายาต" currentSignature={signature} canSignAny={canSignAny}
       onClose={() => {}} onDone={() => {}}
     />
   </MemoryRouter>,
@@ -119,5 +121,26 @@ describe('เซ็น / ส่งเซ็น', () => {
     fireEvent.click(screen.getByRole('button', { name: /ส่งให้ 1 คนเซ็น/ }))
     await waitFor(() => expect(assignSigners).toHaveBeenCalled())
     expect(signDocument).not.toHaveBeenCalled()
+  })
+})
+
+describe('เซ็น / ส่งเซ็น — signing or clearing one line at once', () => {
+  const checkerSigned: DocSignature = { blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'ไกรธัช จิระกรธนัน', status: 'signed', signedAt: 1 }
+
+  it('lets an admin sign another line on the spot', async () => {
+    show([], 'data:image/png;base64,AA', true)
+    fireEvent.click(screen.getByRole('button', { name: /เซ็นตรงนี้/ }))
+    await waitFor(() => expect(signBlockAsSelf).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }), { id: 'checker', label: 'ผู้ตรวจสอบ' }, { uid: 'u1', name: 'นันทพล นายาต' }))
+  })
+
+  it('offers no เซ็นตรงนี้ to someone who is not an admin', () => {
+    show()
+    expect(screen.queryByRole('button', { name: /เซ็นตรงนี้/ })).toBeNull()
+  })
+
+  it('takes one signature back off the document it belongs to', async () => {
+    show([checkerSigned])
+    fireEvent.click(screen.getByRole('button', { name: /ลบลายเซ็น/ }))
+    await waitFor(() => expect(unsignDocument).toHaveBeenCalledWith('s1', 'checker'))
   })
 })

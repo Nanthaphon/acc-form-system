@@ -16,7 +16,6 @@ import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters, filterChoices } from '../../shared/submissionFilter'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import AssignSignersModal from '../../components/AssignSignersModal'
-import SignNowModal from '../../components/SignNowModal'
 import StatusBadge from '../../components/StatusBadge'
 import DocNumberCell from '../../components/DocNumberCell'
 import { askAndVoid } from '../../components/voidDocument'
@@ -49,7 +48,6 @@ export default function HistoryPage() {
   const [signers, setSigners] = useState<Signer[]>([])
   const [groups, setGroups] = useState<FormGroup[]>([])
   const [signModal, setSignModal] = useState<SubmissionSummary | null>(null)
-  const [signNow, setSignNow] = useState<SubmissionSummary | null>(null)
   function load() { if (profile) listMySubmissions(profile.uid).then(setRows) }
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
   useEffect(() => { listForms().then(setForms); listSigners().then(setSigners); listGroups().then(setGroups) }, [])
@@ -193,8 +191,7 @@ export default function HistoryPage() {
                           : <ActionGroupItem label="แก้ไขเอกสาร" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
                         <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
                         <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
-                        {!voided && !primary && canSignOrSend(r) && <ActionGroupItem label="เซ็น / ส่งเซ็นเพิ่ม" onClick={() => setSignModal(r)} icon={<Send size={15} />} />}
-                        {!voided && canSignNow() && <ActionGroupItem label="เซ็นเอง / ลบลายเซ็น" onClick={() => setSignNow(r)} icon={<Signature size={15} />} />}
+                        {!voided && !primary && (canSignOrSend(r) || canSignNow()) && <ActionGroupItem label="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Send size={15} />} />}
                         {!voided && subStatus(r) === 'pending' && <ActionGroupItem label="ยกเลิกการส่งให้เซ็น" onClick={() => onCancelSign(r)} icon={<RotateCcw size={15} />} />}
                         {!voided && !deletable && canVoid && <ActionGroupItem label="ยกเลิกเอกสาร" onClick={async () => { if (await askAndVoid(r)) load() }} icon={<Ban size={15} />} />}
                       </ActionGroup>
@@ -239,17 +236,6 @@ export default function HistoryPage() {
       )}
       </div>
 
-      {signNow && profile && (
-        <SignNowModal
-          submission={signNow}
-          settings={formOf(signNow.formType) ?? ({ signatureBlocks: formSignatureBlocks(null) } as FormSettings)}
-          me={{ uid: profile.uid, name: myName() }}
-          mySignature={profile.signatureImage}
-          onClose={() => setSignNow(null)}
-          onDone={load}
-        />
-      )}
-
       {signModal && profile && (
         <AssignSignersModal
           submission={signModal}
@@ -258,6 +244,7 @@ export default function HistoryPage() {
           currentUid={profile.uid}
           currentName={myName()}
           currentSignature={profile.signatureImage}
+          canSignAny={canSignNow()}
           onClose={() => setSignModal(null)}
           onDone={load}
         />

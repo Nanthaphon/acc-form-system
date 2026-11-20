@@ -1,9 +1,9 @@
-import { uiAlert } from './dialog/dialogService'
+import { uiAlert, uiConfirm } from './dialog/dialogService'
 import { useState } from 'react'
-import { CheckCircle2, Clock3, PenLine, Send, Signature, X } from 'lucide-react'
+import { CheckCircle2, Clock3, Eraser, PenLine, Send, Signature, X } from 'lucide-react'
 import type { SubmissionSummary, FormSettings, DocSignature } from '../types/schema'
 import { formSignatureBlocks } from '../types/schema'
-import { assignSigners, signDocument, unsignDocument } from '../data/submissions'
+import { assignSigners, canRemoveSignature, signBlockAsSelf, signDocument, unsignDocument } from '../data/submissions'
 import { notifySigners, notifySummary } from '../data/notify'
 import type { Signer } from '../data/submissions'
 import { dbErrorMessage } from '../shared/dbError'
@@ -21,9 +21,14 @@ interface Props {
   currentUid: string
   currentName: string
   currentSignature?: string | null
+  /** Admins: sign any line at once (เซ็นตรงนี้), not only their own. */
+  canSignAny?: boolean
   onClose: () => void
   onDone: () => void              // reload the list after sending
 }
+
+// The small button at the end of a signer line.
+const ROW_BTN = 'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60'
 
 function Step({ title }: { title: string }) {
   return <h3 className="mb-2.5 text-xs font-semibold text-stone-500">{title}</h3>
@@ -33,7 +38,7 @@ function Step({ title }: { title: string }) {
 // their own line (or takes their signature back off), and picks who signs the
 // other lines online — any line left without anyone is signed in pen on paper.
 // Nothing happens until the one button at the bottom, which says what it will do.
-export default function AssignSignersModal({ submission, settings, signers, currentUid, currentName, currentSignature, onClose, onDone }: Props) {
+export default function AssignSignersModal({ submission, settings, signers, currentUid, currentName, currentSignature, canSignAny, onClose, onDone }: Props) {
   const { refresh: refreshProfile } = useAuth()
   const allBlocks = formSignatureBlocks(settings)
   const ownBlock = allBlocks[0]
@@ -52,6 +57,33 @@ export default function AssignSignersModal({ submission, settings, signers, curr
   const [assign, setAssign] = useState<Record<string, string>>(() =>
     Object.fromEntries(sigs.filter(x => x.status === 'pending').map(x => [x.blockId, x.assignedUid])))
   const [busy, setBusy] = useState(false)
+  const [rowBusy, setRowBusy] = useState<string | null>(null)
+
+  // Done at once, on its own line: the rest of the modal is left as it was.
+  async function signNow(blockId: string, blockLabel: string) {
+    if (rowBusy || !(await uiConfirm('ลายเซ็นของคุณจะถูกแปะลงเอกสารทันที', {
+      title: `เซ็นช่อง "${blockLabel}" ?`, confirmText: 'เซ็น',
+    }))) return
+    setRowBusy(blockId)
+    try {
+      await signBlockAsSelf(submission, { id: blockId, label: blockLabel }, { uid: currentUid, name: currentName })
+      onDone(); onClose()
+    } catch (e) {
+      uiAlert(dbErrorMessage(e), { title: 'เซ็นไม่สำเร็จ' })
+    } finally { setRowBusy(null) }
+  }
+  async function unsignNow(blockId: string, blockLabel: string, signedBy: string) {
+    if (rowBusy || !(await uiConfirm(signedBy && signedBy !== currentName ? `ลายเซ็นของ ${signedBy} จะถูกลบออกจากช่องนี้` : 'ลายเซ็นของคุณจะถูกลบออกจากช่องนี้', {
+      title: `ลบลายเซ็นช่อง "${blockLabel}" ?`, tone: 'danger', confirmText: 'ลบลายเซ็น',
+    }))) return
+    setRowBusy(blockId)
+    try {
+      await unsignDocument(submission.id, blockId)
+      onDone(); onClose()
+    } catch (e) {
+      uiAlert(dbErrorMessage(e), { title: 'ลบลายเซ็นไม่สำเร็จ' })
+    } finally { setRowBusy(null) }
+  }
   const signerName = (uid: string) => signers.find(s => s.uid === uid)?.name ?? ''
 
   // What the button will do.
@@ -158,12 +190,20 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                     const sig = sigFor(b.id)
                     const picked = assign[b.id] ?? ''
                     return (
-                      <div key={b.id} className="grid min-h-[60px] grid-cols-1 items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_8.5rem]">
+                      <div key={b.id} className="grid min-h-[60px] grid-cols-1 items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto]">
                         <span className="text-sm font-medium text-stone-800">{b.label}</span>
                         {sig?.status === 'signed' ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-olive-50 px-3 py-1 text-xs font-medium text-olive-700 sm:col-span-2">
-                            <CheckCircle2 size={14} /> เซ็นแล้วโดย {sig.assignedName} · {formatDateTime(sig.signedAt)}
-                          </span>
+                          <>
+                            <span className="inline-flex items-center gap-1.5 justify-self-start rounded-full bg-olive-50 px-3 py-1 text-xs font-medium text-olive-700">
+                              <CheckCircle2 size={14} /> เซ็นแล้วโดย {sig.assignedName} · {formatDateTime(sig.signedAt)}
+                            </span>
+                            {canRemoveSignature(sig, currentUid, submission.createdBy) ? (
+                              <button type="button" disabled={!!rowBusy} onClick={() => unsignNow(b.id, b.label, sig.assignedName)}
+                                className={`${ROW_BTN} border-rose-200 bg-white text-brick-600 hover:bg-rose-50 justify-self-start sm:justify-self-end`}>
+                                {rowBusy === b.id ? <Spinner size={14} /> : <Eraser size={14} />} ลบลายเซ็น
+                              </button>
+                            ) : <span />}
+                          </>
                         ) : (
                           <>
                             <div className="min-w-0">
@@ -176,13 +216,22 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                                 emptyLabel="— ไม่ส่งใคร (เซ็นบนกระดาษ) —"
                               />
                             </div>
-                            {sig?.status === 'pending' && sig.assignedUid === picked ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-ochre-50 px-2.5 py-1 text-xs font-medium justify-self-start sm:justify-self-end text-ochre-700"><Clock3 size={13} /> รอเซ็น</span>
-                            ) : picked ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-clay-50 px-2.5 py-1 text-xs font-medium justify-self-start sm:justify-self-end text-clay-700"><Send size={13} /> จะส่งให้เซ็น</span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium justify-self-start sm:justify-self-end text-stone-500"><PenLine size={13} /> เซ็นบนกระดาษ</span>
-                            )}
+                            <div className="flex items-center gap-2 justify-self-start sm:justify-self-end">
+                              {sig?.status === 'pending' && sig.assignedUid === picked ? (
+                                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-ochre-50 px-2.5 py-1 text-xs font-medium text-ochre-700"><Clock3 size={13} /> รอเซ็น</span>
+                              ) : picked ? (
+                                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-clay-50 px-2.5 py-1 text-xs font-medium text-clay-700"><Send size={13} /> จะส่งให้เซ็น</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500"><PenLine size={13} /> เซ็นบนกระดาษ</span>
+                              )}
+                              {/* An admin can sign any line on the spot, without sending it anywhere. */}
+                              {canSignAny && currentSignature && (
+                                <button type="button" disabled={!!rowBusy} onClick={() => signNow(b.id, b.label)}
+                                  className={`${ROW_BTN} border-clay-200 bg-white text-clay-700 hover:bg-clay-50`}>
+                                  {rowBusy === b.id ? <Spinner size={14} /> : <Signature size={14} />} เซ็นตรงนี้
+                                </button>
+                              )}
+                            </div>
                           </>
                         )}
                       </div>
