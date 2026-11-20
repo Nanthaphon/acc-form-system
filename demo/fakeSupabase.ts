@@ -552,15 +552,26 @@ function demoSync(dryRun: boolean) {
   }))
   central.push({ emp_id: '1010999', company: 'Globe Syndicate', name_prefix: 'นางสาว', first_name: 'นางสาวสมใจ', last_name: 'ใหม่มาก', position: 'เจ้าหน้าที่', department: 'HR', m365_email: null, resign_date: null })
   const plan = planSync(central, people, db.companies as any[], bangkokToday())
+  const created: { employeeId: string; name: string }[] = []
   if (!dryRun) {
     for (const p of plan.patches) Object.assign(people.find(x => x.uid === p.uid), p.set, { centralSyncedAt: Date.now() })
+    for (const n of plan.notHere) {
+      people.push({
+        uid: `u-sync-${n.employeeId}`, employeeId: n.employeeId, firstName: '', lastName: '', position: '', department: '',
+        companyId: '', defaultJob: '', bankAccount: '', role: 'employee', mustChangePassword: true, passwordIsDefault: true,
+        createdAt: Date.now(), ...n.set, centralSyncedAt: Date.now(),
+      })
+      created.push({ employeeId: n.employeeId, name: n.name })
+    }
     save()
   }
   return {
     data: {
       dryRun, ranAt: Date.now(), centralCount: central.length,
       updated: plan.patches.filter(p => p.changed.length > 0).map(p => ({ employeeId: p.employeeId, name: p.name, changed: p.changed })),
-      unchanged: plan.unchanged, notInCentral: plan.notInCentral, notHere: plan.notHere,
+      unchanged: plan.unchanged, notInCentral: plan.notInCentral,
+      notHere: plan.notHere.map(({ employeeId, name, company }) => ({ employeeId, name, company })),
+      created, clashes: plan.clashes,
       resigned: plan.resigned, unknownCompanies: plan.unknownCompanies, failed: [],
     },
     error: null,

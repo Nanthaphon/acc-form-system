@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { bangkokToday, hasResigned, matchCompany, planSync, stripPrefix } from './plan'
+import { bangkokToday, hasResigned, loginEmail, matchCompany, planSync, stripPrefix } from './plan'
+import { employeeIdToEmail } from '../../../src/data/auth'
 import type { CentralEmployee, LocalCompany, LocalProfile } from './plan'
 
 const COMPANIES: LocalCompany[] = [
@@ -126,7 +127,11 @@ describe('planSync', () => {
       [emp({}), emp({ emp_id: '1010182', name_prefix: 'นางสาว', first_name: 'นางสาวเบญจวรรณ', last_name: 'ดี' }), emp({ emp_id: '1010999', resign_date: '2025-01-01' })],
       [prof({})], COMPANIES, TODAY,
     )
-    expect(plan.notHere).toEqual([{ employeeId: '1010182', name: 'เบญจวรรณ ดี', company: 'Globe Syndicate' }])
+    expect(plan.notHere).toHaveLength(1)
+    expect(plan.notHere[0]).toMatchObject({ employeeId: '1010182', name: 'เบญจวรรณ ดี', company: 'Globe Syndicate' })
+    // …with the details the new account is made with
+    expect(plan.notHere[0].set).toMatchObject({ firstName: 'เบญจวรรณ', lastName: 'ดี', companyId: 'globe', centralStatus: 'active' })
+    expect(plan.notHere[0].set.centralFields).toContain('firstName')
   })
 
   it('prefers the row still working when the master lists an ID twice', () => {
@@ -136,5 +141,25 @@ describe('planSync', () => {
     )
     expect(plan.patches[0].set.companyId).toBe('globe')
     expect(plan.patches[0].set.centralStatus).toBe('active')
+  })
+
+  it('makes no second account for someone already here under another employee ID', () => {
+    const plan = planSync(
+      [emp({ emp_id: '1010050', first_name: 'สมชาย', last_name: 'ใจดี', m365_email: 'somchai@globe.co.th' }),
+       emp({ emp_id: '1010051', first_name: 'วิภา', last_name: 'สุข', m365_email: 'wipa@globe.co.th' })],
+      [prof({ employeeId: 'ACC01', firstName: 'สมชาย', lastName: 'ใจดี' }), prof({ uid: 'u2', employeeId: 'ACC02', firstName: 'Wipa', lastName: 'S', email: 'WIPA@globe.co.th' })],
+      COMPANIES, TODAY,
+    )
+    expect(plan.notHere).toEqual([])
+    expect(plan.clashes).toEqual([
+      { employeeId: '1010050', name: 'สมชาย ใจดี', existingEmployeeId: 'ACC01' },
+      { employeeId: '1010051', name: 'วิภา สุข', existingEmployeeId: 'ACC02' },
+    ])
+  })
+})
+
+describe('loginEmail', () => {
+  it('is the login the app itself uses for an employee ID', () => {
+    for (const id of ['1010001', 'ACC001', 'Acc@GB', ' gs-01 ']) expect(loginEmail(id)).toBe(employeeIdToEmail(id))
   })
 })

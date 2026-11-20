@@ -6,6 +6,8 @@ import ActionIconButton from '../../components/ActionIconButton'
 import CopyButton from '../../components/CopyButton'
 import SetPasswordModal from '../../components/SetPasswordModal'
 import EmployeeSyncModal from '../../components/EmployeeSyncModal'
+import { lastSyncAt } from '../../data/employeeSync'
+import { formatDateTime } from '../../shared/date'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import { listEmployees, deleteEmployee } from '../../data/users'
@@ -51,6 +53,7 @@ export default function EmployeeListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<{ done: number; total: number } | null>(null)
   const [syncing, setSyncing] = useState(false)
+  const [syncedAt, setSyncedAt] = useState<number | null>(null)
 
   function load() {
     listEmployees().then(r => {
@@ -60,7 +63,7 @@ export default function EmployeeListPage() {
       setSelected(prev => new Set([...prev].filter(uid => present.has(uid))))
     })
   }
-  useEffect(() => { load(); listCompanies().then(setCompanies); listAccessGroups().then(setGroups) }, [])
+  useEffect(() => { load(); listCompanies().then(setCompanies); listAccessGroups().then(setGroups); lastSyncAt().then(setSyncedAt) }, [])
 
   const viewerIsSuper = isSuperAdmin(profile)
   // The same rule as the row's delete button, which the database enforces too.
@@ -148,7 +151,7 @@ export default function EmployeeListPage() {
       <PageHeader
         icon={<Users size={20} />}
         title="ข้อมูลพนักงาน"
-        subtitle={loading ? 'กำลังโหลด...' : `ทั้งหมด ${rows.length} คน · ยังใช้รหัสเริ่มต้น ${onDefault} คน`}
+        subtitle={loading ? 'กำลังโหลด...' : `ทั้งหมด ${rows.length} คน · ยังใช้รหัสเริ่มต้น ${onDefault} คน${syncedAt ? ` · ซิงก์ล่าสุด ${formatDateTime(syncedAt)}` : ''}`}
         actions={<>
           <button type="button" onClick={() => setSyncing(true)} className={ui.btnSecondary}><DatabaseZap size={16} /> ซิงก์ข้อมูลพนักงาน</button>
           <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> นำเข้าพนักงาน</Link>
@@ -292,7 +295,7 @@ export default function EmployeeListPage() {
         </table>
       </div>
 
-      {syncing && <EmployeeSyncModal onClose={() => setSyncing(false)} onDone={load} />}
+      {syncing && <EmployeeSyncModal onClose={() => setSyncing(false)} onDone={() => { load(); lastSyncAt().then(setSyncedAt) }} />}
       {pwFor && <SetPasswordModal profile={pwFor} onClose={() => setPwFor(null)} onDone={load} />}
     </div>
   )

@@ -61,8 +61,13 @@ export interface SyncPlan {
   unchanged: number
   /** Here, but not in the master (by employee ID). */
   notInCentral: { employeeId: string; name: string }[]
-  /** In the master and still working, but with no login here yet. */
-  notHere: { employeeId: string; name: string; company: string }[]
+  /** In the master and still working, but with no login here yet: an account
+   *  is made for each, with these details (`set`). */
+  notHere: { employeeId: string; name: string; company: string; set: ProfilePatch['set'] }[]
+  /** In the master with no login here, but a profile here under another
+   *  employee ID has the same name or email — probably the same person, so no
+   *  second account is made; an admin fixes the ID. */
+  clashes: { employeeId: string; name: string; existingEmployeeId: string }[]
   /** Matched people the master says have left. */
   resigned: { employeeId: string; name: string; resignDate: string }[]
   /** Company names in the master that match no company here. */
@@ -125,9 +130,26 @@ export function planSync(
     if (!prev || (hasResigned(prev.resign_date, today) && !hasResigned(c.resign_date, today))) byId.set(k, c)
   }
 
-  const plan: SyncPlan = { patches: [], unchanged: 0, notInCentral: [], notHere: [], resigned: [], unknownCompanies: [] }
+  const plan: SyncPlan = { patches: [], unchanged: 0, notInCentral: [], notHere: [], clashes: [], resigned: [], unknownCompanies: [] }
   const unknown = new Set<string>()
   const matched = new Set<string>()
+
+  // The master's details for one person. A field is the master's only when the
+  // master has a value for it; an empty one there never blanks what was typed here.
+  function values(c: CentralEmployee): Partial<Record<CentralField, string>> {
+    const wanted: Partial<Record<CentralField, string>> = {}
+    const first = stripPrefix(clean(c.first_name), c.name_prefix)
+    if (first) wanted.firstName = first
+    if (clean(c.last_name)) wanted.lastName = clean(c.last_name)
+    if (clean(c.position)) wanted.position = clean(c.position)
+    if (clean(c.department)) wanted.department = clean(c.department)
+    if (clean(c.m365_email)) wanted.email = clean(c.m365_email).toLowerCase()
+    const companyId = matchCompany(c.company, companies)
+    if (companyId) wanted.companyId = companyId
+    else if (clean(c.company)) unknown.add(clean(c.company))
+    for (const f of CENTRAL_FIELDS) if (!fields.includes(f)) delete wanted[f]
+    return wanted
+  }
 
   for (const p of profiles) {
     const name = `${p.firstName} ${p.lastName}`.trim()
@@ -142,20 +164,7 @@ export function planSync(
     }
     matched.add(key(p.employeeId))
 
-    // A field is the master's only when the master has a value for it; an
-    // empty one there never blanks what was typed here.
-    const wanted: Partial<Record<CentralField, string>> = {}
-    const first = stripPrefix(clean(c.first_name), c.name_prefix)
-    if (first) wanted.firstName = first
-    if (clean(c.last_name)) wanted.lastName = clean(c.last_name)
-    if (clean(c.position)) wanted.position = clean(c.position)
-    if (clean(c.department)) wanted.department = clean(c.department)
-    if (clean(c.m365_email)) wanted.email = clean(c.m365_email).toLowerCase()
-    const companyId = matchCompany(c.company, companies)
-    if (companyId) wanted.companyId = companyId
-    else if (clean(c.company)) unknown.add(clean(c.company))
-
-    for (const f of CENTRAL_FIELDS) if (!fields.includes(f)) delete wanted[f]
+    const wanted = values(c)
     const owned = CENTRAL_FIELDS.filter(f => f in wanted)
     const changed = owned.filter(f => (p[f] ?? '') !== wanted[f])
     const left = hasResigned(c.resign_date, today)
@@ -173,17 +182,36 @@ export function planSync(
     })
   }
 
+  // Profiles under an ID the master does not have — where a duplicate would come from.
+  const unmatched = profiles.filter(p => !byId.has(key(p.employeeId)))
   for (const [k, c] of byId) {
     if (matched.has(k) || hasResigned(c.resign_date, today)) continue
+    const wanted = values(c)
+    const name = `${wanted.firstName ?? ''} ${wanted.lastName ?? ''}`.trim()
+    const email = clean(c.m365_email).toLowerCase()
+    const twin = unmatched.find(p =>
+      (name && key(`${p.firstName} ${p.lastName}`) === key(name)) || (email && clean(p.email).toLowerCase() === email))
+    if (twin) {
+      plan.clashes.push({ employeeId: clean(c.emp_id), name, existingEmployeeId: twin.employeeId })
+      continue
+    }
     plan.notHere.push({
       employeeId: clean(c.emp_id),
-      name: `${stripPrefix(clean(c.first_name), c.name_prefix)} ${clean(c.last_name)}`.trim(),
+      name,
       company: clean(c.company),
+      set: { ...wanted, centralStatus: 'active', centralFields: CENTRAL_FIELDS.filter(f => f in wanted) },
     })
   }
   plan.notHere.sort((a, b) => a.employeeId.localeCompare(b.employeeId))
   plan.unknownCompanies = [...unknown].sort()
   return plan
+}
+
+/** The login email for an employee ID — the same as src/data/auth.ts
+ *  employeeIdToEmail (a test keeps the two together). */
+export function loginEmail(employeeId: string): string {
+  const local = employeeId.trim().replace(/[^A-Za-z0-9._-]/gu, c => '+' + c.codePointAt(0)!.toString(16))
+  return `${local}@globe.local`
 }
 
 /** Today in Bangkok, 'yyyy-mm-dd'. */

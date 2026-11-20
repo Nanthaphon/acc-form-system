@@ -11,7 +11,9 @@ export interface SyncSummary {
   updated: { employeeId: string; name: string; changed: string[] }[]
   unchanged: number
   notInCentral: { employeeId: string; name: string }[]
-  notHere: { employeeId: string; name: string; company: string }[]
+  notHere: { employeeId: string; name: string; company: string }[]   // no login yet: one is made
+  created?: { employeeId: string; name: string }[]                     // logins made this run
+  clashes?: { employeeId: string; name: string; existingEmployeeId: string }[]
   resigned: { employeeId: string; name: string; resignDate: string }[]
   unknownCompanies: string[]
   failed: { employeeId: string; error: string }[]
@@ -63,3 +65,15 @@ export function withoutCentral<T extends Partial<UserProfile>>(patch: T, p: Pick
   return Object.fromEntries(Object.entries(patch).filter(([k]) => !owned.includes(k))) as T
 }
 
+
+/** When the last sync that changed something ran (ms), or null. The automatic
+ *  run every 10 minutes logs only when it did something. */
+export async function lastSyncAt(): Promise<number | null> {
+  try {
+    const { data, error } = await supabase.from('employee_sync_runs').select('ranAt').order('ranAt', { ascending: false }).limit(1)
+    if (error || !data?.length) return null
+    return Number((data[0] as { ranAt: number }).ranAt)
+  } catch {
+    return null // no sync table yet: just no time shown
+  }
+}

@@ -32,14 +32,18 @@ function SyncResult({ r }: { r: SyncSummary }) {
   return (
     <div className="space-y-2">
       <p className="text-sm text-stone-700">
-        ระบบกลางมี {r.centralCount} คน · {r.dryRun ? 'จะอัปเดต' : 'อัปเดตแล้ว'} {r.updated.length} คน · ตรงกันอยู่แล้ว {r.unchanged} คน
+        ระบบกลางมี {r.centralCount} คน · {r.dryRun ? 'จะอัปเดต' : 'อัปเดตแล้ว'} {r.updated.length} คน
+        · {r.dryRun ? 'จะสร้างบัญชี' : 'สร้างบัญชี'} {r.dryRun ? r.notHere.length : (r.created ?? []).length} คน · ตรงกันอยู่แล้ว {r.unchanged} คน
       </p>
       <Group title={r.dryRun ? 'จะอัปเดต' : 'อัปเดตแล้ว'} tone="ok" items={r.updated.map(u => <>{who(u)} <span className="text-stone-500">— {u.changed.map(f => FIELD_LABEL[f] ?? f).join(', ')}</span></>)} />
       <Group title="บันทึกไม่สำเร็จ" tone="bad" items={r.failed.map(f => <><span className="font-mono">{f.employeeId}</span> <span className="text-stone-500">— {f.error}</span></>)} />
       <Group title="ลาออกแล้วตามระบบกลาง (ยังเข้าระบบนี้ได้ ลบหรือเปลี่ยนรหัสผ่านเองถ้าต้องการ)" tone="warn" items={r.resigned.map(p => <>{who(p)} <span className="text-stone-500">— ออก {p.resignDate}</span></>)} />
       <Group title="ไม่พบรหัสพนักงานนี้ในระบบกลาง (แก้ข้อมูลในระบบนี้ได้ตามเดิม)" tone="warn" items={r.notInCentral.map(who)} />
       <Group title="ชื่อบริษัทในระบบกลางที่ไม่ตรงกับบริษัทในระบบนี้ (ไม่ได้เปลี่ยนบริษัทให้)" tone="warn" items={r.unknownCompanies.map(c => c)} />
-      <Group title="พนักงานในระบบกลางที่ยังไม่มีบัญชีในระบบนี้" tone="muted" items={r.notHere.map(p => <>{who(p)} <span className="text-stone-500">— {p.company}</span></>)} />
+      {r.dryRun
+        ? <Group title="จะสร้างบัญชีใหม่ (ชื่อผู้ใช้และรหัสผ่านแรก = รหัสพนักงาน)" tone="ok" items={r.notHere.map(p => <>{who(p)} <span className="text-stone-500">— {p.company}</span></>)} />
+        : <Group title="สร้างบัญชีใหม่แล้ว (ชื่อผู้ใช้และรหัสผ่านแรก = รหัสพนักงาน)" tone="ok" items={(r.created ?? []).map(who)} />}
+      <Group title="ไม่ได้สร้างบัญชี: ชื่อหรืออีเมลตรงกับบัญชีเดิมที่ใช้รหัสอื่น (แก้รหัสพนักงานให้ตรงกัน)" tone="warn" items={(r.clashes ?? []).map(c => <>{who(c)} <span className="text-stone-500">— บัญชีเดิม {c.existingEmployeeId}</span></>)} />
     </div>
   )
 }
@@ -71,7 +75,7 @@ export default function EmployeeSyncModal({ onClose, onDone }: { onClose: () => 
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><DatabaseZap size={18} /></div>
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold text-stone-900">ซิงก์ข้อมูลพนักงานจากระบบกลาง</h2>
-            <p className="text-xs text-stone-500">ชื่อ นามสกุล ตำแหน่ง แผนก บริษัท อีเมล · จับคู่ด้วยรหัสพนักงาน · ไม่สร้าง ไม่ลบบัญชี</p>
+            <p className="text-xs text-stone-500">ระบบซิงก์เองทุก 10 นาที · กดเพื่อซิงก์ทันที</p>
           </div>
           <button onClick={close} aria-label="ปิด" className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"><X size={18} /></button>
         </div>
