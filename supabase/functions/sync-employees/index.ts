@@ -153,6 +153,7 @@ Deno.serve(async req => {
     notHere: plan.notHere.map(({ employeeId, name, company }) => ({ employeeId, name, company })),
     created,
     clashes: plan.clashes,
+    shortIds: plan.shortIds,
     resigned: plan.resigned,
     unknownCompanies: plan.unknownCompanies,
     failed,

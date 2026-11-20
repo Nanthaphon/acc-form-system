@@ -50,6 +50,9 @@ export type CentralField = typeof CENTRAL_FIELDS[number]
 
 export type CentralStatus = 'active' | 'resigned' | 'missing'
 
+/** Supabase Auth's shortest password; the first password is the employee ID. */
+export const MIN_LOGIN_ID = 6
+
 export interface ProfilePatch {
   uid: string
   employeeId: string
@@ -76,6 +79,9 @@ export interface SyncPlan {
    *  employee ID has the same name or email — probably the same person, so no
    *  second account is made; an admin fixes the ID. */
   clashes: { employeeId: string; name: string; existingEmployeeId: string }[]
+  /** In the master with an employee ID too short to be a login (and its first
+   *  password): no account is made. */
+  shortIds: { employeeId: string; name: string }[]
   /** Matched people the master says have left. */
   resigned: { employeeId: string; name: string; resignDate: string }[]
   /** Company names in the master that match no company here. */
@@ -142,7 +148,7 @@ export function planSync(
     if (!prev || (hasResigned(prev.resign_date, today) && !hasResigned(c.resign_date, today))) byId.set(k, c)
   }
 
-  const plan: SyncPlan = { patches: [], unchanged: 0, notInCentral: [], notHere: [], clashes: [], resigned: [], unknownCompanies: [] }
+  const plan: SyncPlan = { patches: [], unchanged: 0, notInCentral: [], notHere: [], clashes: [], shortIds: [], resigned: [], unknownCompanies: [] }
   const unknown = new Set<string>()
   const matched = new Set<string>()
 
@@ -210,6 +216,12 @@ export function planSync(
       (name && key(`${p.firstName} ${p.lastName}`) === key(name)) || (email && clean(p.email).toLowerCase() === email))
     if (twin) {
       plan.clashes.push({ employeeId: clean(c.emp_id), name, existingEmployeeId: twin.employeeId })
+      continue
+    }
+    // The first password is the employee ID, and a login needs 6 characters:
+    // a shorter ID ("2") is a placeholder in the master, not a person to sign in.
+    if (clean(c.emp_id).length < MIN_LOGIN_ID) {
+      plan.shortIds.push({ employeeId: clean(c.emp_id), name })
       continue
     }
     plan.notHere.push({

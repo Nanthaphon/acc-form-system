@@ -196,6 +196,14 @@ describe('planSync — edits made here', () => {
   })
 })
 
+describe('planSync — IDs too short to log in with', () => {
+  it('makes no account for them, and lists them instead of failing every sync', () => {
+    const plan = planSync([emp({ emp_id: '2', first_name: 'ทดสอบ', last_name: 'สอง' }), emp({ emp_id: '1010400' })], [], COMPANIES, TODAY)
+    expect(plan.notHere.map(n => n.employeeId)).toEqual(['1010400'])
+    expect(plan.shortIds).toEqual([{ employeeId: '2', name: 'ทดสอบ สอง' }])
+  })
+})
+
 describe('loginEmail', () => {
   it('is the login the app itself uses for an employee ID', () => {
     for (const id of ['1010001', 'ACC001', 'Acc@GB', ' gs-01 ']) expect(loginEmail(id)).toBe(employeeIdToEmail(id))
