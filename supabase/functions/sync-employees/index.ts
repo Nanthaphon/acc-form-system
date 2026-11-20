@@ -30,9 +30,10 @@ const env = (k: string) => Deno.env.get(k) ?? ''
 const PAGE = 1000 // the central Data API's max rows per request
 
 async function fetchCentral(): Promise<CentralEmployee[]> {
-  const url = env('CENTRAL_URL').replace(/\/+$/, '')
-  const anon = env('CENTRAL_ANON_KEY')
-  const token = env('CENTRAL_FEED_TOKEN')
+  const url = env('CENTRAL_URL').trim().replace(/\/+$/, '')
+  const anon = env('CENTRAL_ANON_KEY').trim()
+  // A pasted secret easily picks up a space, a line break or quotes.
+  const token = env('CENTRAL_FEED_TOKEN').trim().replace(/^["']|["']$/g, '')
   if (!url || !anon || !token) throw new Error('NOT_CONFIGURED')
   const all: CentralEmployee[] = []
   for (let offset = 0; ; offset += PAGE) {
