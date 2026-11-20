@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { getProfileByUid } from '../data/users'
+import { clearCache } from '../shared/cache'
 import type { UserProfile } from '../types/schema'
 
 interface AuthCtx { user: User | null; profile: UserProfile | null; loading: boolean; refresh: () => Promise<void> }
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // the same objects too, so pages don't re-render and refetch everything.
       if (uid === uidRef.current) return
       uidRef.current = uid
+      clearCache() // another person's (or nobody's) lists from here on
       setUser(u)
       // Waiting for the profile gives the first screen a name and a role, but it
       // must never hold the app on its spinner: the query can hang for good when

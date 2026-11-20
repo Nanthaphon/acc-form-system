@@ -1,7 +1,11 @@
 import { supabase } from '../lib/supabase'
+import { cached, invalidate, MINUTE } from '../shared/cache'
 import type { AccessGroup } from '../types/schema'
 
-export async function listAccessGroups(): Promise<AccessGroup[]> {
+export function listAccessGroups(): Promise<AccessGroup[]> {
+  return cached('accessGroups', 5 * MINUTE, () => fetchAccessGroups())
+}
+async function fetchAccessGroups(): Promise<AccessGroup[]> {
   const { data, error } = await supabase.from('access_groups').select('*').order('sortOrder', { ascending: true })
   // Never hand out a group that may not exist: renaming or deleting one of
   // those updates no rows and reports success, and a form tagged with it
@@ -11,6 +15,7 @@ export async function listAccessGroups(): Promise<AccessGroup[]> {
 }
 
 export async function createAccessGroup(name: string): Promise<string> {
+  invalidate('accessGroups')
   const id = crypto.randomUUID()
   // sortOrder is an int4 column — use seconds (fits int4); createdAt keeps ms (bigint).
   const row: AccessGroup = { id, name, sortOrder: Math.floor(Date.now() / 1000), createdAt: Date.now() }
@@ -20,6 +25,7 @@ export async function createAccessGroup(name: string): Promise<string> {
 }
 
 export async function renameAccessGroup(id: string, name: string): Promise<void> {
+  invalidate('accessGroups')
   const { error } = await supabase.from('access_groups').update({ name }).eq('id', id)
   if (error) throw error
 }
@@ -43,6 +49,7 @@ export async function accessGroupUsage(id: string): Promise<{ employees: number;
 }
 
 export async function deleteAccessGroup(id: string): Promise<void> {
+  invalidate('accessGroups')
   const { error } = await supabase.from('access_groups').delete().eq('id', id)
   if (error) throw error
 }

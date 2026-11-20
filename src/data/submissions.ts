@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { cached, MINUTE } from '../shared/cache'
 import type { Submission, SubmissionSummary, SubmissionStatus, DocSignature, SignatureBlock } from '../types/schema'
 import { formatDocNumber, reviseDocNumber } from '../shared/docNumber'
 import { addVersion } from './versions'
@@ -98,7 +99,10 @@ export async function deleteSubmission(id: string): Promise<void> {
 // ----- Online signatures -----
 export interface Signer { uid: string; name: string }
 // Everyone can list possible signers (name + uid only) via a SECURITY DEFINER RPC.
-export async function listSigners(): Promise<Signer[]> {
+export function listSigners(): Promise<Signer[]> {
+  return cached('signers', 5 * MINUTE, () => fetchSigners())
+}
+async function fetchSigners(): Promise<Signer[]> {
   const { data } = await supabase.rpc('list_signers')
   return (data ?? []) as Signer[]
 }

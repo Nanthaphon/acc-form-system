@@ -1,4 +1,5 @@
 import { supabase, supabaseSecondary } from '../lib/supabase'
+import { cached, invalidate, MINUTE } from '../shared/cache'
 import { employeeIdToEmail } from './auth'
 import type { UserProfile, Role } from '../types/schema'
 import type { CsvEmployeeRow } from '../shared/csv'
@@ -53,6 +54,7 @@ async function releaseOrphanLogin(employeeId: string): Promise<'free' | 'taken' 
 }
 
 export async function createEmployee(e: NewEmployee): Promise<string> {
+  invalidate('employees', 'signers')
   const existing = await findEmployeeById(e.employeeId)
   if (existing) throw alreadyEmployee(e.employeeId, existing)
 
@@ -116,7 +118,10 @@ const EMPLOYEE_OPTIONAL_COLS = [
   'centralFields', 'centralStatus',      // supabase/2026-11-20-central-employees.sql
   'nickname',                            // supabase/2026-11-20d-employee-nickname.sql
 ]
-export async function listEmployees(): Promise<UserProfile[]> {
+export function listEmployees(): Promise<UserProfile[]> {
+  return cached('employees', MINUTE, () => fetchEmployees())
+}
+async function fetchEmployees(): Promise<UserProfile[]> {
   let optional = [...EMPLOYEE_OPTIONAL_COLS]
   for (;;) {
     const { data, error } = await supabase.from('profiles').select([EMPLOYEE_LIST_COLS, ...optional].join(',')).order('employeeId')
@@ -129,18 +134,21 @@ export async function listEmployees(): Promise<UserProfile[]> {
 // After someone sets their own password. Two writes, so the first still lands
 // on a database that doesn't have the passwordIsDefault column yet.
 export async function markOwnPasswordChanged(uid: string): Promise<void> {
+  invalidate('employees', 'signers')
   const { error } = await supabase.from('profiles').update({ mustChangePassword: false }).eq('uid', uid)
   if (error) throw error // otherwise the page says 'changed' and RequireAuth sends them straight back
   await supabase.from('profiles').update({ passwordIsDefault: false }).eq('uid', uid)
 }
 // Super Admin only (checked in the database): set anyone's login password.
 export async function adminSetPassword(uid: string, password: string, mustChange: boolean): Promise<void> {
+  invalidate('employees', 'signers')
   const { error } = await supabase.rpc('admin_set_password', { target: uid, new_password: password, must_change: mustChange })
   if (error) throw error
 }
 // Super Admin only (checked in the database): rename someone's username —
 // login, profile and documents together; a default password follows it.
 export async function adminChangeUsername(uid: string, newUsername: string): Promise<void> {
+  invalidate('employees', 'signers')
   const { error } = await supabase.rpc('admin_change_username', { target: uid, new_username: newUsername })
   if (error) throw error
 }
@@ -161,6 +169,7 @@ const SKIPPABLE_COLS = ['email', 'nickname'] as const
  *  (supabase/2026-10-26-employee-email.sql not run) — everything else was
  *  saved, the email was not. A nickname is left out the same way, silently. */
 export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<{ emailSkipped: boolean }> {
+  invalidate('employees', 'signers')
   const run = (p: Partial<UserProfile>) => supabase.from('profiles').update(p).eq('uid', uid)
   let rest: Partial<UserProfile> = patch
   let emailSkipped = false
@@ -180,6 +189,7 @@ export async function updateProfile(uid: string, patch: Partial<UserProfile>): P
 // Fully removes an employee: their login account, profile, and submissions.
 // Runs a SECURITY DEFINER RPC (delete_employee) that checks admin + deletes the auth user.
 export async function deleteEmployee(uid: string): Promise<void> {
+  invalidate('employees', 'signers')
   const { error } = await supabase.rpc('delete_employee', { target: uid })
   if (error) throw error
   notifyPendingSignChanged() // their documents went too
@@ -212,6 +222,7 @@ export async function importEmployees(
   rows: CsvEmployeeRow[],
   onProgress?: (p: ImportProgress) => void,
 ): Promise<{ ok: number; failed: { employeeId: string; reason: string }[] }> {
+  invalidate('employees', 'signers')
   let ok = 0
   const failed: { employeeId: string; reason: string }[] = []
   const total = rows.length
@@ -250,6 +261,7 @@ export async function existingEmployeeIds(): Promise<Set<string>> {
 export async function updateEmployeeEmails(
   rows: { employeeId: string; email?: string }[],
 ): Promise<{ updated: number; failed: { employeeId: string; reason: string }[] }> {
+  invalidate('employees', 'signers')
   const wanted = rows.filter(r => r.email)
   if (wanted.length === 0) return { updated: 0, failed: [] }
   const { data, error } = await supabase.from('profiles').select('uid,employeeId,email')

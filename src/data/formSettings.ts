@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { cached, invalidate, MINUTE } from '../shared/cache'
 import type { FormSettings } from '../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS } from '../types/schema'
 
@@ -46,7 +47,10 @@ export async function getFormSettings(formType: string): Promise<FormSettings> {
   return withColumnsFallback(data as FormSettings)
 }
 
-export async function listForms(): Promise<FormSettings[]> {
+export function listForms(): Promise<FormSettings[]> {
+  return cached('forms', 5 * MINUTE, () => fetchForms())
+}
+async function fetchForms(): Promise<FormSettings[]> {
   const { data, error } = await supabase.from('form_settings').select('*')
   // Never invent a form: a phantom row cannot be deleted (the delete matches no
   // row, so the card came back for ever) and employees could fill it in.
@@ -55,6 +59,7 @@ export async function listForms(): Promise<FormSettings[]> {
 }
 
 export async function createForm(name: string, groupId: string): Promise<string> {
+  invalidate('forms')
   const newId = crypto.randomUUID()
   // New form starts BLANK — no columns/categories/notes. Admin builds it up.
   // Document title (หัวเอกสาร) starts equal to the form name.
@@ -84,18 +89,21 @@ export function duplicateRow(src: FormSettings, name: string, newId: string, now
 }
 
 export async function duplicateForm(src: FormSettings, name: string): Promise<string> {
+  invalidate('forms')
   const newId = crypto.randomUUID()
   await writeSkippingMissing(r => supabase.from('form_settings').insert(r), { ...settingsRow(duplicateRow(src, name, newId, Date.now())) })
   return newId
 }
 
 export async function renameForm(formType: string, name: string): Promise<void> {
+  invalidate('forms')
   // Keep the document title (หัวเอกสาร) in sync with the form name.
   await writeSkippingMissing(r => supabase.from('form_settings').update(r).eq('formType', formType),
     { name, title: name, updatedAt: Date.now() })
 }
 
 export async function deleteForm(formType: string): Promise<void> {
+  invalidate('forms')
   const { error } = await supabase.from('form_settings').delete().eq('formType', formType)
   if (error) throw error
 }
@@ -111,6 +119,7 @@ export function settingsRow(fs: FormSettings): FormSettings {
 // Saves a form's settings. Returns the columns the database doesn't have yet
 // (skipped) so the caller can tell the admin what wasn't stored.
 export async function updateFormSettings(fs: FormSettings): Promise<string[]> {
+  invalidate('forms')
   const skipped = await writeSkippingMissing(r => supabase.from('form_settings').upsert(r), { ...settingsRow(fs), updatedAt: Date.now() })
   // Without the multi-group column, keep the first chosen group in the old single field.
   if (skipped.includes('accessGroups')) {
@@ -124,11 +133,13 @@ export async function updateFormSettings(fs: FormSettings): Promise<string[]> {
 // Turn a form on/off. When off, employees don't see it (maintenance mode).
 // Moves a form into another folder; its documents are untouched.
 export async function moveForm(formType: string, groupId: string): Promise<void> {
+  invalidate('forms')
   const { error } = await supabase.from('form_settings').update({ groupId, updatedAt: Date.now() }).eq('formType', formType)
   if (error) throw error
 }
 
 export async function setFormActive(formType: string, active: boolean): Promise<void> {
+  invalidate('forms')
   const { error } = await supabase.from('form_settings').update({ active }).eq('formType', formType)
   if (error) throw error
 }

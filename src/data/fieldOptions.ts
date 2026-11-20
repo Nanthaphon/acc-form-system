@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { cached, invalidate, MINUTE } from '../shared/cache'
 
 // Custom Field: the list of values an employee field may take. A field with
 // no values stays free text, so a list only ever narrows a field once an
@@ -33,7 +34,10 @@ export function isMissingTable(e: unknown): boolean {
 
 /** Every value of every field, in order. Throws, so the admin page can tell a
  *  missing table from an empty list. */
-export async function listFieldOptions(): Promise<FieldOption[]> {
+export function listFieldOptions(): Promise<FieldOption[]> {
+  return cached('fieldOptions', 5 * MINUTE, () => fetchFieldOptions())
+}
+async function fetchFieldOptions(): Promise<FieldOption[]> {
   const { data, error } = await supabase
     .from('field_options')
     .select('*')
@@ -58,6 +62,7 @@ export async function loadOptionLists(): Promise<OptionLists> {
 }
 
 export async function addFieldOption(field: OptionField, value: string): Promise<void> {
+  invalidate('fieldOptions', 'employees')
   const row = { field, value: value.trim(), sortOrder: Math.floor(Date.now() / 1000) }
   const { error } = await supabase.from('field_options').insert(row)
   if (error) throw error
@@ -65,12 +70,14 @@ export async function addFieldOption(field: OptionField, value: string): Promise
 
 /** Renames the value on the list and on every employee who has it. */
 export async function renameFieldOption(id: string, value: string): Promise<void> {
+  invalidate('fieldOptions', 'employees')
   const { error } = await supabase.rpc('rename_field_option', { opt_id: id, new_value: value.trim() })
   if (error) throw error
 }
 
 /** Removes the value from the list only. Employees who have it keep it. */
 export async function deleteFieldOption(id: string): Promise<void> {
+  invalidate('fieldOptions', 'employees')
   const { error } = await supabase.from('field_options').delete().eq('id', id)
   if (error) throw error
 }
