@@ -14,9 +14,10 @@ export function dbErrorMessage(e: unknown): string {
     const fn = /function (?:\w+\.)?(\w+)/.exec(msg)?.[1]
     return `ฐานข้อมูลยังไม่ได้อัปเดตให้ตรงกับระบบเวอร์ชันนี้${fn ? ` (ไม่พบฟังก์ชัน ${fn})` : ''} — ผู้ดูแลระบบต้องรันไฟล์ SQL ล่าสุดใน Supabase ก่อน`
   }
-  // supabase/2026-11-20-central-employees.sql: a field the employee master owns.
+  // protect_central_fields: a field the employee master owns (before
+  // 2026-11-20c-employee-edit-here.sql), or the sync's own bookkeeping.
   if (msg.includes('CENTRAL_FIELD:')) {
-    return 'ข้อมูลนี้มาจากระบบข้อมูลพนักงานกลาง แก้ในระบบนี้ไม่ได้ — แจ้ง HR/IT ให้แก้ที่ระบบกลาง แล้วกด “ซิงก์ข้อมูลพนักงาน”'
+    return 'ฐานข้อมูลยังล็อกข้อมูลที่มาจาก IT Asset ไว้ — ผู้ดูแลระบบต้องรันไฟล์ supabase/2026-11-20c-employee-edit-here.sql ก่อน'
   }
   return msg || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง'
 }

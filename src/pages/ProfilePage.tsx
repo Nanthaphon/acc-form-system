@@ -12,8 +12,7 @@ import OptionInput from '../components/OptionInput'
 import { roleLabel } from '../shared/roles'
 import { emailProblem, normalizeEmail } from '../shared/emailAddress'
 import { dbErrorMessage, EMAIL_NOT_SAVED } from '../shared/dbError'
-import { centralOwns, withoutCentral } from '../data/employeeSync'
-import type { Company, UserProfile } from '../types/schema'
+import type { Company } from '../types/schema'
 
 const labelCls = 'mb-1.5 block text-xs font-medium text-stone-500'
 const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 disabled:bg-stone-50 disabled:text-stone-500'
@@ -49,13 +48,13 @@ export default function ProfilePage() {
     try {
       // Only what this page edits — not the whole row (role, signature image,
       // super-admin and password flags…), which the database guards.
-      const { emailSkipped } = await updateProfile(f.uid, withoutCentral({
+      const { emailSkipped } = await updateProfile(f.uid, {
         firstName: f.firstName, lastName: f.lastName, position: f.position,
         department: f.department, defaultJob: f.defaultJob, bankAccount: f.bankAccount,
         companyId: f.companyId,
         // undefined when the database has no email column: an untouched field sends nothing.
         ...(f.email !== undefined ? { email: normalizeEmail(f.email) || null } : {}),
-      }, f))
+      })
       await refresh()
       if (emailSkipped) uiAlert(EMAIL_NOT_SAVED, { title: 'บันทึกแล้ว ยกเว้นอีเมล' })
       else uiAlert('บันทึกข้อมูลแล้ว', { tone: 'success' })
@@ -103,13 +102,12 @@ export default function ProfilePage() {
                 value={(form as any)[k] || ''}
                 options={k in lists ? lists[k as OptionField] : []}
                 onChange={v => set(k, v)}
-                disabled={centralOwns(form, k as keyof UserProfile)}
               />
             </div>
           ))}
           <div className="sm:col-span-2">
             <label className={labelCls}>บริษัท / สังกัด</label>
-            <select className={inputCls} value={form.companyId} onChange={e => set('companyId', e.target.value)} disabled={centralOwns(form, 'companyId')}>
+            <select className={inputCls} value={form.companyId} onChange={e => set('companyId', e.target.value)}>
               <option value="">— เลือกบริษัท —</option>
               {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>

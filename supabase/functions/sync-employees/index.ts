@@ -85,7 +85,14 @@ Deno.serve(async req => {
   // The columns this database has: centralFields/centralStatus come with
   // supabase/2026-11-20-central-employees.sql, email with 2026-10-26-employee-email.sql.
   const base = 'uid,"employeeId","firstName","lastName",position,department,"companyId"'
-  let { data: profiles, error } = await admin.from('profiles').select(`${base},email,"centralStatus","centralFields"`)
+  // centralValues comes with supabase/2026-11-20c-employee-edit-here.sql: without it
+  // every sync copies the master over what was typed here, as before.
+  let trackValues = true
+  let { data: profiles, error } = await admin.from('profiles').select(`${base},email,"centralStatus","centralFields","centralValues"`)
+  if (error?.code === '42703') {
+    trackValues = false
+    ;({ data: profiles, error } = await admin.from('profiles').select(`${base},email,"centralStatus","centralFields"`))
+  }
   let fields: readonly CentralField[] = CENTRAL_FIELDS
   if (error?.code === '42703') {
     const probe = await admin.from('profiles').select(`${base},"centralStatus","centralFields"`)
@@ -104,7 +111,7 @@ Deno.serve(async req => {
   }
   if (central.length === 0) return json({ error: 'CENTRAL_EMPTY' }, 502) // never mark everyone missing on a bad read
 
-  const plan = planSync(central, (profiles ?? []) as LocalProfile[], (companies ?? []) as LocalCompany[], bangkokToday(), fields)
+  const plan = planSync(central, (profiles ?? []) as LocalProfile[], (companies ?? []) as LocalCompany[], bangkokToday(), fields, trackValues)
   const failed: { employeeId: string; error: string }[] = []
   const created: { employeeId: string; name: string }[] = []
   const now = Date.now()

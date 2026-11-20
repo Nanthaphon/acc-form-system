@@ -33,6 +33,11 @@ export interface LocalProfile {
   email?: string | null
   centralStatus?: string | null
   centralFields?: string[] | null
+  /** The master's values as the last sync saw them. A field is copied again
+   *  only when the master's value has moved on from this — so a change typed
+   *  here stays until the master itself changes that field.
+   *  Absent (never synced, or a database without the column): copy them all. */
+  centralValues?: Partial<Record<string, string>> | null
 }
 
 export interface LocalCompany { id: string; name: string; shortName?: string | null }
@@ -50,6 +55,7 @@ export interface ProfilePatch {
   set: Partial<Record<CentralField, string>> & {
     centralStatus: CentralStatus
     centralFields: CentralField[]
+    centralValues?: Partial<Record<CentralField, string>>
   }
   /** Fields whose value actually changed (for the summary). */
   changed: CentralField[]
@@ -111,6 +117,8 @@ export function hasResigned(resignDate: string | null | undefined, today: string
 
 const sameSet = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every(x => b.includes(x))
+const sameValues = (a: Partial<Record<string, string>> | null, b: Partial<Record<string, string>>) =>
+  !!a && sameSet(Object.keys(a), Object.keys(b)) && Object.keys(b).every(k => a[k] === b[k])
 
 export function planSync(
   central: CentralEmployee[],
@@ -119,6 +127,8 @@ export function planSync(
   today: string,
   /** The fields this database can take (no email column on an older one). */
   fields: readonly CentralField[] = CENTRAL_FIELDS,
+  /** The database has profiles."centralValues" (2026-11-20c-employee-edit-here.sql). */
+  trackValues = false,
 ): SyncPlan {
   // One master row per employee ID. The view can list someone twice (moved
   // company); the row still working wins, then the later start.
@@ -166,20 +176,24 @@ export function planSync(
 
     const wanted = values(c)
     const owned = CENTRAL_FIELDS.filter(f => f in wanted)
-    const changed = owned.filter(f => (p[f] ?? '') !== wanted[f])
+    // Copy a field only when the master changed it since the last sync (or
+    // there is no record of the last sync): an edit made here survives until then.
+    const seen = trackValues ? p.centralValues ?? null : null
+    const copy = owned.filter(f => !seen || seen[f] !== wanted[f])
+    const changed = copy.filter(f => (p[f] ?? '') !== wanted[f])
     const left = hasResigned(c.resign_date, today)
     const status: CentralStatus = left ? 'resigned' : 'active'
     if (left) plan.resigned.push({ employeeId: p.employeeId, name: `${wanted.firstName ?? p.firstName} ${wanted.lastName ?? p.lastName}`.trim(), resignDate: clean(c.resign_date).slice(0, 10) })
 
-    if (changed.length === 0 && p.centralStatus === status && sameSet(p.centralFields ?? [], owned)) {
+    const valuesMoved = trackValues && !sameValues(seen, wanted)
+    if (changed.length === 0 && !valuesMoved && p.centralStatus === status && sameSet(p.centralFields ?? [], owned)) {
       plan.unchanged++
       continue
     }
-    plan.patches.push({
-      uid: p.uid, employeeId: p.employeeId, name,
-      set: { ...wanted, centralStatus: status, centralFields: owned },
-      changed,
-    })
+    const set: ProfilePatch['set'] = { centralStatus: status, centralFields: owned }
+    for (const f of copy) set[f] = wanted[f]
+    if (trackValues) set.centralValues = wanted
+    plan.patches.push({ uid: p.uid, employeeId: p.employeeId, name, set, changed })
   }
 
   // Profiles under an ID the master does not have — where a duplicate would come from.
@@ -199,7 +213,7 @@ export function planSync(
       employeeId: clean(c.emp_id),
       name,
       company: clean(c.company),
-      set: { ...wanted, centralStatus: 'active', centralFields: CENTRAL_FIELDS.filter(f => f in wanted) },
+      set: { ...wanted, centralStatus: 'active', centralFields: CENTRAL_FIELDS.filter(f => f in wanted), ...(trackValues ? { centralValues: wanted } : {}) },
     })
   }
   plan.notHere.sort((a, b) => a.employeeId.localeCompare(b.employeeId))

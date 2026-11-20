@@ -158,6 +158,44 @@ describe('planSync', () => {
   })
 })
 
+describe('planSync — edits made here', () => {
+  const seen = { firstName: 'อ้อมฤทัย', lastName: 'ใจดี', position: 'ผู้จัดการ', department: 'บัญชี', companyId: 'globe', email: 'om@globe.co.th' }
+  const fields = ['firstName', 'lastName', 'position', 'department', 'companyId', 'email'] as const
+  const synced = (o: Partial<LocalProfile> = {}) => prof({ ...seen, centralStatus: 'active', centralFields: [...fields], centralValues: { ...seen }, ...o })
+
+  it('keeps a value typed here while the master still has the same one', () => {
+    const plan = planSync([emp({})], [synced({ position: 'ผู้จัดการฝ่ายบัญชีอาวุโส' })], COMPANIES, TODAY, fields, true)
+    expect(plan.patches).toEqual([])
+    expect(plan.unchanged).toBe(1)
+  })
+
+  it('copies a field again once the master changes it, and only that field', () => {
+    const plan = planSync([emp({ department: 'การเงิน' })], [synced({ position: 'ตำแหน่งที่แก้เอง' })], COMPANIES, TODAY, fields, true)
+    const p = plan.patches[0]
+    expect(p.changed).toEqual(['department'])
+    expect(p.set.department).toBe('การเงิน')
+    expect(p.set.position).toBeUndefined() // the edit here stays
+    expect(p.set.centralValues).toMatchObject({ department: 'การเงิน', position: 'ผู้จัดการ' })
+  })
+
+  it('copies everything for someone never synced', () => {
+    const plan = planSync([emp({})], [prof({ position: 'อะไรก็ได้' })], COMPANIES, TODAY, fields, true)
+    expect(plan.patches[0].set.position).toBe('ผู้จัดการ')
+    expect(plan.patches[0].set.centralValues).toEqual(seen)
+  })
+
+  it('without the centralValues column, copies the master every time as before', () => {
+    const plan = planSync([emp({})], [synced({ position: 'แก้เอง' })], COMPANIES, TODAY, fields, false)
+    expect(plan.patches[0].set.position).toBe('ผู้จัดการ')
+    expect(plan.patches[0].set.centralValues).toBeUndefined()
+  })
+
+  it('remembers the master values for a new account', () => {
+    const plan = planSync([emp({ emp_id: '1010300' })], [], COMPANIES, TODAY, fields, true)
+    expect(plan.notHere[0].set.centralValues).toEqual(seen)
+  })
+})
+
 describe('loginEmail', () => {
   it('is the login the app itself uses for an employee ID', () => {
     for (const id of ['1010001', 'ACC001', 'Acc@GB', ' gs-01 ']) expect(loginEmail(id)).toBe(employeeIdToEmail(id))

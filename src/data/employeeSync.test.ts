@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 const invoke = vi.fn()
 vi.mock('../lib/supabase', () => ({ supabase: { functions: { invoke: (...a: unknown[]) => invoke(...a) } } }))
 
-const { centralOwns, syncEmployees, syncErrorMessage, withoutCentral } = await import('./employeeSync')
+const { syncEmployees, syncErrorMessage } = await import('./employeeSync')
 
 // What supabase-js hands back when the function answered with an error status.
 const httpError = (status: number, body: unknown) => ({
@@ -40,20 +40,3 @@ describe('syncErrorMessage', () => {
   })
 })
 
-describe('centralOwns / withoutCentral', () => {
-  const p = { centralFields: ['firstName', 'email'] }
-
-  it('knows which fields the master owns', () => {
-    expect(centralOwns(p, 'firstName')).toBe(true)
-    expect(centralOwns(p, 'bankAccount')).toBe(false)
-    expect(centralOwns({}, 'firstName')).toBe(false)
-    expect(centralOwns(null, 'firstName')).toBe(false)
-  })
-
-  it('leaves the owned fields out of a save, and everything else in', () => {
-    expect(withoutCentral({ firstName: 'A', email: 'a@x', bankAccount: '123', defaultJob: '' }, p))
-      .toEqual({ bankAccount: '123', defaultJob: '' })
-    const patch = { firstName: 'A' }
-    expect(withoutCentral(patch, { centralFields: [] })).toBe(patch)
-  })
-})

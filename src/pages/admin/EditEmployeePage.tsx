@@ -14,7 +14,6 @@ import { isSuperAdmin, roleLabel, ROLE_OPTIONS } from '../../shared/roles'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import EmployeeSummaryCard from '../../components/EmployeeSummaryCard'
 import { PageHeader, ui } from '../../components/ui'
-import { centralOwns, withoutCentral } from '../../data/employeeSync'
 import type { Company, UserProfile, AccessGroup } from '../../types/schema'
 
 export default function EditEmployeePage() {
@@ -60,14 +59,14 @@ export default function EditEmployeePage() {
     }
     setSaving(true)
     try {
-      const { emailSkipped } = await updateProfile(uid, withoutCentral({
+      const { emailSkipped } = await updateProfile(uid, {
         firstName: f.firstName, lastName: f.lastName, position: f.position,
         department: f.department, companyId: f.companyId, defaultJob: f.defaultJob,
         bankAccount: f.bankAccount, accessGroup: f.accessGroup,
         // Absent when the database has no email column yet — then nothing is sent for it.
         ...(f.email !== undefined ? { email: normalizeEmail(f.email) || null } : {}),
         ...(targetIsSuper || isSelf ? {} : { role: f.role }),
-      }, f))
+      })
       if (emailSkipped) uiAlert(EMAIL_NOT_SAVED, { title: 'บันทึกแล้ว ยกเว้นอีเมล' })
       else uiAlert('บันทึกข้อมูลพนักงานแล้ว', { tone: 'success' })
       nav('/admin/employees')
@@ -90,8 +89,6 @@ export default function EditEmployeePage() {
 
   const fullName = `${f.firstName} ${f.lastName}`.trim()
   const hint = 'mt-1 text-[11px] text-stone-500'
-  // Fields the employee master owns: shown, not editable here.
-  const owns = (k: keyof UserProfile) => centralOwns(f, k)
 
   return (
     <div>
@@ -140,7 +137,7 @@ export default function EditEmployeePage() {
                 </div>
                 <div>
                   <label className={ui.label}>อีเมล</label>
-                  <input type="email" className={ui.input} placeholder="สำหรับแจ้งเตือนเอกสารรอเซ็น" value={f.email ?? ''} onChange={e => set('email', e.target.value)} disabled={owns('email')} />
+                  <input type="email" className={ui.input} placeholder="สำหรับแจ้งเตือนเอกสารรอเซ็น" value={f.email ?? ''} onChange={e => set('email', e.target.value)} />
                 </div>
               </div>
             </section>
@@ -151,15 +148,15 @@ export default function EditEmployeePage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
                 <div>
                   <label className={ui.label}>ชื่อ</label>
-                  <input className={ui.input} placeholder="ชื่อจริง" value={f.firstName} onChange={e => set('firstName', e.target.value)} disabled={owns('firstName')} />
+                  <input className={ui.input} placeholder="ชื่อจริง" value={f.firstName} onChange={e => set('firstName', e.target.value)} />
                 </div>
                 <div>
                   <label className={ui.label}>นามสกุล</label>
-                  <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} disabled={owns('lastName')} />
+                  <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} />
                 </div>
                 <div className="md:col-span-2 2xl:col-span-1">
                   <label className={ui.label}>ตำแหน่ง</label>
-                  <OptionInput className={ui.input} placeholder="เช่น หัวหน้าฝ่ายบัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} disabled={owns('position')} />
+                  <OptionInput className={ui.input} placeholder="เช่น หัวหน้าฝ่ายบัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
                 </div>
               </div>
             </section>
@@ -170,14 +167,14 @@ export default function EditEmployeePage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className={ui.label}>บริษัท</label>
-                  <select className={ui.input} value={f.companyId} onChange={e => set('companyId', e.target.value)} disabled={owns('companyId')}>
+                  <select className={ui.input} value={f.companyId} onChange={e => set('companyId', e.target.value)}>
                     <option value="">— เลือกบริษัท —</option>
                     {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className={ui.label}>แผนก</label>
-                  <OptionInput className={ui.input} placeholder="เช่น Payroll" value={f.department} options={lists.department} onChange={v => set('department', v)} disabled={owns('department')} />
+                  <OptionInput className={ui.input} placeholder="เช่น Payroll" value={f.department} options={lists.department} onChange={v => set('department', v)} />
                 </div>
                 <div>
                   <label className={ui.label}>กลุ่มการเข้าถึง</label>

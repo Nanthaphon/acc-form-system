@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase'
-import type { UserProfile } from '../types/schema'
 
 // The employee master (IT Asset Management, report.employees) → profiles.
 // The work is done by the sync-employees edge function; see docs/central-employees.md.
@@ -50,19 +49,6 @@ export async function syncEmployees(dryRun = false): Promise<SyncSummary> {
     throw new Error(syncErrorMessage(code || error.message))
   }
   return data!
-}
-
-/** The master owns this field of this person: read-only here. */
-export function centralOwns(p: Pick<UserProfile, 'centralFields'> | null | undefined, field: keyof UserProfile): boolean {
-  return !!p?.centralFields?.includes(field)
-}
-
-/** A profile save without the fields the master owns: the database refuses a
- *  change to them, and an unchanged value has no reason to be sent. */
-export function withoutCentral<T extends Partial<UserProfile>>(patch: T, p: Pick<UserProfile, 'centralFields'> | null | undefined): T {
-  const owned = p?.centralFields ?? []
-  if (owned.length === 0) return patch
-  return Object.fromEntries(Object.entries(patch).filter(([k]) => !owned.includes(k))) as T
 }
 
 
