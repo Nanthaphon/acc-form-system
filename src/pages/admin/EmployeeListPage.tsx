@@ -6,6 +6,7 @@ import ActionIconButton from '../../components/ActionIconButton'
 import CopyButton from '../../components/CopyButton'
 import SetPasswordModal from '../../components/SetPasswordModal'
 import ColumnPicker from '../../components/ColumnPicker'
+import FilterSelect from '../../components/FilterSelect'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
 import { Spinner } from '../../components/Spinner'
@@ -35,7 +36,7 @@ const HIDDEN_AT_FIRST = ['email', 'group']
 const muted = (v: ReactNode) => v || <span className="text-stone-300">—</span>
 // Dropdown value for 'people with no access group' — '' already means 'any'.
 const NO_GROUP = '-'
-const FILTER_SELECT = ui.input.replace('w-full', 'w-auto min-w-[10rem]')
+
 const CHECKBOX = 'h-4 w-4 cursor-pointer rounded accent-clay-600 disabled:cursor-not-allowed disabled:opacity-30'
 // Thai vowels written before the consonant: an initial is the consonant itself.
 const LEADING_VOWELS = new Set(['เ', 'แ', 'โ', 'ใ', 'ไ'])
@@ -213,35 +214,34 @@ export default function EmployeeListPage() {
       <PageHeader
         icon={<Users size={20} />}
         title="ข้อมูลพนักงาน"
-        subtitle={loading ? 'กำลังโหลด...' : `${rows.length} คน`}
         actions={<>
           <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> นำเข้า</Link>
           <Link to="/admin/employees/new" className={ui.btnPrimary}><UserPlus size={16} /> เพิ่มพนักงาน</Link>
         </>}
       />
 
-      <div className={ui.tableCard}>
-        {/* Search and filters */}
-        <div className="flex flex-wrap items-center gap-2.5 border-b border-stone-100 px-4 py-3">
-          <div className="relative min-w-[14rem] flex-1 sm:max-w-sm">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="ค้นหา" className={`${ui.input} pl-9`} />
-          </div>
-          <select aria-label="กรองตามแผนก" value={dept} onChange={e => setDept(e.target.value)} className={FILTER_SELECT}>
-            <option value="">ทุกแผนก</option>
-            {departments.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <select aria-label="กรองตามกลุ่มสิทธิ์" value={group} onChange={e => setGroup(e.target.value)} className={FILTER_SELECT}>
-            <option value="">ทุกกลุ่มสิทธิ์</option>
-            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-            <option value={NO_GROUP}>ยังไม่ระบุกลุ่ม</option>
-          </select>
-          {filtering && <button type="button" onClick={clearFilters} className={ui.btnGhost}><X size={16} /> ล้างตัวกรอง</button>}
-          <div className="ml-auto flex items-center gap-3">
-            {filtering && <span className="text-xs text-stone-500">แสดง {filtered.length} จาก {rows.length} คน</span>}
-            <ColumnPicker columns={COLUMNS} hidden={cols.hidden} onToggle={cols.toggle} onReset={cols.reset} />
-          </div>
+      {/* Search and filters — the same bar, controls and sizes as the history pages (SubmissionFilterBar) */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="ค้นหาชื่อ ชื่อเล่น รหัส" className={`${ui.inputSm} w-56 pl-8`} />
         </div>
+        <FilterSelect className="w-52" ariaLabel="กรองตามแผนก" allLabel="ทุกแผนก" value={dept} onChange={setDept}
+          options={departments.map(d => ({ value: d, label: d }))} />
+        <FilterSelect className="w-48" ariaLabel="กรองตามกลุ่มสิทธิ์" allLabel="ทุกกลุ่มสิทธิ์" value={group} onChange={setGroup}
+          options={[...groups.map(g => ({ value: g.id, label: g.name })), { value: NO_GROUP, label: 'ยังไม่ระบุกลุ่ม' }]} />
+        {filtering && <button type="button" onClick={clearFilters} className={ui.btnGhost}><X size={16} /> ล้างตัวกรอง</button>}
+        <div className="ml-auto flex items-center gap-3">
+          <span className="whitespace-nowrap text-sm text-stone-500">
+            {filtering
+              ? <>แสดง <span className="font-medium text-stone-900">{filtered.length}</span> จาก {rows.length} คน</>
+              : <><span className="font-medium text-stone-900">{rows.length}</span> คน</>}
+          </span>
+          <ColumnPicker columns={COLUMNS} hidden={cols.hidden} onToggle={cols.toggle} onReset={cols.reset} />
+        </div>
+      </div>
+
+      <div className={ui.tableCard}>
 
         {/* What is ticked, and deleting it */}
         <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${picked.length > 0 ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>

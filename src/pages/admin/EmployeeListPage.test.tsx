@@ -33,6 +33,11 @@ const show = async () => {
   await waitFor(() => expect(screen.getByText('ปรมินทร์ ทดสอบ')).toBeInTheDocument())
 }
 const box = (name: string) => screen.getByRole('checkbox', { name: `เลือก ${name} ทดสอบ` }) as HTMLInputElement
+// FilterSelect: open the drop-down, then pick the option by its label.
+const pick = (filter: string, option: string) => {
+  fireEvent.click(screen.getByRole('combobox', { name: filter }))
+  fireEvent.click(screen.getByRole('option', { name: option }))
+}
 const selectAll = () => screen.getByRole('checkbox', { name: 'เลือกทั้งหมด' })
 
 describe('EmployeeListPage — selecting and deleting several at once', () => {
@@ -89,11 +94,11 @@ describe('filters', () => {
 
   it('narrows the list by department, and clears again', async () => {
     await show()
-    fireEvent.change(screen.getByLabelText('กรองตามแผนก'), { target: { value: 'Payroll' } })
+    pick('กรองตามแผนก', 'Payroll')
     expect(screen.getByText('เยาวลักษณ์ ทดสอบ')).toBeInTheDocument()
     expect(screen.queryByText('ปรมินทร์ ทดสอบ')).not.toBeInTheDocument()
     expect(names()).toBe(2)
-    expect(screen.getByText(/แสดง 2 จาก 5 คน/)).toBeInTheDocument()
+    expect(screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'แสดง 2 จาก 5 คน')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /ล้างตัวกรอง/ }))
     expect(screen.getByText('ปรมินทร์ ทดสอบ')).toBeInTheDocument()
@@ -101,18 +106,18 @@ describe('filters', () => {
 
   it('narrows the list by access group, including the people without one', async () => {
     await show()
-    fireEvent.change(screen.getByLabelText('กรองตามกลุ่มสิทธิ์'), { target: { value: 'g2' } })
+    pick('กรองตามกลุ่มสิทธิ์', 'จัดซื้อ')
     expect(screen.getByText('ปรมินทร์ ทดสอบ')).toBeInTheDocument()
     expect(names()).toBe(1)
 
-    fireEvent.change(screen.getByLabelText('กรองตามกลุ่มสิทธิ์'), { target: { value: '-' } })
+    pick('กรองตามกลุ่มสิทธิ์', 'ยังไม่ระบุกลุ่ม')
     expect(screen.getByText('วุฑฒิกานต์ ทดสอบ')).toBeInTheDocument()
     expect(screen.queryByText('ปรมินทร์ ทดสอบ')).not.toBeInTheDocument()
   })
 
   it('combines the search box with a filter', async () => {
     await show()
-    fireEvent.change(screen.getByLabelText('กรองตามแผนก'), { target: { value: 'Payroll' } })
+    pick('กรองตามแผนก', 'Payroll')
     fireEvent.change(screen.getByPlaceholderText(/ค้นหา/), { target: { value: 'วุฑฒิ' } })
     expect(names()).toBe(1)
     expect(screen.getByText('วุฑฒิกานต์ ทดสอบ')).toBeInTheDocument()
