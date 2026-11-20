@@ -20,9 +20,11 @@ import SignNowModal from '../../components/SignNowModal'
 import StatusBadge from '../../components/StatusBadge'
 import DocNumberCell from '../../components/DocNumberCell'
 import { askAndVoid } from '../../components/voidDocument'
-import { ActionGroup, ActionGroupItem, PrimaryAction, PrimarySlot, RowMenu, RowMenuSlot } from '../../components/RowActions'
+import { ActionGroup, ActionGroupItem, PrimaryAction, PrimarySlot } from '../../components/RowActions'
+import ActionIconButton from '../../components/ActionIconButton'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../shared/usePagination'
 import { chainRows, chainLength } from '../../shared/revisionChain'
-import type { RowMenuItem } from '../../components/RowActions'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
@@ -60,6 +62,9 @@ export default function HistoryPage() {
   const filtered = applyFilters(rows, filters, { formGroup, formName, groups: groups })
   // A corrected document and the rounds before it are one line, folded.
   const chains = chainRows(filtered, rows)
+  // Ten lines a page, as on ประวัติการพิมพ์ทั้งหมด; a filter change starts at page 1.
+  const pager = usePagination(chains, { pageSize: 10, storageKey: 'pageSize:myHistory' })
+  function changeFilters(f: Filters) { setFilters(f); pager.setPage(1) }
   // The filter offers only the folders and forms this person may use (and any
   // their own documents were made on).
   const choices = filterChoices(forms, groups, {
@@ -73,7 +78,7 @@ export default function HistoryPage() {
     !!formOf(r.formType) && (hasUnsignedLine(r, blocksOf(r)) || onlyOwnerSigns(r))
   // The highlighted button only where the document is still waiting on
   // something. A document others have signed in full may keep a line for pen —
-  // sending that one out too is offered behind ⋯ instead.
+  // sending that one out too is the smaller send icon beside it instead.
   const signingIsNext = (r: SubmissionSummary) =>
     hasUnsignedLine(r, blocksOf(r)) && (subStatus(r) !== 'signed' || onlyOwnerSigns(r))
   // Admins sign their own document on the spot, without sending it to anyone
@@ -129,11 +134,12 @@ export default function HistoryPage() {
         title="ประวัติเอกสารของฉัน"
       />
       <div className="mb-4">
-        <SubmissionFilterBar value={filters} onChange={setFilters} forms={choices.forms} groups={choices.groups} formGroup={formGroup}
-          resultCount={filtered.length} total={rows.length}
+        <SubmissionFilterBar value={filters} onChange={changeFilters} forms={choices.forms} groups={choices.groups} formGroup={formGroup}
+          resultCount={chains.length} total={chainRows(rows).length}
           extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>
-      <div className={ui.tableWrap}>
+      <div className={ui.tableCard}>
+      <div className={ui.tableScroll}>
         <table className={ui.table}>
           <thead className={ui.thead}>
             <tr>
@@ -142,7 +148,7 @@ export default function HistoryPage() {
             </tr>
           </thead>
           <tbody className={ui.tbody}>
-            {chains.map(({ latest: r, older }) => {
+            {pager.pageItems.map(({ latest: r, older }) => {
               // A cancelled document is a record: it can be looked at, printed
               // and copied, nothing more.
               const voided = !!r.voided
@@ -152,18 +158,9 @@ export default function HistoryPage() {
               // have not signed yet — it is still edited in place (FormPage).
               const frozen = (r.signatures ?? []).some(x => x.status === 'signed' && x.assignedUid !== r.createdBy)
               const canVoid = voidingAvailable()
-              // The rare and the destructive wait behind ⋯.
               const primary = !voided && signingIsNext(r)
-              const more: RowMenuItem[] = voided ? [] : [
-                ...(!primary && canSignOrSend(r) ? [{ label: 'เซ็น / ส่งเซ็นเพิ่ม', icon: <Send size={16} />, onClick: () => setSignModal(r) }] : []),
-                ...(canSignNow() ? [{ label: 'เซ็นเอง / ลบลายเซ็น', icon: <Signature size={16} />, onClick: () => setSignNow(r) }] : []),
-                ...(subStatus(r) === 'pending' ? [{ label: 'ยกเลิกการส่งให้เซ็น', icon: <RotateCcw size={16} />, onClick: () => onCancelSign(r) }] : []),
-                ...(isUnsigned(r) || onlyOwnerSigns(r)
-                  ? [{ label: 'ลบเอกสาร', icon: <Trash2 size={16} />, onClick: () => onDelete(r), danger: true }]
-                  // Someone else has been asked or has signed: kept, and cancelled instead.
-                  : !canVoid ? []
-                  : [{ label: 'ยกเลิกเอกสาร', icon: <Ban size={16} />, onClick: async () => { if (await askAndVoid(r)) load() }, danger: true }]),
-              ]
+              // Deleted while nobody else has been asked; otherwise kept, and cancelled instead.
+              const deletable = !voided && (isUnsigned(r) || onlyOwnerSigns(r))
               const showing = open.has(r.id)
               return (
                 <Fragment key={r.id}>
@@ -196,11 +193,17 @@ export default function HistoryPage() {
                           : <ActionGroupItem label="แก้ไขเอกสาร" to={`/submission/${r.id}`} icon={<Pencil size={15} />} />}
                         <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
                         <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
+                        {!voided && !primary && canSignOrSend(r) && <ActionGroupItem label="เซ็น / ส่งเซ็นเพิ่ม" onClick={() => setSignModal(r)} icon={<Send size={15} />} />}
+                        {!voided && canSignNow() && <ActionGroupItem label="เซ็นเอง / ลบลายเซ็น" onClick={() => setSignNow(r)} icon={<Signature size={15} />} />}
+                        {!voided && subStatus(r) === 'pending' && <ActionGroupItem label="ยกเลิกการส่งให้เซ็น" onClick={() => onCancelSign(r)} icon={<RotateCcw size={15} />} />}
+                        {!voided && !deletable && canVoid && <ActionGroupItem label="ยกเลิกเอกสาร" onClick={async () => { if (await askAndVoid(r)) load() }} icon={<Ban size={15} />} />}
                       </ActionGroup>
                       {primary
                         ? <PrimaryAction label="เซ็นเอง หรือส่งให้คนอื่นเซ็น" short="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Signature size={15} />} />
                         : <PrimarySlot />}
-                      {more.length ? <RowMenu items={more} label={`ตัวเลือกเพิ่มเติม ${r.docNumber}`} /> : <RowMenuSlot />}
+                      {deletable
+                        ? <ActionIconButton label={`ลบเอกสาร ${r.docNumber}`} tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
+                        : <span aria-hidden className="inline-block w-8" />}
                     </div>
                   </td>
                 </tr>
@@ -229,6 +232,11 @@ export default function HistoryPage() {
             )}
           </tbody>
         </table>
+      </div>
+      {chains.length > 0 && (
+        <Pagination page={pager.page} pageCount={pager.pageCount} pageSize={pager.pageSize} from={pager.from} to={pager.to} total={pager.total}
+          onPage={pager.setPage} onPageSize={pager.setPageSize} />
+      )}
       </div>
 
       {signNow && profile && (

@@ -52,7 +52,7 @@ describe('HistoryPage — cancelled and corrected documents', () => {
     fireEvent.click(await screen.findByRole('button', { name: /ดูฉบับก่อนหน้า/ }))
     const old = await rowOf('EX-0001')
     expect(within(old).queryByRole('link', { name: /แก้ไข/ })).toBeNull()
-    expect(within(old).queryByRole('button', { name: /ตัวเลือกเพิ่มเติม/ })).toBeNull()
+    expect(within(old).queryByRole('button', { name: /ลบเอกสาร|ยกเลิกเอกสาร/ })).toBeNull()
     expect(within(old).getByRole('link', { name: /ดูเอกสารฉบับ/ })).toBeInTheDocument()
   })
 
@@ -61,9 +61,8 @@ describe('HistoryPage — cancelled and corrected documents', () => {
     show()
     const signed = await rowOf('EX-0003')
     expect(within(signed).getByRole('link', { name: /แก้ไขเป็นฉบับใหม่/ })).toHaveAttribute('href', '/form/expense?revise=c')
-    fireEvent.click(within(signed).getByRole('button', { name: /ตัวเลือกเพิ่มเติม/ }))
-    expect(screen.getByRole('menuitem', { name: /ยกเลิกเอกสาร/ })).toBeInTheDocument()
-    expect(screen.queryByRole('menuitem', { name: /ลบเอกสาร/ })).toBeNull()
+    expect(within(signed).getByRole('button', { name: /ยกเลิกเอกสาร/ })).toBeInTheDocument()
+    expect(within(signed).queryByRole('button', { name: /ลบเอกสาร/ })).toBeNull()
   })
 
   // Before the database is ready, a correction would be saved and the original
@@ -73,9 +72,7 @@ describe('HistoryPage — cancelled and corrected documents', () => {
     show()
     const signed = await rowOf('EX-0003')
     expect(within(signed).queryByRole('link', { name: /แก้ไข/ })).toBeNull()
-    const more = within(signed).queryByRole('button', { name: /ตัวเลือกเพิ่มเติม/ })
-    if (more) fireEvent.click(more)
-    expect(screen.queryByRole('menuitem', { name: /ยกเลิกเอกสาร/ })).toBeNull()
+    expect(within(signed).queryByRole('button', { name: /ยกเลิกเอกสาร/ })).toBeNull()
     vi.mocked(voidingAvailable).mockReturnValue(true)
   })
 })

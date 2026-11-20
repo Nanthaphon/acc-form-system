@@ -25,16 +25,8 @@ interface Props {
   onDone: () => void              // reload the list after sending
 }
 
-function Step({ n, title, hint }: { n: number; title: string; hint: string }) {
-  return (
-    <div className="mb-3 flex items-start gap-3">
-      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-600 text-xs font-semibold text-white">{n}</span>
-      <div>
-        <div className="text-sm font-semibold text-stone-900">{title}</div>
-        <div className="text-xs text-stone-500">{hint}</div>
-      </div>
-    </div>
-  )
+function Step({ title }: { title: string }) {
+  return <h3 className="mb-2.5 text-xs font-semibold text-stone-500">{title}</h3>
 }
 
 // One place for everything about a document's signatures: the requester signs
@@ -120,11 +112,11 @@ export default function AssignSignersModal({ submission, settings, signers, curr
           role="dialog"
           aria-modal="true"
           aria-label={`เซ็น / ส่งเซ็น ${submission.docNumber}`}
-          className="w-full max-w-4xl rounded-lg border border-stone-200 bg-white shadow-2xl"
+          className="w-full max-w-3xl rounded-lg border border-stone-200 bg-white shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex items-center gap-4 border-b border-stone-100 px-10 py-6">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-clay-50 text-clay-600"><Signature size={24} /></div>
+          <div className="flex items-center gap-3 border-b border-stone-100 px-6 py-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><Signature size={20} /></div>
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-lg font-semibold text-stone-900">เซ็น / ส่งเซ็น</h2>
               <div className="truncate text-xs text-stone-500">
@@ -135,10 +127,10 @@ export default function AssignSignersModal({ submission, settings, signers, curr
             <button onClick={onClose} aria-label="ปิด" className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"><X size={18} /></button>
           </div>
   
-          <div className="space-y-8 px-10 py-8">
+          <div className="space-y-6 px-6 py-5">
             {ownBlock && (
               <section>
-                <Step n={1} title="ลายเซ็นของคุณ" hint={`ช่อง “${ownBlock.label}” ของเอกสาร`} />
+                <Step title={`ลายเซ็นของคุณ · ช่อง “${ownBlock.label}”`} />
                 <OwnSignatureToggle
                   signature={ownSigned ? (ownSig?.signatureImage ?? currentSignature) : currentSignature}
                   blockLabel={ownBlock.label}
@@ -148,14 +140,11 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                   upload={{ uid: currentUid, onUploaded: refreshProfile }}
                   texts={ownSigned ? {
                     on: 'เซ็นแล้ว',
-                    onHint: <>ช่อง “{ownBlock.label}” · เซ็นเมื่อ {formatDateTime(ownSig?.signedAt)}</>,
+                    onHint: formatDateTime(ownSig?.signedAt),
                     off: 'จะเอาลายเซ็นออก',
-                    offHint: <>ช่อง “{ownBlock.label}” จะกลับเป็นช่องว่างเมื่อกดบันทึก</>,
                   } : {
                     on: 'ลงลายเซ็นของฉัน',
-                    onHint: <>ใส่ในช่อง “{ownBlock.label}” เมื่อกดปุ่มด้านล่าง</>,
                     off: 'ไม่ใส่ลายเซ็นของฉัน',
-                    offHint: <>ช่อง “{ownBlock.label}” จะเว้นว่างไว้เซ็นบนกระดาษ</>,
                   }}
                 />
               </section>
@@ -163,23 +152,23 @@ export default function AssignSignersModal({ submission, settings, signers, curr
   
             {others.length > 0 && (
               <section>
-                <Step n={ownBlock ? 2 : 1} title="ให้คนอื่นเซ็นออนไลน์" hint="เลือกคนเซ็นในแต่ละช่อง · ไม่เลือกใคร = เว้นไว้เซ็นด้วยปากกาบนกระดาษ" />
+                <Step title="ผู้เซ็นช่องอื่น" />
                 <div className="divide-y divide-stone-100 rounded-xl border border-stone-200">
                   {others.map(b => {
                     const sig = sigFor(b.id)
                     const picked = assign[b.id] ?? ''
                     return (
-                      <div key={b.id} className="flex min-h-[68px] flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
-                        <span className="w-36 shrink-0 text-sm font-medium text-stone-700">{b.label}</span>
+                      <div key={b.id} className="grid min-h-[60px] grid-cols-1 items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_8.5rem]">
+                        <span className="text-sm font-medium text-stone-800">{b.label}</span>
                         {sig?.status === 'signed' ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-olive-50 px-3 py-1 text-xs font-medium text-olive-700">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-olive-50 px-3 py-1 text-xs font-medium text-olive-700 sm:col-span-2">
                             <CheckCircle2 size={14} /> เซ็นแล้วโดย {sig.assignedName} · {formatDateTime(sig.signedAt)}
                           </span>
                         ) : (
                           <>
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0">
                               <SignerSelect
-                                className={`${ui.inputSm} w-full max-w-md`}
+                                className={`${ui.inputSm} w-full`}
                                 ariaLabel={`ผู้เซ็นช่อง ${b.label}`}
                                 value={picked}
                                 onChange={uid => setAssign({ ...assign, [b.id]: uid })}
@@ -188,11 +177,11 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                               />
                             </div>
                             {sig?.status === 'pending' && sig.assignedUid === picked ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-ochre-50 px-2.5 py-1 text-xs font-medium text-ochre-700"><Clock3 size={13} /> รอเซ็น</span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-ochre-50 px-2.5 py-1 text-xs font-medium justify-self-start sm:justify-self-end text-ochre-700"><Clock3 size={13} /> รอเซ็น</span>
                             ) : picked ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-clay-50 px-2.5 py-1 text-xs font-medium text-clay-700"><Send size={13} /> จะส่งให้เซ็น</span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-clay-50 px-2.5 py-1 text-xs font-medium justify-self-start sm:justify-self-end text-clay-700"><Send size={13} /> จะส่งให้เซ็น</span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500"><PenLine size={13} /> เซ็นบนกระดาษ</span>
+                              <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium justify-self-start sm:justify-self-end text-stone-500"><PenLine size={13} /> เซ็นบนกระดาษ</span>
                             )}
                           </>
                         )}
@@ -204,8 +193,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
             )}
           </div>
   
-          <div className="flex items-center justify-end gap-2 rounded-b-lg border-t border-stone-100 bg-stone-50/60 px-10 py-5">
-            {!changed && <span className="mr-auto text-xs text-stone-400">ยังไม่มีอะไรเปลี่ยน</span>}
+          <div className="flex items-center justify-end gap-2 rounded-b-lg border-t border-stone-100 bg-stone-50/60 px-6 py-4">
             <button onClick={onClose} className={ui.btnSecondary}>ยกเลิก</button>
             <button onClick={confirm} disabled={!changed || busy} className={`${ui.btnPrimary} disabled:opacity-50`}>
               {busy ? <><Spinner size={16} /> กำลังทำรายการ...</> : <>{willSign ? <Signature size={16} /> : <Send size={16} />} {action}</>}

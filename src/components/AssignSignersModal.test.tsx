@@ -87,7 +87,6 @@ describe('เซ็น / ส่งเซ็น', () => {
     show([mine('signed')])
     expect(screen.getByText('เซ็นแล้ว')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /บันทึก/ })).toBeDisabled()
-    expect(screen.getByText('ยังไม่มีอะไรเปลี่ยน')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('checkbox', { name: /ใส่ลายเซ็นของฉัน/ }))
     fireEvent.click(screen.getByRole('button', { name: /เอาลายเซ็นออก/ }))
     await waitFor(() => expect(unsignDocument).toHaveBeenCalledWith('s1', 'maker'))
