@@ -37,12 +37,20 @@ end $$;
 revoke all on function set_doc_status(uuid, text) from public;
 grant execute on function set_doc_status(uuid, text) to authenticated;
 
+-- field_options was made for department and position only
+-- (2026-09-25-field-options.sql): let it hold the docStatus words too.
+alter table field_options drop constraint if exists field_options_field_check;
+alter table field_options add constraint field_options_field_check
+  check (field in ('department', 'position', 'docStatus'));
+
 -- The words to choose from, if they are not there already. The admin may
 -- rename, remove or add to them on หน้า Custom Field.
 insert into field_options (id, field, value, "sortOrder")
 select gen_random_uuid(), 'docStatus', v.value, v."sortOrder"
 from (values ('เอกสารผิด', 1), ('ไม่ได้ใช้', 2), ('ยกเลิกการใช้งาน', 3), ('รอตรวจสอบ', 4)) as v(value, "sortOrder")
 where not exists (select 1 from field_options where field = 'docStatus');
+
+notify pgrst, 'reload schema';
 
 -- Check: the documents that carry a status, and what is on offer.
 select "docNumber", "docStatus" from submissions where "docStatus" is not null order by "createdAt" desc limit 20;
