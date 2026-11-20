@@ -102,6 +102,10 @@ export default function PrintHistoryPage() {
       key: 'emp', label: 'พนักงาน', tdCls: 'whitespace-nowrap',
       cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-stone-500">({r.createdByEmployeeId})</span></>,
     },
+    {
+      key: 'nickname', label: 'ชื่อเล่น', tdCls: 'whitespace-nowrap',
+      cell: r => employees.find(e => e.employeeId === r.createdByEmployeeId)?.nickname || <span className="text-stone-300">—</span>,
+    },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
     { key: 'amount', label: 'ยอด', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => formatMoney(submissionAmount(r)) },
     // How many times it was edited rides beside the status, rather than a column of dashes.
