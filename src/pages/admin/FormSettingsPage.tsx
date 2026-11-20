@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'luci
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, showSeqColumn, isTextCol } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
-import { mmToPct, printWidthsMm, totalColumn, wholePctWidth, PRINT_TABLE_MM } from '../../features/expense-claim/calc'
+import { mmToPct, printWidthsMm, wholePctWidth, PRINT_TABLE_MM } from '../../features/expense-claim/calc'
 import PercentWidthInput from '../../components/PercentWidthInput'
 import MultiSelect from '../../components/MultiSelect'
 import { ui, PageHeader, Badge } from '../../components/ui'
@@ -419,11 +419,8 @@ export default function FormSettingsPage() {
   const usedPct = mmToPct(setWidthMm)
   const leftPct = Math.max(0, 100 - usedPct)
   const visibleCols = columns.filter(c => !c.hidden)
-  const autoCount = visibleCols.filter(c => !c.width).length
   const printedMm = printWidthsMm(showSeq ? seqColumnWidth(settings) : 0, visibleCols.map(c => c.width)).cols
   const autoPct = (col: FormColumn) => { const k = visibleCols.indexOf(col); return k >= 0 && !col.width ? mmToPct(printedMm[k]) : null }
-  const docTotalCol = totalColumn(columns)
-  const markedTotal = columns.some(c => c.isTotal && !isTextCol(c.type))
   const brokenCount = columns.filter(c => brokenOperands(c).length > 0).length
   const previewCompany = companies[0] ?? null
   const previewHeader: ExpenseHeader = {
@@ -525,7 +522,6 @@ export default function FormSettingsPage() {
             />
           </Field>
         </div>
-        <p className={`${ui.hint} mt-2`}>เห็นเฉพาะตอนกรอก ไม่ขึ้นบนเอกสารที่พิมพ์</p>
 
         <div className="mt-5 border-t border-stone-100 pt-4">
           <span className="text-xs font-medium text-stone-500">ช่องกรอกเพิ่มเติม (ใต้ชื่อผู้เบิก)</span>
@@ -560,16 +556,11 @@ export default function FormSettingsPage() {
           ) : (
             <p className="text-xs text-stone-600">
               ใช้ไป {usedPct}% · <span className="font-semibold text-clay-700">เหลือ {leftPct}%</span>
-              {autoCount > 0 && leftPct > 0 && <span className="text-stone-500"> — แบ่งให้คอลัมน์ที่เว้นว่าง {autoCount} คอลัมน์</span>}
+
             </p>
           )}
         </div>
-        <p className={`mb-3 text-xs ${brokenCount > 0 ? 'text-brick-600' : 'text-stone-500'}`}>
-          {docTotalCol
-            ? `ยอดรวมของเอกสารมาจากคอลัมน์ "${docTotalCol.label || docTotalCol.key}"${markedTotal ? '' : ' — ยังไม่ได้เลือกไว้ ระบบจึงใช้คอลัมน์ตัวเลขสุดท้าย ติ๊ก “ยอดรวม” ที่คอลัมน์ที่ต้องการได้'}`
-            : 'ฟอร์มนี้ยังไม่มีคอลัมน์ตัวเลข จึงยังไม่มียอดรวม'}
-          {brokenCount > 0 && ` · มีสูตรที่อ้างคอลัมน์ไม่ครบ ${brokenCount} คอลัมน์`}
-        </p>
+        {brokenCount > 0 && <p role="alert" className="mb-3 text-xs font-medium text-brick-600">มีสูตรที่อ้างคอลัมน์ไม่ครบ {brokenCount} คอลัมน์</p>}
         {/* The table's heading at the widths it prints — each column's share shown
             under its name, so a width is checked by eye rather than by sums. */}
         <div className="scroll-slim overflow-x-auto rounded-lg border border-stone-200">
@@ -622,9 +613,6 @@ export default function FormSettingsPage() {
               className={`${ui.inputSm} w-[124px]`}
             />
           </label>
-          <span className={`${ui.hint} ml-auto`}>
-            {showSeq ? 'เป็นคอลัมน์ในตัว ลบไม่ได้' : 'ไม่แสดงในเอกสาร — ที่ว่างไปให้คอลัมน์อื่น'}
-          </span>
         </div>
 
         <div className="mt-2 space-y-2">
@@ -701,10 +689,7 @@ export default function FormSettingsPage() {
                           <option value="">— เลือกคอลัมน์ —</option>
                           {others.map(o => <option key={o.key} value={o.key}>{o.label || o.key}</option>)}
                         </select>
-                        <span className="text-xs text-stone-500">× อัตราที่ผู้กรอกเลือกในแต่ละรายการ (ไม่หัก · 1 · 2 · 3 · 5% · อื่นๆ)</span>
-                        <span className="w-full text-xs text-stone-500">
-                          ยอดสุทธิ: เพิ่มคอลัมน์คำนวณแบบ “− ลบ” (จำนวนเงินรวม − คอลัมน์นี้) แล้วติ๊ก “ยอดรวม” ที่คอลัมน์นั้น — หัก ณ ที่จ่ายใต้ตารางจะไม่หักซ้ำ
-                        </span>
+                        <span className="text-xs text-stone-500">× อัตราที่เลือกในแต่ละรายการ</span>
                       </>
                     ) : isPercent ? (
                       <>
@@ -863,7 +848,7 @@ export default function FormSettingsPage() {
         <button className={`${btnDashedSm} mt-2`} onClick={addNote}><Plus size={14} /> เพิ่มหมายเหตุ</button>
       </Section>
 
-      <Section title="โลโก้บริษัท" summary="ใช้กับทุกฟอร์ม">
+      <Section title="โลโก้บริษัท">
         <div className="space-y-3">
           {companies.map(company => (
             <div key={company.id} className={`${subCard} flex flex-wrap items-center gap-4`}>

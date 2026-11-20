@@ -119,7 +119,7 @@ export default function Layout() {
     <div className="flex min-h-screen bg-sand-50">
       <aside className={`sticky top-0 flex h-screen shrink-0 flex-col bg-clay-900 pb-4 text-clay-100 transition-[width] duration-200 ${collapsed ? 'w-[4.5rem]' : 'w-[17.5rem]'}`}>
         <div className={`flex items-center gap-2.5 py-5 text-base font-semibold text-white ${collapsed ? 'flex-col px-2' : 'px-5'}`}>
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white p-1 shadow-[0_2px_8px_rgba(0,0,0,0.22)]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center">
             <img src="/logo.webp" alt="" className="h-full w-full object-contain" />
           </span>
           {!collapsed && <span className="min-w-0 flex-1 truncate">Acc Documents</span>}
