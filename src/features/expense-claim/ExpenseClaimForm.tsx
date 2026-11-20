@@ -416,7 +416,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                             </div>
                           ) : col.type === 'date' ? (
                             <DateInput
-                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 leading-snug focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
                               style={cellFont}
                               value={row[col.key] as string}
                               onChange={v => setCell(i, col.key, v)}
@@ -425,14 +425,14 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                             <input
                               type="number"
                               placeholder="0"
-                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 text-right placeholder:text-stone-300 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 leading-snug text-right placeholder:text-stone-300 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
                               style={cellFont}
                               value={(row[col.key] ?? '') as string | number}
                               onChange={e => setCell(i, col.key, e.target.value === '' ? '' : Number(e.target.value))}
                             />
                           ) : col.type === 'select' ? (
                             <select
-                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
+                              className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 leading-snug focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
                               style={cellFont}
                               value={row[col.key] as string}
                               onChange={e => setCell(i, col.key, e.target.value)}
@@ -528,6 +528,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                           title="ลบรายการ"
                           aria-label="ลบรายการ"
                           onClick={() => onItemsChange(items.filter((_, x) => x !== i))}
+                          style={{ zoom: 1 / zoom }}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-400 transition-colors hover:bg-rose-50 hover:text-brick-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay-600/30 group-hover:text-stone-600"
                         >
                           <Trash2 size={16} />
@@ -540,6 +541,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                     <td colSpan={(showSeq ? 1 : 0) + vcols.length + tickCols.length + 1} className="border-b border-stone-200 p-1.5">
                       <button
                         type="button"
+                        style={{ zoom: 1 / zoom }}
                         className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-clay-700 transition-colors hover:bg-clay-50"
                         onClick={() => {
                           // A table withholding every line at one rate gives the new line that rate too.
