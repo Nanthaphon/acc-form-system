@@ -128,3 +128,21 @@ describe('EmployeeListPage — nickname', () => {
     expect(screen.queryByText('เยาวลักษณ์ ทดสอบ')).not.toBeInTheDocument()
   })
 })
+
+describe('EmployeeListPage — choosing columns', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('shows the nickname column at first, email only once turned on', async () => {
+    await show()
+    expect(screen.getByRole('columnheader', { name: 'ชื่อเล่น' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'อีเมล' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /คอลัมน์/ }))
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /ชื่อเล่น/ }))
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /อีเมล/ }))
+    expect(screen.queryByRole('columnheader', { name: 'ชื่อเล่น' })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'อีเมล' })).toBeInTheDocument()
+    // the name column cannot be hidden
+    expect(screen.getByRole('menuitemcheckbox', { name: /พนักงาน/ })).toBeDisabled()
+  })
+})

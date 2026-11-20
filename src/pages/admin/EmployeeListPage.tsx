@@ -5,6 +5,9 @@ import { FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users, X } from 'lu
 import ActionIconButton from '../../components/ActionIconButton'
 import CopyButton from '../../components/CopyButton'
 import SetPasswordModal from '../../components/SetPasswordModal'
+import ColumnPicker from '../../components/ColumnPicker'
+import type { PickableColumn } from '../../components/ColumnPicker'
+import { useHiddenColumns } from '../../shared/useHiddenColumns'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import { listEmployees, deleteEmployee } from '../../data/users'
@@ -12,9 +15,24 @@ import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import { useAuth } from '../../auth/AuthProvider'
 import { canManageLogin, isSuperAdmin, roleLabel, roleTone } from '../../shared/roles'
+import type { ReactNode } from 'react'
 import type { AccessGroup, Company, UserProfile } from '../../types/schema'
 
-const HEADERS = ['พนักงาน', 'ชื่อผู้ใช้', 'ตำแหน่ง / แผนก', 'บริษัท', 'สิทธิ์', '']
+// The columns a viewer can show or hide (ColumnPicker). The name always shows.
+const COLUMNS: PickableColumn[] = [
+  { key: 'name', label: 'พนักงาน', locked: true },
+  { key: 'nickname', label: 'ชื่อเล่น' },
+  { key: 'employeeId', label: 'ชื่อผู้ใช้' },
+  { key: 'position', label: 'ตำแหน่ง' },
+  { key: 'department', label: 'แผนก' },
+  { key: 'company', label: 'บริษัท' },
+  { key: 'email', label: 'อีเมล' },
+  { key: 'group', label: 'กลุ่มการเข้าถึง' },
+  { key: 'role', label: 'สิทธิ์' },
+]
+// Off until turned on: the rest is what people look someone up by.
+const HIDDEN_AT_FIRST = ['email', 'group']
+const muted = (v: ReactNode) => v || <span className="text-stone-300">—</span>
 // Dropdown value for 'people with no access group' — '' already means 'any'.
 const NO_GROUP = '-'
 const FILTER_SELECT = ui.input.replace('w-full', 'w-auto min-w-[10rem]')
@@ -28,7 +46,7 @@ function initial(p: UserProfile): string {
 }
 
 // Placeholder rows while the list loads, the same shape as the real ones.
-function SkeletonRows() {
+function SkeletonRows({ cols }: { cols: number }) {
   return (
     <>
       {Array.from({ length: 6 }, (_, i) => (
@@ -40,7 +58,7 @@ function SkeletonRows() {
               <div className="space-y-1.5"><div className="h-3 w-36 rounded bg-stone-100" /><div className="h-2.5 w-16 rounded bg-stone-100" /></div>
             </div>
           </td>
-          {Array.from({ length: 4 }, (_, j) => <td key={j} className="px-4 py-3"><div className="h-3 w-24 rounded bg-stone-100" /></td>)}
+          {Array.from({ length: cols - 1 }, (_, j) => <td key={j} className="px-4 py-3"><div className="h-3 w-24 rounded bg-stone-100" /></td>)}
           <td className="px-4 py-3" />
         </tr>
       ))}
@@ -60,6 +78,8 @@ export default function EmployeeListPage() {
   const [pwFor, setPwFor] = useState<UserProfile | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<{ done: number; total: number } | null>(null)
+  const cols = useHiddenColumns('cols:employees', HIDDEN_AT_FIRST)
+  const shown = COLUMNS.filter(c => c.locked || !cols.hidden.has(c.key))
 
   function load() {
     listEmployees().then(r => {
@@ -139,6 +159,45 @@ export default function EmployeeListPage() {
     else uiAlert(`ลบแล้ว ${n - failed.length} คน · ไม่สำเร็จ ${failed.length} คน\n\n${failed.join('\n')}`, { title: 'ลบไม่ครบทุกคน', tone: 'danger' })
   }
 
+  // One table cell per column key (COLUMNS).
+  function cell(key: string, r: UserProfile): ReactNode {
+    const td = 'px-4 py-3'
+    switch (key) {
+      case 'name': return (
+        <td key={key} className={td}>
+          <div className="flex items-center gap-3">
+            <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-50 text-sm font-semibold text-clay-700">
+              {initial(r)}
+            </span>
+            <Link to={`/admin/employees/${r.uid}`} className="whitespace-nowrap font-medium text-stone-900 transition-colors hover:text-clay-600">
+              {r.firstName} {r.lastName}
+            </Link>
+            {r.centralStatus === 'resigned' && <Badge tone="amber">ลาออกแล้ว</Badge>}
+          </div>
+        </td>
+      )
+      case 'nickname': return <td key={key} className={`${td} whitespace-nowrap text-stone-800`}>{muted(r.nickname)}</td>
+      case 'employeeId': return (
+        <td key={key} className={`${td} whitespace-nowrap`}>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-[13px] font-medium text-stone-800">{r.employeeId}</span>
+            <CopyButton value={r.employeeId} label="คัดลอกชื่อผู้ใช้" />
+          </div>
+        </td>
+      )
+      case 'position': return <td key={key} className={`${td} text-stone-800`}>{muted(r.position)}</td>
+      case 'department': return <td key={key} className={`${td} text-stone-700`}>{muted(r.department)}</td>
+      case 'company': {
+        const c = company(r.companyId)
+        return <td key={key} className={`${td} max-w-[180px] truncate text-stone-700`} title={c?.name || r.companyId}>{muted(c?.shortName || c?.name || r.companyId)}</td>
+      }
+      case 'email': return <td key={key} className={`${td} whitespace-nowrap text-stone-700`}>{muted(r.email)}</td>
+      case 'group': return <td key={key} className={`${td} whitespace-nowrap text-stone-700`}>{muted(groups.find(g => g.id === r.accessGroup)?.name)}</td>
+      case 'role': return <td key={key} className={`${td} whitespace-nowrap`}><Badge tone={roleTone(r)}>{roleLabel(r)}</Badge></td>
+      default: return null
+    }
+  }
+
   async function onDelete(r: UserProfile) {
     if (!(await uiConfirm(`จะลบบัญชี login และประวัติทั้งหมดของคนนี้อย่างถาวร`, { title: `ลบพนักงาน "${r.firstName} ${r.lastName}" (${r.employeeId}) ?`, tone: 'danger', confirmText: 'ลบ' }))) return
     try {
@@ -177,12 +236,11 @@ export default function EmployeeListPage() {
             {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
             <option value={NO_GROUP}>ยังไม่ระบุกลุ่ม</option>
           </select>
-          {filtering && (
-            <>
-              <button type="button" onClick={clearFilters} className={ui.btnGhost}><X size={16} /> ล้างตัวกรอง</button>
-              <span className="ml-auto text-xs text-stone-500">แสดง {filtered.length} จาก {rows.length} คน</span>
-            </>
-          )}
+          {filtering && <button type="button" onClick={clearFilters} className={ui.btnGhost}><X size={16} /> ล้างตัวกรอง</button>}
+          <div className="ml-auto flex items-center gap-3">
+            {filtering && <span className="text-xs text-stone-500">แสดง {filtered.length} จาก {rows.length} คน</span>}
+            <ColumnPicker columns={COLUMNS} hidden={cols.hidden} onToggle={cols.toggle} onReset={cols.reset} />
+          </div>
         </div>
 
         {/* What is ticked, and deleting it */}
@@ -223,13 +281,13 @@ export default function EmployeeListPage() {
                     onChange={toggleAll}
                   />
                 </th>
-                {HEADERS.map(h => <th key={h} className={ui.th}>{h}</th>)}
+                {shown.map(c => <th key={c.key} className={ui.th}>{c.label}</th>)}
+                <th className={ui.th}><span className="sr-only">จัดการ</span></th>
               </tr>
             </thead>
             <tbody className={ui.tbody}>
-              {loading && <SkeletonRows />}
+              {loading && <SkeletonRows cols={shown.length + 1} />}
               {!loading && filtered.map(r => {
-                const c = company(r.companyId)
                 return (
                   <tr key={r.uid} className={`group transition-colors duration-150 ${selected.has(r.uid) ? 'bg-rose-50/50' : 'hover:bg-stone-50/70'}`}>
                     <td className="w-10 px-4 py-3">
@@ -243,34 +301,7 @@ export default function EmployeeListPage() {
                         onChange={() => toggle(r.uid)}
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-50 text-sm font-semibold text-clay-700">
-                          {initial(r)}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Link to={`/admin/employees/${r.uid}`} className="whitespace-nowrap font-medium text-stone-900 transition-colors hover:text-clay-600">
-                              {r.firstName} {r.lastName}
-                            </Link>
-                            {r.centralStatus === 'resigned' && <Badge tone="amber">ลาออกแล้ว</Badge>}
-                          </div>
-                          {r.nickname && <div className="text-xs text-stone-500">{r.nickname}</div>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <span className="font-mono text-[13px] font-medium text-stone-800">{r.employeeId}</span>
-                        <CopyButton value={r.employeeId} label="คัดลอกชื่อผู้ใช้" />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-stone-800">{r.position || <span className="text-stone-300">—</span>}</div>
-                      {r.department && <div className="text-xs text-stone-500">{r.department}</div>}
-                    </td>
-                    <td className="max-w-[180px] truncate px-4 py-3 text-stone-700" title={c?.name || r.companyId}>{c?.shortName || c?.name || r.companyId}</td>
-                    <td className="whitespace-nowrap px-4 py-3"><Badge tone={roleTone(r)}>{roleLabel(r)}</Badge></td>
+                    {shown.map(c => cell(c.key, r))}
                     <td className="px-4 py-2">
                       <div className="flex items-center justify-end gap-1">
                         {canManageLogin(profile, r) && r.uid !== profile?.uid && (
@@ -289,7 +320,7 @@ export default function EmployeeListPage() {
               })}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={HEADERS.length + 1} className={ui.emptyCell}>
+                  <td colSpan={shown.length + 2} className={ui.emptyCell}>
                     {rows.length === 0 ? 'ยังไม่มีพนักงาน' : needle && !dept && !group ? `ไม่พบพนักงานที่ตรงกับ “${q}”` : 'ไม่พบพนักงานที่ตรงกับตัวกรอง'}
                   </td>
                 </tr>

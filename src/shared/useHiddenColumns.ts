@@ -3,13 +3,16 @@ import { useEffect, useState } from 'react'
 // Which table columns the viewer has hidden, remembered per table in this
 // browser. Storage can be unavailable (private mode, blocked site data) — then
 // every column simply starts visible.
-export function useHiddenColumns(storageKey: string) {
+// defaultHidden: columns that start hidden until the viewer turns them on.
+export function useHiddenColumns(storageKey: string, defaultHidden: readonly string[] = []) {
   const [hidden, setHidden] = useState<Set<string>>(() => {
     try {
-      const v: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '[]')
+      const raw = localStorage.getItem(storageKey)
+      if (raw === null) return new Set(defaultHidden)
+      const v: unknown = JSON.parse(raw)
       return new Set(Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
     } catch {
-      return new Set()
+      return new Set(defaultHidden)
     }
   })
 
