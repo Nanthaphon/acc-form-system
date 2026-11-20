@@ -33,7 +33,11 @@ npm run lint      # oxlint
 
 ## กฎของโปรเจค
 
-- **SQL รันเองไม่ได้** — เขียนไฟล์ไว้ใน `supabase/` แล้วให้ผู้ใช้ก๊อปไปรันใน Supabase SQL Editor
+- **SQL: เขียนไฟล์ไว้ใน `supabase/` เสมอ แล้วรันให้ผู้ใช้ผ่าน CLI** (ผู้ใช้ `supabase login` ไว้แล้ว)
+  - อ่านอย่างเดียว รันได้เลย: `npx supabase db query --remote=<ref> --read-only --output-format json "<sql>"`
+  - เปลี่ยนโครงสร้าง/ข้อมูล: บอกผู้ใช้ว่าจะรันไฟล์ไหน ที่โปรเจคไหน ทำอะไร รอผู้ใช้ตกลงก่อนทุกครั้ง แล้วรัน `npx supabase db query --remote=<ref> --yes -f <file>`
+  - โปรเจค: Acc Documents = `wrujttmqawcvcrqqhcno` · it-asset (ข้อมูลพนักงานกลาง) = `wvxjhjcliusgsfyqfqnh`
+  - CLI ใช้ไม่ได้ (ไม่ได้ล็อกอิน / error) → ให้ผู้ใช้ก๊อปไปรันใน Supabase SQL Editor แบบเดิม
 - **push/deploy เมื่อผู้ใช้สั่งเท่านั้น** (`git push origin HEAD:main` แล้วรอ Vercel ~1 นาที)
 - เพิ่ม/แก้ฟีเจอร์ที่ผู้ใช้เห็น → เขียนประกาศใน `announcements.ts` ด้วย
 - การพิมพ์คิดเป็นมิลลิเมตรจริง: พื้นที่ตารางบน A4 = 190 มม. · กระดาษสูง 276 มม. (`PRINT_TABLE_MM`, `PRINT_SHEET_MM`)
