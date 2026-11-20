@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users, X } from 'lucide-react'
+import { FileDown, FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users, X } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import CopyButton from '../../components/CopyButton'
 import SetPasswordModal from '../../components/SetPasswordModal'
@@ -10,6 +10,8 @@ import FilterSelect from '../../components/FilterSelect'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
 import { initialOf } from '../../shared/initials'
+import { employeesCsvName, employeesToCsv } from '../../shared/employeeCsv'
+import { saveFile } from '../../shared/saveFile'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import { listEmployees, deleteEmployee } from '../../data/users'
@@ -155,6 +157,11 @@ export default function EmployeeListPage() {
     else uiAlert(`ลบแล้ว ${n - failed.length} คน · ไม่สำเร็จ ${failed.length} คน\n\n${failed.join('\n')}`, { title: 'ลบไม่ครบทุกคน', tone: 'danger' })
   }
 
+  // The people the search and filters are showing, every column, as a CSV file.
+  function exportCsv() {
+    saveFile(new TextEncoder().encode(employeesToCsv(filtered, companies, groups)), employeesCsvName(), 'text/csv;charset=utf-8')
+  }
+
   // One table cell per column key (COLUMNS).
   function cell(key: string, r: UserProfile): ReactNode {
     const td = 'px-4 py-3'
@@ -210,6 +217,7 @@ export default function EmployeeListPage() {
         icon={<Users size={20} />}
         title="ข้อมูลพนักงาน"
         actions={<>
+          <button type="button" onClick={exportCsv} disabled={loading || filtered.length === 0} className={ui.btnSecondary}><FileDown size={16} /> ส่งออก CSV</button>
           <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> นำเข้า</Link>
           <Link to="/admin/employees/new" className={ui.btnPrimary}><UserPlus size={16} /> เพิ่มพนักงาน</Link>
         </>}

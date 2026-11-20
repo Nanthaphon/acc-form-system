@@ -5,7 +5,8 @@ import { useId } from 'react'
 // แผนก and ตำแหน่ง are free text: a list may offer "Payroll" to click, but a
 // department the list does not have yet can still be typed. The browser shows
 // the suggestions under the box as it is typed into, narrowing them as it goes.
-export default function OptionInput({ value, options, onChange, placeholder, className, disabled }: {
+export default function OptionInput({ id, value, options, onChange, placeholder, className, disabled }: {
+  id?: string
   value: string
   options: string[]
   onChange: (value: string) => void
@@ -17,6 +18,7 @@ export default function OptionInput({ value, options, onChange, placeholder, cla
   return (
     <>
       <input
+        id={id}
         className={className}
         placeholder={placeholder}
         value={value}

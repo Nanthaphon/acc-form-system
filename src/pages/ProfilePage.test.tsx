@@ -43,7 +43,7 @@ describe('saving my profile', () => {
   it('a typed email the database cannot hold yet: saved without it, and says why', async () => {
     vi.mocked(updateProfile).mockResolvedValue({ emailSkipped: true })
     render(<ProfilePage />)
-    fireEvent.change(screen.getByPlaceholderText('สำหรับแจ้งเตือนเอกสารรอเซ็น'), { target: { value: 'po@example.com' } })
+    fireEvent.change(screen.getByLabelText('อีเมล'), { target: { value: 'po@example.com' } })
     save()
     await waitFor(() => expect(uiAlert).toHaveBeenCalled())
     expect(vi.mocked(updateProfile).mock.calls[0][1]).toMatchObject({ email: 'po@example.com' })

@@ -1,7 +1,8 @@
 import { uiAlert } from '../components/dialog/dialogService'
 import SignatureField from '../components/SignatureField'
 import { useEffect, useState } from 'react'
-import { PenLine, Save, UserRound } from 'lucide-react'
+import { Save, Signature, UserRound } from 'lucide-react'
+import { Badge, PageHeader, SectionTitle, ui } from '../components/ui'
 import { Spinner } from '../components/Spinner'
 import { useAuth } from '../auth/AuthProvider'
 import { updateProfile } from '../data/users'
@@ -14,18 +15,15 @@ import { emailProblem, normalizeEmail } from '../shared/emailAddress'
 import { dbErrorMessage, EMAIL_NOT_SAVED } from '../shared/dbError'
 import type { Company } from '../types/schema'
 
-const labelCls = 'mb-1.5 block text-xs font-medium text-stone-500'
-const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 disabled:bg-stone-50 disabled:text-stone-500'
-
-const FIELDS: Array<[key: string, label: string, placeholder: string, wide?: boolean]> = [
-  ['firstName', 'ชื่อ', 'ชื่อจริง'],
-  ['lastName', 'นามสกุล', 'นามสกุล'],
-  ['nickname', 'ชื่อเล่น', ''],
-  ['position', 'ตำแหน่ง', 'เช่น เจ้าหน้าที่บัญชี'],
-  ['department', 'แผนก', 'เช่น Payroll'],
-  ['defaultJob', 'Job (ค่าเริ่มต้น)', 'ใส่อัตโนมัติเวลากรอกฟอร์ม'],
-  ['bankAccount', 'เลขบัญชี', 'เลขบัญชีธนาคาร'],
-  ['email', 'อีเมล', 'สำหรับแจ้งเตือนเอกสารรอเซ็น'],
+const FIELDS: Array<[key: string, label: string]> = [
+  ['firstName', 'ชื่อ'],
+  ['lastName', 'นามสกุล'],
+  ['nickname', 'ชื่อเล่น'],
+  ['position', 'ตำแหน่ง'],
+  ['department', 'แผนก'],
+  ['email', 'อีเมล'],
+  ['defaultJob', 'Job'],
+  ['bankAccount', 'เลขบัญชี'],
 ]
 
 export default function ProfilePage() {
@@ -68,74 +66,51 @@ export default function ProfilePage() {
   const set = (k: string, v: string) => setForm({ ...form!, [k]: v })
 
   const fullName = `${form.firstName ?? ''} ${form.lastName ?? ''}`.trim()
-  const companyName = companies.find(c => c.id === form.companyId)?.name
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-clay-50 text-clay-600">
-          <UserRound size={24} />
-        </div>
-        <div className="min-w-0">
-          <h1 className="truncate text-xl font-semibold text-stone-900">{fullName || 'ข้อมูลของฉัน'}</h1>
-          <p className="truncate text-sm text-stone-500">
-            {form.position || 'ไม่ระบุตำแหน่ง'}
-            {form.employeeId ? ` · รหัส ${form.employeeId}` : ''}
-            {companyName ? ` · ${companyName}` : ''}
-          </p>
-        </div>
-        {form.role === 'admin' && (
-          <span className="ml-auto shrink-0 rounded-full bg-clay-50 px-3 py-1 text-xs font-semibold text-clay-700">{roleLabel(form)}</span>
-        )}
-      </div>
+    <div>
+      <PageHeader
+        icon={<UserRound size={20} />}
+        title={fullName || 'ข้อมูลของฉัน'}
+        subtitle={form.employeeId}
+        actions={<>
+          {form.role === 'admin' && <Badge tone="blue">{roleLabel(form)}</Badge>}
+          <button type="button" onClick={save} disabled={saving} className={ui.btnPrimary}>
+            {saving ? <><Spinner size={16} /> กำลังบันทึก...</> : <><Save size={16} /> บันทึก</>}
+          </button>
+        </>}
+      />
 
-      {/* ข้อมูลส่วนตัว */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <h2 className="mb-4 text-[15px] font-semibold text-stone-900">ข้อมูลส่วนตัว</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {FIELDS.map(([k, label, placeholder]) => (
-            <div key={k}>
-              <label className={labelCls}>{label}</label>
-              <OptionInput
-                className={inputCls}
-                placeholder={placeholder}
-                value={(form as any)[k] || ''}
-                options={k in lists ? lists[k as OptionField] : []}
-                onChange={v => set(k, v)}
-              />
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <section className={ui.card}>
+          <SectionTitle icon={<UserRound size={16} />} className="mb-5">ข้อมูลส่วนตัว</SectionTitle>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {FIELDS.map(([k, label]) => (
+              <div key={k}>
+                <label htmlFor={`me-${k}`} className={ui.label}>{label}</label>
+                <OptionInput
+                  id={`me-${k}`}
+                  className={ui.input}
+                  value={(form as any)[k] || ''}
+                  options={k in lists ? lists[k as OptionField] : []}
+                  onChange={v => set(k, v)}
+                />
+              </div>
+            ))}
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label htmlFor="me-company" className={ui.label}>บริษัท</label>
+              <select id="me-company" className={ui.input} value={form.companyId} onChange={e => set('companyId', e.target.value)}>
+                <option value="">—</option>
+                {companies.map(c => <option key={c.id} value={c.id}>{c.shortName || c.name}</option>)}
+              </select>
             </div>
-          ))}
-          <div className="sm:col-span-2">
-            <label className={labelCls}>บริษัท / สังกัด</label>
-            <select className={inputCls} value={form.companyId} onChange={e => set('companyId', e.target.value)}>
-              <option value="">— เลือกบริษัท —</option>
-              {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* ลายเซ็น */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6">
-        <div className="mb-1 flex items-center gap-2">
-          <PenLine size={16} className="text-stone-400" />
-          <h2 className="text-[15px] font-semibold text-stone-900">ลายเซ็นของฉัน</h2>
-        </div>
-        <p className="mb-4 text-xs text-stone-500">ใช้เซ็นเอกสารออนไลน์ · แนะนำรูปพื้นหลังโปร่ง (PNG) จะดูเหมือนเซ็นจริงมากกว่า</p>
-
-        <SignatureField uid={form.uid} signature={form.signatureImage} onChanged={refresh} />
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-2.5">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-clay-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-clay-700 disabled:opacity-60"
-        >
-          {saving ? <><Spinner size={16} /> กำลังบันทึก...</> : <><Save size={16} /> บันทึก</>}
-        </button>
+        <section className={ui.card}>
+          <SectionTitle icon={<Signature size={16} />} className="mb-5">ลายเซ็นของฉัน</SectionTitle>
+          <SignatureField uid={form.uid} signature={form.signatureImage} onChanged={refresh} />
+        </section>
       </div>
     </div>
   )
