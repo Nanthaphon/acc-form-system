@@ -156,9 +156,9 @@ Deno.serve(async req => {
     unknownCompanies: plan.unknownCompanies,
     failed,
   }
-  // An automatic run is logged only when it did something.
-  const didSomething = plan.patches.length > 0 || created.length > 0 || failed.length > 0
-  if (!dryRun && (by !== 'auto' || didSomething)) {
+  // Every real run is logged, automatic ones too (a trigger fires per change,
+  // plus once an hour): the log is how anyone can tell the trigger works.
+  if (!dryRun) {
     await admin.from('employee_sync_runs').insert({ ranAt: now, by, ok: failed.length === 0, summary })
   }
   return json(summary)
