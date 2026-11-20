@@ -727,9 +727,14 @@ export default function FormSettingsPage() {
                 )}
 
                 {col.type === 'select' && (
-                  <div className={`${subPanel} mt-2`}>
-                    <span className="text-xs text-stone-500">ตัวเลือกที่พนักงานเลือกได้</span>
-                    <div className="mt-2 space-y-2">
+                  // Folded by default: a list of fourteen banks made the column a page long.
+                  <details className={`${subPanel} group/opts mt-2`}>
+                    <summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-stone-600">
+                      <ChevronDown size={14} className="shrink-0 text-stone-400 transition-transform group-open/opts:rotate-180" />
+                      <span className="font-medium">ตัวเลือก {(col.options ?? []).filter(o => o.trim()).length}</span>
+                      <span className="min-w-0 flex-1 truncate text-stone-500">{(col.options ?? []).filter(o => o.trim()).join(', ')}</span>
+                    </summary>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                       {(col.options ?? []).map((opt, optIdx) => (
                         <div key={optIdx} className="flex items-center gap-2">
                           <span className="w-5 shrink-0 text-right text-xs text-stone-500">{optIdx + 1}.</span>
@@ -746,7 +751,7 @@ export default function FormSettingsPage() {
                     <button type="button" className={`${btnDashedSm} mt-2`} onClick={() => addOption(i)}>
                       <Plus size={14} /> เพิ่มตัวเลือก
                     </button>
-                  </div>
+                  </details>
                 )}
               </div>
             )
