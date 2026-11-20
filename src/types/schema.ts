@@ -181,6 +181,7 @@ export interface UserProfile {
   employeeId: string
   firstName: string
   lastName: string
+  nickname?: string               // from it-asset (supabase/2026-11-20d-employee-nickname.sql), editable here
   position: string
   department: string
   companyId: string

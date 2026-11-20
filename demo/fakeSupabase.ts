@@ -7,8 +7,6 @@
 // Who is signed in: ?demo=admin (บัญชี, admin) · ?demo=super (Super Admin) ·
 // none (an employee). ?demo=nosig / first for a fresh account.
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { bangkokToday, planSync } from '../supabase/functions/sync-employees/plan'
-import type { CentralEmployee } from '../supabase/functions/sync-employees/plan'
 
 const params = new URLSearchParams(location.search)
 const DEMO = params.get('demo') ?? ''           // 'first' = first login, 'nosig' = no signature yet
@@ -539,45 +537,6 @@ const user = { id: ME, email: 'emp0123@acc.local', app_metadata: {}, user_metada
 const session = signedOut ? null : { user, access_token: 'demo', refresh_token: 'demo', expires_in: 3600, token_type: 'bearer' }
 
 // files "uploaded" in this page session (path → blob URL), for the demo
-// The employee master, made up from the demo's own people: the first has a new
-// position there, the second has left, the last is not in it at all, and one
-// person there has no login here — so every part of the sync result shows.
-function demoSync(dryRun: boolean) {
-  const people = db.profiles as any[]
-  const central: CentralEmployee[] = people.slice(0, -1).map((p, i) => ({
-    emp_id: p.employeeId, company: db.companies.find((c: any) => c.id === p.companyId)?.shortName || 'Globe Syndicate',
-    name_prefix: 'นาย', first_name: p.firstName, last_name: p.lastName,
-    position: i === 0 ? 'ผู้จัดการฝ่ายบัญชี' : p.position, department: p.department,
-    m365_email: p.email ?? null, resign_date: i === 1 ? '2026-10-31' : null,
-  }))
-  central.push({ emp_id: '1010999', company: 'Globe Syndicate', name_prefix: 'นางสาว', first_name: 'นางสาวสมใจ', last_name: 'ใหม่มาก', position: 'เจ้าหน้าที่', department: 'HR', m365_email: null, resign_date: null })
-  const plan = planSync(central, people, db.companies as any[], bangkokToday())
-  const created: { employeeId: string; name: string }[] = []
-  if (!dryRun) {
-    for (const p of plan.patches) Object.assign(people.find(x => x.uid === p.uid), p.set, { centralSyncedAt: Date.now() })
-    for (const n of plan.notHere) {
-      people.push({
-        uid: `u-sync-${n.employeeId}`, employeeId: n.employeeId, firstName: '', lastName: '', position: '', department: '',
-        companyId: '', defaultJob: '', bankAccount: '', role: 'employee', mustChangePassword: true, passwordIsDefault: true,
-        createdAt: Date.now(), ...n.set, centralSyncedAt: Date.now(),
-      })
-      created.push({ employeeId: n.employeeId, name: n.name })
-    }
-    save()
-  }
-  return {
-    data: {
-      dryRun, ranAt: Date.now(), centralCount: central.length,
-      updated: plan.patches.filter(p => p.changed.length > 0).map(p => ({ employeeId: p.employeeId, name: p.name, changed: p.changed })),
-      unchanged: plan.unchanged, notInCentral: plan.notInCentral,
-      notHere: plan.notHere.map(({ employeeId, name, company }) => ({ employeeId, name, company })),
-      created, clashes: plan.clashes,
-      resigned: plan.resigned, unknownCompanies: plan.unknownCompanies, failed: [],
-    },
-    error: null,
-  }
-}
-
 const stored: Record<string, string> = {}
 const uploads: string[] = []
 ;(window as any).__demoUploads = uploads
@@ -586,7 +545,7 @@ const client: any = {
   rpc,
   // No mail leaves the demo: everyone asked is reported as having no email.
   functions: {
-    invoke: async (name: string, opts: any) => name === 'sync-employees' ? demoSync(!!opts?.body?.dryRun) : ({ data: { sent: 0, noEmail: (opts?.body?.uids ?? []).map((u: string) => { const p = db.profiles.find(x => x.uid === u); return p ? `${p.firstName} ${p.lastName}` : u }), failed: [] }, error: null }),
+    invoke: async (_name: string, opts: any) => ({ data: { sent: 0, noEmail: (opts?.body?.uids ?? []).map((u: string) => { const p = db.profiles.find(x => x.uid === u); return p ? `${p.firstName} ${p.lastName}` : u }), failed: [] }, error: null }),
   },
   auth: {
     onAuthStateChange(cb: (e: string, s: any) => void) {

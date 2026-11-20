@@ -20,6 +20,7 @@ const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5
 const FIELDS: Array<[key: string, label: string, placeholder: string, wide?: boolean]> = [
   ['firstName', 'ชื่อ', 'ชื่อจริง'],
   ['lastName', 'นามสกุล', 'นามสกุล'],
+  ['nickname', 'ชื่อเล่น', ''],
   ['position', 'ตำแหน่ง', 'เช่น เจ้าหน้าที่บัญชี'],
   ['department', 'แผนก', 'เช่น Payroll'],
   ['defaultJob', 'Job (ค่าเริ่มต้น)', 'ใส่อัตโนมัติเวลากรอกฟอร์ม'],
@@ -49,7 +50,7 @@ export default function ProfilePage() {
       // Only what this page edits — not the whole row (role, signature image,
       // super-admin and password flags…), which the database guards.
       const { emailSkipped } = await updateProfile(f.uid, {
-        firstName: f.firstName, lastName: f.lastName, position: f.position,
+        firstName: f.firstName, lastName: f.lastName, nickname: f.nickname ?? '', position: f.position,
         department: f.department, defaultJob: f.defaultJob, bankAccount: f.bankAccount,
         companyId: f.companyId,
         // undefined when the database has no email column: an untouched field sends nothing.

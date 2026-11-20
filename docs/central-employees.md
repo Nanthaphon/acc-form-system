@@ -8,14 +8,14 @@ it-asset                                              Acc Documents (wrujttmqawc
 ตารางพนักงาน ─ trigger เพิ่ม/แก้/ลบ + ทุกชั่วโมง ──►  edge function sync-employees
                                                         │  x-sync-secret = acc_feed_token
 report.employees                                        │
-  └ public.acc_employee_feed(token)  ◄─ อ่าน 9 คอลัมน์ ──┘ ──► profiles
+  └ public.acc_employee_feed(token)  ◄─ อ่าน 10 คอลัมน์ ─┘ ──► profiles
 ```
 
 ## ซิงก์แล้วเกิดอะไร
 
 | ที่ it-asset | ที่ Acc Documents (ภายในไม่กี่วินาที) |
 |---|---|
-| แก้ชื่อ / ตำแหน่ง / แผนก / บริษัท / อีเมล | เปลี่ยนตาม |
+| แก้ชื่อ / ชื่อเล่น / ตำแหน่ง / แผนก / บริษัท / อีเมล | เปลี่ยนตาม |
 | เพิ่มพนักงานใหม่ (ยังทำงานอยู่) | สร้างบัญชีให้ — ชื่อผู้ใช้และรหัสผ่านแรก = รหัสพนักงาน, สิทธิ์พนักงาน, ต้องเปลี่ยนรหัสผ่านตอนเข้าครั้งแรก |
 | ใส่วันลาออก | ป้าย "ลาออกแล้ว" ในรายชื่อ — บัญชียังเข้าได้ แอดมินลบเอง |
 | ลบพนักงาน | ไม่ลบ |
@@ -44,6 +44,7 @@ report.employees                                        │
 4. deploy: `npx supabase functions deploy sync-employees --project-ref wrujttmqawcvcrqqhcno` (ตอบ `y`)
 5. **it-asset** → SQL Editor → รัน `supabase/central/2026-11-20b-acc-employee-realtime.sql`
    ผลท้ายสุดต้องมีชื่อตารางอย่างน้อย 1 แถว (ตารางที่ติด trigger)
+6. **Acc Documents** → รัน `supabase/2026-11-20d-employee-nickname.sql` แล้ว **it-asset** → รัน `supabase/central/2026-11-20c-acc-employee-feed-nickname.sql` (ชื่อเล่น)
 
 ## ตรวจว่าทำงาน
 

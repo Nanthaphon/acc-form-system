@@ -82,24 +82,18 @@ Deno.serve(async req => {
   }
   const { dryRun = false } = await req.json().catch(() => ({})) as { dryRun?: boolean }
 
-  // The columns this database has: centralFields/centralStatus come with
-  // supabase/2026-11-20-central-employees.sql, email with 2026-10-26-employee-email.sql.
-  const base = 'uid,"employeeId","firstName","lastName",position,department,"companyId"'
-  // centralValues comes with supabase/2026-11-20c-employee-edit-here.sql: without it
-  // every sync copies the master over what was typed here, as before.
-  let trackValues = true
-  let { data: profiles, error } = await admin.from('profiles').select(`${base},email,"centralStatus","centralFields","centralValues"`)
-  if (error?.code === '42703') {
-    trackValues = false
-    ;({ data: profiles, error } = await admin.from('profiles').select(`${base},email,"centralStatus","centralFields"`))
-  }
-  let fields: readonly CentralField[] = CENTRAL_FIELDS
-  if (error?.code === '42703') {
-    const probe = await admin.from('profiles').select(`${base},"centralStatus","centralFields"`)
-    if (probe.error?.code === '42703') return json({ error: 'MIGRATION_MISSING' }, 409)
-    ;({ data: profiles, error } = probe)
-    fields = CENTRAL_FIELDS.filter(f => f !== 'email')
-  }
+  // Columns that come with later migrations — a sync works with whatever the
+  // database has:  email (2026-10-26-employee-email.sql) · nickname
+  // (2026-11-20d-employee-nickname.sql) · centralValues (2026-11-20c-employee-edit-here.sql:
+  // without it every sync copies the master over what was typed here).
+  const has = async (col: string) => !(await admin.from('profiles').select(`"${col}"`).limit(0)).error
+  if (!(await has('centralFields'))) return json({ error: 'MIGRATION_MISSING' }, 409)
+  const [hasEmail, hasNickname, trackValues] = await Promise.all([has('email'), has('nickname'), has('centralValues')])
+  const fields: readonly CentralField[] = CENTRAL_FIELDS.filter(f =>
+    (f !== 'email' || hasEmail) && (f !== 'nickname' || hasNickname))
+  const cols = ['uid', 'employeeId', 'firstName', 'lastName', 'position', 'department', 'companyId', 'centralStatus', 'centralFields',
+    ...(hasEmail ? ['email'] : []), ...(hasNickname ? ['nickname'] : []), ...(trackValues ? ['centralValues'] : [])]
+  const { data: profiles, error } = await admin.from('profiles').select(cols.map(c => `"${c}"`).join(','))
   if (error) return json({ error: error.message }, 500)
   const { data: companies } = await admin.from('companies').select('id,name,"shortName"')
 

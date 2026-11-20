@@ -60,3 +60,20 @@ describe('isMissingColumn', () => {
     expect(isMissingColumn(null, 'email')).toBe(false)
   })
 })
+
+describe('updateProfile on a database without the nickname column', () => {
+  it('saves the rest without the nickname, quietly', async () => {
+    answers = [{ error: { code: 'PGRST204', message: "Could not find the 'nickname' column of 'profiles' in the schema cache" } }]
+    expect(await updateProfile('u1', { firstName: 'ก', nickname: 'เอ' })).toEqual({ emailSkipped: false })
+    expect(sent).toEqual([{ firstName: 'ก', nickname: 'เอ' }, { firstName: 'ก' }])
+  })
+
+  it('leaves out both when neither column is there', async () => {
+    answers = [
+      { error: { code: 'PGRST204', message: "Could not find the 'email' column of 'profiles' in the schema cache" } },
+      { error: { code: 'PGRST204', message: "Could not find the 'nickname' column of 'profiles' in the schema cache" } },
+    ]
+    expect(await updateProfile('u1', { firstName: 'ก', email: 'a@b.co', nickname: 'เอ' })).toEqual({ emailSkipped: true })
+    expect(sent[2]).toEqual({ firstName: 'ก' })
+  })
+})

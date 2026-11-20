@@ -14,6 +14,7 @@ export interface CentralEmployee {
   company: string | null
   name_prefix: string | null
   first_name: string | null
+  nickname?: string | null     // only once it-asset runs 2026-11-20c-acc-employee-feed-nickname.sql
   last_name: string | null
   position: string | null
   department: string | null
@@ -27,6 +28,7 @@ export interface LocalProfile {
   employeeId: string
   firstName: string
   lastName: string
+  nickname?: string | null
   position: string
   department: string
   companyId: string
@@ -43,7 +45,7 @@ export interface LocalProfile {
 export interface LocalCompany { id: string; name: string; shortName?: string | null }
 
 /** The profile columns the master may own. */
-export const CENTRAL_FIELDS = ['firstName', 'lastName', 'position', 'department', 'companyId', 'email'] as const
+export const CENTRAL_FIELDS = ['firstName', 'lastName', 'nickname', 'position', 'department', 'companyId', 'email'] as const
 export type CentralField = typeof CENTRAL_FIELDS[number]
 
 export type CentralStatus = 'active' | 'resigned' | 'missing'
@@ -151,6 +153,7 @@ export function planSync(
     const first = stripPrefix(clean(c.first_name), c.name_prefix)
     if (first) wanted.firstName = first
     if (clean(c.last_name)) wanted.lastName = clean(c.last_name)
+    if (clean(c.nickname)) wanted.nickname = clean(c.nickname)
     if (clean(c.position)) wanted.position = clean(c.position)
     if (clean(c.department)) wanted.department = clean(c.department)
     if (clean(c.m365_email)) wanted.email = clean(c.m365_email).toLowerCase()

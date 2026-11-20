@@ -108,21 +108,23 @@ export async function getProfileByUid(uid: string): Promise<UserProfile | null> 
 // Every profile column except signatureImage (a base64 image per person) —
 // lists only need names and details.
 const EMPLOYEE_LIST_COLS = 'uid,employeeId,firstName,lastName,position,department,companyId,defaultJob,bankAccount,role,groupId,accessGroup,mustChangePassword,createdAt'
-const EMPLOYEE_LOGIN_COLS = 'isSuperAdmin,passwordIsDefault'
-const EMPLOYEE_EMAIL_COL = 'email'
-const EMPLOYEE_CENTRAL_COLS = 'centralFields,centralStatus'
+// Newer columns, each with the migration that adds it: a database that has not
+// run one still lists everyone, without that column.
+const EMPLOYEE_OPTIONAL_COLS = [
+  'isSuperAdmin', 'passwordIsDefault',   // supabase/2026-09-11-super-admin.sql
+  'email',                               // supabase/2026-10-26-employee-email.sql
+  'centralFields', 'centralStatus',      // supabase/2026-11-20-central-employees.sql
+  'nickname',                            // supabase/2026-11-20d-employee-nickname.sql
+]
 export async function listEmployees(): Promise<UserProfile[]> {
-  const q = (cols: string) => supabase.from('profiles').select(cols).order('employeeId')
-  // Newer columns, each with the migration that adds it: a database that has not
-  // run one still lists everyone, without that column.
-  //   email — supabase/2026-10-26-employee-email.sql
-  //   isSuperAdmin, passwordIsDefault — supabase/2026-09-11-super-admin.sql
-  //   centralFields, centralStatus — supabase/2026-11-20-central-employees.sql
-  let { data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS},${EMPLOYEE_EMAIL_COL},${EMPLOYEE_CENTRAL_COLS}`)
-  if (error?.code === '42703') ({ data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS},${EMPLOYEE_EMAIL_COL}`))
-  if (error?.code === '42703') ({ data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS}`))
-  if (error?.code === '42703') ({ data } = await q(EMPLOYEE_LIST_COLS))
-  return (data ?? []) as unknown as UserProfile[]
+  let optional = [...EMPLOYEE_OPTIONAL_COLS]
+  for (;;) {
+    const { data, error } = await supabase.from('profiles').select([EMPLOYEE_LIST_COLS, ...optional].join(',')).order('employeeId')
+    if (error?.code !== '42703' || optional.length === 0) return (data ?? []) as unknown as UserProfile[]
+    // Leave out the column the database named, or else the newest one.
+    const missing = optional.find(c => isMissingColumn(error, c)) ?? optional[optional.length - 1]
+    optional = optional.filter(c => c !== missing)
+  }
 }
 // After someone sets their own password. Two writes, so the first still lands
 // on a database that doesn't have the passwordIsDefault column yet.
@@ -152,24 +154,28 @@ export function isMissingColumn(e: { code?: string; message?: string } | null | 
     (msg.includes(`'${col}' column`) || msg.includes(`"${col}"`) || msg.includes(`.${col} `))
 }
 
+// Columns a save can do without on a database that has not run their migration.
+const SKIPPABLE_COLS = ['email', 'nickname'] as const
+
 /** emailSkipped: an email was typed, but the database has no email column yet
  *  (supabase/2026-10-26-employee-email.sql not run) — everything else was
- *  saved, the email was not. */
+ *  saved, the email was not. A nickname is left out the same way, silently. */
 export async function updateProfile(uid: string, patch: Partial<UserProfile>): Promise<{ emailSkipped: boolean }> {
   const run = (p: Partial<UserProfile>) => supabase.from('profiles').update(p).eq('uid', uid)
-  let { error } = await run(patch)
-  // Without the email column the whole row was refused, so typing an email on
-  // the profile page made "บันทึก" fail outright. Save the rest without it.
-  if (error && 'email' in patch && isMissingColumn(error, 'email')) {
-    const { email, ...rest } = patch
-    if (Object.keys(rest).length > 0) {
-      const { error: again } = await run(rest)
-      if (again) throw again
-    }
-    return { emailSkipped: !!email }
+  let rest: Partial<UserProfile> = patch
+  let emailSkipped = false
+  for (;;) {
+    const { error } = await run(rest)
+    if (!error) return { emailSkipped }
+    // Without the column the whole row was refused, so typing an email on the
+    // profile page made "บันทึก" fail outright. Save the rest without it.
+    const col = SKIPPABLE_COLS.find(k => k in rest && isMissingColumn(error, k))
+    if (!col) throw error
+    if (col === 'email') emailSkipped = !!rest.email
+    const { [col]: _skip, ...others } = rest
+    rest = others
+    if (Object.keys(rest).length === 0) return { emailSkipped }
   }
-  if (error) throw error
-  return { emailSkipped: false }
 }
 // Fully removes an employee: their login account, profile, and submissions.
 // Runs a SECURITY DEFINER RPC (delete_employee) that checks admin + deletes the auth user.

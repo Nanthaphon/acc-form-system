@@ -35,7 +35,7 @@ describe('saving my profile', () => {
     save()
     await waitFor(() => expect(uiAlert).toHaveBeenCalledWith('บันทึกข้อมูลแล้ว', { tone: 'success' }))
     expect(updateProfile).toHaveBeenCalledWith('u1', {
-      firstName: 'พรทิพย์', lastName: 'รุ่งเรือง', position: 'Sr. ACC/FN Officer',
+      firstName: 'พรทิพย์', lastName: 'รุ่งเรือง', nickname: '', position: 'Sr. ACC/FN Officer',
       department: 'Accounting and Finance', defaultJob: 'ACC', bankAccount: '0093634810', companyId: 'bhrm',
     })
   })

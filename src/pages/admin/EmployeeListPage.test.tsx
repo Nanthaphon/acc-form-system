@@ -9,7 +9,7 @@ const person = (uid: string, employeeId: string, firstName: string, extra: Parti
 })
 const ME = person('me', '1010145', 'ผู้ดูแล', { role: 'admin' })
 const SUPER = person('su', '1010002', 'ซูเปอร์', { role: 'admin', isSuperAdmin: true } as Partial<UserProfile>)
-const PEOPLE = [ME, SUPER, person('a', '1010009', 'เยาวลักษณ์', { department: 'Payroll', accessGroup: 'g1' }), person('b', '1010012', 'ปรมินทร์', { department: 'Management', accessGroup: 'g2' }), person('c', '1010027', 'วุฑฒิกานต์', { department: 'Payroll' })]
+const PEOPLE = [ME, SUPER, person('a', '1010009', 'เยาวลักษณ์', { department: 'Payroll', accessGroup: 'g1' }), person('b', '1010012', 'ปรมินทร์', { department: 'Management', accessGroup: 'g2', nickname: 'มินท์' }), person('c', '1010027', 'วุฑฒิกานต์', { department: 'Payroll' })]
 
 const deleteEmployee = vi.fn((_uid: string) => Promise.resolve())
 const uiPrompt = vi.fn()
@@ -116,5 +116,15 @@ describe('filters', () => {
     fireEvent.change(screen.getByPlaceholderText(/ค้นหา/), { target: { value: 'วุฑฒิ' } })
     expect(names()).toBe(1)
     expect(screen.getByText('วุฑฒิกานต์ ทดสอบ')).toBeInTheDocument()
+  })
+})
+
+describe('EmployeeListPage — nickname', () => {
+  it('shows the nickname under the name, and finds people by it', async () => {
+    await show()
+    expect(screen.getByText('มินท์')).toBeInTheDocument()
+    fireEvent.change(screen.getByPlaceholderText(/ค้นหา/), { target: { value: 'มินท์' } })
+    expect(screen.getByText('ปรมินทร์ ทดสอบ')).toBeInTheDocument()
+    expect(screen.queryByText('เยาวลักษณ์ ทดสอบ')).not.toBeInTheDocument()
   })
 })

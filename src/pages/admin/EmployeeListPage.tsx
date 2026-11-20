@@ -1,42 +1,50 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DatabaseZap, FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users, X } from 'lucide-react'
+import { FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users, X } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import CopyButton from '../../components/CopyButton'
 import SetPasswordModal from '../../components/SetPasswordModal'
-import EmployeeSyncModal from '../../components/EmployeeSyncModal'
-import { lastSyncAt } from '../../data/employeeSync'
-import { formatDateTime } from '../../shared/date'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import { listEmployees, deleteEmployee } from '../../data/users'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import { useAuth } from '../../auth/AuthProvider'
-import { canManageLogin, isSuperAdmin, passwordState, PASSWORD_STATE, roleLabel, roleTone } from '../../shared/roles'
-import type { PasswordState } from '../../shared/roles'
+import { canManageLogin, isSuperAdmin, roleLabel, roleTone } from '../../shared/roles'
 import type { AccessGroup, Company, UserProfile } from '../../types/schema'
 
-const HEADERS = ['ชื่อ-นามสกุล', 'ชื่อผู้ใช้', 'รหัสผ่าน', 'ตำแหน่ง / แผนก', 'บริษัท', 'สิทธิ์', '']
-const STATES: PasswordState[] = ['default', 'temporary', 'own']
+const HEADERS = ['พนักงาน', 'ชื่อผู้ใช้', 'ตำแหน่ง / แผนก', 'บริษัท', 'สิทธิ์', '']
 // Dropdown value for 'people with no access group' — '' already means 'any'.
 const NO_GROUP = '-'
-// ui.input is w-full; a filter should take only the width it needs.
-const FILTER_SELECT = ui.input.replace('w-full', 'w-auto min-w-[11rem]')
+const FILTER_SELECT = ui.input.replace('w-full', 'w-auto min-w-[10rem]')
 const CHECKBOX = 'h-4 w-4 cursor-pointer rounded accent-clay-600 disabled:cursor-not-allowed disabled:opacity-30'
+// Thai vowels written before the consonant: an initial is the consonant itself.
+const LEADING_VOWELS = new Set(['เ', 'แ', 'โ', 'ใ', 'ไ'])
 
-// The default password is the username, so it can be shown; any other is hashed.
-function PasswordCell({ p }: { p: UserProfile }) {
-  const st = passwordState(p)
-  const meta = PASSWORD_STATE[st]
+function initial(p: UserProfile): string {
+  const chars = Array.from((p.nickname || p.firstName || p.employeeId || '?').trim())
+  return (chars.find(c => !LEADING_VOWELS.has(c)) ?? chars[0] ?? '?').toUpperCase()
+}
+
+// Placeholder rows while the list loads, the same shape as the real ones.
+function SkeletonRows() {
   return (
-    <div className="flex items-center gap-1.5" title={meta.hint}>
-      {st === 'default'
-        ? <><span className="font-mono text-[13px] text-stone-900">{p.employeeId}</span><CopyButton value={p.employeeId} label="คัดลอกรหัสผ่าน" /></>
-        : <span className="font-mono tracking-widest text-stone-300">••••••</span>}
-      <Badge tone={meta.tone}>{meta.label}</Badge>
-    </div>
+    <>
+      {Array.from({ length: 6 }, (_, i) => (
+        <tr key={i} className="animate-pulse">
+          <td className="px-4 py-3"><div className="h-4 w-4 rounded bg-stone-100" /></td>
+          <td className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-stone-100" />
+              <div className="space-y-1.5"><div className="h-3 w-36 rounded bg-stone-100" /><div className="h-2.5 w-16 rounded bg-stone-100" /></div>
+            </div>
+          </td>
+          {Array.from({ length: 4 }, (_, j) => <td key={j} className="px-4 py-3"><div className="h-3 w-24 rounded bg-stone-100" /></td>)}
+          <td className="px-4 py-3" />
+        </tr>
+      ))}
+    </>
   )
 }
 
@@ -52,8 +60,6 @@ export default function EmployeeListPage() {
   const [pwFor, setPwFor] = useState<UserProfile | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<{ done: number; total: number } | null>(null)
-  const [syncing, setSyncing] = useState(false)
-  const [syncedAt, setSyncedAt] = useState<number | null>(null)
 
   function load() {
     listEmployees().then(r => {
@@ -63,29 +69,26 @@ export default function EmployeeListPage() {
       setSelected(prev => new Set([...prev].filter(uid => present.has(uid))))
     })
   }
-  useEffect(() => { load(); listCompanies().then(setCompanies); listAccessGroups().then(setGroups); lastSyncAt().then(setSyncedAt) }, [])
+  useEffect(() => { load(); listCompanies().then(setCompanies); listAccessGroups().then(setGroups) }, [])
 
   const viewerIsSuper = isSuperAdmin(profile)
   // The same rule as the row's delete button, which the database enforces too.
   const deletable = (r: UserProfile) => r.uid !== profile?.uid && !isSuperAdmin(r)
   // Only the Super Admin may edit the Super Admin's account.
   const locked = (r: UserProfile) => isSuperAdmin(r) && !viewerIsSuper
-  const companyName = (id: string) => companies.find(c => c.id === id)?.name || id
-  // Search the fields people actually look someone up by.
+  const company = (id: string) => companies.find(c => c.id === id)
   const needle = q.trim().toLowerCase()
-  // The department list is built from the people themselves, so it covers values
-  // typed before they were ever added to Custom Field.
+  // Built from the people themselves, so it covers values typed before they
+  // were ever added to Custom Field.
   const departments = [...new Set(rows.map(r => r.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'th'))
   const filtering = !!needle || !!dept || !!group
   const filtered = rows.filter(r =>
-    (!needle || `${r.employeeId} ${r.firstName} ${r.lastName} ${r.position} ${r.department}`.toLowerCase().includes(needle))
+    (!needle || `${r.employeeId} ${r.firstName} ${r.lastName} ${r.nickname ?? ''} ${r.position} ${r.department}`.toLowerCase().includes(needle))
     && (!dept || r.department === dept)
     && (!group || (group === NO_GROUP ? !r.accessGroup : r.accessGroup === group)))
   function clearFilters() { setQ(''); setDept(''); setGroup('') }
-  const onDefault = rows.filter(r => passwordState(r) === 'default').length
 
-  // "Select all" means everyone the search is showing, not everyone there is:
-  // what is ticked should be what can be seen.
+  // "Select all" means everyone the search is showing: what is ticked should be what can be seen.
   const visible = filtered.filter(deletable)
   const allTicked = visible.length > 0 && visible.every(r => selected.has(r.uid))
   const someTicked = visible.some(r => selected.has(r.uid))
@@ -151,151 +154,151 @@ export default function EmployeeListPage() {
       <PageHeader
         icon={<Users size={20} />}
         title="ข้อมูลพนักงาน"
-        subtitle={loading ? 'กำลังโหลด...' : `ทั้งหมด ${rows.length} คน · ยังใช้รหัสเริ่มต้น ${onDefault} คน${syncedAt ? ` · ซิงก์ล่าสุด ${formatDateTime(syncedAt)}` : ''}`}
+        subtitle={loading ? 'กำลังโหลด...' : `${rows.length} คน`}
         actions={<>
-          <button type="button" onClick={() => setSyncing(true)} className={ui.btnSecondary}><DatabaseZap size={16} /> ซิงก์ข้อมูลพนักงาน</button>
-          <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> นำเข้าพนักงาน</Link>
+          <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> นำเข้า</Link>
           <Link to="/admin/employees/new" className={ui.btnPrimary}><UserPlus size={16} /> เพิ่มพนักงาน</Link>
         </>}
       />
 
-      {/* Search, filters, and what the password badges mean */}
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-xs">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
-          <input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="ค้นหาชื่อผู้ใช้ / ชื่อ / ตำแหน่ง / แผนก"
-            className={`${ui.input} pl-9`}
-          />
+      <div className={ui.tableCard}>
+        {/* Search and filters */}
+        <div className="flex flex-wrap items-center gap-2.5 border-b border-stone-100 px-4 py-3">
+          <div className="relative min-w-[14rem] flex-1 sm:max-w-sm">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="ค้นหา" className={`${ui.input} pl-9`} />
+          </div>
+          <select aria-label="กรองตามแผนก" value={dept} onChange={e => setDept(e.target.value)} className={FILTER_SELECT}>
+            <option value="">ทุกแผนก</option>
+            {departments.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select aria-label="กรองตามกลุ่มสิทธิ์" value={group} onChange={e => setGroup(e.target.value)} className={FILTER_SELECT}>
+            <option value="">ทุกกลุ่มสิทธิ์</option>
+            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            <option value={NO_GROUP}>ยังไม่ระบุกลุ่ม</option>
+          </select>
+          {filtering && (
+            <>
+              <button type="button" onClick={clearFilters} className={ui.btnGhost}><X size={16} /> ล้างตัวกรอง</button>
+              <span className="ml-auto text-xs text-stone-500">แสดง {filtered.length} จาก {rows.length} คน</span>
+            </>
+          )}
         </div>
-        <select aria-label="กรองตามแผนก" value={dept} onChange={e => setDept(e.target.value)} className={FILTER_SELECT}>
-          <option value="">ทุกแผนก</option>
-          {departments.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <select aria-label="กรองตามกลุ่มสิทธิ์" value={group} onChange={e => setGroup(e.target.value)} className={FILTER_SELECT}>
-          <option value="">ทุกกลุ่มสิทธิ์</option>
-          {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-          <option value={NO_GROUP}>ยังไม่ระบุกลุ่ม</option>
-        </select>
-        {filtering && (
-          <button type="button" onClick={clearFilters} className={ui.btnGhost}><X size={16} /> ล้างตัวกรอง</button>
-        )}
-        <span className="text-xs text-stone-500">
-          {filtering ? `แสดง ${filtered.length} จาก ${rows.length} คน` : `ทั้งหมด ${rows.length} คน`}
-        </span>
-      </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500">
-        {STATES.map(s => (
-          <span key={s} className="inline-flex items-center gap-1.5">
-            <Badge tone={PASSWORD_STATE[s].tone}>{PASSWORD_STATE[s].label}</Badge> {PASSWORD_STATE[s].short}
-          </span>
-        ))}
-      </div>
-
-      {picked.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-rose-100 bg-rose-50 px-4 py-2.5 text-sm">
-          <span className="font-medium text-stone-900">เลือกแล้ว {picked.length} คน</span>
-          {pickedHidden > 0 && <span className="text-stone-500">(ไม่อยู่ในผลค้นหาตอนนี้ {pickedHidden} คน)</span>}
-          <button type="button" onClick={() => setSelected(new Set())} disabled={!!deleting} className={ui.btnGhost}>
-            ยกเลิกการเลือก
-          </button>
-          <button
-            type="button"
-            onClick={onDeleteSelected}
-            disabled={!!deleting}
-            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-brick-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brick-700 disabled:opacity-60"
-          >
-            {deleting
-              ? <><Spinner size={16} /> กำลังลบ {deleting.done + 1}/{deleting.total}</>
-              : <><Trash2 size={16} /> ลบ {picked.length} คน</>}
-          </button>
+        {/* What is ticked, and deleting it */}
+        <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${picked.length > 0 ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+          <div className="overflow-hidden">
+            {picked.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 border-b border-rose-100 bg-rose-50/70 px-4 py-2.5 text-sm">
+                <span className="font-medium text-stone-900">เลือกแล้ว {picked.length} คน</span>
+                {pickedHidden > 0 && <span className="text-stone-500">(ไม่อยู่ในผลค้นหาตอนนี้ {pickedHidden} คน)</span>}
+                <button type="button" onClick={() => setSelected(new Set())} disabled={!!deleting} className={ui.btnGhost}>ยกเลิกการเลือก</button>
+                <button
+                  type="button"
+                  onClick={onDeleteSelected}
+                  disabled={!!deleting}
+                  className="ml-auto inline-flex items-center gap-2 rounded-xl bg-brick-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brick-700 disabled:opacity-60"
+                >
+                  {deleting
+                    ? <><Spinner size={16} /> กำลังลบ {deleting.done + 1}/{deleting.total}</>
+                    : <><Trash2 size={16} /> ลบ {picked.length} คน</>}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      )}
 
-      <div className={ui.tableWrap}>
-        <table className={ui.table}>
-          <thead className={ui.thead}>
-            <tr>
-              <th className={`${ui.th} w-10`}>
-                <input
-                  type="checkbox"
-                  aria-label="เลือกทั้งหมด"
-                  className={CHECKBOX}
-                  checked={allTicked}
-                  disabled={visible.length === 0 || !!deleting}
-                  ref={el => { if (el) el.indeterminate = someTicked && !allTicked }}
-                  onChange={toggleAll}
-                />
-              </th>
-              {HEADERS.map(h => <th key={h} className={ui.th}>{h}</th>)}
-            </tr>
-          </thead>
-          <tbody className={ui.tbody}>
-            {filtered.map(r => (
-              <tr key={r.uid} className={`${ui.tr} ${selected.has(r.uid) ? 'bg-rose-50/50' : ''}`}>
-                <td className={`${ui.td} w-10`}>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead className={`${ui.thead} bg-stone-50/60`}>
+              <tr>
+                <th className={`${ui.th} w-10`}>
                   <input
                     type="checkbox"
-                    aria-label={`เลือก ${r.firstName} ${r.lastName}`}
+                    aria-label="เลือกทั้งหมด"
                     className={CHECKBOX}
-                    checked={selected.has(r.uid) && deletable(r)}
-                    disabled={!deletable(r) || !!deleting}
-                    title={deletable(r) ? undefined : r.uid === profile?.uid ? 'ลบบัญชีของตัวเองไม่ได้' : 'ลบบัญชี Super Admin ไม่ได้'}
-                    onChange={() => toggle(r.uid)}
+                    checked={allTicked}
+                    disabled={visible.length === 0 || !!deleting}
+                    ref={el => { if (el) el.indeterminate = someTicked && !allTicked }}
+                    onChange={toggleAll}
                   />
-                </td>
-                <td className={`${ui.td} whitespace-nowrap`}>
-                  <Link to={`/admin/employees/${r.uid}`} className="font-medium text-stone-900 hover:text-clay-600">
-                    {r.firstName} {r.lastName}
-                  </Link>
-                  {r.centralStatus === 'resigned' && <span className="ml-2"><Badge tone="amber">ลาออกแล้ว</Badge></span>}
-                </td>
-                <td className={`${ui.td} whitespace-nowrap`}>
-                  <div className="flex items-center gap-1">
-                    <span className="font-mono text-[13px] font-medium text-stone-900">{r.employeeId}</span>
-                    <CopyButton value={r.employeeId} label="คัดลอกชื่อผู้ใช้" />
-                  </div>
-                </td>
-                <td className={`${ui.td} whitespace-nowrap`}><PasswordCell p={r} /></td>
-                <td className={ui.td}>
-                  <div className="text-stone-700">{r.position || <span className="text-stone-300">—</span>}</div>
-                  {r.department && <div className="text-xs text-stone-400">{r.department}</div>}
-                </td>
-                <td className={`${ui.td} max-w-[200px] truncate`} title={companyName(r.companyId)}>{companyName(r.companyId)}</td>
-                <td className={`${ui.td} whitespace-nowrap`}><Badge tone={roleTone(r)}>{roleLabel(r)}</Badge></td>
-                <td className="px-4 py-2">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {canManageLogin(profile, r) && r.uid !== profile?.uid && (
-                      <ActionIconButton label="ตั้งรหัสผ่านใหม่" icon={<KeyRound size={16} />} onClick={() => setPwFor(r)} />
-                    )}
-                    {!locked(r) && (
-                      <ActionIconButton label="แก้ไข" to={`/admin/employees/${r.uid}/edit`} icon={<Pencil size={16} />} />
-                    )}
-                    {r.uid !== profile?.uid && !isSuperAdmin(r) && (
-                      <ActionIconButton label="ลบพนักงาน" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
-                    )}
-                  </div>
-                </td>
+                </th>
+                {HEADERS.map(h => <th key={h} className={ui.th}>{h}</th>)}
               </tr>
-            ))}
-            {loading && (
-              <tr><td colSpan={HEADERS.length + 1} className={ui.emptyCell}><Spinner size={20} className="mx-auto" /></td></tr>
-            )}
-            {!loading && filtered.length === 0 && (
-              <tr>
-                <td colSpan={HEADERS.length + 1} className={ui.emptyCell}>
-                  {rows.length === 0 ? 'ยังไม่มีพนักงาน' : needle && !dept && !group ? `ไม่พบพนักงานที่ตรงกับ “${q}”` : 'ไม่พบพนักงานที่ตรงกับตัวกรอง'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className={ui.tbody}>
+              {loading && <SkeletonRows />}
+              {!loading && filtered.map(r => {
+                const c = company(r.companyId)
+                return (
+                  <tr key={r.uid} className={`group transition-colors duration-150 ${selected.has(r.uid) ? 'bg-rose-50/50' : 'hover:bg-stone-50/70'}`}>
+                    <td className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`เลือก ${r.firstName} ${r.lastName}`}
+                        className={CHECKBOX}
+                        checked={selected.has(r.uid) && deletable(r)}
+                        disabled={!deletable(r) || !!deleting}
+                        title={deletable(r) ? undefined : r.uid === profile?.uid ? 'ลบบัญชีของตัวเองไม่ได้' : 'ลบบัญชี Super Admin ไม่ได้'}
+                        onChange={() => toggle(r.uid)}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-clay-50 text-sm font-semibold text-clay-700">
+                          {initial(r)}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Link to={`/admin/employees/${r.uid}`} className="whitespace-nowrap font-medium text-stone-900 transition-colors hover:text-clay-600">
+                              {r.firstName} {r.lastName}
+                            </Link>
+                            {r.centralStatus === 'resigned' && <Badge tone="amber">ลาออกแล้ว</Badge>}
+                          </div>
+                          {r.nickname && <div className="text-xs text-stone-500">{r.nickname}</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-[13px] font-medium text-stone-800">{r.employeeId}</span>
+                        <CopyButton value={r.employeeId} label="คัดลอกชื่อผู้ใช้" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-stone-800">{r.position || <span className="text-stone-300">—</span>}</div>
+                      {r.department && <div className="text-xs text-stone-500">{r.department}</div>}
+                    </td>
+                    <td className="max-w-[180px] truncate px-4 py-3 text-stone-700" title={c?.name || r.companyId}>{c?.shortName || c?.name || r.companyId}</td>
+                    <td className="whitespace-nowrap px-4 py-3"><Badge tone={roleTone(r)}>{roleLabel(r)}</Badge></td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center justify-end gap-1">
+                        {canManageLogin(profile, r) && r.uid !== profile?.uid && (
+                          <ActionIconButton label="ตั้งรหัสผ่านใหม่" icon={<KeyRound size={16} />} onClick={() => setPwFor(r)} />
+                        )}
+                        {!locked(r) && (
+                          <ActionIconButton label="แก้ไข" to={`/admin/employees/${r.uid}/edit`} icon={<Pencil size={16} />} />
+                        )}
+                        {r.uid !== profile?.uid && !isSuperAdmin(r) && (
+                          <ActionIconButton label="ลบพนักงาน" tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={HEADERS.length + 1} className={ui.emptyCell}>
+                    {rows.length === 0 ? 'ยังไม่มีพนักงาน' : needle && !dept && !group ? `ไม่พบพนักงานที่ตรงกับ “${q}”` : 'ไม่พบพนักงานที่ตรงกับตัวกรอง'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {syncing && <EmployeeSyncModal onClose={() => setSyncing(false)} onDone={() => { load(); lastSyncAt().then(setSyncedAt) }} />}
       {pwFor && <SetPasswordModal profile={pwFor} onClose={() => setPwFor(null)} onDone={load} />}
     </div>
   )

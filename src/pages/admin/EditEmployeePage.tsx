@@ -60,7 +60,7 @@ export default function EditEmployeePage() {
     setSaving(true)
     try {
       const { emailSkipped } = await updateProfile(uid, {
-        firstName: f.firstName, lastName: f.lastName, position: f.position,
+        firstName: f.firstName, lastName: f.lastName, nickname: f.nickname ?? '', position: f.position,
         department: f.department, companyId: f.companyId, defaultJob: f.defaultJob,
         bankAccount: f.bankAccount, accessGroup: f.accessGroup,
         // Absent when the database has no email column yet — then nothing is sent for it.
@@ -145,7 +145,7 @@ export default function EditEmployeePage() {
             {/* ข้อมูลส่วนตัว */}
             <section className={ui.card}>
               <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><UserRound size={16} className="text-stone-400" /> ข้อมูลส่วนตัว</h2>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div>
                   <label className={ui.label}>ชื่อ</label>
                   <input className={ui.input} placeholder="ชื่อจริง" value={f.firstName} onChange={e => set('firstName', e.target.value)} />
@@ -154,7 +154,11 @@ export default function EditEmployeePage() {
                   <label className={ui.label}>นามสกุล</label>
                   <input className={ui.input} placeholder="นามสกุล" value={f.lastName} onChange={e => set('lastName', e.target.value)} />
                 </div>
-                <div className="md:col-span-2 2xl:col-span-1">
+                <div>
+                  <label className={ui.label}>ชื่อเล่น</label>
+                  <input className={ui.input} value={f.nickname ?? ''} onChange={e => set('nickname', e.target.value)} />
+                </div>
+                <div>
                   <label className={ui.label}>ตำแหน่ง</label>
                   <OptionInput className={ui.input} placeholder="เช่น หัวหน้าฝ่ายบัญชี" value={f.position} options={lists.position} onChange={v => set('position', v)} />
                 </div>
