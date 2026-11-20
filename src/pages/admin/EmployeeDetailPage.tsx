@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FileText, Pencil, PenLine, Printer, Trash2, UserRound } from 'lucide-react'
+import { Building2, FileText, Mail, Pencil, PenLine, Printer, Tags, Trash2, UserRound, Users } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission, isSigned } from '../../data/submissions'
@@ -14,17 +14,17 @@ import type { UserProfile, SubmissionSummary, FormSettings, Company, AccessGroup
 import { formatDate, formatDateTime } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
-import { canManageLogin, isSuperAdmin } from '../../shared/roles'
+import { canManageLogin, isSuperAdmin, roleLabel, roleTone } from '../../shared/roles'
+import { initialsOf } from '../../shared/initials'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import { ActionGroup, ActionGroupItem, RowMenu } from '../../components/RowActions'
-import EmployeeSummaryCard from '../../components/EmployeeSummaryCard'
 import StatusBadge from '../../components/StatusBadge'
 import LoginInfo from '../../components/LoginInfo'
 import SignatureField from '../../components/SignatureField'
 import SetPasswordModal from '../../components/SetPasswordModal'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { Spinner } from '../../components/Spinner'
-import { PageHeader, ui } from '../../components/ui'
+import { Badge, PageHeader, ui } from '../../components/ui'
 import DocNumberCell from '../../components/DocNumberCell'
 import { formatMoney } from '../../shared/money'
 
@@ -97,8 +97,16 @@ export default function EmployeeDetailPage() {
   const canSetPassword = canManage && profile.uid !== me?.uid
   const live = subs.filter(s => !s.voided)
   const lastAt = subs.reduce((m, s) => Math.max(m, s.createdAt), 0)
+  const name = `${profile.firstName} ${profile.lastName}`.trim()
+  const company = companies.find(c => c.id === profile.companyId)
+  const details = [
+    { icon: <Building2 size={13} />, label: 'บริษัท', value: company?.shortName || company?.name },
+    { icon: <Users size={13} />, label: 'แผนก', value: profile.department },
+    { icon: <Tags size={13} />, label: 'กลุ่มการเข้าถึง', value: groups.find(g => g.id === profile.accessGroup)?.name },
+    { icon: <Mail size={13} />, label: 'อีเมล', value: profile.email },
+  ]
   const stats = [
-    { label: 'เอกสารทั้งหมด', value: `${live.length} ฉบับ` },
+    { label: 'เอกสาร', value: `${live.length} ฉบับ` },
     { label: 'ยอดรวม (บาท)', value: formatMoney(live.reduce((sum, s) => sum + submissionAmount(s), 0)) },
     { label: 'ทำล่าสุด', value: lastAt ? formatDate(lastAt) : '—' },
   ]
@@ -107,8 +115,7 @@ export default function EmployeeDetailPage() {
     <div>
       <PageHeader
         icon={<UserRound size={20} />}
-        title="ข้อมูลพนักงาน"
-        subtitle={`${profile.firstName} ${profile.lastName}`.trim()}
+        title={name || 'ข้อมูลพนักงาน'}
         onBack={() => nav('/admin/employees')}
         actions={canEdit && (
           <Link to={`/admin/employees/${profile.uid}/edit`} className={ui.btnPrimary}>
@@ -117,44 +124,56 @@ export default function EmployeeDetailPage() {
         )}
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <EmployeeSummaryCard
-          person={profile}
-          companies={companies}
-          groups={groups}
-        />
-
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <LoginInfo
-            profile={profile}
-            onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined}
-            onChangeUsername={viewerIsSuper ? () => setChangingUsername(true) : undefined}
-          />
-
-          {/* Not everyone can manage a signature image on their own; an admin can
-              put one on the account so the person can sign documents online. */}
-          <div className={ui.card}>
-            <div className="mb-1 flex items-center gap-2">
-              <PenLine size={16} className="text-stone-400" />
-              <h2 className={ui.cardTitle}>ลายเซ็น</h2>
+      {/* Who it is, where they belong, and their documents in three figures */}
+      <section className={`${ui.card} mb-6`}>
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-5">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-clay-600 text-xl font-semibold text-white">
+              {initialsOf(profile.firstName, profile.lastName) || '?'}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold text-stone-900">{name || '—'}</h2>
+                {profile.nickname && <span className="text-sm text-stone-500">({profile.nickname})</span>}
+                <Badge tone={roleTone(profile)}>{roleLabel(profile)}</Badge>
+                {profile.centralStatus === 'resigned' && <Badge tone="amber">ลาออกแล้ว</Badge>}
+              </div>
+              <p className="mt-0.5 text-sm text-stone-600">{profile.position || '—'}</p>
             </div>
-            <p className="mb-4 text-xs text-stone-500">ใช้ตอนเซ็นเอกสารออนไลน์ · แนะนำรูปพื้นหลังโปร่ง</p>
-            <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
           </div>
-
-          {/* Their documents in three figures */}
-          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3 xl:col-span-2">
-            {stats.map(s => (
-              <div key={s.label} className={ui.card}>
-                <dt className="text-xs font-medium text-stone-500">{s.label}</dt>
-                <dd className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">{s.value}</dd>
+          <dl className="grid grid-cols-3 divide-x divide-stone-200/70 rounded-xl bg-stone-50 py-3">
+            {stats.map(st => (
+              <div key={st.label} className="min-w-[7.5rem] px-5">
+                <dt className="text-xs text-stone-500">{st.label}</dt>
+                <dd className="mt-0.5 text-lg font-semibold tabular-nums text-stone-900">{st.value}</dd>
               </div>
             ))}
           </dl>
         </div>
+        <dl className="mt-5 grid gap-x-8 gap-y-4 border-t border-stone-100 pt-5 sm:grid-cols-2 xl:grid-cols-4">
+          {details.map(d => (
+            <div key={d.label} className="min-w-0">
+              <dt className="flex items-center gap-1.5 text-xs text-stone-500">{d.icon} {d.label}</dt>
+              <dd className={`mt-1 break-words text-sm ${d.value ? 'text-stone-800' : 'text-stone-400'}`}>{d.value || '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <div className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <LoginInfo
+          profile={profile}
+          onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined}
+          onChangeUsername={viewerIsSuper ? () => setChangingUsername(true) : undefined}
+        />
+        {/* An admin can put a signature on the account so the person can sign online. */}
+        <div className={ui.card}>
+          <h2 className={`${ui.cardTitle} mb-4 flex items-center gap-2`}><PenLine size={16} className="text-stone-400" /> ลายเซ็น</h2>
+          <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
+        </div>
       </div>
 
-      <section className="mt-8">
+      <section>
         <h2 className={`${ui.cardTitle} mb-3 flex items-center gap-2`}>
           <FileText size={16} className="text-stone-400" /> เอกสารของ {profile.firstName || 'พนักงาน'}
         </h2>
@@ -162,7 +181,8 @@ export default function EmployeeDetailPage() {
           <SubmissionFilterBar value={filters} onChange={setFilters} forms={forms} groups={folders} formGroup={formGroup}
             resultCount={filtered.length} total={subs.length} />
         </div>
-        <div className={ui.tableWrap}>
+        <div className={ui.tableCard}>
+          <div className={ui.tableScroll}>
           <table className={ui.table}>
             <thead className={ui.thead}>
               <tr>{HEADERS.map(h => <th key={h.label} className={`${ui.th} ${h.cls}`}>{h.label}</th>)}</tr>
@@ -208,6 +228,7 @@ export default function EmployeeDetailPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </section>
 

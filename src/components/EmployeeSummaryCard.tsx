@@ -2,10 +2,11 @@ import type { ReactNode } from 'react'
 import { Building2, Mail, Tags, Users } from 'lucide-react'
 import type { AccessGroup, Company, UserProfile } from '../types/schema'
 import { roleLabel, roleTone } from '../shared/roles'
+import { initialsOf } from '../shared/initials'
 import { Badge, ui } from './ui'
 
 type Person = Pick<UserProfile, 'firstName' | 'lastName' | 'position' | 'employeeId' | 'role' | 'companyId' | 'department'>
-  & Partial<Pick<UserProfile, 'isSuperAdmin' | 'accessGroup' | 'email'>>
+  & Partial<Pick<UserProfile, 'isSuperAdmin' | 'accessGroup' | 'email' | 'nickname'>>
 
 // The person being edited, at a glance, beside the form — and it follows what
 // is typed, so the admin sees how the account will read before saving.
@@ -16,7 +17,7 @@ export default function EmployeeSummaryCard({ person, companies, groups, footer 
   footer?: ReactNode
 }) {
   const name = `${person.firstName} ${person.lastName}`.trim()
-  const initials = [person.firstName, person.lastName].map(n => (n ?? '').trim().charAt(0)).join('') || '?'
+  const initials = initialsOf(person.firstName, person.lastName) || '?'
   const company = companies.find(c => c.id === person.companyId)
   const group = groups.find(g => g.id === person.accessGroup)
   const rows: { icon: ReactNode; label: string; value?: string | null }[] = [
@@ -32,6 +33,7 @@ export default function EmployeeSummaryCard({ person, companies, groups, footer 
           {initials}
         </span>
         <h2 className="mt-4 text-lg font-semibold text-stone-900">{name || 'ยังไม่ได้ใส่ชื่อ'}</h2>
+        {person.nickname && <p className="text-sm text-stone-500">({person.nickname})</p>}
         <p className="text-sm text-stone-500">{person.position || 'ยังไม่ได้ใส่ตำแหน่ง'}</p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <span className="rounded-lg bg-stone-100 px-2.5 py-1 font-mono text-xs text-stone-700">{person.employeeId || '—'}</span>

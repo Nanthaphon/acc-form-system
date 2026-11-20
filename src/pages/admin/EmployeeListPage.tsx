@@ -9,6 +9,7 @@ import ColumnPicker from '../../components/ColumnPicker'
 import FilterSelect from '../../components/FilterSelect'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
+import { initialOf } from '../../shared/initials'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import { listEmployees, deleteEmployee } from '../../data/users'
@@ -38,13 +39,7 @@ const muted = (v: ReactNode) => v || <span className="text-stone-300">—</span>
 const NO_GROUP = '-'
 
 const CHECKBOX = 'h-4 w-4 cursor-pointer rounded accent-clay-600 disabled:cursor-not-allowed disabled:opacity-30'
-// Thai vowels written before the consonant: an initial is the consonant itself.
-const LEADING_VOWELS = new Set(['เ', 'แ', 'โ', 'ใ', 'ไ'])
-
-function initial(p: UserProfile): string {
-  const chars = Array.from((p.nickname || p.firstName || p.employeeId || '?').trim())
-  return (chars.find(c => !LEADING_VOWELS.has(c)) ?? chars[0] ?? '?').toUpperCase()
-}
+const initial = (p: UserProfile) => initialOf(p.nickname || p.firstName || p.employeeId) || '?'
 
 // Placeholder rows while the list loads, the same shape as the real ones.
 function SkeletonRows({ cols }: { cols: number }) {
