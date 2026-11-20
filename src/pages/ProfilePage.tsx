@@ -12,12 +12,11 @@ import OptionInput from '../components/OptionInput'
 import { roleLabel } from '../shared/roles'
 import { emailProblem, normalizeEmail } from '../shared/emailAddress'
 import { dbErrorMessage, EMAIL_NOT_SAVED } from '../shared/dbError'
-import { CENTRAL_LOCK_HINT, centralOwns, withoutCentral } from '../data/employeeSync'
+import { centralOwns, withoutCentral } from '../data/employeeSync'
 import type { Company, UserProfile } from '../types/schema'
 
 const labelCls = 'mb-1.5 block text-xs font-medium text-stone-500'
 const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 disabled:bg-stone-50 disabled:text-stone-500'
-const lockHint = 'mt-1 text-[11px] text-stone-500'
 
 const FIELDS: Array<[key: string, label: string, placeholder: string, wide?: boolean]> = [
   ['firstName', 'ชื่อ', 'ชื่อจริง'],
@@ -106,7 +105,6 @@ export default function ProfilePage() {
                 onChange={v => set(k, v)}
                 disabled={centralOwns(form, k as keyof UserProfile)}
               />
-              {centralOwns(form, k as keyof UserProfile) && <p className={lockHint}>{CENTRAL_LOCK_HINT}</p>}
             </div>
           ))}
           <div className="sm:col-span-2">
@@ -115,7 +113,6 @@ export default function ProfilePage() {
               <option value="">— เลือกบริษัท —</option>
               {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            {centralOwns(form, 'companyId') && <p className={lockHint}>{CENTRAL_LOCK_HINT}</p>}
           </div>
         </div>
       </div>

@@ -63,4 +63,3 @@ export function withoutCentral<T extends Partial<UserProfile>>(patch: T, p: Pick
   return Object.fromEntries(Object.entries(patch).filter(([k]) => !owned.includes(k))) as T
 }
 
-export const CENTRAL_LOCK_HINT = 'มาจากข้อมูลพนักงานกลาง — แก้ที่ระบบกลาง'
