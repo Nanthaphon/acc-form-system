@@ -13,15 +13,16 @@
 //
 // Who may call it (deployed with verify_jwt = false, see supabase/config.toml —
 // it checks the caller itself):
-//   • the automatic job: header x-sync-secret = SYNC_SECRET
-//     (supabase/manual/2026-11-20-employee-sync-cron.sql, every 10 minutes)
+//   • it-asset, the moment an employee is added/changed/removed, and hourly:
+//     header x-sync-secret = its acc_feed_token, the same as CENTRAL_FEED_TOKEN
+//     here (supabase/central/2026-11-20b-acc-employee-realtime.sql)
 //   • an admin of this system: the button on ข้อมูลพนักงาน
 //
 // Secrets (Supabase → Edge Functions → Secrets), see docs/central-employees.md:
 //   CENTRAL_URL         https://wvxjhjcliusgsfyqfqnh.supabase.co
 //   CENTRAL_ANON_KEY    that project's anon / publishable key
 //   CENTRAL_FEED_TOKEN  the token supabase/central/2026-11-20-acc-employee-feed.sql printed
-//   SYNC_SECRET         the secret supabase/manual/2026-11-20-employee-sync-cron.sql printed
+//   SYNC_SECRET         optional: another secret accepted as x-sync-secret
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -65,10 +66,12 @@ Deno.serve(async req => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
 
   const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } })
-  const secret = env('SYNC_SECRET')
+  // it-asset's trigger sends its acc_feed_token (= CENTRAL_FEED_TOKEN here); SYNC_SECRET is optional.
+  const secrets = [env('CENTRAL_FEED_TOKEN'), env('SYNC_SECRET')].filter(Boolean)
+  const sent = (req.headers.get('x-sync-secret') ?? '').trim()
   const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim()
   let by: string
-  if (secret && req.headers.get('x-sync-secret') === secret) by = 'auto'
+  if (sent && secrets.includes(sent)) by = 'auto'
   else if (jwt && jwt === env('SUPABASE_SERVICE_ROLE_KEY')) by = 'schedule'
   else {
     const { data: u } = jwt ? await admin.auth.getUser(jwt) : { data: null }
@@ -153,7 +156,7 @@ Deno.serve(async req => {
     unknownCompanies: plan.unknownCompanies,
     failed,
   }
-  // The automatic run every few minutes is logged only when it did something.
+  // An automatic run is logged only when it did something.
   const didSomething = plan.patches.length > 0 || created.length > 0 || failed.length > 0
   if (!dryRun && (by !== 'auto' || didSomething)) {
     await admin.from('employee_sync_runs').insert({ ranAt: now, by, ok: failed.length === 0, summary })

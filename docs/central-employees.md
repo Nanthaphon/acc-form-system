@@ -1,20 +1,21 @@
 # ข้อมูลพนักงานจากระบบกลาง (it-asset → Acc Documents)
 
 ข้อมูลพนักงานหลักอยู่ที่ `report.employees` ในโปรเจค **it-asset-management** (`wvxjhjcliusgsfyqfqnh`)
-Acc Documents ซิงก์มาเอง **ทุก 10 นาที · ทางเดียว** (แก้ใน Acc ไม่ส่งกลับไป it-asset)
+Acc Documents ซิงก์มาเอง **ทันทีที่เพิ่ม/แก้ข้อมูลใน it-asset · ทางเดียว** (แก้ใน Acc ไม่ส่งกลับไป it-asset)
 
 ```
-it-asset                                       Acc Documents (wrujttmqawcvcrqqhcno)
-report.employees
-  └ public.acc_employee_feed(token)  ◄────────  edge function sync-employees ──► profiles
-     (อ่านอย่างเดียว 9 คอลัมน์)                     ทุก 10 นาที (pg_cron) หรือกดปุ่มซิงก์
+it-asset                                              Acc Documents (wrujttmqawcvcrqqhcno)
+ตารางพนักงาน ─ trigger เพิ่ม/แก้/ลบ + ทุกชั่วโมง ──►  edge function sync-employees
+                                                        │  x-sync-secret = acc_feed_token
+report.employees                                        │
+  └ public.acc_employee_feed(token)  ◄─ อ่าน 9 คอลัมน์ ──┘ ──► profiles
 ```
 
 ## ซิงก์แล้วเกิดอะไร
 
-| ที่ it-asset | ที่ Acc Documents |
+| ที่ it-asset | ที่ Acc Documents (ภายในไม่กี่วินาที) |
 |---|---|
-| แก้ชื่อ / ตำแหน่ง / แผนก / บริษัท / อีเมล | เปลี่ยนตามในรอบถัดไป (ไม่เกิน 10 นาที) |
+| แก้ชื่อ / ตำแหน่ง / แผนก / บริษัท / อีเมล | เปลี่ยนตาม |
 | เพิ่มพนักงานใหม่ (ยังทำงานอยู่) | สร้างบัญชีให้ — ชื่อผู้ใช้และรหัสผ่านแรก = รหัสพนักงาน, สิทธิ์พนักงาน, ต้องเปลี่ยนรหัสผ่านตอนเข้าครั้งแรก |
 | ใส่วันลาออก | ป้าย "ลาออกแล้ว" ในรายชื่อ — บัญชียังเข้าได้ แอดมินลบเอง |
 | ลบพนักงาน | ไม่ลบ · ช่องที่ล็อกกลับมาแก้ได้ |
@@ -25,38 +26,40 @@ report.employees
 - **กันบัญชีซ้ำ:** พนักงานใหม่ที่ชื่อหรืออีเมลตรงกับบัญชีเดิมที่ใช้รหัสอื่น (เช่น ACC01) จะไม่ถูกสร้าง
   ขึ้นในผลซิงก์ให้แอดมินแก้รหัสพนักงานของบัญชีเดิมให้ตรงกับ it-asset (Super Admin → เปลี่ยนชื่อผู้ใช้)
 - บริษัทจับคู่กับ `companies` ด้วยชื่อย่อ / ชื่อเต็ม / id — ไม่ตรงก็ไม่เปลี่ยน
+- trigger ทำงานครั้งละคำสั่ง (นำเข้า 100 แถวก็ซิงก์รอบเดียว) และเรียกหลัง commit ผ่าน pg_net
+  ถ้า Acc ล่มหรือเรียกไม่สำเร็จ การบันทึกที่ it-asset ไม่ล้ม และรอบทุกชั่วโมงจะตามให้
 
 ## ตั้งค่า (ทำครั้งเดียว)
 
 1. **it-asset** → SQL Editor → รัน `supabase/central/2026-11-20-acc-employee-feed.sql` → ก๊อป `CENTRAL_FEED_TOKEN`
-2. **Acc Documents** → SQL Editor → รัน `supabase/2026-11-20-central-employees.sql`
-3. **Acc Documents** → SQL Editor → รัน `supabase/manual/2026-11-20-employee-sync-cron.sql` → ก๊อป `SYNC_SECRET`
-4. **Acc Documents** → Edge Functions → Secrets
+2. **Acc Documents** → รัน `supabase/2026-11-20-central-employees.sql`
+3. **Acc Documents** → Edge Functions → Secrets
    | ชื่อ | ค่า |
    |---|---|
    | `CENTRAL_URL` | `https://wvxjhjcliusgsfyqfqnh.supabase.co` |
    | `CENTRAL_ANON_KEY` | anon key ของ it-asset |
    | `CENTRAL_FEED_TOKEN` | จากข้อ 1 |
-   | `SYNC_SECRET` | จากข้อ 3 |
-5. deploy (ตอบ `y` ตอนถามยืนยัน):
-   ```
-   npx supabase functions deploy sync-employees --project-ref wrujttmqawcvcrqqhcno
-   ```
+4. deploy: `npx supabase functions deploy sync-employees --project-ref wrujttmqawcvcrqqhcno` (ตอบ `y`)
+5. **it-asset** → SQL Editor → รัน `supabase/central/2026-11-20b-acc-employee-realtime.sql`
+   ผลท้ายสุดต้องมีชื่อตารางอย่างน้อย 1 แถว (ตารางที่ติด trigger)
 
 ## ตรวจว่าทำงาน
 
 ```sql
--- รอบล่าสุดที่ cron เรียก (status 200 = ปกติ)
-select status_code, left(content, 200), created from net._http_response order by created desc limit 5;
--- รอบที่มีการเปลี่ยนแปลง
+-- (ที่ it-asset) รอบล่าสุดที่เรียก Acc — status 200 = ปกติ
+select status_code, left(content::text, 200), created from net._http_response order by created desc limit 5;
+-- (ที่ Acc Documents) รอบที่มีการเปลี่ยนแปลง
 select to_timestamp("ranAt"/1000), "by", ok, summary->'created', summary->'failed' from employee_sync_runs order by "ranAt" desc limit 5;
 ```
 
 ## หยุด / ยกเลิก
 
 ```sql
-select cron.unschedule('sync-employees');                                  -- หยุดซิงก์อัตโนมัติ
-update profiles set "centralFields" = '{}', "centralStatus" = null;        -- ปลดล็อกทุกช่อง
+-- ที่ it-asset: หยุดซิงก์อัตโนมัติ (ชื่อตารางดูจากผลท้ายไฟล์ 2026-11-20b)
+select cron.unschedule('acc-employee-sync');
+drop trigger acc_employee_sync on <schema>.<table>;
+-- ที่ Acc Documents: ปลดล็อกทุกช่อง
+update profiles set "centralFields" = '{}', "centralStatus" = null;
 ```
 
 ## ทำไมเลือกซิงก์ ไม่อ่านตรง

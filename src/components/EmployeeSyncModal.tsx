@@ -75,7 +75,7 @@ export default function EmployeeSyncModal({ onClose, onDone }: { onClose: () => 
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><DatabaseZap size={18} /></div>
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold text-stone-900">ซิงก์ข้อมูลพนักงานจากระบบกลาง</h2>
-            <p className="text-xs text-stone-500">ระบบซิงก์เองทุก 10 นาที · กดเพื่อซิงก์ทันที</p>
+            <p className="text-xs text-stone-500">ซิงก์เองทันทีที่แก้ข้อมูลใน IT Asset · กดเพื่อซิงก์ซ้ำ</p>
           </div>
           <button onClick={close} aria-label="ปิด" className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"><X size={18} /></button>
         </div>
