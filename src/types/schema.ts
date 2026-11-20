@@ -195,6 +195,10 @@ export interface UserProfile {
   signatureImage?: string | null          // saved signature (data URL), reused when signing documents
   isSuperAdmin?: boolean           // the one admin who may set anyone's password (see shared/roles)
   passwordIsDefault?: boolean      // password is still the default one (= employeeId)
+  // From the employee master (supabase/2026-11-20-central-employees.sql)
+  centralFields?: string[]         // fields the master owns — read-only here
+  centralStatus?: 'active' | 'resigned' | 'missing' | null
+  centralSyncedAt?: number | null
 }
 
 export interface ExpenseTotals {

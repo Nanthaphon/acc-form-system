@@ -1,10 +1,11 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users, X } from 'lucide-react'
+import { DatabaseZap, FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users, X } from 'lucide-react'
 import ActionIconButton from '../../components/ActionIconButton'
 import CopyButton from '../../components/CopyButton'
 import SetPasswordModal from '../../components/SetPasswordModal'
+import EmployeeSyncModal from '../../components/EmployeeSyncModal'
 import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, ui } from '../../components/ui'
 import { listEmployees, deleteEmployee } from '../../data/users'
@@ -49,6 +50,7 @@ export default function EmployeeListPage() {
   const [pwFor, setPwFor] = useState<UserProfile | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<{ done: number; total: number } | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   function load() {
     listEmployees().then(r => {
@@ -148,6 +150,7 @@ export default function EmployeeListPage() {
         title="ข้อมูลพนักงาน"
         subtitle={loading ? 'กำลังโหลด...' : `ทั้งหมด ${rows.length} คน · ยังใช้รหัสเริ่มต้น ${onDefault} คน`}
         actions={<>
+          <button type="button" onClick={() => setSyncing(true)} className={ui.btnSecondary}><DatabaseZap size={16} /> ซิงก์ข้อมูลพนักงาน</button>
           <Link to="/admin/import" className={ui.btnSecondary}><FileUp size={16} /> นำเข้าพนักงาน</Link>
           <Link to="/admin/employees/new" className={ui.btnPrimary}><UserPlus size={16} /> เพิ่มพนักงาน</Link>
         </>}
@@ -245,6 +248,7 @@ export default function EmployeeListPage() {
                   <Link to={`/admin/employees/${r.uid}`} className="font-medium text-stone-900 hover:text-clay-600">
                     {r.firstName} {r.lastName}
                   </Link>
+                  {r.centralStatus === 'resigned' && <span className="ml-2"><Badge tone="amber">ลาออกแล้ว</Badge></span>}
                 </td>
                 <td className={`${ui.td} whitespace-nowrap`}>
                   <div className="flex items-center gap-1">
@@ -288,6 +292,7 @@ export default function EmployeeListPage() {
         </table>
       </div>
 
+      {syncing && <EmployeeSyncModal onClose={() => setSyncing(false)} onDone={load} />}
       {pwFor && <SetPasswordModal profile={pwFor} onClose={() => setPwFor(null)} onDone={load} />}
     </div>
   )

@@ -110,13 +110,16 @@ export async function getProfileByUid(uid: string): Promise<UserProfile | null> 
 const EMPLOYEE_LIST_COLS = 'uid,employeeId,firstName,lastName,position,department,companyId,defaultJob,bankAccount,role,groupId,accessGroup,mustChangePassword,createdAt'
 const EMPLOYEE_LOGIN_COLS = 'isSuperAdmin,passwordIsDefault'
 const EMPLOYEE_EMAIL_COL = 'email'
+const EMPLOYEE_CENTRAL_COLS = 'centralFields,centralStatus'
 export async function listEmployees(): Promise<UserProfile[]> {
   const q = (cols: string) => supabase.from('profiles').select(cols).order('employeeId')
   // Newer columns, each with the migration that adds it: a database that has not
   // run one still lists everyone, without that column.
   //   email — supabase/2026-10-26-employee-email.sql
   //   isSuperAdmin, passwordIsDefault — supabase/2026-09-11-super-admin.sql
-  let { data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS},${EMPLOYEE_EMAIL_COL}`)
+  //   centralFields, centralStatus — supabase/2026-11-20-central-employees.sql
+  let { data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS},${EMPLOYEE_EMAIL_COL},${EMPLOYEE_CENTRAL_COLS}`)
+  if (error?.code === '42703') ({ data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS},${EMPLOYEE_EMAIL_COL}`))
   if (error?.code === '42703') ({ data, error } = await q(`${EMPLOYEE_LIST_COLS},${EMPLOYEE_LOGIN_COLS}`))
   if (error?.code === '42703') ({ data } = await q(EMPLOYEE_LIST_COLS))
   return (data ?? []) as unknown as UserProfile[]
