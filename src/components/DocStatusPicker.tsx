@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Tag } from 'lucide-react'
+import FilterSelect from './FilterSelect'
 import { setDocStatus } from '../data/submissions'
 import { uiAlert } from './dialog/dialogService'
 import type { SubmissionSummary } from '../types/schema'
@@ -32,21 +32,14 @@ export default function DocStatusPicker({ sub, options, onChanged }: {
   }
 
   return (
-    <span className="relative inline-flex items-center">
-      <Tag size={13} className={`pointer-events-none absolute left-2 ${current ? 'text-clay-600' : 'text-stone-400'}`} aria-hidden />
-      <select
-        value={current}
-        disabled={saving}
-        onChange={e => change(e.target.value)}
-        aria-label={`สถานะที่ผู้ดูแลระบบตั้ง — ${sub.docNumber}`}
-        title="สถานะที่ผู้ดูแลระบบตั้งเอง (ไม่มีผลกับการใช้งานเอกสาร)"
-        className={`h-7 max-w-[9.5rem] truncate rounded-lg border py-0 pl-7 pr-2 text-xs transition-colors focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 disabled:opacity-50 ${
-          current ? 'border-clay-200 bg-clay-50 font-medium text-clay-700' : 'border-stone-200 bg-white text-stone-500'
-        }`}
-      >
-        <option value="">— ไม่ได้ตั้ง —</option>
-        {list.map(v => <option key={v} value={v}>{v}</option>)}
-      </select>
-    </span>
+    <FilterSelect
+      className={`w-40 ${saving ? 'pointer-events-none opacity-50' : ''}`}
+      ariaLabel={`ป้ายสถานะ ${sub.docNumber}`}
+      allLabel="— ไม่ได้ตั้ง —"
+      searchable={false}
+      value={current}
+      options={list.map(v => ({ value: v, label: v }))}
+      onChange={change}
+    />
   )
 }

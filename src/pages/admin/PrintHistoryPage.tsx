@@ -115,10 +115,14 @@ export default function PrintHistoryPage() {
         <span className="inline-flex items-center gap-2">
           <StatusBadge sub={r} />
           {editLabel(r, vcounts) && <span className="text-xs text-ochre-700" title="จำนวนครั้งที่แก้ไขหลังบันทึก">✎ {editLabel(r, vcounts)}</span>}
-          {docStatusAvailable() && <DocStatusPicker sub={r} options={statuses} onChanged={st => statusChanged(r.id, st)} />}
         </span>
       ),
     },
+    // The admin's own tag (เอกสารผิด, ไม่ได้ใช้ …) — its own column, so it can be seen and sorted out at a glance.
+    ...(docStatusAvailable() ? [{
+      key: 'docStatus', label: 'ป้ายสถานะ', tdCls: 'whitespace-nowrap',
+      cell: (r: SubmissionSummary) => <DocStatusPicker sub={r} options={statuses} onChanged={st => statusChanged(r.id, st)} />,
+    }] : []),
     // When it was last printed, and how many times in all.
     {
       key: 'lastPrinted', label: 'พิมพ์ล่าสุด', tdCls: 'whitespace-nowrap',
@@ -137,6 +141,7 @@ export default function PrintHistoryPage() {
       />
       <div className="mb-4">
         <SubmissionFilterBar value={filters} onChange={changeFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees}
+          docStatuses={docStatusAvailable() ? statuses : undefined}
           resultCount={chains.length} total={allLines}
           extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>

@@ -25,13 +25,17 @@ export interface Filters {
   formType: string   // '' = all
   groupId: string    // folder / form group; '' = all
   status: string     // '' = all
+  docStatus: string  // the admin's own status; '' = all, NO_DOC_STATUS = none set
   emp: string        // employeeId; '' = all (only used where an employee filter is shown)
   datePreset: string // all | today | thisMonth | lastMonth | thisYear | custom
   fromD: string      // ISO yyyy-mm-dd (custom)
   toD: string
 }
 
-export const emptyFilters: Filters = { q: '', formType: '', groupId: '', status: '', emp: '', datePreset: 'all', fromD: '', toD: '' }
+/** The docStatus filter value for documents the admin has not tagged. */
+export const NO_DOC_STATUS = '-'
+
+export const emptyFilters: Filters = { q: '', formType: '', groupId: '', status: '', docStatus: '', emp: '', datePreset: 'all', fromD: '', toD: '' }
 
 export function dateBounds(f: Filters): [number, number] {
   const now = new Date()
@@ -68,6 +72,7 @@ export function applyFilters<T extends SubmissionSummary>(rows: T[], f: Filters,
     if (f.formType && r.formType !== f.formType) return false
     if (f.groupId && formGroup && !inPicked(formGroup(r.formType))) return false
     if (f.status && subStatus(r) !== f.status) return false
+    if (f.docStatus && (f.docStatus === NO_DOC_STATUS ? !!r.docStatus : r.docStatus !== f.docStatus)) return false
     if (r.createdAt < dStart || r.createdAt > dEnd) return false
     if (needle) {
       const hay = `${r.docNumber} ${formName?.(r.formType) ?? ''}`.toLowerCase()
