@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import EmptyRow from '../../components/EmptyRow'
 import { PageSkeleton } from '../../components/TableSkeleton'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -211,11 +212,11 @@ export default function EmployeeDetailPage() {
                   </tr>
                 ))}
                 {chains.length === 0 && (
-                  <tr>
-                    <td colSpan={HEADERS.length} className={ui.emptyCell}>
-                      {subs.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
-                    </td>
-                  </tr>
+                  <EmptyRow colSpan={HEADERS.length} icon={<FileText size={20} />}>
+
+                    {subs.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
+
+                  </EmptyRow>
                 )}
               </tbody>
             </table>

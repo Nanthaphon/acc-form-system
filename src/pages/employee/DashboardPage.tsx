@@ -1,7 +1,7 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FolderOpen, Plus } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
 import type { FormGroup, FormSettings } from '../../types/schema'
@@ -81,7 +81,7 @@ export default function DashboardPage() {
         </div>
       )}
       <PageHeader
-        icon={<FolderOpen size={20} />}
+        icon={<FileText size={20} />}
         title="เลือกกลุ่มฟอร์ม"
         subtitle={`${visibleGroups.length} กลุ่ม`}
         actions={isAdmin && (

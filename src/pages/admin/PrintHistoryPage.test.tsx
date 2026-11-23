@@ -208,3 +208,15 @@ describe('ประวัติทั้งหมด — แบ่งหน้�
     expect(screen.queryByRole('navigation', { name: 'เลือกหน้า' })).toBeNull()
   })
 })
+
+describe('ประวัติทั้งหมด — คอลัมน์เริ่มต้น', () => {
+  it('ไม่แสดง “พิมพ์ล่าสุด” จนกว่าจะเลือกเปิดเอง', async () => {
+    localStorage.clear()
+    show()
+    await screen.findByRole('columnheader', { name: 'ชื่อฟอร์ม' })
+    expect(screen.queryByRole('columnheader', { name: 'พิมพ์ล่าสุด' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /คอลัมน์/ }))
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /พิมพ์ล่าสุด/ }))
+    expect(screen.getByRole('columnheader', { name: 'พิมพ์ล่าสุด' })).toBeInTheDocument()
+  })
+})

@@ -3,7 +3,7 @@ import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useBlocker, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, Pencil, Plus, Save, SlidersHorizontal, Trash2, X } from 'lucide-react'
 import type { Company, FormSettings, FormColumn, ColumnType, CalcDef, ExpenseHeader, ExpenseRow, AccessGroup, SignatureBlock, HeaderField } from '../../types/schema'
 import { EXPENSE_CLAIM_DEFAULTS, calcOperands, formSignatureBlocks, formAccessGroups, MAX_SIGNATURE_BLOCKS, DEFAULT_REQUESTER_TITLE, DEFAULT_ITEMS_TITLE, SEQ_COLUMN_WIDTH, seqColumnWidth, showSeqColumn, isTextCol } from '../../types/schema'
 import ExpenseClaimPreview from '../../features/expense-claim/ExpenseClaimPreview'
@@ -442,7 +442,7 @@ export default function FormSettingsPage() {
       {/* Stays on screen while scrolling a long form, so saving is always one click away. */}
       <div className="sticky top-0 z-20 -mt-2 bg-sand-50 pt-2">
         <PageHeader
-          icon={<Pencil size={20} />}
+          icon={<SlidersHorizontal size={20} />}
           title={`แก้ไขฟอร์ม — ${settings.name || settings.title}`}
           onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
           actions={<>

@@ -1,7 +1,7 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AtSign, IdCard, KeyRound, Lock, Save, ShieldCheck, UserRound } from 'lucide-react'
+import { AtSign, KeyRound, Lock, Save, ShieldCheck, UserPen, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid, updateProfile } from '../../data/users'
 import { listCompanies } from '../../data/companies'
@@ -93,7 +93,7 @@ export default function EditEmployeePage() {
   return (
     <div>
       <PageHeader
-        icon={<IdCard size={20} />}
+        icon={<UserPen size={20} />}
         title="แก้ไขข้อมูลพนักงาน"
         subtitle={fullName || 'พนักงาน'}
         onBack={() => nav('/admin/employees')}

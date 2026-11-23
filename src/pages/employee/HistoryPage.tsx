@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import EmptyRow from '../../components/EmptyRow'
 import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Ban, ChevronDown, ChevronRight, Copy, FilePen, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
@@ -226,11 +227,11 @@ export default function HistoryPage() {
             })}
             {loading && <TableSkeleton cols={shown.length + 1} />}
             {!loading && chains.length === 0 && (
-              <tr>
-                <td colSpan={shown.length + 1} className={ui.emptyCell}>
-                  {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
-                </td>
-              </tr>
+              <EmptyRow colSpan={shown.length + 1} icon={<History size={20} />}>
+
+                {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
+
+              </EmptyRow>
             )}
           </tbody>
         </table>

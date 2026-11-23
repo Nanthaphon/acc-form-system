@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
+import EmptyRow from '../../components/EmptyRow'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FileDown, FileUp, KeyRound, Pencil, Search, Trash2, UserPlus, Users, X } from 'lucide-react'
@@ -322,11 +323,11 @@ export default function EmployeeListPage() {
                 )
               })}
               {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan={shown.length + 2} className={ui.emptyCell}>
-                    {rows.length === 0 ? 'ยังไม่มีพนักงาน' : needle && !dept && !group ? `ไม่พบพนักงานที่ตรงกับ “${q}”` : 'ไม่พบพนักงานที่ตรงกับตัวกรอง'}
-                  </td>
-                </tr>
+                <EmptyRow colSpan={shown.length + 2} icon={<Users size={20} />}>
+
+                  {rows.length === 0 ? 'ยังไม่มีพนักงาน' : needle && !dept && !group ? `ไม่พบพนักงานที่ตรงกับ “${q}”` : 'ไม่พบพนักงานที่ตรงกับตัวกรอง'}
+
+                </EmptyRow>
               )}
             </tbody>
           </table>

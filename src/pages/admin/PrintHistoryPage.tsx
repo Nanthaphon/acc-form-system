@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import EmptyRow from '../../components/EmptyRow'
 import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArchiveRestore, Ban, ChevronDown, ChevronRight, Copy, FilePen, Pencil, Printer, Trash2 } from 'lucide-react'
@@ -47,7 +48,8 @@ export default function PrintHistoryPage() {
   const [filters, setFilters] = useState<Filters>(emptyFilters)
   const [statuses, setStatuses] = useState<string[]>([])
   const [open, setOpen] = useState<Set<string>>(new Set())
-  const { hidden, toggle, reset } = useHiddenColumns('cols:printHistory')
+  // v2: พิมพ์ล่าสุด starts hidden; a new key so the default reaches people who opened the page before.
+  const { hidden, toggle, reset } = useHiddenColumns('cols:printHistory:v2', ['lastPrinted'])
 
   function loadRows() { listAllSubmissions().then(r => { setRows(remember('subs:all', r)); setLoading(false) }).catch(() => setLoading(false)) }
   useEffect(() => {
@@ -225,11 +227,11 @@ export default function PrintHistoryPage() {
             })}
             {loading && <TableSkeleton cols={shown.length + 1} />}
             {!loading && chains.length === 0 && (
-              <tr>
-                <td colSpan={shown.length + 1} className={ui.emptyCell}>
-                  {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
-                </td>
-              </tr>
+              <EmptyRow colSpan={shown.length + 1} icon={<Printer size={20} />}>
+
+                {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
+
+              </EmptyRow>
             )}
           </tbody>
         </table>

@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
+import EmptyRow from '../components/EmptyRow'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Inbox, Signature } from 'lucide-react'
@@ -103,7 +104,7 @@ export default function SignInboxPage() {
               ))}
               {loading && <TableSkeleton cols={7} rows={4} />}
               {!loading && pendingRows.length === 0 && (
-                <tr><td colSpan={7} className={ui.emptyCell}>ไม่มีเอกสารรอเซ็น</td></tr>
+                <EmptyRow colSpan={7} icon={<Inbox size={20} />}>ไม่มีเอกสารรอเซ็น</EmptyRow>
               )}
             </tbody>
           </table>
@@ -141,7 +142,7 @@ export default function SignInboxPage() {
               })}
               {loading && <TableSkeleton cols={6} rows={3} />}
               {!loading && doneRows.length === 0 && (
-                <tr><td colSpan={6} className={ui.emptyCell}>ยังไม่มีเอกสารที่คุณเซ็น</td></tr>
+                <EmptyRow colSpan={6} icon={<Signature size={20} />}>ยังไม่มีเอกสารที่คุณเซ็น</EmptyRow>
               )}
             </tbody>
           </table>

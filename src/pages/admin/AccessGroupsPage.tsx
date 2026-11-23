@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
+import EmptyRow from '../../components/EmptyRow'
 import TableSkeleton from '../../components/TableSkeleton'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -71,7 +72,7 @@ export default function AccessGroupsPage() {
             {loading ? (
               <TableSkeleton cols={2} rows={4} />
             ) : groups.length === 0 ? (
-              <tr><td colSpan={2} className={ui.emptyCell}>ยังไม่มีกลุ่ม — กด “เพิ่มกลุ่ม” เพื่อสร้าง</td></tr>
+              <EmptyRow colSpan={2} icon={<Tags size={20} />}>ยังไม่มีกลุ่ม</EmptyRow>
             ) : (
               groups.map(g => (
                 <tr key={g.id} className={ui.tr}>
