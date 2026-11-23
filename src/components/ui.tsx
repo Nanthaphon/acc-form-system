@@ -19,7 +19,7 @@ export const ui = {
   input: 'w-full rounded-xl border border-stone-200/60 bg-white px-3.5 py-2.5 text-sm text-stone-800 transition-all placeholder:text-stone-400 hover:border-stone-300 focus:border-clay-600 focus:outline-none focus:ring-2 focus:ring-clay-600/15 disabled:bg-stone-50 disabled:text-stone-400',
   inputSm: 'rounded-xl border border-stone-200/60 bg-white px-3 py-1.5 text-sm text-stone-800 transition-all placeholder:text-stone-400 hover:border-stone-300 focus:border-clay-600 focus:outline-none focus:ring-2 focus:ring-clay-600/15',
   // buttons
-  btnPrimary: 'inline-flex items-center justify-center gap-2 rounded-xl bg-clay-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-clay-700 focus:outline-none focus:ring-2 focus:ring-clay-600/30 disabled:bg-stone-300',
+  btnPrimary: 'inline-flex items-center justify-center gap-2 rounded-xl bg-clay-600 px-4 py-2.5 text-sm font-medium text-white shadow-[0_4px_12px_-4px_rgba(30,78,140,0.55)] transition-colors hover:bg-clay-700 focus:outline-none focus:ring-2 focus:ring-clay-600/30 disabled:bg-stone-300',
   btnSecondary: 'inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:border-stone-300 hover:bg-stone-50 disabled:opacity-60',
   btnDashed: 'inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-clay-600 hover:text-clay-700 disabled:opacity-40',
   btnGhost: 'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900',
@@ -30,10 +30,10 @@ export const ui = {
   tableCard: 'overflow-hidden rounded-2xl border border-stone-200/60 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04),0_20px_50px_-28px_rgba(22,32,36,0.20)]',
   tableScroll: 'scroll-slim overflow-x-auto',
   table: 'w-full text-sm',
-  thead: 'border-b border-stone-200/60 text-stone-500',
-  th: 'whitespace-nowrap px-4 py-3 text-left text-xs font-medium',
+  thead: 'border-b border-clay-100 bg-clay-50/70 text-clay-800',
+  th: 'whitespace-nowrap px-4 py-3 text-left text-xs font-semibold',
   tbody: 'divide-y divide-stone-100',
-  tr: 'transition-colors hover:bg-stone-50/60',
+  tr: 'transition-colors hover:bg-clay-50/50',
   td: 'px-4 py-2.5 text-stone-700',
   emptyCell: 'px-4 py-10 text-center text-sm text-stone-400',
 } as const
@@ -57,7 +57,7 @@ export function PageHeader({ icon, title, subtitle, onBack, actions }: {
           <ArrowLeft size={16} /> กลับ
         </button>
       )}
-      {icon && <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-clay-50 text-clay-600">{icon}</div>}
+      {icon && <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-clay-500 to-clay-700 text-white shadow-[0_6px_16px_-6px_rgba(30,78,140,0.6)]">{icon}</div>}
       <div className="min-w-0">
         <h1 className="truncate text-xl font-semibold text-stone-900">{title}</h1>
         {subtitle && <p className="truncate text-sm text-stone-500">{subtitle}</p>}
@@ -70,11 +70,11 @@ export function PageHeader({ icon, title, subtitle, onBack, actions }: {
 // A tone name says what a badge MEANS, not what colour it is: `blue` is the
 // brand navy, `green` the sea green, `red` the brick.
 const BADGE_TONES = {
-  gray: 'bg-stone-100 text-stone-600',
-  blue: 'bg-clay-50 text-clay-700',
-  green: 'bg-olive-50 text-olive-700',
+  gray: 'bg-stone-100 text-stone-700',
+  blue: 'bg-clay-100 text-clay-800',
+  green: 'bg-olive-100 text-olive-800',
   amber: 'bg-ochre-50 text-ochre-700',
-  red: 'bg-rose-50 text-brick-600',
+  red: 'bg-rose-100 text-brick-700',
 } as const
 
 // A card or section heading: the same icon tile in front of every one, so a
@@ -82,7 +82,7 @@ const BADGE_TONES = {
 export function SectionTitle({ icon, children, className = '' }: { icon: ReactNode; children: ReactNode; className?: string }) {
   return (
     <h2 className={`flex items-center gap-2.5 text-[15px] font-semibold text-stone-900 ${className}`}>
-      <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600">{icon}</span>
+      <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-clay-100 text-clay-700">{icon}</span>
       {children}
     </h2>
   )

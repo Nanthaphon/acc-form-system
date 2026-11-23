@@ -186,7 +186,8 @@ export default function Layout() {
         </div>
       </aside>
       {/* bottom padding: the chat button floats over the page's last line */}
-      <main className="min-w-0 flex-1 p-6 pb-24 md:p-8 md:pb-24">
+      {/* A soft navy wash behind the top of every page, fading into the page grey. */}
+      <main className="min-w-0 flex-1 bg-[linear-gradient(180deg,#E6EDF7_0px,#F7F9FA_260px)] p-6 pb-24 md:p-8 md:pb-24">
         <Outlet />
       </main>
       {/* Not on the inbox itself, where admins already answer — the button would sit over its reply box. */}
