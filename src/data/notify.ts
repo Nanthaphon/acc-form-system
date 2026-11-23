@@ -22,6 +22,21 @@ export async function notifySigners(submissionId: string, uids: string[]): Promi
   }
 }
 
+/**
+ * Emails the requester that a line they were waiting on is now signed — and
+ * that the document is complete, when it was the last one. Called by the
+ * signer right after signing. Best effort, like notifySigners: null when
+ * nothing could be sent, and the signature stands either way.
+ */
+export async function notifySigned(submissionId: string, signedBlockId: string): Promise<NotifyResult | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke<NotifyResult>('notify-signers', { body: { submissionId, signedBlockId } })
+    return error || !data ? null : data
+  } catch {
+    return null
+  }
+}
+
 /** One line for the "sent" message, or '' when there is nothing worth saying. */
 export function notifySummary(r: NotifyResult | null): string {
   if (!r) return ''

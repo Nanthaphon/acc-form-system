@@ -9,6 +9,7 @@ import { Spinner } from '../components/Spinner'
 import { useAuth } from '../auth/AuthProvider'
 import type { SubmissionSummary, FormSettings, DocSignature } from '../types/schema'
 import { listMyAssigned, signDocument, submissionAmount } from '../data/submissions'
+import { notifySigned } from '../data/notify'
 import { listForms } from '../data/formSettings'
 import { formatDate } from '../shared/date'
 import { formatMoney } from '../shared/money'
@@ -39,8 +40,11 @@ export default function SignInboxPage() {
       return
     }
     if (!(await uiConfirm(`ลายเซ็นของคุณจะถูกแปะลงเอกสาร`, { title: `เซ็นช่อง "${blockLabel}" ของเอกสาร ${s.docNumber} ?`, confirmText: 'เซ็น' }))) return
-    try { await signDocument(s.id, blockId); reload() }
-    catch (e: any) { uiAlert('เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
+    try { await signDocument(s.id, blockId) }
+    catch (e: any) { uiAlert('เซ็นไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')); return }
+    reload()
+    // The signature is done; the requester is told by email on a best-effort basis.
+    void notifySigned(s.id, blockId)
   }
 
   return (

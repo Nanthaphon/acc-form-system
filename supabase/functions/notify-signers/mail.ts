@@ -8,6 +8,7 @@ export interface SignatureLine {
   assignedUid: string
   assignedName: string
   status: 'pending' | 'signed'
+  signedAt?: number
 }
 
 export interface DocForMail {
@@ -96,4 +97,71 @@ export function graphMessage(to: string, subject: string, html: string) {
     },
     saveToSentItems: false,
   }
+}
+
+// ── Someone has signed: tell the requester ─────────────────────────────────
+
+/** A signature is "just now" for this long, so a call cannot be repeated to mail the requester again and again. */
+export const SIGNED_FRESH_MS = 2 * 60_000
+
+/**
+ * The line the caller has signed in the last moments — the reason to write to
+ * the requester. Null when there is no such line, or when the caller is the
+ * requester themself (they need no notice of their own signature).
+ */
+export function justSigned(doc: DocForMail, blockId: string, callerUid: string, now: number): SignatureLine | null {
+  if (callerUid === doc.createdBy) return null
+  const line = (doc.signatures ?? []).find(s => s.blockId === blockId)
+  if (!line || line.status !== 'signed' || line.assignedUid !== callerUid) return null
+  if (typeof line.signedAt !== 'number' || now - line.signedAt > SIGNED_FRESH_MS || line.signedAt > now + SIGNED_FRESH_MS) return null
+  return line
+}
+
+/** Every line of the document signed. */
+export const allSigned = (doc: DocForMail): boolean =>
+  (doc.signatures ?? []).length > 0 && (doc.signatures ?? []).every(s => s.status === 'signed')
+
+export interface SignedMailInput {
+  recipientName: string
+  signerName: string
+  docNumber: string
+  formName: string
+  blockLabel: string
+  amount: number | null
+  /** Was this the last signature: the document is approved in full. */
+  complete: boolean
+  appUrl: string
+}
+
+export function buildSignedMail(m: SignedMailInput): { subject: string; html: string } {
+  const link = `${m.appUrl.replace(/\/+$/, '')}/history`
+  const subject = m.complete
+    ? `เอกสาร ${m.docNumber} เซ็นครบแล้ว`
+    : `${m.signerName} เซ็นเอกสาร ${m.docNumber} แล้ว`
+  const headline = m.complete
+    ? `เอกสารของคุณได้รับการเซ็นครบทุกช่องแล้ว (ช่องสุดท้าย <b>${escapeHtml(m.blockLabel)}</b> โดย ${escapeHtml(m.signerName)})`
+    : `<b>${escapeHtml(m.signerName)}</b> เซ็นเอกสารของคุณแล้วในช่อง <b>${escapeHtml(m.blockLabel)}</b>`
+  const row = (label: string, value: string) => `
+        <tr>
+          <td style="padding:6px 0;color:#64757D;width:120px;vertical-align:top">${label}</td>
+          <td style="padding:6px 0;color:#162024;font-weight:600">${escapeHtml(value)}</td>
+        </tr>`
+  const html = `<!doctype html>
+<html lang="th"><body style="margin:0;padding:24px;background:#F7F9FA;font-family:Tahoma,'Leelawadee UI',sans-serif;font-size:15px;line-height:1.6">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #E1E8EB;border-radius:8px">
+    <tr><td style="padding:28px 32px">
+      <p style="margin:0 0 16px;color:#162024">เรียน คุณ${escapeHtml(m.recipientName)}</p>
+      <p style="margin:0 0 20px;color:#374449">${headline}</p>
+      <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-top:1px solid #EFF3F5;border-bottom:1px solid #EFF3F5;margin-bottom:24px">${
+        row('เลขที่เอกสาร', m.docNumber)}${
+        m.formName ? row('แบบฟอร์ม', m.formName) : ''}${
+        m.amount !== null ? row('จำนวนเงิน', `${formatBaht(m.amount)} บาท`) : ''}${
+        row('สถานะ', m.complete ? 'เซ็นครบแล้ว' : 'รอลายเซ็นช่องอื่น')}
+      </table>
+      <a href="${escapeHtml(link)}" style="display:inline-block;background:#1E4E8C;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">เปิดประวัติเอกสารของฉัน</a>
+      <p style="margin:24px 0 0;color:#64757D;font-size:13px">อีเมลนี้ส่งอัตโนมัติจากระบบ Acc Documents — ไม่ต้องตอบกลับ</p>
+    </td></tr>
+  </table>
+</body></html>`
+  return { subject, html }
 }

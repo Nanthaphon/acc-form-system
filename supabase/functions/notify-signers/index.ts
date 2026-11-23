@@ -1,8 +1,15 @@
-// notify-signers — emails each person a document has just been sent to for
-// signing, through the company's Microsoft 365 (Microsoft Graph sendMail).
+// notify-signers — the document emails, through the company's Microsoft 365
+// (Microsoft Graph sendMail). Two notices, both called by the app with the
+// caller's own login:
 //
-// Called by the app right after "ส่งเซ็น" with the requester's own login:
-//   POST { submissionId, uids }  →  { sent, noEmail, failed }
+//   1. right after "ส่งเซ็น", the requester presses it:
+//        POST { submissionId, uids }  →  { sent, noEmail, failed }
+//      mails each person the document was just sent to.
+//   2. right after someone signs, the signer presses it:
+//        POST { submissionId, signedBlockId }  →  { sent, noEmail, failed }
+//      mails the requester that this line is signed — and that the document is
+//      complete, when that was the last one. Only for a line the caller signed
+//      in the last couple of minutes.
 // It only ever mails people who are actually waiting on that document, and
 // only for a document the caller created — the uids are a hint, not trusted.
 // A notice that cannot be sent never undoes the sending itself.
@@ -14,7 +21,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { buildMail, docAmount, graphMessage, linesToNotify } from './mail.ts'
+import { allSigned, buildMail, buildSignedMail, docAmount, graphMessage, justSigned, linesToNotify } from './mail.ts'
 import type { DocForMail } from './mail.ts'
 
 const CORS = {
@@ -55,6 +62,45 @@ async function sendMail(token: string, to: string, subject: string, html: string
 const fullName = (p?: { firstName?: string; lastName?: string } | null) =>
   `${p?.firstName ?? ''} ${p?.lastName ?? ''}`.trim()
 
+// Someone signed: tell the requester. The signature must be the caller's own and
+// fresh (justSigned), so this cannot be used to mail someone about nothing.
+async function notifyRequester(admin: ReturnType<typeof createClient>, callerUid: string, submissionId: string, blockId: string) {
+  const { data: doc } = await admin
+    .from('submissions').select('createdBy,docNumber,formType,signatures,totals')
+    .eq('id', submissionId).maybeSingle()
+  if (!doc) return json({ error: 'document not found' }, 404)
+  const line = justSigned(doc as DocForMail, blockId, callerUid, Date.now())
+  if (!line) return json({ sent: 0, noEmail: [], failed: [] })
+
+  const [{ data: people }, { data: form }] = await Promise.all([
+    admin.from('profiles').select('uid,firstName,lastName,email').in('uid', [doc.createdBy, callerUid]),
+    admin.from('form_settings').select('*').eq('formType', doc.formType).maybeSingle(),
+  ])
+  const byUid = new Map((people ?? []).map(p => [p.uid, p]))
+  const requester = byUid.get(doc.createdBy)
+  const to = String(requester?.email ?? '').trim()
+  const requesterName = fullName(requester) || 'ผู้เบิก'
+  if (!to) return json({ sent: 0, noEmail: [requesterName], failed: [] })
+
+  const { subject, html } = buildSignedMail({
+    recipientName: requesterName,
+    signerName: fullName(byUid.get(callerUid)) || line.assignedName,
+    docNumber: doc.docNumber,
+    formName: form?.name || form?.title || '',
+    blockLabel: line.blockLabel,
+    amount: docAmount(doc as DocForMail),
+    complete: allSigned(doc as DocForMail),
+    appUrl: env('APP_URL') || 'https://acc-form-system.vercel.app',
+  })
+  try {
+    await sendMail(await graphToken(), to, subject, html)
+    return json({ sent: 1, noEmail: [], failed: [] })
+  } catch (e) {
+    console.error('notify requester:', e)
+    return json({ sent: 0, noEmail: [], failed: [requesterName] })
+  }
+}
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405)
@@ -72,9 +118,11 @@ Deno.serve(async req => {
   const { data: who, error: whoErr } = await admin.auth.getUser(jwt)
   if (whoErr || !who.user) return json({ error: 'not signed in' }, 401)
 
-  let body: { submissionId?: string; uids?: string[] }
+  let body: { submissionId?: string; uids?: string[]; signedBlockId?: string }
   try { body = await req.json() } catch { return json({ error: 'bad body' }, 400) }
-  if (!body.submissionId || !Array.isArray(body.uids)) return json({ error: 'submissionId and uids required' }, 400)
+  if (!body.submissionId || (!Array.isArray(body.uids) && !body.signedBlockId)) return json({ error: 'submissionId and uids (or signedBlockId) required' }, 400)
+  if (body.signedBlockId) return notifyRequester(admin, who.user.id, body.submissionId, body.signedBlockId)
+  if (!Array.isArray(body.uids)) return json({ error: 'uids required' }, 400)
 
   const { data: doc, error: docErr } = await admin
     .from('submissions').select('createdBy,docNumber,formType,signatures,totals')
