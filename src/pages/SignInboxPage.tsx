@@ -5,7 +5,7 @@ import { Eye, Inbox, Signature } from 'lucide-react'
 import ActionIconButton from '../components/ActionIconButton'
 import { Badge, PageHeader, ui } from '../components/ui'
 import DocNumberCell from '../components/DocNumberCell'
-import { Spinner } from '../components/Spinner'
+import TableSkeleton from '../components/TableSkeleton'
 import { useAuth } from '../auth/AuthProvider'
 import type { SubmissionSummary, FormSettings, DocSignature } from '../types/schema'
 import { listMyAssigned, signDocument, submissionAmount } from '../data/submissions'
@@ -101,9 +101,7 @@ export default function SignInboxPage() {
                   </td>
                 </tr>
               ))}
-              {loading && (
-                <tr><td colSpan={7} className={ui.emptyCell}><Spinner size={20} className="mx-auto" /></td></tr>
-              )}
+              {loading && <TableSkeleton cols={7} rows={4} />}
               {!loading && pendingRows.length === 0 && (
                 <tr><td colSpan={7} className={ui.emptyCell}>ไม่มีเอกสารรอเซ็น</td></tr>
               )}
@@ -141,9 +139,7 @@ export default function SignInboxPage() {
                   </tr>
                 )
               })}
-              {loading && (
-                <tr><td colSpan={6} className={ui.emptyCell}><Spinner size={20} className="mx-auto" /></td></tr>
-              )}
+              {loading && <TableSkeleton cols={6} rows={3} />}
               {!loading && doneRows.length === 0 && (
                 <tr><td colSpan={6} className={ui.emptyCell}>ยังไม่มีเอกสารที่คุณเซ็น</td></tr>
               )}

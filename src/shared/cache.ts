@@ -40,4 +40,17 @@ export function invalidate(...keys: string[]) {
   }
 }
 
-export function clearCache() { store.clear() }
+export function clearCache() { store.clear(); last.clear() }
+
+// ── Last-known lists ───────────────────────────────────────────────────────
+// Document lists change all the time, so they are never served from memory as
+// if they were fresh (cached above is for slow-changing lists). But a page
+// that was open a moment ago can open showing the last list it had, while the
+// new one loads — instead of an empty screen. Cleared with everything else on
+// a change of user.
+const last = new Map<string, unknown>()
+
+/** Remember the list a page just loaded. */
+export function remember<T>(key: string, value: T): T { if (ON) last.set(key, value); return value }
+/** The list this page last had, if any. */
+export function recall<T>(key: string): T | undefined { return last.get(key) as T | undefined }

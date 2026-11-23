@@ -22,6 +22,8 @@ import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
 import { usePagination } from '../../shared/usePagination'
 import Pagination from '../../components/Pagination'
+import TableSkeleton from '../../components/TableSkeleton'
+import { recall, remember } from '../../shared/cache'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
@@ -35,7 +37,9 @@ interface Column extends PickableColumn {
 }
 
 export default function PrintHistoryPage() {
-  const [rows, setRows] = useState<SubmissionSummary[]>([])
+  const [rows, setRows] = useState<SubmissionSummary[]>(() => recall<SubmissionSummary[]>('subs:all') ?? [])
+  // Nothing to show yet — the first visit; a return shows the last list while the new one loads.
+  const [loading, setLoading] = useState(() => recall('subs:all') === undefined)
   const [employees, setEmployees] = useState<UserProfile[]>([])
   const [forms, setForms] = useState<FormSettings[]>([])
   const [groups, setGroups] = useState<FormGroup[]>([])
@@ -45,7 +49,7 @@ export default function PrintHistoryPage() {
   const [open, setOpen] = useState<Set<string>>(new Set())
   const { hidden, toggle, reset } = useHiddenColumns('cols:printHistory')
 
-  function loadRows() { listAllSubmissions().then(setRows) }
+  function loadRows() { listAllSubmissions().then(r => { setRows(remember('subs:all', r)); setLoading(false) }).catch(() => setLoading(false)) }
   useEffect(() => {
     loadRows()
     listEmployees().then(setEmployees)
@@ -118,11 +122,6 @@ export default function PrintHistoryPage() {
         </span>
       ),
     },
-    // The admin's own tag (เอกสารผิด, ไม่ได้ใช้ …) — its own column, so it can be seen and sorted out at a glance.
-    ...(docStatusAvailable() ? [{
-      key: 'docStatus', label: 'ป้ายสถานะ', tdCls: 'whitespace-nowrap',
-      cell: (r: SubmissionSummary) => <DocStatusPicker sub={r} options={statuses} onChanged={st => statusChanged(r.id, st)} />,
-    }] : []),
     // When it was last printed, and how many times in all.
     {
       key: 'lastPrinted', label: 'พิมพ์ล่าสุด', tdCls: 'whitespace-nowrap',
@@ -130,6 +129,11 @@ export default function PrintHistoryPage() {
         ? <>{formatDateTime(r.lastPrintedAt)} <span className="text-xs text-stone-500">· {r.printCount} ครั้ง</span></>
         : <span className="text-stone-500">ยังไม่พิมพ์</span>,
     },
+    // The admin's own tag (เอกสารผิด, ไม่ได้ใช้ …) — its own column, so it can be seen and sorted out at a glance.
+    ...(docStatusAvailable() ? [{
+      key: 'docStatus', label: 'ป้ายสถานะ', tdCls: 'whitespace-nowrap',
+      cell: (r: SubmissionSummary) => <DocStatusPicker sub={r} options={statuses} onChanged={st => statusChanged(r.id, st)} />,
+    }] : []),
   ]
   const shown = columns.filter(c => c.locked || !hidden.has(c.key))
 
@@ -219,7 +223,8 @@ export default function PrintHistoryPage() {
                 </Fragment>
               )
             })}
-            {chains.length === 0 && (
+            {loading && <TableSkeleton cols={shown.length + 1} />}
+            {!loading && chains.length === 0 && (
               <tr>
                 <td colSpan={shown.length + 1} className={ui.emptyCell}>
                   {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}

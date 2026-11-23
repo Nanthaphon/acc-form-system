@@ -22,6 +22,8 @@ import { askAndVoid } from '../../components/voidDocument'
 import { ActionGroup, ActionGroupItem, PrimaryAction, PrimarySlot } from '../../components/RowActions'
 import ActionIconButton from '../../components/ActionIconButton'
 import Pagination from '../../components/Pagination'
+import TableSkeleton from '../../components/TableSkeleton'
+import { recall, remember } from '../../shared/cache'
 import { usePagination } from '../../shared/usePagination'
 import { chainRows, chainLength } from '../../shared/revisionChain'
 import { Badge, PageHeader, ui } from '../../components/ui'
@@ -37,7 +39,9 @@ interface Column extends PickableColumn {
 
 export default function HistoryPage() {
   const { profile } = useAuth()
-  const [rows, setRows] = useState<SubmissionSummary[]>([])
+  const mineKey = `subs:mine`
+  const [rows, setRows] = useState<SubmissionSummary[]>(() => recall<SubmissionSummary[]>(mineKey) ?? [])
+  const [loading, setLoading] = useState(() => recall(mineKey) === undefined)
   const [forms, setForms] = useState<FormSettings[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
@@ -48,7 +52,7 @@ export default function HistoryPage() {
   const [signers, setSigners] = useState<Signer[]>([])
   const [groups, setGroups] = useState<FormGroup[]>([])
   const [signModal, setSignModal] = useState<SubmissionSummary | null>(null)
-  function load() { if (profile) listMySubmissions(profile.uid).then(setRows) }
+  function load() { if (profile) listMySubmissions(profile.uid).then(r => { setRows(remember(mineKey, r)); setLoading(false) }).catch(() => setLoading(false)) }
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
   useEffect(() => { listForms().then(setForms); listSigners().then(setSigners); listGroups().then(setGroups) }, [])
 
@@ -220,7 +224,8 @@ export default function HistoryPage() {
                 </Fragment>
               )
             })}
-            {chains.length === 0 && (
+            {loading && <TableSkeleton cols={shown.length + 1} />}
+            {!loading && chains.length === 0 && (
               <tr>
                 <td colSpan={shown.length + 1} className={ui.emptyCell}>
                   {rows.length === 0 ? 'ยังไม่มีเอกสาร' : 'ไม่พบเอกสารที่ตรงกับตัวกรอง'}
