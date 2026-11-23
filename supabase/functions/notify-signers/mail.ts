@@ -48,6 +48,10 @@ export function docAmount(doc: DocForMail): number | null {
   return typeof n === 'number' && Number.isFinite(n) ? n : null
 }
 
+/** The document's own page in the app — where a mail's button lands. */
+export const docLink = (appUrl: string, submissionId: string) =>
+  `${appUrl.replace(/\/+$/, '')}/submission/${encodeURIComponent(submissionId)}/preview`
+
 export interface MailInput {
   recipientName: string
   requesterName: string
@@ -57,10 +61,12 @@ export interface MailInput {
   amount: number | null
   /** The app's address, e.g. https://acc-form-system.vercel.app */
   appUrl: string
+  /** The document — the button opens it, ready to sign. */
+  submissionId: string
 }
 
 export function buildMail(m: MailInput): { subject: string; html: string } {
-  const link = `${m.appUrl.replace(/\/+$/, '')}/sign`
+  const link = docLink(m.appUrl, m.submissionId)
   const subject = `เอกสารรอเซ็น ${m.docNumber} จาก ${m.requesterName}`
   const row = (label: string, value: string) => `
         <tr>
@@ -79,7 +85,7 @@ export function buildMail(m: MailInput): { subject: string; html: string } {
         row('ผู้เบิก', m.requesterName)}${
         m.amount !== null ? row('จำนวนเงิน', `${formatBaht(m.amount)} บาท`) : ''}
       </table>
-      <a href="${escapeHtml(link)}" style="display:inline-block;background:#1E4E8C;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">เปิดเอกสารรอเซ็น</a>
+      <a href="${escapeHtml(link)}" style="display:inline-block;background:#1E4E8C;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">เปิดเอกสารเพื่อเซ็น</a>
       <p style="margin:24px 0 0;color:#64757D;font-size:13px">อีเมลนี้ส่งอัตโนมัติจากระบบ Acc Documents — ไม่ต้องตอบกลับ</p>
     </td></tr>
   </table>
@@ -131,10 +137,11 @@ export interface SignedMailInput {
   /** Was this the last signature: the document is approved in full. */
   complete: boolean
   appUrl: string
+  submissionId: string
 }
 
 export function buildSignedMail(m: SignedMailInput): { subject: string; html: string } {
-  const link = `${m.appUrl.replace(/\/+$/, '')}/history`
+  const link = docLink(m.appUrl, m.submissionId)
   const subject = m.complete
     ? `เอกสาร ${m.docNumber} เซ็นครบแล้ว`
     : `${m.signerName} เซ็นเอกสาร ${m.docNumber} แล้ว`
@@ -158,7 +165,7 @@ export function buildSignedMail(m: SignedMailInput): { subject: string; html: st
         m.amount !== null ? row('จำนวนเงิน', `${formatBaht(m.amount)} บาท`) : ''}${
         row('สถานะ', m.complete ? 'เซ็นครบแล้ว' : 'รอลายเซ็นช่องอื่น')}
       </table>
-      <a href="${escapeHtml(link)}" style="display:inline-block;background:#1E4E8C;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">เปิดประวัติเอกสารของฉัน</a>
+      <a href="${escapeHtml(link)}" style="display:inline-block;background:#1E4E8C;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 24px;border-radius:8px">เปิดเอกสาร</a>
       <p style="margin:24px 0 0;color:#64757D;font-size:13px">อีเมลนี้ส่งอัตโนมัติจากระบบ Acc Documents — ไม่ต้องตอบกลับ</p>
     </td></tr>
   </table>

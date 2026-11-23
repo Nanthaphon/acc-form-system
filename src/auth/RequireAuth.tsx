@@ -5,16 +5,18 @@ import PageLoader from '../components/Spinner'
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, profile, loading } = useAuth()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
+  // Carried through sign-in, so a link from a mail opens its document afterwards.
+  const here = { from: pathname + search }
   if (loading) return <PageLoader label="กำลังเข้าสู่ระบบ..." />
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace state={here} />
   // A new account's password IS its username, and nothing used to make anyone
   // change it — the dashboard only showed a note, so a guessable password could
   // be kept for good. Until it is changed, the only page reachable is the one
   // that changes it. Keying off a loaded profile means a failed profile load
   // never locks anyone out.
   if (profile?.mustChangePassword && pathname !== '/change-password') {
-    return <Navigate to="/change-password" replace />
+    return <Navigate to="/change-password" replace state={here} />
   }
   return <>{children}</>
 }

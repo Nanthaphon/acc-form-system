@@ -92,6 +92,7 @@ async function notifyRequester(admin: ReturnType<typeof createClient>, callerUid
     amount: docAmount(doc as DocForMail),
     complete: allSigned(doc as DocForMail),
     appUrl: env('APP_URL') || 'https://acc-form-system.vercel.app',
+    submissionId,
   })
   try {
     await sendMail(await graphToken(), to, subject, html)
@@ -167,6 +168,7 @@ Deno.serve(async req => {
       blockLabel: line.blockLabel,
       amount: docAmount(doc as DocForMail),
       appUrl: env('APP_URL') || 'https://acc-form-system.vercel.app',
+      submissionId: body.submissionId,
     })
     try {
       token ??= await graphToken()

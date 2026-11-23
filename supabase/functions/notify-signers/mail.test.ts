@@ -32,13 +32,13 @@ describe('docAmount', () => {
 describe('buildMail', () => {
   const base = {
     recipientName: 'ไกรธัช', requesterName: 'นันทพล นายาต', docNumber: 'GAC-0011', formName: 'ใบเบิกค่าใช้จ่าย',
-    blockLabel: 'ผู้อนุมัติ', amount: 1234.5, appUrl: 'https://acc-form-system.vercel.app/',
+    blockLabel: 'ผู้อนุมัติ', amount: 1234.5, appUrl: 'https://acc-form-system.vercel.app/', submissionId: 'df31cf43',
   }
 
   it('names the document and links to the signing inbox', () => {
     const { subject, html } = buildMail(base)
     expect(subject).toBe('เอกสารรอเซ็น GAC-0011 จาก นันทพล นายาต')
-    expect(html).toContain('href="https://acc-form-system.vercel.app/sign"')
+    expect(html).toContain('href="https://acc-form-system.vercel.app/submission/df31cf43/preview"')
     expect(html).toContain('1,234.50 บาท')
     expect(html).toContain('ผู้อนุมัติ')
   })
@@ -95,7 +95,7 @@ describe('allSigned', () => {
 describe('buildSignedMail', () => {
   const base = {
     recipientName: 'นันทพล', signerName: 'ไกรธัช', docNumber: 'GAC-0011', formName: 'ใบอนุมัติค่าใช้จ่าย',
-    blockLabel: 'ผู้อนุมัติ', amount: 1234.5, complete: false, appUrl: 'https://acc-form-system.vercel.app/',
+    blockLabel: 'ผู้อนุมัติ', amount: 1234.5, complete: false, appUrl: 'https://acc-form-system.vercel.app/', submissionId: 'df31cf43',
   }
 
   it('tells the requester who signed which line', () => {
@@ -104,7 +104,7 @@ describe('buildSignedMail', () => {
     expect(html).toContain('ไกรธัช')
     expect(html).toContain('ผู้อนุมัติ')
     expect(html).toContain('1,234.50 บาท')
-    expect(html).toContain('href="https://acc-form-system.vercel.app/history"')
+    expect(html).toContain('href="https://acc-form-system.vercel.app/submission/df31cf43/preview"')
     expect(html).toContain('รอลายเซ็นช่องอื่น')
   })
 

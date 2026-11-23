@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { fromState } from '../shared/returnPath'
 import { BookOpen, LogIn } from 'lucide-react'
 import { loginWithEmployeeId } from '../data/auth'
 import { Spinner } from '../components/Spinner'
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const nav = useNavigate()
+  const { state } = useLocation()
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -22,7 +24,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await loginWithEmployeeId(employeeId, password)
-      nav('/')
+      nav(fromState(state), { replace: true })
     } catch {
       setError('รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง')
       setLoading(false) // stay on the page; on success we navigate away

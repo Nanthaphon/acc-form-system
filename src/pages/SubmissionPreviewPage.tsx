@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { PageSkeleton } from '../components/TableSkeleton'
-import { useNavigate, useParams } from 'react-router-dom'
-import { Ban, Eye, FileSpreadsheet, FileText, Printer } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Ban, Eye, FileSpreadsheet, FileText, Printer, Signature } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import ExpenseClaimPreview from '../features/expense-claim/ExpenseClaimPreview'
-import { getSubmission, incrementPrint } from '../data/submissions'
+import { getSubmission, incrementPrint, signDocument } from '../data/submissions'
+import { notifySigned } from '../data/notify'
 import { getFormSettings } from '../data/formSettings'
 import { adoptDocumentWht } from '../features/expense-claim/calc'
 import { getCompany } from '../data/companies'
@@ -15,7 +16,7 @@ import { PageHeader, ui } from '../components/ui'
 import { formatDateTime } from '../shared/date'
 import { dbErrorMessage } from '../shared/dbError'
 import { saveFile } from '../shared/saveFile'
-import { uiAlert } from '../components/dialog/dialogService'
+import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
 import { loadChunk } from '../shared/loadChunk'
 
 export default function SubmissionPreviewPage() {
@@ -26,8 +27,9 @@ export default function SubmissionPreviewPage() {
   const [settings, setSettings] = useState<FormSettings | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [signing, setSigning] = useState<string | null>(null)
 
-  useEffect(() => {
+  function load() {
     if (!id) return
     getSubmission(id).then(async s => {
       if (!s) return
@@ -37,7 +39,26 @@ export default function SubmissionPreviewPage() {
       setSettings(fs)
       if (s.header.companyId) setCompany(await getCompany(s.header.companyId))
     })
-  }, [id])
+  }
+  useEffect(load, [id])
+
+  // Opened from the mail "มีเอกสารรอเซ็น": sign right here, after reading it.
+  async function onSign(blockId: string, blockLabel: string) {
+    if (!sub || signing) return
+    if (!(await uiConfirm('ลายเซ็นของคุณจะถูกแปะลงเอกสาร', { title: `เซ็นช่อง "${blockLabel}" ของเอกสาร ${sub.docNumber} ?`, confirmText: 'เซ็น' }))) return
+    setSigning(blockId)
+    try {
+      await signDocument(sub.id, blockId)
+    } catch (e) {
+      uiAlert('เซ็นไม่สำเร็จ: ' + dbErrorMessage(e))
+      setSigning(null)
+      return
+    }
+    void notifySigned(sub.id, blockId) // the requester is told by email, best effort
+    setSigning(null)
+    load()
+    uiAlert('เซ็นเอกสารแล้ว', { tone: 'success' })
+  }
 
   async function onPrint() {
     if (sub) await incrementPrint(sub.id)
@@ -68,6 +89,8 @@ export default function SubmissionPreviewPage() {
 
   // Only the document owner or an admin can print; others (e.g. assigned signers) view only.
   const canPrint = profile?.role === 'admin' || sub.createdBy === profile?.uid
+  // The lines this document is waiting on the viewer for.
+  const myLines = sub.voided ? [] : (sub.signatures ?? []).filter(x => x.assignedUid === profile?.uid && x.status === 'pending')
 
   return (
     <div>
@@ -86,6 +109,19 @@ export default function SubmissionPreviewPage() {
             : <span className="inline-flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-2 text-sm font-medium text-stone-500"><Eye size={16} /> ดูอย่างเดียว</span>}
         />
       </div>
+      {myLines.length > 0 && (
+        <div className="no-print mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-clay-200 bg-clay-50 px-4 py-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-600 text-white"><Signature size={18} /></span>
+          <span className="min-w-0 flex-1 text-sm font-medium text-clay-800">เอกสารนี้รอคุณเซ็น</span>
+          {profile?.signatureImage
+            ? myLines.map(l => (
+                <button key={l.blockId} type="button" disabled={!!signing} onClick={() => onSign(l.blockId, l.blockLabel)} className={ui.btnPrimary}>
+                  {signing === l.blockId ? <Spinner size={16} /> : <Signature size={16} />} เซ็นช่อง {l.blockLabel}
+                </button>
+              ))
+            : <Link to="/profile" className={ui.btnSecondary}>อัปโหลดลายเซ็นก่อนเซ็น</Link>}
+        </div>
+      )}
       {sub.voided && (
         <div className="no-print mb-4 flex items-start gap-2 rounded-lg bg-rose-50 px-4 py-3 text-sm text-brick-700">
           <Ban size={16} className="mt-0.5 shrink-0" />

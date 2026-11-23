@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { fromState } from '../shared/returnPath'
 import { KeyRound, Save } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { changeMyPassword } from '../data/auth'
@@ -14,6 +15,7 @@ const inputCls = 'w-full rounded-lg border border-stone-200 bg-white px-3 py-2.5
 export default function ChangePasswordPage() {
   const { user, profile, refresh } = useAuth()
   const nav = useNavigate()
+  const { state } = useLocation()
   const [pw, setPw] = useState('')
   const [pw2, setPw2] = useState('')
   const [saving, setSaving] = useState(false)
@@ -30,7 +32,7 @@ export default function ChangePasswordPage() {
       if (uid) await markOwnPasswordChanged(uid)
       await refresh()
       uiAlert('เปลี่ยนรหัสผ่านเรียบร้อย ครั้งหน้าให้ใช้รหัสผ่านใหม่ในการเข้าสู่ระบบ', { tone: 'success' })
-      nav('/')
+      nav(fromState(state), { replace: true })
     } catch (err: any) {
       uiAlert('เปลี่ยนรหัสผ่านไม่สำเร็จ: ' + (err?.message || 'เกิดข้อผิดพลาด'))
     } finally {
