@@ -118,3 +118,14 @@ describe('buildSignedMail', () => {
     expect(buildSignedMail({ ...base, signerName: '<b>x</b>' }).html).not.toContain('<b>x</b>')
   })
 })
+
+describe('signedLine — the one-off resend', () => {
+  const line = (o: Partial<SignatureLine> = {}): SignatureLine =>
+    ({ blockId: 'approver', blockLabel: 'ผู้อนุมัติ', assignedUid: 'boss', assignedName: 'ไกรธัช', status: 'signed', signedAt: 1, ...o })
+  it('finds a signed line however old, and never the requester’s own', async () => {
+    const { signedLine } = await import('./mail')
+    expect(signedLine({ createdBy: 'me', docNumber: 'x', signatures: [line()] }, 'approver')?.assignedUid).toBe('boss')
+    expect(signedLine({ createdBy: 'me', docNumber: 'x', signatures: [line({ status: 'pending' })] }, 'approver')).toBeNull()
+    expect(signedLine({ createdBy: 'boss', docNumber: 'x', signatures: [line()] }, 'approver')).toBeNull()
+  })
+})

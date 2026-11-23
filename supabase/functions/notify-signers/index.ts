@@ -21,7 +21,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { allSigned, buildMail, buildSignedMail, docAmount, graphMessage, justSigned, linesToNotify } from './mail.ts'
+import { allSigned, buildMail, buildSignedMail, docAmount, graphMessage, justSigned, linesToNotify, signedLine } from './mail.ts'
 import type { DocForMail } from './mail.ts'
 
 const CORS = {
@@ -64,16 +64,17 @@ const fullName = (p?: { firstName?: string; lastName?: string } | null) =>
 
 // Someone signed: tell the requester. The signature must be the caller's own and
 // fresh (justSigned), so this cannot be used to mail someone about nothing.
-async function notifyRequester(admin: ReturnType<typeof createClient>, callerUid: string, submissionId: string, blockId: string) {
+async function notifyRequester(admin: ReturnType<typeof createClient>, callerUid: string | null, submissionId: string, blockId: string) {
   const { data: doc } = await admin
     .from('submissions').select('createdBy,docNumber,formType,signatures,totals')
     .eq('id', submissionId).maybeSingle()
   if (!doc) return json({ error: 'document not found' }, 404)
-  const line = justSigned(doc as DocForMail, blockId, callerUid, Date.now())
+  // callerUid null: the one-off resend (BACKFILL_TOKEN) — any signed line, however old.
+  const line = callerUid ? justSigned(doc as DocForMail, blockId, callerUid, Date.now()) : signedLine(doc as DocForMail, blockId)
   if (!line) return json({ sent: 0, noEmail: [], failed: [] })
 
   const [{ data: people }, { data: form }] = await Promise.all([
-    admin.from('profiles').select('uid,firstName,lastName,email').in('uid', [doc.createdBy, callerUid]),
+    admin.from('profiles').select('uid,firstName,lastName,email').in('uid', [doc.createdBy, line.assignedUid]),
     admin.from('form_settings').select('*').eq('formType', doc.formType).maybeSingle(),
   ])
   const byUid = new Map((people ?? []).map(p => [p.uid, p]))
@@ -84,7 +85,7 @@ async function notifyRequester(admin: ReturnType<typeof createClient>, callerUid
 
   const { subject, html } = buildSignedMail({
     recipientName: requesterName,
-    signerName: fullName(byUid.get(callerUid)) || line.assignedName,
+    signerName: fullName(byUid.get(line.assignedUid)) || line.assignedName,
     docNumber: doc.docNumber,
     formName: form?.name || form?.title || '',
     blockLabel: line.blockLabel,
@@ -112,6 +113,15 @@ Deno.serve(async req => {
   const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
   })
+
+  // One-off resend of the signed notice, for signatures made before the app sent it.
+  // Only while BACKFILL_TOKEN is set (remove the secret afterwards to close it).
+  const backfill = env('BACKFILL_TOKEN')
+  if (backfill && req.headers.get('x-backfill-token') === backfill) {
+    const b = await req.json().catch(() => ({})) as { submissionId?: string; signedBlockId?: string }
+    if (!b.submissionId || !b.signedBlockId) return json({ error: 'submissionId and signedBlockId required' }, 400)
+    return notifyRequester(admin, null, b.submissionId, b.signedBlockId)
+  }
 
   // Who is asking: the requester's own session token.
   const jwt = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')

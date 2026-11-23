@@ -165,3 +165,9 @@ export function buildSignedMail(m: SignedMailInput): { subject: string; html: st
 </body></html>`
   return { subject, html }
 }
+
+/** For a one-off resend (BACKFILL_TOKEN): the signed line, however long ago, by whoever. */
+export function signedLine(doc: DocForMail, blockId: string): SignatureLine | null {
+  const line = (doc.signatures ?? []).find(s => s.blockId === blockId)
+  return line && line.status === 'signed' && line.assignedUid !== doc.createdBy ? line : null
+}
