@@ -29,6 +29,8 @@ import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { PageHeader, ui } from '../../components/ui'
+import StatusTiles from '../../components/StatusTiles'
+import { avatarTone, initialOf } from '../../shared/initials'
 import { formatMoney } from '../../shared/money'
 
 interface Column extends PickableColumn {
@@ -99,21 +101,38 @@ export default function PrintHistoryPage() {
 
   const columns: Column[] = [
     {
-      key: 'form', label: 'ชื่อฟอร์ม', locked: true, tdCls: 'whitespace-nowrap font-medium text-stone-900',
-      // One line: long names are cut with … and shown in full on hover.
-      cell: r => <div className="max-w-[240px] truncate" title={formName(r.formType)}>{formName(r.formType)}</div>,
+      key: 'form', label: 'เอกสาร', locked: true, tdCls: 'whitespace-nowrap',
+      // The form's name over the number; long names are cut with … and shown in full on hover.
+      cell: r => (
+        <div className="min-w-0">
+          <div className="max-w-[260px] truncate font-medium text-stone-900" title={formName(r.formType)}>{formName(r.formType)}</div>
+          <div className="mt-0.5 font-mono text-[12px] text-stone-500"><DocNumberCell sub={r} /></div>
+        </div>
+      ),
     },
-    { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => <DocNumberCell sub={r} /> },
     {
       key: 'emp', label: 'พนักงาน', tdCls: 'whitespace-nowrap',
-      cell: r => <>{empName(r.createdByEmployeeId)} <span className="text-stone-500">({r.createdByEmployeeId})</span></>,
+      cell: r => {
+        const name = empName(r.createdByEmployeeId)
+        return (
+          <div className="flex items-center gap-2.5">
+            <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${avatarTone(r.createdByEmployeeId)}`}>
+              {initialOf(name || r.createdByEmployeeId) || '?'}
+            </span>
+            <div className="min-w-0">
+              <div className="text-stone-900">{name || '—'}</div>
+              <div className="font-mono text-[12px] text-stone-500">{r.createdByEmployeeId}</div>
+            </div>
+          </div>
+        )
+      },
     },
     {
       key: 'nickname', label: 'ชื่อเล่น', tdCls: 'whitespace-nowrap',
       cell: r => employees.find(e => e.employeeId === r.createdByEmployeeId)?.nickname || <span className="text-stone-300">—</span>,
     },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
-    { key: 'amount', label: 'ยอด', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => formatMoney(submissionAmount(r)) },
+    { key: 'amount', label: 'ยอด (บาท)', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right font-semibold tabular-nums text-stone-900', cell: r => formatMoney(submissionAmount(r)) },
     // How many times it was edited rides beside the status, rather than a column of dashes.
     {
       key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap',
@@ -145,7 +164,9 @@ export default function PrintHistoryPage() {
         icon={<Printer size={20} />}
         title="ประวัติการพิมพ์ทั้งหมดในระบบ"
       />
-      <div className="mb-4">
+      <StatusTiles docs={chainRows(rows).map(c => c.latest)} shown={chains.map(c => c.latest)} status={filters.status}
+        onStatus={status => changeFilters({ ...filters, status })} />
+      <div className="mb-4 rounded-2xl border border-stone-200/60 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         <SubmissionFilterBar value={filters} onChange={changeFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees}
           docStatuses={docStatusAvailable() ? statuses : undefined}
           resultCount={chains.length} total={allLines}

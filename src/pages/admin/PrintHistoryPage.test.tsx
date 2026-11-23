@@ -213,10 +213,28 @@ describe('ประวัติทั้งหมด — คอลัมน์�
   it('ไม่แสดง “พิมพ์ล่าสุด” จนกว่าจะเลือกเปิดเอง', async () => {
     localStorage.clear()
     show()
-    await screen.findByRole('columnheader', { name: 'ชื่อฟอร์ม' })
+    await screen.findByRole('columnheader', { name: 'เอกสาร' })
     expect(screen.queryByRole('columnheader', { name: 'พิมพ์ล่าสุด' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /คอลัมน์/ }))
     fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /พิมพ์ล่าสุด/ }))
     expect(screen.getByRole('columnheader', { name: 'พิมพ์ล่าสุด' })).toBeInTheDocument()
+  })
+})
+
+describe('ประวัติทั้งหมด — การ์ดสรุปสถานะ', () => {
+  it('นับเอกสารตามสถานะ และกดการ์ดเพื่อกรอง กดซ้ำเพื่อดูทั้งหมด', async () => {
+    localStorage.clear()
+    show()
+    const signedTile = await screen.findByRole('button', { name: /เซ็นครบ\s*1/ })
+    expect(screen.getByRole('button', { name: /ทั้งหมด\s*3/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /บันทึกแล้ว\s*2/ })).toBeInTheDocument()
+
+    fireEvent.click(signedTile)
+    await waitFor(() => expect(screen.queryByText('GAC-0050')).toBeNull())
+    expect(screen.getByText('GAC-0049')).toBeInTheDocument()
+    expect(signedTile).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(signedTile)
+    expect(await screen.findByText('GAC-0050')).toBeInTheDocument()
   })
 })
