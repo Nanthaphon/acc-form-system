@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import { PageSkeleton } from '../../components/TableSkeleton'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { FileText, Pencil, Printer, Signature, Trash2, UserRound } from 'lucide-react'
@@ -26,7 +27,6 @@ import LoginInfo from '../../components/LoginInfo'
 import SignatureField from '../../components/SignatureField'
 import SetPasswordModal from '../../components/SetPasswordModal'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
-import { Spinner } from '../../components/Spinner'
 import { Badge, PageHeader, SectionTitle, ui } from '../../components/ui'
 import DocNumberCell from '../../components/DocNumberCell'
 import { formatMoney } from '../../shared/money'
@@ -93,7 +93,7 @@ export default function EmployeeDetailPage() {
   function changeFilters(f: Filters) { setFilters(f); pager.setPage(1) }
 
   if (!profile) return (
-    <div className="flex items-center gap-2 p-4 text-sm text-stone-500"><Spinner size={16} /> กำลังโหลด...</div>
+    <PageSkeleton />
   )
 
   const viewerIsSuper = isSuperAdmin(me)

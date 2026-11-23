@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm, uiPrompt } from '../../components/dialog/dialogService'
+import TableSkeleton from '../../components/TableSkeleton'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Pencil, Plus, Tags, Trash2 } from 'lucide-react'
@@ -68,7 +69,7 @@ export default function AccessGroupsPage() {
           </thead>
           <tbody className={ui.tbody}>
             {loading ? (
-              <tr><td colSpan={2} className={ui.emptyCell}>กำลังโหลด...</td></tr>
+              <TableSkeleton cols={2} rows={4} />
             ) : groups.length === 0 ? (
               <tr><td colSpan={2} className={ui.emptyCell}>ยังไม่มีกลุ่ม — กด “เพิ่มกลุ่ม” เพื่อสร้าง</td></tr>
             ) : (

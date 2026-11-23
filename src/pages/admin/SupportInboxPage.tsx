@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ListSkeleton } from '../../components/TableSkeleton'
 import { useSearchParams } from 'react-router-dom'
 import { Headset, Search, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
@@ -11,7 +12,6 @@ import SupportThread from '../../components/support/SupportThread'
 import { notifySupportChanged } from '../../shared/useSupportUnread'
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { Badge, PageHeader, ui } from '../../components/ui'
-import { Spinner } from '../../components/Spinner'
 import { formatDateTime } from '../../shared/date'
 
 type Filter = 'all' | SupportStatus
@@ -112,7 +112,7 @@ export default function SupportInboxPage() {
             </div>
             <ul className="scroll-slim min-h-0 flex-1 divide-y divide-stone-100 overflow-y-auto">
               {tickets === null ? (
-                <li className="flex items-center justify-center gap-2 py-10 text-sm text-stone-500"><Spinner size={16} /> กำลังโหลด...</li>
+                <ListSkeleton rows={4} />
               ) : shown.length === 0 ? (
                 <li className="py-10 text-center text-sm text-stone-500">ไม่มีเรื่อง</li>
               ) : shown.map(t => {

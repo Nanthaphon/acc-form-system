@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import { ListSkeleton } from '../../components/TableSkeleton'
 import { useEffect, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -199,7 +200,7 @@ export default function FieldOptionsPage() {
             )}
 
             {loading ? (
-              <li className="px-4 py-12 text-center text-sm text-stone-400">กำลังโหลด...</li>
+              <ListSkeleton rows={4} />
             ) : valuesOf(field).length === 0 && !adding ? (
               <li className="px-4 py-12 text-center text-sm text-stone-400">
                 ยังไม่มีตัวเลือก{label} — กด “เพิ่ม{label}” แล้วจะขึ้นเป็นคำแนะนำตอนกรอก

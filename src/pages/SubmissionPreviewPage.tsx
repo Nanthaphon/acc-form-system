@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PageSkeleton } from '../components/TableSkeleton'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Ban, Eye, FileSpreadsheet, FileText, Printer } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
@@ -62,7 +63,7 @@ export default function SubmissionPreviewPage() {
   }
 
   if (!sub || !settings) return (
-    <div className="flex items-center gap-2 p-4 text-sm text-stone-500"><Spinner size={16} /> กำลังโหลด...</div>
+    <PageSkeleton />
   )
 
   // Only the document owner or an admin can print; others (e.g. assigned signers) view only.
