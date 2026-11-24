@@ -22,3 +22,28 @@ describe('SignerSelect', () => {
     expect(screen.getAllByRole('button').map(b => b.textContent)).toEqual(['กชกร เรืองนุ้ย', 'กนกวรรณ พิลานนท์', 'เกียรติ ศรีสุข'])
   })
 })
+
+describe('SignerSelect — nickname', () => {
+  const people = [
+    { uid: 'a', name: 'กชกร เรืองนุ้ย', nickname: 'Jib' },
+    { uid: 'b', name: 'พรทิพย์ รุ่งเรือง', nickname: 'ปุ้ย' },
+    { uid: 'c', name: 'นันทพล นายาต' },
+  ]
+
+  it('finds someone by their nickname, and shows it beside the name', () => {
+    render(<SignerSelect value="" onChange={() => {}} signers={people} />)
+    const box = screen.getByPlaceholderText(/ค้นหาผู้เซ็น/)
+    fireEvent.focus(box)
+    fireEvent.change(box, { target: { value: 'ปุ้ย' } })
+    expect(screen.getByRole('button', { name: /พรทิพย์ รุ่งเรือง/ })).toHaveTextContent('(ปุ้ย)')
+    expect(screen.queryByRole('button', { name: /กชกร/ })).toBeNull()
+  })
+
+  it('matches a nickname whatever its case', () => {
+    render(<SignerSelect value="" onChange={() => {}} signers={people} />)
+    const box = screen.getByPlaceholderText(/ค้นหาผู้เซ็น/)
+    fireEvent.focus(box)
+    fireEvent.change(box, { target: { value: 'jib' } })
+    expect(screen.getByRole('button', { name: /กชกร เรืองนุ้ย/ })).toBeInTheDocument()
+  })
+})

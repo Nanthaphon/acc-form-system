@@ -28,7 +28,8 @@ export default function SignerSelect({ value, onChange, signers, className, empt
   }, [])
 
   const matches = signers
-    .filter(s => s.name.toLowerCase().includes(q.trim().toLowerCase()))
+    // by name or nickname — people are often known by the nickname
+    .filter(s => `${s.name} ${s.nickname ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => byThaiName.compare(a.name, b.name))
 
   return (
@@ -61,6 +62,7 @@ export default function SignerSelect({ value, onChange, signers, className, empt
               onClick={() => { onChange(s.uid); setOpen(false); setQ('') }}
             >
               {s.name}
+              {s.nickname && <span className="ml-1.5 text-stone-500">({s.nickname})</span>}
             </button>
           ))}
         </div>

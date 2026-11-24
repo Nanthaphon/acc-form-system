@@ -97,7 +97,7 @@ export async function deleteSubmission(id: string): Promise<void> {
 }
 
 // ----- Online signatures -----
-export interface Signer { uid: string; name: string }
+export interface Signer { uid: string; name: string; nickname?: string }  // nickname: supabase/2026-11-24-signers-nickname.sql
 // Everyone can list possible signers (name + uid only) via a SECURITY DEFINER RPC.
 export function listSigners(): Promise<Signer[]> {
   return cached('signers', 5 * MINUTE, () => fetchSigners())
