@@ -28,6 +28,7 @@ import { recall, remember } from '../../shared/cache'
 import { usePagination } from '../../shared/usePagination'
 import { chainRows, chainLength } from '../../shared/revisionChain'
 import { Badge, PageHeader, ui } from '../../components/ui'
+import StatusTiles from '../../components/StatusTiles'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
@@ -94,13 +95,17 @@ export default function HistoryPage() {
   const { hidden, toggle, reset } = useHiddenColumns('cols:myHistory')
   const columns: Column[] = [
     {
-      key: 'form', label: 'ชื่อฟอร์ม', locked: true, tdCls: 'whitespace-nowrap font-medium text-stone-900',
-      // One line: long names are cut with … and shown in full on hover.
-      cell: r => <div className="max-w-[240px] truncate" title={formName(r.formType)}>{formName(r.formType)}</div>,
+      key: 'form', label: 'เอกสาร', locked: true, tdCls: 'whitespace-nowrap',
+      // The form's name over the number, as on ประวัติการพิมพ์ทั้งหมด.
+      cell: r => (
+        <div className="min-w-0">
+          <div className="max-w-[260px] truncate font-medium text-stone-900" title={formName(r.formType)}>{formName(r.formType)}</div>
+          <div className="mt-0.5 font-mono text-[12px] text-stone-500"><DocNumberCell sub={r} /></div>
+        </div>
+      ),
     },
-    { key: 'doc', label: 'เลขที่', locked: true, tdCls: 'whitespace-nowrap font-mono text-[13px]', cell: r => <DocNumberCell sub={r} /> },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
-    { key: 'amount', label: 'ยอดสุทธิ', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right tabular-nums', cell: r => formatMoney(submissionAmount(r)) },
+    { key: 'amount', label: 'ยอดสุทธิ (บาท)', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right font-semibold tabular-nums text-stone-900', cell: r => formatMoney(submissionAmount(r)) },
     { key: 'prints', label: 'พิมพ์แล้ว (ครั้ง)', thCls: 'text-center', tdCls: 'text-center tabular-nums', cell: r => r.printCount },
     { key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap', cell: r => <StatusBadge sub={r} /> },
     {
@@ -136,7 +141,9 @@ export default function HistoryPage() {
         icon={<History size={20} />}
         title="ประวัติเอกสารของฉัน"
       />
-      <div className="mb-4">
+      <StatusTiles docs={chainRows(rows).map(c => c.latest)} shown={chains.map(c => c.latest)} status={filters.status}
+        onStatus={status => changeFilters({ ...filters, status })} />
+      <div className="mb-4 rounded-2xl border border-stone-200/60 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         <SubmissionFilterBar value={filters} onChange={changeFilters} forms={choices.forms} groups={choices.groups} formGroup={formGroup}
           resultCount={chains.length} total={chainRows(rows).length}
           extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />

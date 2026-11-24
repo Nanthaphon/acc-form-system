@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import HistoryPage from './HistoryPage'
 import { voidingAvailable } from '../../data/submissions'
@@ -74,5 +74,16 @@ describe('HistoryPage — cancelled and corrected documents', () => {
     expect(within(signed).queryByRole('link', { name: /แก้ไข/ })).toBeNull()
     expect(within(signed).queryByRole('button', { name: /ยกเลิกเอกสาร/ })).toBeNull()
     vi.mocked(voidingAvailable).mockReturnValue(true)
+  })
+})
+
+describe('HistoryPage — การ์ดสรุปสถานะ', () => {
+  it('นับเอกสารของฉันตามสถานะ และกดการ์ดเพื่อกรอง', async () => {
+    show()
+    const signedTile = await screen.findByRole('button', { name: /เซ็นครบ\s*1/ })
+    expect(screen.getByRole('button', { name: /ทั้งหมด\s*2/ })).toBeInTheDocument()
+    fireEvent.click(signedTile)
+    await waitFor(() => expect(screen.queryByText('EX-0002')).toBeNull())
+    expect(screen.getByText('EX-0003')).toBeInTheDocument()
   })
 })
