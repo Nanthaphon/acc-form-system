@@ -25,7 +25,7 @@ export default function StatusTiles({ docs, shown, status, onStatus }: {
   const count = (st: SubmissionStatus | '') => (st ? docs.filter(d => subStatus(d) === st).length : docs.length)
   const total = shown.filter(d => !d.voided).reduce((sum, d) => sum + submissionAmount(d), 0)
   return (
-    <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
       {TILES.map(t => {
         const active = status === t.status
         return (
@@ -46,11 +46,11 @@ export default function StatusTiles({ docs, shown, status, onStatus }: {
           </button>
         )
       })}
-      <div className="col-span-2 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-clay-600 to-clay-800 p-3.5 text-white shadow-[0_6px_16px_-6px_rgba(30,78,140,0.6)] sm:col-span-1">
+      <div className="col-span-2 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-clay-600 to-clay-800 p-3.5 text-white shadow-[0_6px_16px_-6px_rgba(30,78,140,0.6)] sm:col-span-3 xl:col-span-2">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15"><Wallet size={18} /></span>
         <span className="min-w-0">
-          <span className="block text-xs text-clay-100">ยอดรวมที่แสดง (บาท)</span>
-          <span className="block truncate text-xl font-semibold tabular-nums">{formatMoney(total)}</span>
+          <span className="block text-xs text-clay-100">ยอดรวม (บาท)</span>
+          <span className="block whitespace-nowrap text-xl font-semibold tabular-nums" title={formatMoney(total)}>{formatMoney(total)}</span>
         </span>
       </div>
     </div>
