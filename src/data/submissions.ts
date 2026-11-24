@@ -138,11 +138,18 @@ export async function signBlockAsSelf(sub: SubmissionSummary, block: SignatureBl
   await assignSigners(sub.id, assignmentsForSelfSign(sub.signatures, block, me))
   await signDocument(sub.id, block.id)
 }
-// May this signature be taken back? The person whose signature it is can, and
-// so can the document's owner — matching the check inside unsign_document().
-// Only a signature that has actually been put on the document can be removed.
-export function canRemoveSignature(sig: DocSignature, myUid: string, ownerUid: string): boolean {
-  return sig.status === 'signed' && (sig.assignedUid === myUid || ownerUid === myUid)
+// May this signature be taken back? Only by the person whose signature it is —
+// not the document's owner, not an admin (unsign_document and the
+// protect_others_signatures trigger hold the same line). A requester who needs
+// an approved document changed makes a new round (R1) instead.
+export function canRemoveSignature(sig: DocSignature, myUid: string): boolean {
+  return sig.status === 'signed' && sig.assignedUid === myUid
+}
+
+/** Someone other than the requester has signed: the document is approved
+ *  as it stands, and only a new round (R1) or cancelling it changes that. */
+export function signedByOthers(s: Pick<SubmissionSummary, 'signatures' | 'createdBy'>): boolean {
+  return (s.signatures ?? []).some(x => x.status === 'signed' && x.assignedUid !== s.createdBy)
 }
 // Take one signature back off a document — the line goes blank again and can be
 // signed again or sent to someone else. Everyone else's signatures stay put

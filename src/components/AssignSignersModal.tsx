@@ -197,7 +197,7 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                             <span className="inline-flex items-center gap-1.5 justify-self-start rounded-full bg-olive-50 px-3 py-1 text-xs font-medium text-olive-700">
                               <CheckCircle2 size={14} /> เซ็นแล้วโดย {sig.assignedName} · {formatDateTime(sig.signedAt)}
                             </span>
-                            {canRemoveSignature(sig, currentUid, submission.createdBy) ? (
+                            {canRemoveSignature(sig, currentUid) ? (
                               <button type="button" disabled={!!rowBusy} onClick={() => unsignNow(b.id, b.label, sig.assignedName)}
                                 className={`${ROW_BTN} border-rose-200 bg-white text-brick-600 hover:bg-rose-50 justify-self-start sm:justify-self-end`}>
                                 {rowBusy === b.id ? <Spinner size={14} /> : <Eraser size={14} />} ลบลายเซ็น

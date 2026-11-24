@@ -238,7 +238,7 @@ export default function FormPage() {
       // Nobody else is on it: clear it back to a plain saved document rather
       // than leave a line waiting on the requester.
       if (sigs.every(x => x.assignedUid === profile?.uid)) await cancelSigning(savedId)
-      else for (const s of sigs.filter(x => x.status === 'signed')) await unsignDocument(savedId, s.blockId)
+      else for (const s of sigs.filter(x => x.status === 'signed' && x.assignedUid === profile?.uid)) await unsignDocument(savedId, s.blockId)
       setSigs((await getSubmission(savedId))?.signatures ?? [])
       return true
     } catch (e) {

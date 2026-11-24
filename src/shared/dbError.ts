@@ -18,6 +18,10 @@ export function dbErrorMessage(e: unknown): string {
   if (msg.includes('SELF_APPROVAL')) {
     return 'ผู้เบิกเซ็นได้เฉพาะช่องของผู้เบิก — ช่องผู้อนุมัติและช่องอื่นต้องให้คนอื่นเซ็น'
   }
+  // unsign_document / cancel_signing / protect_others_signatures (supabase/2026-11-24c-own-signature-only.sql)
+  if (msg.includes('SIGNED_BY_OTHERS')) {
+    return 'ลายเซ็นของคนอื่นลบไม่ได้ — คนที่เซ็นเท่านั้นลบลายเซ็นของตัวเองได้ · ต้องแก้เอกสารที่อนุมัติแล้วให้ใช้ “แก้ไขเป็นฉบับใหม่ (R1)”'
+  }
   // protect_central_fields: a field the employee master owns (before
   // 2026-11-20c-employee-edit-here.sql), or the sync's own bookkeeping.
   if (msg.includes('CENTRAL_FIELD:')) {

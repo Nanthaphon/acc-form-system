@@ -1,11 +1,12 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import { dbErrorMessage } from '../../shared/dbError'
 import OlderVersionRow, { roundLabel } from '../../components/OlderVersionRow'
 import EmptyRow from '../../components/EmptyRow'
 import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Ban, ChevronDown, ChevronRight, Copy, FilePen, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning, voidingAvailable } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning, signedByOthers, voidingAvailable } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -128,13 +129,11 @@ export default function HistoryPage() {
   }
 
   async function onCancelSign(r: SubmissionSummary) {
-    const signed = (r.signatures ?? []).filter(x => x.status === 'signed').length
-    const msg = signed > 0
-      ? `ยกเลิกการส่งเซ็น "${r.docNumber}" ?\nมีลายเซ็นแล้ว ${signed} ช่อง — การยกเลิกจะลบลายเซ็นทั้งหมด และกลับไปสถานะ "บันทึกแล้ว"`
-      : `ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับไปสถานะ "บันทึกแล้ว"`
-    if (!(await uiConfirm(msg, { tone: 'danger', confirmText: 'ยกเลิกส่งเซ็น' }))) return
+    // Offered only while nobody else has signed (signedByOthers): the only
+    // signature it can clear is the requester's own.
+    if (!(await uiConfirm(`ยกเลิกการส่งเซ็น "${r.docNumber}" ? เอกสารจะกลับไปสถานะ "บันทึกแล้ว"`, { tone: 'danger', confirmText: 'ยกเลิกส่งเซ็น' }))) return
     try { await cancelSigning(r.id); load() }
-    catch (e: any) { uiAlert('ยกเลิกไม่สำเร็จ: ' + (e?.message || 'เกิดข้อผิดพลาด')) }
+    catch (e) { uiAlert(dbErrorMessage(e), { title: 'ยกเลิกไม่สำเร็จ' }) }
   }
   return (
     <div>
@@ -209,7 +208,7 @@ export default function HistoryPage() {
                         <ActionGroupItem label="ดูเอกสาร / สั่งพิมพ์" to={`/submission/${r.id}/preview`} icon={<Printer size={15} />} />
                         <ActionGroupItem label="คัดลอกเป็นเอกสารใหม่" to={`/form/${r.formType}?clone=${r.id}`} icon={<Copy size={15} />} />
                         {!voided && !primary && (canSignOrSend(r) || canSignNow()) && <ActionGroupItem label="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Send size={15} />} />}
-                        {!voided && subStatus(r) === 'pending' && <ActionGroupItem label="ยกเลิกการส่งให้เซ็น" onClick={() => onCancelSign(r)} icon={<RotateCcw size={15} />} />}
+                        {!voided && subStatus(r) === 'pending' && !signedByOthers(r) && <ActionGroupItem label="ยกเลิกการส่งให้เซ็น" onClick={() => onCancelSign(r)} icon={<RotateCcw size={15} />} />}
                         {!voided && !deletable && canVoid && <ActionGroupItem label="ยกเลิกเอกสาร" onClick={async () => { if (await askAndVoid(r)) load() }} icon={<Ban size={15} />} />}
                       </ActionGroup>
                       <span>

@@ -481,11 +481,14 @@ const rpcRun = (name: string, args: any) => {
     case 'unsign_document': {
       const s = db.submissions.find(x => x.id === args.sub_id)
       const b = s?.signatures?.find((x: any) => x.blockId === args.block_id)
+      // As in the database: only the one who signed takes it back.
+      if (b && b.assignedUid !== ME) return { data: null, error: { message: 'SIGNED_BY_OTHERS' } }
       if (b) { b.status = 'pending'; delete b.signatureImage; delete b.signedAt }
       return { data: null, error: null }
     }
     case 'cancel_signing': {
       const s = db.submissions.find(x => x.id === args.sub_id)
+      if (s?.signatures?.some((x: any) => x.status === 'signed' && x.assignedUid !== s.createdBy)) return { data: null, error: { message: 'SIGNED_BY_OTHERS' } }
       if (s) s.signatures = []
       return { data: null, error: null }
     }

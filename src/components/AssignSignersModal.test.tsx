@@ -12,7 +12,7 @@ vi.mock('../data/submissions', () => ({
   signDocument: vi.fn(() => Promise.resolve()),
   unsignDocument: vi.fn(() => Promise.resolve()),
   signBlockAsSelf: vi.fn(() => Promise.resolve()),
-  canRemoveSignature: (sig: { status: string; assignedUid: string }, me: string, owner: string) => sig.status === 'signed' && (sig.assignedUid === me || owner === me),
+  canRemoveSignature: (sig: { status: string; assignedUid: string }, me: string) => sig.status === 'signed' && sig.assignedUid === me,
 }))
 vi.mock('./dialog/dialogService', () => ({ uiAlert: vi.fn(), uiConfirm: vi.fn(() => Promise.resolve(true)) }))
 vi.mock('../data/notify', async importOriginal => ({
@@ -146,9 +146,12 @@ describe('เซ็น / ส่งเซ็น — signing or clearing one line 
     expect(screen.queryByRole('button', { name: /เซ็นตรงนี้/ })).toBeNull()
   })
 
-  it('takes one signature back off the document it belongs to', async () => {
+  // A signature is taken back only by the one who signed — the requester who
+  // needs an approved document changed makes a new round (R1) instead.
+  it('never lets the requester take the approver signature off their document', () => {
     show([checkerSigned])
-    fireEvent.click(screen.getByRole('button', { name: /ลบลายเซ็น/ }))
-    await waitFor(() => expect(unsignDocument).toHaveBeenCalledWith('s1', 'checker'))
+    expect(screen.getByText(/เซ็นแล้วโดย ไกรธัช จิระกรธนัน/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /ลบลายเซ็น/ })).toBeNull()
+    expect(unsignDocument).not.toHaveBeenCalled()
   })
 })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Submission, DocSignature } from '../types/schema'
 import { canRequestSignatures, DEFAULT_SIGNATURE_BLOCKS } from '../types/schema'
-import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature, isSigned, onlyOwnerSigns, hasUnsignedLine } from './submissions'
+import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature, signedByOthers, isSigned, onlyOwnerSigns, hasUnsignedLine } from './submissions'
 
 function sub(signatures?: DocSignature[]): Submission {
   return {
@@ -120,22 +120,31 @@ describe('assignmentsForSelfSign', () => {
   })
 })
 
-describe('canRemoveSignature', () => {
-  const ME = 'uid-1', OWNER = 'uid-1', OTHER = 'uid-9'
+describe('canRemoveSignature — a signature is taken back only by the one who signed', () => {
+  const ME = 'uid-1', OTHER = 'uid-9'
   const s = (status: 'pending' | 'signed', assignedUid: string): DocSignature =>
     ({ blockId: 'b', blockLabel: 'b', assignedUid, assignedName: 'x', status })
 
   it('lets me take back a signature I put on', () => {
-    expect(canRemoveSignature(s('signed', ME), ME, OTHER)).toBe(true)
+    expect(canRemoveSignature(s('signed', ME), ME)).toBe(true)
   })
-  it('lets the document owner clear a signature someone else left', () => {
-    expect(canRemoveSignature(s('signed', OTHER), OWNER, OWNER)).toBe(true)
+  it('never lets the document owner clear the approver signature', () => {
+    expect(canRemoveSignature(s('signed', OTHER), ME)).toBe(false)
   })
   it('refuses when the line was never signed — there is nothing to take back', () => {
-    expect(canRemoveSignature(s('pending', ME), ME, ME)).toBe(false)
+    expect(canRemoveSignature(s('pending', ME), ME)).toBe(false)
   })
-  it('refuses someone else\u2019s signature on a document that is not mine', () => {
-    expect(canRemoveSignature(s('signed', OTHER), 'uid-2', OWNER)).toBe(false)
+})
+
+describe('signedByOthers', () => {
+  const sig = (assignedUid: string, status: 'pending' | 'signed' = 'signed'): DocSignature =>
+    ({ blockId: assignedUid, blockLabel: 'b', assignedUid, assignedName: 'x', status })
+  it('is false while only the requester has signed, or others are still waiting', () => {
+    expect(signedByOthers({ createdBy: 'me', signatures: [sig('me'), sig('boss', 'pending')] })).toBe(false)
+    expect(signedByOthers({ createdBy: 'me', signatures: [] })).toBe(false)
+  })
+  it('is true once anyone else has signed', () => {
+    expect(signedByOthers({ createdBy: 'me', signatures: [sig('me'), sig('boss')] })).toBe(true)
   })
 })
 
