@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Tag } from 'lucide-react'
 import FilterSelect from './FilterSelect'
 import { setDocStatus } from '../data/submissions'
 import { uiAlert } from './dialog/dialogService'
@@ -33,7 +34,8 @@ export default function DocStatusPicker({ sub, options, onChanged }: {
 
   return (
     <FilterSelect
-      className={`w-40 ${saving ? 'pointer-events-none opacity-50' : ''}`}
+      chip={{ unsetLabel: 'ตั้งป้าย', icon: <Tag size={12} className="shrink-0" /> }}
+      className={saving ? 'pointer-events-none opacity-50' : ''}
       ariaLabel={`ป้ายสถานะ ${sub.docNumber}`}
       allLabel="— ไม่ได้ตั้ง —"
       searchable={false}

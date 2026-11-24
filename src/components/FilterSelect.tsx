@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
-import { Check, ChevronDown, Search } from 'lucide-react'
+import type { KeyboardEvent, ReactNode } from 'react'
+import { Check, ChevronDown, Plus, Search } from 'lucide-react'
 
 export interface FilterOption {
   value: string
@@ -17,12 +17,14 @@ interface Props {
   ariaLabel: string
   searchable?: boolean      // a search box at the top; on by default past 8 options
   className?: string
+  /** A small chip in a table row rather than a filter box: dashed "+ …" while unset, a coloured tag once set. */
+  chip?: { unsetLabel: string; icon?: ReactNode }
 }
 
 // A filter's drop-down, drawn by the app rather than the browser: grouped
 // under headings, searchable when long, the picked one ticked — and the button
 // itself turns teal while it filters, so what is narrowing the list shows.
-export default function FilterSelect({ value, onChange, options, allLabel, ariaLabel, searchable, className = '' }: Props) {
+export default function FilterSelect({ value, onChange, options, allLabel, ariaLabel, searchable, className = '', chip }: Props) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [active, setActive] = useState(0)
@@ -90,14 +92,28 @@ export default function FilterSelect({ value, onChange, options, allLabel, ariaL
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         onClick={() => (open ? setOpen(false) : openList())}
-        className={`flex w-full items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-sm transition-all focus:outline-none focus:ring-2 focus:ring-clay-600/15 ${
-          filtering
-            ? 'border-clay-200 bg-clay-50 text-clay-800 hover:border-clay-300'
-            : 'border-stone-200/60 bg-white text-stone-700 hover:border-stone-300'
-        } ${open ? 'border-clay-600 ring-2 ring-clay-600/15' : ''}`}
+        className={chip
+          ? `inline-flex max-w-[11rem] items-center gap-1.5 rounded-md border px-2 py-0.5 text-[12px] font-medium leading-5 transition-colors focus:outline-none focus:ring-2 focus:ring-clay-600/20 ${
+              filtering
+                ? 'border-transparent bg-clay-100 text-clay-800 hover:bg-clay-200/70'
+                : 'border-dashed border-stone-300 bg-white text-stone-500 hover:border-clay-400 hover:text-clay-700'
+            }`
+          : `flex w-full items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-sm transition-all focus:outline-none focus:ring-2 focus:ring-clay-600/15 ${
+              filtering
+                ? 'border-clay-200 bg-clay-50 text-clay-800 hover:border-clay-300'
+                : 'border-stone-200/60 bg-white text-stone-700 hover:border-stone-300'
+            } ${open ? 'border-clay-600 ring-2 ring-clay-600/15' : ''}`}
       >
-        <span className="min-w-0 flex-1 truncate">{picked?.label ?? allLabel}</span>
-        <ChevronDown size={15} className={`shrink-0 transition-transform ${filtering ? 'text-clay-600' : 'text-stone-400'} ${open ? 'rotate-180' : ''}`} />
+        {chip ? (
+          filtering
+            ? <>{chip.icon}<span className="min-w-0 truncate">{picked?.label ?? value}</span><ChevronDown size={13} className={`shrink-0 text-clay-500 transition-transform ${open ? 'rotate-180' : ''}`} /></>
+            : <><Plus size={13} className="shrink-0" /><span className="truncate">{chip.unsetLabel}</span></>
+        ) : (
+          <>
+            <span className="min-w-0 flex-1 truncate">{picked?.label ?? allLabel}</span>
+            <ChevronDown size={15} className={`shrink-0 transition-transform ${filtering ? 'text-clay-600' : 'text-stone-400'} ${open ? 'rotate-180' : ''}`} />
+          </>
+        )}
       </button>
 
       {open && (
