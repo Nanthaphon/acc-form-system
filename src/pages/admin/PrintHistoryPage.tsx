@@ -165,6 +165,14 @@ export default function PrintHistoryPage() {
         icon={<Printer size={20} />}
         title="ประวัติการพิมพ์ทั้งหมดในระบบ"
       />
+      {/* Said out loud, not hidden: without supabase/2026-10-28-void-documents.sql the
+          cancel and R1 buttons cannot work, and quietly leaving them out is how the
+          office ended up cancelling documents by hand with a tag. */}
+      {!loading && !voidingAvailable() && (
+        <div role="alert" className="mb-4 rounded-xl border border-ochre-200 bg-ochre-50 px-4 py-3 text-sm text-ochre-700">
+          ฐานข้อมูลยังไม่ได้ติดตั้งระบบยกเลิกเอกสาร — ปุ่ม “ยกเลิกเอกสาร” และ “แก้ไขเป็นฉบับใหม่ (R1)” จึงยังใช้ไม่ได้ · ผู้ดูแลระบบต้องรัน supabase/2026-10-28-void-documents.sql
+        </div>
+      )}
       <StatusTiles docs={chainRows(rows).map(c => c.latest)} shown={chains.map(c => c.latest)} status={filters.status}
         onStatus={status => changeFilters({ ...filters, status })} />
       <div className="mb-4 rounded-2xl border border-stone-200/60 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">

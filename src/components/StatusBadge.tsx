@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Ban, Clock3, UserRound } from 'lucide-react'
 import type { SubmissionSummary } from '../types/schema'
-import { subStatus, statusMeta, statusLabel } from '../data/submissions'
+import { displayStatus, subStatus, statusMeta, statusLabel } from '../data/submissions'
 import { formatDateTime } from '../shared/date'
 
 interface TooltipPos {
@@ -19,7 +19,7 @@ function pendingCountText(count: number): string {
 // who still hasn't signed; on a cancelled one, why, and what replaced it.
 export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
   const st = subStatus(sub)
-  const meta = statusMeta(st)
+  const meta = statusMeta(displayStatus(sub))
   const ref = useRef<HTMLSpanElement>(null)
   const [pos, setPos] = useState<TooltipPos | null>(null)
 

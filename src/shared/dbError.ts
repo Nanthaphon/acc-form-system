@@ -14,6 +14,10 @@ export function dbErrorMessage(e: unknown): string {
     const fn = /function (?:\w+\.)?(\w+)/.exec(msg)?.[1]
     return `ฐานข้อมูลยังไม่ได้อัปเดตให้ตรงกับระบบเวอร์ชันนี้${fn ? ` (ไม่พบฟังก์ชัน ${fn})` : ''} — ผู้ดูแลระบบต้องรันไฟล์ SQL ล่าสุดใน Supabase ก่อน`
   }
+  // forbid_self_approval (supabase/2026-11-24b-one-way-per-job.sql)
+  if (msg.includes('SELF_APPROVAL')) {
+    return 'ผู้เบิกเซ็นได้เฉพาะช่องของผู้เบิก — ช่องผู้อนุมัติและช่องอื่นต้องให้คนอื่นเซ็น'
+  }
   // protect_central_fields: a field the employee master owns (before
   // 2026-11-20c-employee-edit-here.sql), or the sync's own bookkeeping.
   if (msg.includes('CENTRAL_FIELD:')) {

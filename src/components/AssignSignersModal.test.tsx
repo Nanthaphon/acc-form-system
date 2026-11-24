@@ -127,10 +127,18 @@ describe('เซ็น / ส่งเซ็น', () => {
 describe('เซ็น / ส่งเซ็น — signing or clearing one line at once', () => {
   const checkerSigned: DocSignature = { blockId: 'checker', blockLabel: 'ผู้ตรวจสอบ', assignedUid: 'boss', assignedName: 'ไกรธัช จิระกรธนัน', status: 'signed', signedAt: 1 }
 
-  it('lets an admin sign another line on the spot', async () => {
+  // The requester signs only their own line: approving one's own claim is no approval.
+  it('never offers the requester เซ็นตรงนี้ on another line of their own document', () => {
     show([], 'data:image/png;base64,AA', true)
-    fireEvent.click(screen.getByRole('button', { name: /เซ็นตรงนี้/ }))
-    await waitFor(() => expect(signBlockAsSelf).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }), { id: 'checker', label: 'ผู้ตรวจสอบ' }, { uid: 'u1', name: 'นันทพล นายาต' }))
+    expect(screen.queryByRole('button', { name: /เซ็นตรงนี้/ })).toBeNull()
+    expect(signBlockAsSelf).not.toHaveBeenCalled()
+  })
+
+  it('leaves the requester out of the people who can sign the other lines', () => {
+    show()
+    fireEvent.focus(screen.getByRole('textbox', { name: 'ผู้เซ็นช่อง ผู้ตรวจสอบ' }))
+    expect(screen.getByRole('button', { name: 'ไกรธัช จิระกรธนัน' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'นันทพล นายาต' })).toBeNull()
   })
 
   it('offers no เซ็นตรงนี้ to someone who is not an admin', () => {

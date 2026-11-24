@@ -212,7 +212,8 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                                 ariaLabel={`ผู้เซ็นช่อง ${b.label}`}
                                 value={picked}
                                 onChange={uid => setAssign({ ...assign, [b.id]: uid })}
-                                signers={signers}
+                                // The requester never signs another line of their own document.
+                                signers={signers.filter(s => s.uid !== submission.createdBy)}
                                 emptyLabel="— ไม่ส่งใคร (เซ็นบนกระดาษ) —"
                               />
                             </div>
@@ -225,7 +226,8 @@ export default function AssignSignersModal({ submission, settings, signers, curr
                                 <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500"><PenLine size={13} /> เซ็นบนกระดาษ</span>
                               )}
                               {/* An admin can sign any line on the spot, without sending it anywhere. */}
-                              {canSignAny && currentSignature && (
+                              {/* Never on one's own document: the requester signs only their own line. */}
+                              {canSignAny && currentSignature && submission.createdBy !== currentUid && (
                                 <button type="button" disabled={!!rowBusy} onClick={() => signNow(b.id, b.label)}
                                   className={`${ROW_BTN} border-clay-200 bg-white text-clay-700 hover:bg-clay-50`}>
                                   {rowBusy === b.id ? <Spinner size={14} /> : <Signature size={14} />} เซ็นตรงนี้

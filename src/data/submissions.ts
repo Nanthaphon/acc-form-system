@@ -299,6 +299,14 @@ const STATUS_META: Record<SubmissionStatus, { label: string; className: string }
 }
 export function statusMeta(s: SubmissionStatus) { return STATUS_META[s] }
 
+/** The status as shown, counted and filtered. Signed by the requester alone is
+ *  not approved by anyone: it goes with บันทึกแล้ว, not เซ็นครบ (its label says
+ *  ผู้เบิกเซ็นแล้ว). subStatus stays the raw state the rules work from. */
+export function displayStatus(s: SubmissionSummary): SubmissionStatus {
+  const st = subStatus(s)
+  return st === 'signed' && onlyOwnerSigns(s) ? 'done' : st
+}
+
 // How many of the assigned signatures are done.
 export function signProgress(s: SubmissionSummary): { signed: number; total: number } {
   const sigs = s.signatures ?? []

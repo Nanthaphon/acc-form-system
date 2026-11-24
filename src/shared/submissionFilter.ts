@@ -1,7 +1,7 @@
 import type { FormGroup, FormSettings, SubmissionSummary } from '../types/schema'
 import { canSeeForm, isActive } from '../types/schema'
 import { folderIn, folderOpen } from './folders'
-import { subStatus } from '../data/submissions'
+import { displayStatus } from '../data/submissions'
 
 // The folders and forms a filter offers someone: those they may use — the
 // rule of the folder screen (DashboardPage): their access group, the form
@@ -71,7 +71,7 @@ export function applyFilters<T extends SubmissionSummary>(rows: T[], f: Filters,
     if (f.emp && r.createdByEmployeeId !== f.emp) return false
     if (f.formType && r.formType !== f.formType) return false
     if (f.groupId && formGroup && !inPicked(formGroup(r.formType))) return false
-    if (f.status && subStatus(r) !== f.status) return false
+    if (f.status && displayStatus(r) !== f.status) return false
     if (f.docStatus && (f.docStatus === NO_DOC_STATUS ? !!r.docStatus : r.docStatus !== f.docStatus)) return false
     if (r.createdAt < dStart || r.createdAt > dEnd) return false
     if (needle) {

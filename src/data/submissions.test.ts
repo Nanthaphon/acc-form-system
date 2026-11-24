@@ -159,3 +159,14 @@ describe('a cancelled document', () => {
     expect(statusLabel(s)).toBe('ยกเลิก')
   })
 })
+
+describe('displayStatus — one status everywhere', () => {
+  it('counts a document only its requester signed with บันทึกแล้ว, not เซ็นครบ', async () => {
+    const { displayStatus } = await import('./submissions')
+    const own: DocSignature = { blockId: 'requester', blockLabel: 'ผู้เบิก', assignedUid: 'uid-1', assignedName: 'ผู้เบิก', status: 'signed' }
+    expect(subStatus(sub([own]))).toBe('signed')        // the raw state the rules use
+    expect(displayStatus(sub([own]))).toBe('done')      // what is shown, counted and filtered
+    expect(displayStatus(sub([own, sig('signed')]))).toBe('signed')
+    expect(displayStatus(sub([own, sig('pending')]))).toBe('pending')
+  })
+})

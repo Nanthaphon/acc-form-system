@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Ban, CircleCheck, Clock3, FileCheck2, Files, Wallet } from 'lucide-react'
 import type { SubmissionStatus, SubmissionSummary } from '../types/schema'
-import { subStatus, submissionAmount } from '../data/submissions'
+import { displayStatus, submissionAmount } from '../data/submissions'
 import { formatMoney } from '../shared/money'
 
 // The documents at a glance, one tile a status — and each tile is the status
@@ -22,7 +22,7 @@ export default function StatusTiles({ docs, shown, status, onStatus }: {
   status: string
   onStatus: (status: string) => void
 }) {
-  const count = (st: SubmissionStatus | '') => (st ? docs.filter(d => subStatus(d) === st).length : docs.length)
+  const count = (st: SubmissionStatus | '') => (st ? docs.filter(d => displayStatus(d) === st).length : docs.length)
   const total = shown.filter(d => !d.voided).reduce((sum, d) => sum + submissionAmount(d), 0)
   return (
     <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
