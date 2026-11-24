@@ -238,12 +238,15 @@ const signedBy = (entry: Partial<DocSignature>) => JSON.stringify([entry])
 export async function countMyPendingToSign(uid: string): Promise<number> {
   const { count } = await supabase.from('submissions').select('id', { count: 'exact', head: true })
     .contains('signatures', signedBy({ assignedUid: uid, status: 'pending' }))
+    .neq('createdBy', uid) // one's own document is dealt with on ประวัติ, not waited on here
   return count ?? 0
 }
 // Every document the current user is assigned to (pending or already signed) —
-// so signers keep a record of what they signed.
+// so signers keep a record of what they signed. Not their own documents: signing
+// a line of one's own (เซ็นตรงนี้ on ผู้อนุมัติ) assigns it to oneself, and that
+// is no reason for it to wait in ฟอร์มเอกสารรอเซ็น.
 export async function listMyAssigned(uid: string): Promise<SubmissionSummary[]> {
-  return listRows(q => q.contains('signatures', signedBy({ assignedUid: uid })).order('createdAt', { ascending: false }))
+  return listRows(q => q.contains('signatures', signedBy({ assignedUid: uid })).neq('createdBy', uid).order('createdAt', { ascending: false }))
 }
 
 // True once anybody has actually signed. From that moment the document is a
