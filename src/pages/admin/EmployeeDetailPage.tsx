@@ -3,7 +3,7 @@ import EmptyRow from '../../components/EmptyRow'
 import { PageSkeleton } from '../../components/TableSkeleton'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FileText, Pencil, Printer, Signature, Trash2, UserRound } from 'lucide-react'
+import { AtSign, FileText, KeyRound, Pencil, Printer, Signature, Trash2, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid } from '../../data/users'
 import { listMySubmissions, submissionAmount, deleteSubmission, isSigned } from '../../data/submissions'
@@ -13,10 +13,11 @@ import { listGroups } from '../../data/formGroups'
 import { listCompanies } from '../../data/companies'
 import { listAccessGroups } from '../../data/accessGroups'
 import type { UserProfile, SubmissionSummary, FormSettings, Company, AccessGroup, FormGroup } from '../../types/schema'
-import { formatDate, formatDateTime } from '../../shared/date'
+import { formatDate } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
-import { canManageLogin, isSuperAdmin, roleLabel, roleTone } from '../../shared/roles'
+import { canManageLogin, isSuperAdmin, passwordState, PASSWORD_STATE, roleLabel, roleTone } from '../../shared/roles'
+import { avatarTone, initialsOf } from '../../shared/initials'
 import { chainRows, chainLength } from '../../shared/revisionChain'
 import { usePagination } from '../../shared/usePagination'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
@@ -24,7 +25,7 @@ import Pagination from '../../components/Pagination'
 import { ActionGroup, ActionGroupItem } from '../../components/RowActions'
 import ActionIconButton from '../../components/ActionIconButton'
 import StatusBadge from '../../components/StatusBadge'
-import LoginInfo from '../../components/LoginInfo'
+import CopyButton from '../../components/CopyButton'
 import SignatureField from '../../components/SignatureField'
 import SetPasswordModal from '../../components/SetPasswordModal'
 import ChangeUsernameModal from '../../components/ChangeUsernameModal'
@@ -33,12 +34,10 @@ import DocNumberCell from '../../components/DocNumberCell'
 import { formatMoney } from '../../shared/money'
 
 const HEADERS = [
-  { label: 'ชื่อฟอร์ม', cls: '' },
-  { label: 'เลขที่', cls: '' },
+  { label: 'เอกสาร', cls: '' },
   { label: 'วันที่', cls: '' },
-  { label: 'ยอด', cls: 'text-right' },
+  { label: 'ยอด (บาท)', cls: 'text-right' },
   { label: 'สถานะ', cls: '' },
-  { label: 'พิมพ์ล่าสุด', cls: '' },
   { label: '', cls: '' },
 ]
 
@@ -105,12 +104,10 @@ export default function EmployeeDetailPage() {
   const canManage = canManageLogin(me, profile)
   const canSetPassword = canManage && profile.uid !== me?.uid
   const name = `${profile.firstName} ${profile.lastName}`.trim()
+  const pw = passwordState(profile)
   const company = companies.find(c => c.id === profile.companyId)
   const details: { label: string; value?: string | null }[] = [
-    { label: 'ชื่อ-นามสกุล', value: name },
-    { label: 'ชื่อเล่น', value: profile.nickname },
     { label: 'รหัสพนักงาน', value: profile.employeeId },
-    { label: 'ตำแหน่ง', value: profile.position },
     { label: 'แผนก', value: profile.department },
     { label: 'บริษัท', value: company?.shortName || company?.name },
     { label: 'อีเมล', value: profile.email },
@@ -130,40 +127,73 @@ export default function EmployeeDetailPage() {
         )}
       />
 
-      {/* The person's details, label above value */}
-      <section className={`${ui.card} mb-6`}>
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          <SectionTitle icon={<UserRound size={16} />}>ข้อมูลพนักงาน</SectionTitle>
-          <Badge tone={roleTone(profile)}>{roleLabel(profile)}</Badge>
-          {profile.centralStatus === 'resigned' && <Badge tone="amber">ลาออกแล้ว</Badge>}
-        </div>
-        <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
-          {details.map(d => (
-            <div key={d.label} className="min-w-0">
-              <dt className="text-xs text-stone-500">{d.label}</dt>
-              <dd className={`mt-1 break-words text-sm ${d.value ? 'font-medium text-stone-900' : 'text-stone-400'}`}>{d.value || '—'}</dd>
+      {/* Everything about the person in one card: who, where, how they sign in, their signature. */}
+      <section className={`${ui.card} mb-8`}>
+        <div className="flex flex-wrap items-start gap-x-10 gap-y-5">
+          <div className="flex min-w-[16rem] items-center gap-4">
+            <span aria-hidden className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold ${avatarTone(profile.employeeId)}`}>
+              {initialsOf(profile.firstName, profile.lastName) || '?'}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold text-stone-900">{name || '—'}</h2>
+                {profile.nickname && <span className="text-sm text-stone-500">({profile.nickname})</span>}
+              </div>
+              <p className="text-sm text-stone-600">{profile.position || '—'}</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <Badge tone={roleTone(profile)}>{roleLabel(profile)}</Badge>
+                {profile.centralStatus === 'resigned' && <Badge tone="amber">ลาออกแล้ว</Badge>}
+              </div>
             </div>
-          ))}
-        </dl>
-      </section>
-
-      <div className="mb-8 grid gap-6 lg:grid-cols-2">
-        <LoginInfo
-          profile={profile}
-          onSetPassword={canSetPassword ? () => setSettingPassword(true) : undefined}
-          onChangeUsername={viewerIsSuper ? () => setChangingUsername(true) : undefined}
-        />
-        {/* An admin can put a signature on the account so the person can sign online. */}
-        <div className={ui.card}>
-          <SectionTitle icon={<Signature size={16} />} className="mb-4">ลายเซ็น</SectionTitle>
-          <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
+          </div>
+          <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3">
+            {details.map(d => (
+              <div key={d.label} className="min-w-0">
+                <dt className="text-xs text-stone-500">{d.label}</dt>
+                <dd className={`mt-0.5 break-words text-sm ${d.value ? 'text-stone-900' : 'text-stone-400'}`}>{d.value || '—'}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-      </div>
+
+        <div className="mt-6 grid gap-6 border-t border-stone-100 pt-6 lg:grid-cols-2 lg:divide-x lg:divide-stone-100">
+          {/* Signing in: the username, and the password while it is still the default */}
+          <div>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-stone-900"><KeyRound size={15} className="text-clay-600" /> เข้าสู่ระบบ</h3>
+              <div className="ml-auto flex gap-1">
+                {viewerIsSuper && <button type="button" onClick={() => setChangingUsername(true)} className={ui.btnGhost}><AtSign size={15} /> แก้ชื่อผู้ใช้</button>}
+                {canSetPassword && <button type="button" onClick={() => setSettingPassword(true)} className={ui.btnGhost}><KeyRound size={15} /> ตั้งรหัสผ่านใหม่</button>}
+              </div>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-3">
+              <div>
+                <dt className="text-xs text-stone-500">ชื่อผู้ใช้</dt>
+                <dd className="mt-0.5 flex items-center gap-1 font-mono text-sm text-stone-900">{profile.employeeId}<CopyButton value={profile.employeeId} label="คัดลอกชื่อผู้ใช้" /></dd>
+              </div>
+              <div>
+                <dt className="text-xs text-stone-500">รหัสผ่าน</dt>
+                <dd className="mt-0.5 flex items-center gap-1.5 text-sm">
+                  {pw === 'default'
+                    ? <><span className="font-mono text-stone-900">{profile.employeeId}</span><CopyButton value={profile.employeeId} label="คัดลอกรหัสผ่าน" /></>
+                    : <span className="font-mono tracking-widest text-stone-400">••••••</span>}
+                  <Badge tone={PASSWORD_STATE[pw].tone}>{PASSWORD_STATE[pw].label}</Badge>
+                </dd>
+              </div>
+            </dl>
+          </div>
+          {/* An admin can put a signature on the account so the person can sign online. */}
+          <div className="lg:pl-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-900"><Signature size={15} className="text-clay-600" /> ลายเซ็น</h3>
+            <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
+          </div>
+        </div>
+      </section>
 
       {/* Their documents — the same filter bar, table and pages as ประวัติการพิมพ์ทั้งหมด */}
       <section>
         <SectionTitle icon={<FileText size={16} />} className="mb-3">เอกสาร</SectionTitle>
-        <div className="mb-4">
+        <div className="mb-4 rounded-2xl border border-stone-200/60 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
           <SubmissionFilterBar value={filters} onChange={changeFilters} forms={forms} groups={folders} formGroup={formGroup}
             resultCount={chains.length} total={chainRows(subs).length} />
         </div>
@@ -176,29 +206,25 @@ export default function EmployeeDetailPage() {
               <tbody className={ui.tbody}>
                 {pager.pageItems.map(({ latest: r, older }) => (
                   <tr key={r.id} className={ui.tr}>
-                    <td className={`${ui.td} whitespace-nowrap font-medium text-stone-900`}>
+                    <td className={`${ui.td} whitespace-nowrap`}>
+                      {/* The form's name over its number, as on the history pages */}
                       <div className="flex items-center gap-1.5">
-                        <span className="max-w-[240px] truncate" title={formName(r.formType)}>{formName(r.formType)}</span>
+                        <span className="max-w-[260px] truncate font-medium text-stone-900" title={formName(r.formType)}>{formName(r.formType)}</span>
                         {older.length > 0 && (
                           <span className="rounded-md border border-stone-200 px-1.5 text-[11px] font-medium text-stone-600" title="จำนวนฉบับรวมฉบับแก้ไข">
                             {chainLength({ latest: r, older })} ฉบับ
                           </span>
                         )}
                       </div>
+                      <div className="mt-0.5 font-mono text-[12px] text-stone-500"><DocNumberCell sub={r} /></div>
                     </td>
-                    <td className={`${ui.td} whitespace-nowrap font-mono text-[13px]`}><DocNumberCell sub={r} /></td>
                     <td className={`${ui.td} whitespace-nowrap`}>{formatDate(r.createdAt)}</td>
-                    <td className={`${ui.td} whitespace-nowrap text-right tabular-nums`}>{formatMoney(submissionAmount(r))}</td>
+                    <td className={`${ui.td} whitespace-nowrap text-right font-semibold tabular-nums text-stone-900`}>{formatMoney(submissionAmount(r))}</td>
                     <td className={`${ui.td} whitespace-nowrap`}>
                       <span className="inline-flex items-center gap-2">
                         <StatusBadge sub={r} />
                         {editLabel(r, vcounts) && <span className="text-xs text-ochre-700" title="จำนวนครั้งที่แก้ไขหลังบันทึก">✎ {editLabel(r, vcounts)}</span>}
                       </span>
-                    </td>
-                    <td className={`${ui.td} whitespace-nowrap`}>
-                      {r.printCount > 0
-                        ? <>{formatDateTime(r.lastPrintedAt)} <span className="text-xs text-stone-500">· {r.printCount} ครั้ง</span></>
-                        : <span className="text-stone-500">ยังไม่พิมพ์</span>}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2">
                       <div className="flex items-center justify-end gap-2">
