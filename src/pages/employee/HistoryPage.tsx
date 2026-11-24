@@ -196,7 +196,11 @@ export default function HistoryPage() {
                     </td>
                   ))}
                   <td className="whitespace-nowrap px-4 py-2">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center gap-2">
+                      {/* The main thing to do comes first — fixed width, so the buttons after it line up down the table. */}
+                      {primary
+                        ? <PrimaryAction label="เซ็นเอง หรือส่งให้คนอื่นเซ็น" short="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Signature size={15} />} />
+                        : <PrimarySlot />}
                       <ActionGroup>
                         {voided || (frozen && !canVoid) ? null : frozen
                           ? <ActionGroupItem label="แก้ไขเป็นฉบับใหม่ — ฉบับนี้จะถูกยกเลิก" to={`/form/${r.formType}?revise=${r.id}`} icon={<FilePen size={15} />} />
@@ -207,12 +211,11 @@ export default function HistoryPage() {
                         {!voided && subStatus(r) === 'pending' && <ActionGroupItem label="ยกเลิกการส่งให้เซ็น" onClick={() => onCancelSign(r)} icon={<RotateCcw size={15} />} />}
                         {!voided && !deletable && canVoid && <ActionGroupItem label="ยกเลิกเอกสาร" onClick={async () => { if (await askAndVoid(r)) load() }} icon={<Ban size={15} />} />}
                       </ActionGroup>
-                      {primary
-                        ? <PrimaryAction label="เซ็นเอง หรือส่งให้คนอื่นเซ็น" short="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Signature size={15} />} />
-                        : <PrimarySlot />}
-                      {deletable
-                        ? <ActionIconButton label={`ลบเอกสาร ${r.docNumber}`} tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
-                        : <span aria-hidden className="inline-block w-8" />}
+                      <span className="ml-auto">
+                        {deletable
+                          ? <ActionIconButton label={`ลบเอกสาร ${r.docNumber}`} tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
+                          : <span aria-hidden className="inline-block w-8" />}
+                      </span>
                     </div>
                   </td>
                 </tr>
