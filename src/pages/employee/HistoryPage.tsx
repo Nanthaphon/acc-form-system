@@ -196,7 +196,7 @@ export default function HistoryPage() {
                     </td>
                   ))}
                   <td className="whitespace-nowrap px-4 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       {/* The main thing to do comes first — fixed width, so the buttons after it line up down the table. */}
                       {primary
                         ? <PrimaryAction label="เซ็นเอง หรือส่งให้คนอื่นเซ็น" short="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Signature size={15} />} />
@@ -211,7 +211,7 @@ export default function HistoryPage() {
                         {!voided && subStatus(r) === 'pending' && <ActionGroupItem label="ยกเลิกการส่งให้เซ็น" onClick={() => onCancelSign(r)} icon={<RotateCcw size={15} />} />}
                         {!voided && !deletable && canVoid && <ActionGroupItem label="ยกเลิกเอกสาร" onClick={async () => { if (await askAndVoid(r)) load() }} icon={<Ban size={15} />} />}
                       </ActionGroup>
-                      <span className="ml-auto">
+                      <span>
                         {deletable
                           ? <ActionIconButton label={`ลบเอกสาร ${r.docNumber}`} tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
                           : <span aria-hidden className="inline-block w-8" />}
