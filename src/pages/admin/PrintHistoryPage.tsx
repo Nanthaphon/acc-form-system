@@ -1,4 +1,5 @@
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
+import OlderVersionRow, { roundLabel } from '../../components/OlderVersionRow'
 import EmptyRow from '../../components/EmptyRow'
 import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -229,19 +230,7 @@ export default function PrintHistoryPage() {
                     </td>
                   </tr>
                   {showing && older.map((o, i) => (
-                    <tr key={o.id} className="bg-stone-50/70">
-                      <td colSpan={shown.length + 1} className="px-4 py-2">
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-6 text-xs text-stone-500">
-                          <span className="text-stone-400">{i === older.length - 1 ? 'ฉบับแรก' : `ฉบับก่อนหน้า ${older.length - i}`}</span>
-                          <span className="font-mono text-[13px] text-stone-500 line-through decoration-stone-400">{o.docNumber}</span>
-                          <StatusBadge sub={o} />
-                          <span>{formatDate(o.createdAt)}</span>
-                          <span className="tabular-nums">{formatMoney(submissionAmount(o))}</span>
-                          {o.voided?.reason && <span className="truncate" title={o.voided.reason}>เหตุผล: {o.voided.reason}</span>}
-                          <ActionGroupItem label={`ดูเอกสารฉบับ ${o.docNumber}`} to={`/submission/${o.id}/preview`} icon={<Printer size={15} />} />
-                        </div>
-                      </td>
-                    </tr>
+                    <OlderVersionRow key={o.id} doc={o} colSpan={shown.length + 1} label={roundLabel(o.docNumber)} last={i === older.length - 1} />
                   ))}
                 </Fragment>
               )

@@ -174,7 +174,8 @@ export default function ExpenseClaimPreview({ company, header: given, items, set
               <div aria-hidden className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 overflow-hidden">
                 {/* Faint enough to read the document through, large enough that
                     a photocopy of it still says so. */}
-                <span className="-rotate-[30deg] select-none whitespace-nowrap rounded-lg border-[6px] border-brick-600/25 px-10 py-2 text-[104px] font-bold leading-none text-brick-600/25">ยกเลิก</span>
+                {/* Replaced by a correction: "no longer used"; cancelled outright: "cancelled". */}
+                <span className={`-rotate-[30deg] select-none whitespace-nowrap rounded-lg border-[6px] border-brick-600/25 px-10 py-2 font-bold leading-none text-brick-600/25 ${replacedBy ? 'text-[76px]' : 'text-[104px]'}`}>{replacedBy ? 'ไม่ได้ใช้แล้ว' : 'ยกเลิก'}</span>
                 <span className="-rotate-[30deg] max-w-[62%] select-none text-center text-[22px] font-semibold leading-snug text-brick-600/30">
                   เอกสารฉบับนี้ไม่ใช้แล้ว{replacedBy ? ` — ใช้ฉบับ ${replacedBy} แทน` : ''}
                 </span>

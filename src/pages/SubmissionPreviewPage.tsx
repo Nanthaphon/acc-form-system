@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { PageSkeleton } from '../components/TableSkeleton'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Ban, Eye, FileSpreadsheet, FileText, Printer, Signature } from 'lucide-react'
+import { Ban, ChevronDown, Eye, FileSpreadsheet, FileText, History, Printer, Signature } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import ExpenseClaimPreview from '../features/expense-claim/ExpenseClaimPreview'
 import { getSubmission, incrementPrint, signDocument } from '../data/submissions'
@@ -13,7 +13,8 @@ import type { Submission, FormSettings, Company } from '../types/schema'
 import AttachmentsField from '../components/AttachmentsField'
 import { Spinner } from '../components/Spinner'
 import { PageHeader, ui } from '../components/ui'
-import { formatDateTime } from '../shared/date'
+import { formatDate, formatDateTime } from '../shared/date'
+import { roundLabel } from '../components/OlderVersionRow'
 import { dbErrorMessage } from '../shared/dbError'
 import { saveFile } from '../shared/saveFile'
 import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
@@ -28,6 +29,8 @@ export default function SubmissionPreviewPage() {
   const [company, setCompany] = useState<Company | null>(null)
   const [exporting, setExporting] = useState(false)
   const [signing, setSigning] = useState<string | null>(null)
+  // The rounds this one corrects, newest first: R1's original, R2's R1 and original …
+  const [older, setOlder] = useState<Submission[]>([])
 
   function load() {
     if (!id) return
@@ -41,6 +44,24 @@ export default function SubmissionPreviewPage() {
     })
   }
   useEffect(load, [id])
+  // Follow "replaces" back to the original. A round that cannot be read (no
+  // right to it, or gone) ends the walk; ten is far more than anyone corrects.
+  useEffect(() => {
+    let alive = true
+    setOlder([])
+    ;(async () => {
+      const found: Submission[] = []
+      let next = sub?.replaces?.id
+      while (next && found.length < 10) {
+        const o = await getSubmission(next).catch(() => null)
+        if (!o) break
+        found.push(o)
+        next = o.replaces?.id
+      }
+      if (alive) setOlder(found)
+    })()
+    return () => { alive = false }
+  }, [sub?.id, sub?.replaces?.id])
 
   // Opened from the mail "มีเอกสารรอเซ็น": sign right here, after reading it.
   async function onSign(blockId: string, blockLabel: string) {
@@ -142,6 +163,34 @@ export default function SubmissionPreviewPage() {
         <div className="no-print mb-4"><AttachmentsField saved={sub.attachments ?? []} readOnly /></div>
       )}
       <ExpenseClaimPreview company={company} header={sub.header} items={sub.items} docNumber={sub.docNumber} settings={settings} signatures={sub.signatures} voided={!!sub.voided} replacedBy={sub.voided?.replacedByNumber} createdAt={sub.createdAt} />
+
+      {/* The rounds before this correction, each openable in full — with the
+          cancelled watermark, so none of them can pass for the live one. Screen only. */}
+      {older.length > 0 && (
+        <section className="no-print mt-8">
+          <h2 className="mb-3 flex items-center gap-2 text-[15px] font-semibold text-stone-900">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-clay-100 text-clay-700"><History size={16} /></span>
+            ฉบับก่อนแก้ไข <span className="text-sm font-normal text-stone-500">{older.length} ฉบับ</span>
+          </h2>
+          <div className="space-y-3">
+            {older.map(o => (
+              <details key={o.id} className="group/old overflow-hidden rounded-2xl border border-stone-200/70 bg-white">
+                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-sm hover:bg-clay-50/40">
+                  <ChevronDown size={16} className="shrink-0 text-stone-400 transition-transform group-open/old:rotate-180" />
+                  <span className="rounded-md bg-white px-1.5 py-0.5 text-xs font-medium text-clay-700 ring-1 ring-clay-200">{roundLabel(o.docNumber)}</span>
+                  <span className="font-mono text-[13px] text-stone-500 line-through decoration-stone-400">{o.docNumber}</span>
+                  <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-xs font-medium text-brick-700">ไม่ได้ใช้แล้ว</span>
+                  <span className="text-xs text-stone-500">{formatDate(o.createdAt)}</span>
+                  {o.voided?.reason && <span className="min-w-0 max-w-[28rem] truncate text-xs text-stone-500" title={o.voided.reason}>เหตุผลที่แก้: {o.voided.reason}</span>}
+                </summary>
+                <div className="border-t border-stone-100 bg-stone-50/60 p-4">
+                  <ExpenseClaimPreview company={company} header={o.header} items={adoptDocumentWht(settings.columns, o.header, o.items)} docNumber={o.docNumber} settings={settings} signatures={o.signatures} voided replacedBy={o.voided?.replacedByNumber ?? sub.docNumber} createdAt={o.createdAt} />
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
