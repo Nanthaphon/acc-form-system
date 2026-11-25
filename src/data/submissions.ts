@@ -306,6 +306,11 @@ const STATUS_META: Record<SubmissionStatus, { label: string; className: string }
 }
 export function statusMeta(s: SubmissionStatus) { return STATUS_META[s] }
 
+/** The money in these documents — cancelled ones count for nothing. */
+export function amountOf(docs: SubmissionSummary[]): number {
+  return docs.filter(d => !d.voided).reduce((sum, d) => sum + submissionAmount(d), 0)
+}
+
 /** The status as shown, counted and filtered. Signed by the requester alone is
  *  not approved by anyone: it goes with บันทึกแล้ว, not เซ็นครบ (its label says
  *  ผู้เบิกเซ็นแล้ว). subStatus stays the raw state the rules work from. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Submission, DocSignature } from '../types/schema'
+import type { Submission, SubmissionSummary, DocSignature } from '../types/schema'
 import { canRequestSignatures, DEFAULT_SIGNATURE_BLOCKS } from '../types/schema'
 import { subStatus, statusLabel, statusMeta, isUnsigned, assignmentsForSelfSign, canRemoveSignature, signedByOthers, isSigned, onlyOwnerSigns, hasUnsignedLine } from './submissions'
 
@@ -177,5 +177,15 @@ describe('displayStatus — one status everywhere', () => {
     expect(displayStatus(sub([own]))).toBe('done')      // what is shown, counted and filtered
     expect(displayStatus(sub([own, sig('signed')]))).toBe('signed')
     expect(displayStatus(sub([own, sig('pending')]))).toBe('pending')
+  })
+})
+
+describe('amountOf — the total beside the filter count', () => {
+  it('adds up what is shown, leaving out cancelled documents', async () => {
+    const { amountOf } = await import('./submissions')
+    const doc = (net: number, voided = false) =>
+      ({ id: String(net), totals: { netTotal: net }, voided: voided ? { at: 1 } : null }) as unknown as SubmissionSummary
+    expect(amountOf([doc(100), doc(250), doc(999, true)])).toBe(350)
+    expect(amountOf([])).toBe(0)
   })
 })

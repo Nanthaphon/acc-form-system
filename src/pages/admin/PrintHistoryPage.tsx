@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { ArchiveRestore, Ban, ChevronDown, ChevronRight, Copy, FilePen, Pencil, Printer, Trash2 } from 'lucide-react'
 import { ActionGroup, ActionGroupItem } from '../../components/RowActions'
 import ActionIconButton from '../../components/ActionIconButton'
-import { listAllSubmissions, submissionAmount, deleteSubmission, isSigned, voidingAvailable, docStatusAvailable } from '../../data/submissions'
+import { listAllSubmissions, submissionAmount, amountOf, deleteSubmission, isSigned, voidingAvailable, docStatusAvailable } from '../../data/submissions'
 import { loadOptionLists } from '../../data/fieldOptions'
 import DocStatusPicker from '../../components/DocStatusPicker'
 import { chainRows, chainLength } from '../../shared/revisionChain'
@@ -30,7 +30,6 @@ import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { PageHeader, ui } from '../../components/ui'
-import StatusTiles from '../../components/StatusTiles'
 import { avatarTone, initialOf } from '../../shared/initials'
 import { formatMoney } from '../../shared/money'
 
@@ -173,12 +172,10 @@ export default function PrintHistoryPage() {
           ฐานข้อมูลยังไม่ได้ติดตั้งระบบยกเลิกเอกสาร — ปุ่ม “ยกเลิกเอกสาร” และ “แก้ไขเป็นฉบับใหม่ (R1)” จึงยังใช้ไม่ได้ · ผู้ดูแลระบบต้องรัน supabase/2026-10-28-void-documents.sql
         </div>
       )}
-      <StatusTiles docs={chainRows(rows).map(c => c.latest)} shown={chains.map(c => c.latest)} status={filters.status}
-        onStatus={status => changeFilters({ ...filters, status })} />
       <div className="mb-4 rounded-2xl border border-stone-200/60 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         <SubmissionFilterBar value={filters} onChange={changeFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees}
           docStatuses={docStatusAvailable() ? statuses : undefined}
-          resultCount={chains.length} total={allLines}
+          resultCount={chains.length} total={allLines} amount={amountOf(chains.map(c => c.latest))}
           extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>
       <div className={ui.tableCard}>

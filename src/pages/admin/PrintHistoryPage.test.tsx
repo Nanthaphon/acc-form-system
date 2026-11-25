@@ -221,20 +221,14 @@ describe('ประวัติทั้งหมด — คอลัมน์�
   })
 })
 
-describe('ประวัติทั้งหมด — การ์ดสรุปสถานะ', () => {
-  it('นับเอกสารตามสถานะ และกดการ์ดเพื่อกรอง กดซ้ำเพื่อดูทั้งหมด', async () => {
+// No status cards over the table: the status filter does that job. The money
+// in what is shown sits beside the count in the filter bar.
+describe('ประวัติทั้งหมด — ยอดรวมในแถบตัวกรอง', () => {
+  it('ไม่มีการ์ดสถานะ แสดงยอดรวมต่อท้ายจำนวนรายการ', async () => {
     localStorage.clear()
     show()
-    const signedTile = await screen.findByRole('button', { name: /เซ็นครบ\s*1/ })
-    expect(screen.getByRole('button', { name: /ทั้งหมด\s*3/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: /บันทึกแล้ว\s*2/ })).toBeInTheDocument()
-
-    fireEvent.click(signedTile)
-    await waitFor(() => expect(screen.queryByText('GAC-0050')).toBeNull())
-    expect(screen.getByText('GAC-0049')).toBeInTheDocument()
-    expect(signedTile).toHaveAttribute('aria-pressed', 'true')
-
-    fireEvent.click(signedTile)
     expect(await screen.findByText('GAC-0050')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /เซ็นครบ\s*\d/ })).toBeNull()
+    expect(screen.getByText(/ยอดรวม/)).toBeInTheDocument()
   })
 })

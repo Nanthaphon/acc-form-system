@@ -9,6 +9,7 @@ import FilterSelect from './FilterSelect'
 import type { FilterOption } from './FilterSelect'
 import { folderIn, folderPath } from '../shared/folders'
 import { ui } from './ui'
+import { formatMoney } from '../shared/money'
 
 const STATUSES: SubmissionStatus[] = ['done', 'pending', 'signed', 'void']
 
@@ -22,10 +23,11 @@ interface Props {
   docStatuses?: string[]      // when provided, show a filter on the admin's own status
   resultCount: number
   total?: number              // all there are, so a filtered count reads "12 จาก 110"
+  amount?: number             // the money in what is shown (amountOf)
   extra?: ReactNode           // the page's own tools, at the end of the bar (the column picker)
 }
 
-export default function SubmissionFilterBar({ value, onChange, forms, groups, formGroup, employees, docStatuses, resultCount, total, extra }: Props) {
+export default function SubmissionFilterBar({ value, onChange, forms, groups, formGroup, employees, docStatuses, resultCount, total, amount, extra }: Props) {
   const cls = ui.inputSm
   const set = (patch: Partial<Filters>) => onChange({ ...value, ...patch })
   // A folder picked narrows the forms to its own. The forms are listed under
@@ -100,6 +102,7 @@ export default function SubmissionFilterBar({ value, onChange, forms, groups, fo
         <span className="whitespace-nowrap text-sm text-stone-500">
           <span className="font-medium text-stone-900">{resultCount}</span>
           {total !== undefined && total !== resultCount && <> จาก {total}</>} รายการ
+          {amount !== undefined && <> · ยอดรวม <span className="font-semibold tabular-nums text-stone-900">{formatMoney(amount)}</span> บาท</>}
         </span>
         {extra}
       </div>

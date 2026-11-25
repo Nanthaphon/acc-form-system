@@ -6,7 +6,7 @@ import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Ban, ChevronDown, ChevronRight, Copy, FilePen, History, Pencil, Printer, RotateCcw, Send, Signature, Trash2 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
-import { listMySubmissions, submissionAmount, deleteSubmission, subStatus, isUnsigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning, signedByOthers, voidingAvailable } from '../../data/submissions'
+import { listMySubmissions, submissionAmount, amountOf, deleteSubmission, subStatus, isUnsigned, onlyOwnerSigns, hasUnsignedLine, listSigners, cancelSigning, signedByOthers, voidingAvailable } from '../../data/submissions'
 import type { Signer } from '../../data/submissions'
 import { getVersionCounts, editLabel } from '../../data/versions'
 import { listForms } from '../../data/formSettings'
@@ -30,7 +30,6 @@ import { recall, remember } from '../../shared/cache'
 import { usePagination } from '../../shared/usePagination'
 import { chainRows, chainLength } from '../../shared/revisionChain'
 import { Badge, PageHeader, ui } from '../../components/ui'
-import StatusTiles from '../../components/StatusTiles'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
@@ -141,11 +140,9 @@ export default function HistoryPage() {
         icon={<History size={20} />}
         title="ประวัติเอกสารของฉัน"
       />
-      <StatusTiles docs={chainRows(rows).map(c => c.latest)} shown={chains.map(c => c.latest)} status={filters.status}
-        onStatus={status => changeFilters({ ...filters, status })} />
       <div className="mb-4 rounded-2xl border border-stone-200/60 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         <SubmissionFilterBar value={filters} onChange={changeFilters} forms={choices.forms} groups={choices.groups} formGroup={formGroup}
-          resultCount={chains.length} total={chainRows(rows).length}
+          resultCount={chains.length} total={chainRows(rows).length} amount={amountOf(chains.map(c => c.latest))}
           extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>
       <div className={ui.tableCard}>
