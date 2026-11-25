@@ -128,63 +128,68 @@ export default function EmployeeDetailPage() {
         )}
       />
 
-      {/* Everything about the person in one card: who, where, how they sign in, their signature. */}
-      <section className={`${ui.card} mb-8`}>
-        <div className="flex flex-wrap items-start gap-x-10 gap-y-5">
-          <div className="flex min-w-[16rem] items-center gap-4">
-            <span aria-hidden className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold ${AVATAR_TONE}`}>
-              {initialsOf(profile.firstName, profile.lastName) || '?'}
-            </span>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-stone-900">{name || '—'}</h2>
-                {profile.nickname && <span className="text-sm text-stone-500">({profile.nickname})</span>}
-              </div>
-              <p className="text-sm text-stone-600">{profile.position || '—'}</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                <Badge tone={roleTone(profile)}>{roleLabel(profile)}</Badge>
-                {profile.centralStatus === 'resigned' && <Badge tone="amber">ลาออกแล้ว</Badge>}
-              </div>
+      {/* One card, read top to bottom: who the person is, then three equal
+          columns — their details, how they sign in, their signature — each a
+          plain list of label and value, so nothing floats in a half-empty grid. */}
+      <section className={`${ui.card} mb-8 !p-0`}>
+        <div className="flex flex-wrap items-center gap-4 border-b border-stone-100 px-6 py-5">
+          <span aria-hidden className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-base font-semibold ${AVATAR_TONE}`}>
+            {initialsOf(profile.firstName, profile.lastName) || '?'}
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <h2 className="text-lg font-semibold text-stone-900">{name || '—'}</h2>
+              {profile.nickname && <span className="text-sm text-stone-500">({profile.nickname})</span>}
             </div>
+            <p className="text-sm text-stone-500">{profile.position || '—'}</p>
           </div>
-          <dl className="grid min-w-0 flex-1 grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3">
-            {details.map(d => (
-              <div key={d.label} className="min-w-0">
-                <dt className="text-xs text-stone-500">{d.label}</dt>
-                <dd className={`mt-0.5 break-words text-sm ${d.value ? 'text-stone-900' : 'text-stone-400'}`}>{d.value || '—'}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="ml-auto flex flex-wrap gap-1.5">
+            <Badge tone={roleTone(profile)}>{roleLabel(profile)}</Badge>
+            {profile.centralStatus === 'resigned' && <Badge tone="amber">ลาออกแล้ว</Badge>}
+          </div>
         </div>
 
-        <div className="mt-6 grid gap-6 border-t border-stone-100 pt-6 lg:grid-cols-2 lg:divide-x lg:divide-stone-100">
+        <div className="grid divide-y divide-stone-100 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+          <div className="px-6 py-5">
+            <h3 className="mb-3 text-sm font-semibold text-stone-900">ข้อมูลพนักงาน</h3>
+            <dl className="space-y-2.5 text-sm">
+              {details.map(d => (
+                <div key={d.label} className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3">
+                  <dt className="text-stone-500">{d.label}</dt>
+                  <dd className={`break-words ${d.value ? 'text-stone-900' : 'text-stone-400'}`}>{d.value || '—'}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
           {/* Signing in: the username, and the password while it is still the default */}
-          <div>
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-stone-900"><KeyRound size={15} className="text-stone-500" /> เข้าสู่ระบบ</h3>
-              <div className="ml-auto flex gap-1">
-                {viewerIsSuper && <button type="button" onClick={() => setChangingUsername(true)} className={ui.btnGhost}><AtSign size={15} /> แก้ชื่อผู้ใช้</button>}
-                {canSetPassword && <button type="button" onClick={() => setSettingPassword(true)} className={ui.btnGhost}><KeyRound size={15} /> ตั้งรหัสผ่านใหม่</button>}
+          <div className="flex flex-col px-6 py-5">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-900"><KeyRound size={15} className="text-stone-500" /> เข้าสู่ระบบ</h3>
+            <dl className="space-y-2.5 text-sm">
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3">
+                <dt className="text-stone-500">ชื่อผู้ใช้</dt>
+                <dd className="flex items-center gap-1 font-mono text-stone-900">{profile.employeeId}<CopyButton value={profile.employeeId} label="คัดลอกชื่อผู้ใช้" /></dd>
               </div>
-            </div>
-            <dl className="grid grid-cols-2 gap-x-8 gap-y-3">
-              <div>
-                <dt className="text-xs text-stone-500">ชื่อผู้ใช้</dt>
-                <dd className="mt-0.5 flex items-center gap-1 font-mono text-sm text-stone-900">{profile.employeeId}<CopyButton value={profile.employeeId} label="คัดลอกชื่อผู้ใช้" /></dd>
-              </div>
-              <div>
-                <dt className="text-xs text-stone-500">รหัสผ่าน</dt>
-                <dd className="mt-0.5 flex items-center gap-1.5 text-sm">
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3">
+                <dt className="text-stone-500">รหัสผ่าน</dt>
+                <dd className="flex flex-wrap items-center gap-1.5">
                   {pw === 'default'
                     ? <><span className="font-mono text-stone-900">{profile.employeeId}</span><CopyButton value={profile.employeeId} label="คัดลอกรหัสผ่าน" /></>
-                    : <span className="font-mono tracking-widest text-stone-400">••••••</span>}
+                    : <span className="font-mono text-stone-400">••••••</span>}
                   <Badge tone={PASSWORD_STATE[pw].tone}>{PASSWORD_STATE[pw].label}</Badge>
                 </dd>
               </div>
             </dl>
+            {(viewerIsSuper || canSetPassword) && (
+              <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                {canSetPassword && <button type="button" onClick={() => setSettingPassword(true)} className={`${ui.btnSecondary} !px-3 !py-1.5`}><KeyRound size={15} /> ตั้งรหัสผ่านใหม่</button>}
+                {viewerIsSuper && <button type="button" onClick={() => setChangingUsername(true)} className={`${ui.btnSecondary} !px-3 !py-1.5`}><AtSign size={15} /> แก้ชื่อผู้ใช้</button>}
+              </div>
+            )}
           </div>
+
           {/* An admin can put a signature on the account so the person can sign online. */}
-          <div className="lg:pl-6">
+          <div className="px-6 py-5">
             <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-900"><Signature size={15} className="text-stone-500" /> ลายเซ็น</h3>
             <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
           </div>
