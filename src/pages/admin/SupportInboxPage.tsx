@@ -13,7 +13,6 @@ import { notifySupportChanged } from '../../shared/useSupportUnread'
 import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import { PageHeader, ui } from '../../components/ui'
 import { formatDateTime } from '../../shared/date'
-import { AVATAR_TONE, initialOf } from '../../shared/initials'
 
 type Filter = 'all' | SupportStatus
 const FILTERS: { value: Filter; label: string }[] = [
@@ -23,16 +22,6 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'done', label: SUPPORT_STATUS.done.label },
 ]
 const STATUSES: SupportStatus[] = ['open', 'doing', 'done']
-
-// The status as the document status reads: grey words behind a small dot.
-const STATUS_DOT: Record<SupportStatus, string> = { open: 'bg-ochre-500', doing: 'bg-clay-600', done: 'bg-olive-600' }
-function StatusText({ status }: { status: SupportStatus }) {
-  return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-stone-600">
-      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} />{SUPPORT_STATUS[status].label}
-    </span>
-  )
-}
 
 // A segmented control: the picked one a white chip on a grey track.
 const SEG_TRACK = 'flex rounded-lg bg-stone-100 p-0.5'
@@ -110,7 +99,7 @@ export default function SupportInboxPage() {
 
   return (
     <div>
-      <PageHeader icon={<Headset size={20} />} title="รับเรื่องแจ้งปัญหา" subtitle={tickets ? `${counts.all} เรื่อง · ใหม่ ${counts.open}` : undefined} />
+      <PageHeader icon={<Headset size={20} />} title="รับเรื่องแจ้งปัญหา" />
 
       {error ? (
         <div className="rounded-lg border border-ochre-200 bg-ochre-50 px-4 py-3 text-sm text-ochre-700">{error}</div>
@@ -141,29 +130,18 @@ export default function SupportInboxPage() {
               ) : shown.map(t => {
                 const fresh = isUnread(t, uid, true)
                 const on = t.id === selectedId
-                // The last message only when it says more than the subject does.
-                const preview = t.lastPreview && t.lastPreview.trim() !== t.subject.trim()
-                  ? `${t.lastByReporter ? '' : 'ตอบแล้ว: '}${t.lastPreview}` : ''
+                // Two lines: who and when, then what. The status is the tab above.
                 return (
                   <li key={t.id}>
                     <button type="button" onClick={() => select(t.id)} aria-current={on || undefined}
-                      className={`relative flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${on ? 'bg-stone-50' : 'hover:bg-stone-50/70'}`}>
+                      className={`relative block w-full px-4 py-3 text-left transition-colors ${on ? 'bg-stone-50' : 'hover:bg-stone-50/70'}`}>
                       {on && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-clay-600" />}
-                      <span aria-hidden className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${AVATAR_TONE}`}>
-                        {initialOf(t.reporterName) || '?'}
+                      <span className="flex items-center gap-2">
+                        <span className={`min-w-0 flex-1 truncate text-sm ${fresh ? 'font-semibold text-stone-900' : 'font-medium text-stone-800'}`}>{t.reporterName || 'ไม่ระบุชื่อ'}</span>
+                        {fresh && <span className="h-2 w-2 shrink-0 rounded-full bg-clay-600" aria-label="ยังไม่ได้อ่าน" />}
+                        <span className="shrink-0 text-xs text-stone-400" title={formatDateTime(t.lastMessageAt)}>{shortWhen(t.lastMessageAt)}</span>
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className={`min-w-0 flex-1 truncate text-sm ${fresh ? 'font-semibold text-stone-900' : 'font-medium text-stone-800'}`}>{t.reporterName || 'ไม่ระบุชื่อ'}</span>
-                          <span className="shrink-0 text-[11px] text-stone-500" title={formatDateTime(t.lastMessageAt)}>{shortWhen(t.lastMessageAt)}</span>
-                          {fresh && <span className="h-2 w-2 shrink-0 rounded-full bg-clay-600" aria-label="ยังไม่ได้อ่าน" />}
-                        </span>
-                        <span className={`block truncate text-sm ${fresh ? 'text-stone-900' : 'text-stone-600'}`}>{t.subject}</span>
-                        <span className="mt-1 flex items-center gap-2">
-                          <StatusText status={t.status} />
-                          {preview && <span className="min-w-0 truncate text-xs text-stone-400">· {preview}</span>}
-                        </span>
-                      </span>
+                      <span className={`mt-0.5 block truncate text-sm ${fresh ? 'text-stone-900' : 'text-stone-500'}`}>{t.subject}</span>
                     </button>
                   </li>
                 )
@@ -177,24 +155,17 @@ export default function SupportInboxPage() {
               <>
                 <div className="flex flex-wrap items-center gap-3 border-b border-stone-200 px-5 py-3.5">
                   <button type="button" onClick={() => select(null)} aria-label="กลับไปรายการ" className={`${ui.btnGhost} !px-2 lg:hidden`}><ArrowLeft size={16} /></button>
-                  <span aria-hidden className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${AVATAR_TONE}`}>
-                    {initialOf(selected.reporterName) || '?'}
-                  </span>
+                  {/* Who and when are on the messages below; the page it came from is the one thing they do not say. */}
                   <div className="min-w-[12rem] flex-1">
                     <h2 className="truncate text-[15px] font-semibold text-stone-900" title={selected.subject}>{selected.subject}</h2>
-                    {/* each piece kept whole: a narrow header wraps between them, never inside a name or date */}
-                    <p className="flex flex-wrap gap-x-1.5 text-xs text-stone-500">
-                      <span className="whitespace-nowrap">{selected.reporterName || 'ไม่ระบุชื่อ'}</span>
-                      <span className="whitespace-nowrap">· แจ้งเมื่อ {formatDateTime(selected.createdAt)}</span>
-                      {selected.page && <span className="whitespace-nowrap">· จากหน้า <span className="font-mono">{selected.page}</span></span>}
-                    </p>
+                    {selected.page && <p className="text-xs text-stone-400">จากหน้า <span className="font-mono">{selected.page}</span></p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <div className={SEG_TRACK} role="radiogroup" aria-label="สถานะ">
                       {STATUSES.map(s => (
                         <button key={s} type="button" role="radio" aria-checked={selected.status === s} onClick={() => changeStatus(selected, s)}
-                          className={`${segItem(selected.status === s)} inline-flex items-center gap-1.5`}>
-                          <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[s]}`} />{SUPPORT_STATUS[s].label}
+                          className={segItem(selected.status === s)}>
+                          {SUPPORT_STATUS[s].label}
                         </button>
                       ))}
                     </div>

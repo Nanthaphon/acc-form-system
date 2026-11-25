@@ -11,6 +11,13 @@ import { uiAlert } from '../dialog/dialogService'
 import { Spinner } from '../Spinner'
 import { formatDateTime } from '../../shared/date'
 
+// Today: the time alone. Before: day, month and time — the full date is on hover.
+function shortTime(ms: number): string {
+  const d = new Date(ms)
+  const time = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+  return d.toDateString() === new Date().toDateString() ? time : `${d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} ${time}`
+}
+
 interface Props {
   ticketId: string | null         // null: a new conversation, opened by the first message
   viewerUid: string
@@ -141,11 +148,13 @@ export default function SupportThread({ ticketId, viewerUid, page = '', onCreate
             เล่าปัญหาที่พบ แนบภาพหน้าจอได้
             <span className="mt-1 block text-xs">วางภาพด้วย Ctrl+V หรือลากไฟล์มาวาง</span>
           </div>
-        ) : messages.map(m => {
+        ) : messages.map((m, i) => {
           const mine = m.fromUid === viewerUid
+          // The name once per turn, not over every message of it.
+          const newSpeaker = i === 0 || messages[i - 1].fromUid !== m.fromUid
           return (
             <div key={m.id} className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-              {!mine && (
+              {!mine && newSpeaker && (
                 <span className="mb-1 px-1 text-xs font-medium text-stone-600">
                   {m.fromName || 'ไม่ระบุชื่อ'}{!m.fromReporter && <span className="ml-1.5 text-clay-700">· ผู้ดูแลระบบ</span>}
                 </span>
@@ -165,7 +174,7 @@ export default function SupportThread({ ticketId, viewerUid, page = '', onCreate
                   </div>
                 )}
               </div>
-              <span className="mt-1 px-1 text-[11px] text-stone-500">{formatDateTime(m.createdAt)}</span>
+              <span className="mt-1 px-1 text-[11px] text-stone-400" title={formatDateTime(m.createdAt)}>{shortTime(m.createdAt)}</span>
             </div>
           )
         })}
