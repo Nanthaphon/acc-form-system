@@ -10,8 +10,8 @@ export type OptionField = 'department' | 'position' | 'docStatus'
 export const OPTION_FIELDS: { key: OptionField; label: string }[] = [
   { key: 'department', label: 'แผนก' },
   { key: 'position', label: 'ตำแหน่ง' },
-  // The words the admin may put on a document in the history pages.
-  { key: 'docStatus', label: 'สถานะเอกสาร' },
+  // docStatus (the admin's tag on a document) is no longer offered: a document
+  // is cancelled with ยกเลิกเอกสาร, and a word beside it only confused that.
 ]
 
 export interface FieldOption {

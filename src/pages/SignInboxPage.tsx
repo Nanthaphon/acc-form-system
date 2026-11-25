@@ -14,6 +14,7 @@ import { notifySigned } from '../data/notify'
 import { listForms } from '../data/formSettings'
 import { formatDate } from '../shared/date'
 import { formatMoney } from '../shared/money'
+import { useLiveSubmissions } from '../shared/liveSubmissions'
 
 // Amount header lines up with its right-aligned cells.
 const thRight = ui.th.replace('text-left', 'text-right')
@@ -25,6 +26,8 @@ export default function SignInboxPage() {
   const [loading, setLoading] = useState(true)
 
   function reload() { if (profile) listMyAssigned(profile.uid).then(r => { setRows(r); setLoading(false) }) }
+  // A document sent to me, or called back: the list follows without a refresh.
+  useLiveSubmissions(reload)
   useEffect(() => { reload(); listForms().then(setForms) }, [profile])
 
   const formName = (ft: string) => {

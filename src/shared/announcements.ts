@@ -30,6 +30,15 @@ export interface Announcement {
 // every change in it, one line each. `admin` marks what only admins see.
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    version: '2.7',
+    date: '2026-11-25',
+    title: 'สถานะเอกสารอัปเดตเองทันที',
+    items: [
+      { kind: 'new', text: 'ผู้อนุมัติเซ็นแล้ว สถานะในหน้าประวัติ หน้าเอกสาร และเอกสารรอเซ็นเปลี่ยนเองทันที ไม่ต้องกดรีเฟรช' },
+      { kind: 'better', admin: true, text: 'เอาป้ายสถานะออกจากประวัติการพิมพ์ทั้งหมด (คอลัมน์และตัวกรอง) และจากหน้าตั้งค่าตัวเลือก — เอกสารที่ไม่ใช้แล้วใช้ “ยกเลิกเอกสาร”' },
+    ],
+  },
+  {
     version: '2.6',
     date: '2026-11-24',
     title: 'สถานะเอกสารชัดเจนขึ้น — หนึ่งเรื่องใช้ปุ่มเดียว',

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { countMyPendingToSign } from '../data/submissions'
 import { onPendingSignChanged } from './pendingSignBus'
+import { useLiveSubmissions } from './liveSubmissions'
 
 // Someone else can send a document for signing at any moment, so this count has
 // to keep itself current: it was previously read once when the profile loaded,
@@ -20,6 +21,7 @@ export function usePendingSignCount(uid: string | undefined, intervalMs = PENDIN
 
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => onPendingSignChanged(refresh), [refresh])
+  useLiveSubmissions(refresh)
 
   useEffect(() => {
     if (!uid) return

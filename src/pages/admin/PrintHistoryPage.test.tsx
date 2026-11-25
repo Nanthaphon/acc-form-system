@@ -81,37 +81,14 @@ describe('ประวัติทั้งหมด — เอกสารท�
   })
 })
 
-describe('ประวัติทั้งหมด — สถานะที่ผู้ดูแลระบบตั้งเอง', () => {
-  // The tag picker is the app's own drop-down: open it, then pick by label.
-  const pickTag = (row: HTMLElement, label: string) => {
-    fireEvent.click(within(row).getByRole('combobox', { name: /ป้ายสถานะ/ }))
-    fireEvent.click(screen.getByRole('option', { name: label }))
-  }
-
-  it('เลือกสถานะจากรายการที่ตั้งไว้ใน Custom Field', async () => {
+// The admin's tag on a document is gone: a document is cancelled with ยกเลิกเอกสาร.
+describe('ประวัติทั้งหมด — ไม่มีป้ายสถานะ', () => {
+  it('ไม่มีคอลัมน์ป้ายสถานะ และไม่มีตัวกรองป้าย', async () => {
+    localStorage.clear()
     show()
-    const plain = await rowOf('GAC-0050')
-    fireEvent.click(within(plain).getByRole('combobox', { name: /ป้ายสถานะ/ }))
-    expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual(['— ไม่ได้ตั้ง —', 'เอกสารผิด', 'ไม่ได้ใช้'])
-    fireEvent.click(screen.getByRole('option', { name: 'เอกสารผิด' }))
-    await waitFor(() => expect(setDocStatus).toHaveBeenCalledWith('d', 'เอกสารผิด'))
-  })
-
-  it('ล้างสถานะได้', async () => {
-    show()
-    const plain = await rowOf('GAC-0050')
-    pickTag(plain, 'ไม่ได้ใช้')
-    await waitFor(() => expect(setDocStatus).toHaveBeenCalled())
-    pickTag(plain, '— ไม่ได้ตั้ง —')
-    await waitFor(() => expect(setDocStatus).toHaveBeenLastCalledWith('d', null))
-  })
-
-  it('กรองตามป้ายสถานะได้ รวมถึงเอกสารที่ยังไม่ได้ตั้ง', async () => {
-    show()
-    await rowOf('GAC-0050')
-    fireEvent.click(screen.getByRole('combobox', { name: 'สถานะเอกสาร' }))
-    fireEvent.click(screen.getByRole('option', { name: 'ยังไม่ได้ตั้ง' }))
-    expect(screen.getByText('GAC-0050')).toBeInTheDocument()
+    expect(await screen.findByText('GAC-0050')).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'ป้ายสถานะ' })).toBeNull()
+    expect(screen.queryByRole('combobox', { name: /ป้ายสถานะ|สถานะเอกสาร/ })).toBeNull()
   })
 })
 

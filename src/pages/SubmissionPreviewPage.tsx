@@ -20,6 +20,7 @@ import { dbErrorMessage } from '../shared/dbError'
 import { saveFile } from '../shared/saveFile'
 import { uiAlert, uiConfirm } from '../components/dialog/dialogService'
 import { loadChunk } from '../shared/loadChunk'
+import { useLiveSubmissions } from '../shared/liveSubmissions'
 
 export default function SubmissionPreviewPage() {
   const { id } = useParams()
@@ -45,6 +46,7 @@ export default function SubmissionPreviewPage() {
     })
   }
   useEffect(load, [id])
+  useLiveSubmissions(load, id)
   // Follow "replaces" back to the original. A round that cannot be read (no
   // right to it, or gone) ends the walk; ten is far more than anyone corrects.
   useEffect(() => {

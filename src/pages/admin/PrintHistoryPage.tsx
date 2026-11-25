@@ -5,9 +5,7 @@ import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArchiveRestore, Ban, ChevronDown, ChevronRight, Copy, FilePen, Pencil, Printer, Trash2 } from 'lucide-react'
 import { ActionGroup, ActionGroupItem } from '../../components/RowActions'
-import { listAllSubmissions, submissionAmount, amountOf, deleteSubmission, isSigned, voidingAvailable, docStatusAvailable } from '../../data/submissions'
-import { loadOptionLists } from '../../data/fieldOptions'
-import DocStatusPicker from '../../components/DocStatusPicker'
+import { listAllSubmissions, submissionAmount, amountOf, deleteSubmission, isSigned, voidingAvailable } from '../../data/submissions'
 import { chainRows, chainLength } from '../../shared/revisionChain'
 import StatusBadge from '../../components/StatusBadge'
 import DocNumberCell from '../../components/DocNumberCell'
@@ -30,6 +28,7 @@ import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { PageHeader, ui } from '../../components/ui'
 import { formatMoney } from '../../shared/money'
+import { useLiveSubmissions } from '../../shared/liveSubmissions'
 
 interface Column extends PickableColumn {
   thCls?: string
@@ -46,25 +45,20 @@ export default function PrintHistoryPage() {
   const [groups, setGroups] = useState<FormGroup[]>([])
   const [vcounts, setVcounts] = useState<Record<string, number>>({})
   const [filters, setFilters] = useState<Filters>(emptyFilters)
-  const [statuses, setStatuses] = useState<string[]>([])
   const [open, setOpen] = useState<Set<string>>(new Set())
   // v2: พิมพ์ล่าสุด starts hidden; a new key so the default reaches people who opened the page before.
   const { hidden, toggle, reset } = useHiddenColumns('cols:printHistory:v2', ['lastPrinted'])
 
   function loadRows() { listAllSubmissions().then(r => { setRows(remember('subs:all', r)); setLoading(false) }).catch(() => setLoading(false)) }
+  useLiveSubmissions(loadRows)
   useEffect(() => {
     loadRows()
     listEmployees().then(setEmployees)
     listForms().then(setForms)
     listGroups().then(setGroups)
     getVersionCounts().then(setVcounts)
-    loadOptionLists().then(l => setStatuses(l.docStatus))
   }, [])
 
-  // Keep the row in hand rather than reloading the whole list for one word.
-  function statusChanged(id: string, status: string | null) {
-    setRows(rs => rs.map(r => (r.id === id ? { ...r, docStatus: status } : r)))
-  }
   function toggleOpen(id: string) {
     setOpen(o => { const n = new Set(o); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
@@ -143,11 +137,6 @@ export default function PrintHistoryPage() {
         ? <>{formatDateTime(r.lastPrintedAt)} <span className="text-xs text-stone-500">· {r.printCount} ครั้ง</span></>
         : <span className="text-stone-500">ยังไม่พิมพ์</span>,
     },
-    // The admin's own tag (เอกสารผิด, ไม่ได้ใช้ …) — its own column, so it can be seen and sorted out at a glance.
-    ...(docStatusAvailable() ? [{
-      key: 'docStatus', label: 'ป้ายสถานะ', tdCls: 'whitespace-nowrap',
-      cell: (r: SubmissionSummary) => <DocStatusPicker sub={r} options={statuses} onChanged={st => statusChanged(r.id, st)} />,
-    }] : []),
   ]
   const shown = columns.filter(c => c.locked || !hidden.has(c.key))
 
@@ -167,7 +156,6 @@ export default function PrintHistoryPage() {
       )}
       <div className="mb-4 rounded-2xl border border-stone-200/60 bg-white p-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         <SubmissionFilterBar value={filters} onChange={changeFilters} forms={forms} groups={groups} formGroup={formGroup} employees={employees}
-          docStatuses={docStatusAvailable() ? statuses : undefined}
           resultCount={chains.length} total={allLines} amount={amountOf(chains.map(c => c.latest))}
           extra={<ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} onReset={reset} />} />
       </div>

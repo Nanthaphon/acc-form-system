@@ -33,6 +33,7 @@ import ChangeUsernameModal from '../../components/ChangeUsernameModal'
 import { Badge, PageHeader, SectionTitle, ui } from '../../components/ui'
 import DocNumberCell from '../../components/DocNumberCell'
 import { formatMoney } from '../../shared/money'
+import { useLiveSubmissions } from '../../shared/liveSubmissions'
 
 const HEADERS = [
   { label: 'เอกสาร', cls: '' },
@@ -59,6 +60,7 @@ export default function EmployeeDetailPage() {
 
   function loadProfile() { if (uid) getProfileByUid(uid).then(setProfile) }
   function loadSubs() { if (uid) listMySubmissions(uid).then(setSubs) }
+  useLiveSubmissions(loadSubs)
   useEffect(() => {
     if (!uid) return
     loadProfile()

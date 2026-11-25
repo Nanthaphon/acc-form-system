@@ -32,6 +32,7 @@ import { PageHeader, ui } from '../../components/ui'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
+import { useLiveSubmissions } from '../../shared/liveSubmissions'
 
 interface Column extends PickableColumn {
   thCls?: string
@@ -55,6 +56,8 @@ export default function HistoryPage() {
   const [groups, setGroups] = useState<FormGroup[]>([])
   const [signModal, setSignModal] = useState<SubmissionSummary | null>(null)
   function load() { if (profile) listMySubmissions(profile.uid).then(r => { setRows(remember(mineKey, r)); setLoading(false) }).catch(() => setLoading(false)) }
+  // An approver signs: the status here changes without a refresh.
+  useLiveSubmissions(load)
   useEffect(() => { load(); getVersionCounts().then(setVcounts) }, [profile])
   useEffect(() => { listForms().then(setForms); listSigners().then(setSigners); listGroups().then(setGroups) }, [])
 
