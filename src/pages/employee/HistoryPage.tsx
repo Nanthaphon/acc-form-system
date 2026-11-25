@@ -22,14 +22,13 @@ import AssignSignersModal from '../../components/AssignSignersModal'
 import StatusBadge from '../../components/StatusBadge'
 import DocNumberCell from '../../components/DocNumberCell'
 import { askAndVoid } from '../../components/voidDocument'
-import { ActionGroup, ActionGroupItem, PrimaryAction, PrimarySlot } from '../../components/RowActions'
-import ActionIconButton from '../../components/ActionIconButton'
+import { ActionGroup, ActionGroupItem, ActionGroupSlot, PrimaryAction, PrimarySlot } from '../../components/RowActions'
 import Pagination from '../../components/Pagination'
 import TableSkeleton from '../../components/TableSkeleton'
 import { recall, remember } from '../../shared/cache'
 import { usePagination } from '../../shared/usePagination'
 import { chainRows, chainLength } from '../../shared/revisionChain'
-import { Badge, PageHeader, ui } from '../../components/ui'
+import { PageHeader, ui } from '../../components/ui'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
@@ -106,12 +105,12 @@ export default function HistoryPage() {
       ),
     },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
-    { key: 'amount', label: 'ยอดสุทธิ (บาท)', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right font-semibold tabular-nums text-stone-900', cell: r => formatMoney(submissionAmount(r)) },
+    { key: 'amount', label: 'ยอดสุทธิ (บาท)', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right font-medium tabular-nums text-stone-900', cell: r => formatMoney(submissionAmount(r)) },
     { key: 'prints', label: 'พิมพ์แล้ว (ครั้ง)', thCls: 'text-center', tdCls: 'text-center tabular-nums', cell: r => r.printCount },
     { key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap', cell: r => <StatusBadge sub={r} /> },
     {
       key: 'edits', label: 'แก้ไข', tdCls: 'whitespace-nowrap',
-      cell: r => editLabel(r, vcounts) ? <Badge tone="amber">✎ {editLabel(r, vcounts)}</Badge> : <span className="text-stone-300">—</span>,
+      cell: r => editLabel(r, vcounts) ? <span className="text-stone-600">{editLabel(r, vcounts)}</span> : <span className="text-stone-300">—</span>,
     },
   ]
   const shown = columns.filter(c => c.locked || !hidden.has(c.key))
@@ -148,10 +147,10 @@ export default function HistoryPage() {
       <div className={ui.tableCard}>
       <div className={ui.tableScroll}>
         <table className={ui.table}>
-          <thead className={ui.thead}>
+          <thead className={ui.theadPlain}>
             <tr>
               {shown.map(c => <th key={c.key} className={`${ui.th} ${c.thCls ?? ''}`}>{c.label}</th>)}
-              <th className={`${ui.th} text-right`}>จัดการ</th>
+              <th className={ui.th} aria-label="การจัดการ" />
             </tr>
           </thead>
           <tbody className={ui.tbody}>
@@ -182,7 +181,7 @@ export default function HistoryPage() {
                             aria-expanded={showing}
                             title={showing ? 'ซ่อนฉบับก่อนหน้า' : `ดูฉบับก่อนหน้า ${older.length} ฉบับ`}
                             aria-label={showing ? 'ซ่อนฉบับก่อนหน้า' : `ดูฉบับก่อนหน้า ${older.length} ฉบับ`}
-                            className="inline-flex h-6 items-center gap-0.5 rounded-md border border-stone-200 bg-white pl-0.5 pr-1.5 text-[11px] font-medium text-stone-600 transition-colors hover:border-clay-300 hover:text-clay-700"
+                            className="inline-flex h-6 items-center gap-0.5 rounded-md border border-stone-200 bg-white pl-0.5 pr-1.5 text-[11px] font-medium text-stone-600 transition-colors hover:border-stone-300 hover:text-stone-900"
                           >
                             {showing ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             {chainLength({ latest: r, older })} ฉบับ
@@ -193,7 +192,7 @@ export default function HistoryPage() {
                     </td>
                   ))}
                   <td className="whitespace-nowrap px-4 py-2">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-end gap-2">
                       {/* The main thing to do comes first — fixed width, so the buttons after it line up down the table. */}
                       {primary
                         ? <PrimaryAction label="เซ็นเอง หรือส่งให้คนอื่นเซ็น" short="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Signature size={15} />} />
@@ -207,12 +206,10 @@ export default function HistoryPage() {
                         {!voided && !primary && (canSignOrSend(r) || canSignNow()) && <ActionGroupItem label="เซ็น / ส่งเซ็น" onClick={() => setSignModal(r)} icon={<Send size={15} />} />}
                         {!voided && subStatus(r) === 'pending' && !signedByOthers(r) && <ActionGroupItem label="ยกเลิกการส่งให้เซ็น" onClick={() => onCancelSign(r)} icon={<RotateCcw size={15} />} />}
                         {!voided && !deletable && canVoid && <ActionGroupItem label="ยกเลิกเอกสาร" onClick={async () => { if (await askAndVoid(r)) load() }} icon={<Ban size={15} />} />}
-                      </ActionGroup>
-                      <span>
                         {deletable
-                          ? <ActionIconButton label={`ลบเอกสาร ${r.docNumber}`} tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
-                          : <span aria-hidden className="inline-block w-8" />}
-                      </span>
+                          ? <ActionGroupItem danger label={`ลบเอกสาร ${r.docNumber}`} icon={<Trash2 size={15} />} onClick={() => onDelete(r)} />
+                          : <ActionGroupSlot />}
+                      </ActionGroup>
                     </div>
                   </td>
                 </tr>

@@ -42,14 +42,9 @@ export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
       ref={ref}
       onMouseEnter={hasTip ? show : undefined}
       onMouseLeave={hasTip ? hide : undefined}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-0.5 text-[12px] font-medium leading-5 ring-1 ring-inset ${meta.className}${hasTip ? ' cursor-help' : ''}`}
+      className={`inline-flex items-center gap-2 whitespace-nowrap text-[13px] leading-5 ${meta.className}${hasTip ? ' cursor-help' : ''}`}
     >
-      {/* The dot in a faint halo; it pulses while the document waits on someone. */}
-      <span aria-hidden className="relative flex h-2 w-2 shrink-0 items-center justify-center">
-        {st === 'pending' && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-40 motion-reduce:hidden" />}
-        <span className="absolute inline-flex h-full w-full rounded-full bg-current opacity-20" />
-        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
-      </span>
+      <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dot}`} />
       {statusLabel(sub)}
       {hasTip && pos && createPortal(
         <div

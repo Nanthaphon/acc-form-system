@@ -5,7 +5,6 @@ import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArchiveRestore, Ban, ChevronDown, ChevronRight, Copy, FilePen, Pencil, Printer, Trash2 } from 'lucide-react'
 import { ActionGroup, ActionGroupItem } from '../../components/RowActions'
-import ActionIconButton from '../../components/ActionIconButton'
 import { listAllSubmissions, submissionAmount, amountOf, deleteSubmission, isSigned, voidingAvailable, docStatusAvailable } from '../../data/submissions'
 import { loadOptionLists } from '../../data/fieldOptions'
 import DocStatusPicker from '../../components/DocStatusPicker'
@@ -30,7 +29,6 @@ import SubmissionFilterBar from '../../components/SubmissionFilterBar'
 import ColumnPicker from '../../components/ColumnPicker'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { PageHeader, ui } from '../../components/ui'
-import { avatarTone, initialOf } from '../../shared/initials'
 import { formatMoney } from '../../shared/money'
 
 interface Column extends PickableColumn {
@@ -115,14 +113,9 @@ export default function PrintHistoryPage() {
       cell: r => {
         const name = empName(r.createdByEmployeeId)
         return (
-          <div className="flex items-center gap-2.5">
-            <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${avatarTone(r.createdByEmployeeId)}`}>
-              {initialOf(name || r.createdByEmployeeId) || '?'}
-            </span>
-            <div className="min-w-0">
-              <div className="text-stone-900">{name || '—'}</div>
-              <div className="font-mono text-[12px] text-stone-500">{r.createdByEmployeeId}</div>
-            </div>
+          <div className="min-w-0">
+            <div className="text-stone-900">{name || '—'}</div>
+            <div className="mt-0.5 font-mono text-[12px] text-stone-500">{r.createdByEmployeeId}</div>
           </div>
         )
       },
@@ -132,14 +125,14 @@ export default function PrintHistoryPage() {
       cell: r => employees.find(e => e.employeeId === r.createdByEmployeeId)?.nickname || <span className="text-stone-300">—</span>,
     },
     { key: 'date', label: 'วันที่', tdCls: 'whitespace-nowrap', cell: r => formatDate(r.createdAt) },
-    { key: 'amount', label: 'ยอด (บาท)', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right font-semibold tabular-nums text-stone-900', cell: r => formatMoney(submissionAmount(r)) },
+    { key: 'amount', label: 'ยอด (บาท)', thCls: 'text-right', tdCls: 'whitespace-nowrap text-right font-medium tabular-nums text-stone-900', cell: r => formatMoney(submissionAmount(r)) },
     // How many times it was edited rides beside the status, rather than a column of dashes.
     {
       key: 'status', label: 'สถานะ', tdCls: 'whitespace-nowrap',
       cell: r => (
-        <span className="inline-flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5">
           <StatusBadge sub={r} />
-          {editLabel(r, vcounts) && <span className="text-xs text-ochre-700" title="จำนวนครั้งที่แก้ไขหลังบันทึก">✎ {editLabel(r, vcounts)}</span>}
+          {editLabel(r, vcounts) && <span className="text-xs text-stone-500" title="จำนวนครั้งที่แก้ไขหลังบันทึก">· {editLabel(r, vcounts)}</span>}
         </span>
       ),
     },
@@ -181,7 +174,7 @@ export default function PrintHistoryPage() {
       <div className={ui.tableCard}>
       <div className={ui.tableScroll}>
         <table className={ui.table}>
-          <thead className={ui.thead}>
+          <thead className={ui.theadPlain}>
             <tr>
               {shown.map(c => <th key={c.key} className={`${ui.th} ${c.thCls ?? ''}`}>{c.label}</th>)}
               <th className={ui.th} aria-label="การจัดการ" />
@@ -207,7 +200,7 @@ export default function PrintHistoryPage() {
                               aria-expanded={showing}
                               title={showing ? 'ซ่อนฉบับก่อนหน้า' : `ดูฉบับก่อนหน้า ${older.length} ฉบับ`}
                               aria-label={showing ? 'ซ่อนฉบับก่อนหน้า' : `ดูฉบับก่อนหน้า ${older.length} ฉบับ`}
-                              className="inline-flex h-6 items-center gap-0.5 rounded-md border border-stone-200 bg-white pl-0.5 pr-1.5 text-[11px] font-medium text-stone-600 transition-colors hover:border-clay-300 hover:text-clay-700"
+                              className="inline-flex h-6 items-center gap-0.5 rounded-md border border-stone-200 bg-white pl-0.5 pr-1.5 text-[11px] font-medium text-stone-600 transition-colors hover:border-stone-300 hover:text-stone-900"
                             >
                               {showing ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                               {chainLength({ latest: r, older })} ฉบับ
@@ -218,7 +211,7 @@ export default function PrintHistoryPage() {
                       </td>
                     ))}
                     <td className="whitespace-nowrap px-4 py-2">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end">
                         <ActionGroup>
                           {/* Cancelled: nothing to change. Signed: corrected as a new round. */}
                           {!r.voided && (corrects
@@ -229,8 +222,8 @@ export default function PrintHistoryPage() {
                           {r.voided
                             ? <ActionGroupItem label="กู้คืนเอกสารที่ยกเลิก" onClick={async () => { if (await askAndUnvoid(r)) loadRows() }} icon={<ArchiveRestore size={15} />} />
                             : voidingAvailable() && <ActionGroupItem label="ยกเลิกเอกสาร" onClick={async () => { if (await askAndVoid(r)) loadRows() }} icon={<Ban size={15} />} />}
+                          <ActionGroupItem danger label={`ลบเอกสาร ${r.docNumber}`} icon={<Trash2 size={15} />} onClick={() => onDelete(r)} />
                         </ActionGroup>
-                        <ActionIconButton label={`ลบเอกสาร ${r.docNumber}`} tone="red" icon={<Trash2 size={16} />} onClick={() => onDelete(r)} />
                       </div>
                     </td>
                   </tr>

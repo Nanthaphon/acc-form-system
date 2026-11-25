@@ -13,22 +13,27 @@ import { MoreHorizontal } from 'lucide-react'
 // Icons alone: three words on every line of a long table said the same three
 // things over and over. What each one does is on the tooltip and read out to a
 // screen reader by its aria-label.
-const itemClass = 'inline-flex h-8 w-9 items-center justify-center text-stone-600 transition-colors hover:bg-stone-50 hover:text-clay-700 focus:outline-none focus-visible:bg-clay-50'
+// Bare grey icons with no frame — a table of framed button groups was the
+// busiest thing on the page. The one that deletes turns red on hover only.
+const itemClass = 'inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay-600/30'
+const dangerClass = 'inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-500 transition-colors hover:bg-rose-50 hover:text-brick-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brick-600/30'
 
 export function ActionGroup({ children }: { children: ReactNode }) {
-  return (
-    <div className="inline-flex divide-x divide-stone-200 overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-stone-200/80">
-      {children}
-    </div>
-  )
+  return <div className="inline-flex items-center gap-0.5">{children}</div>
 }
 
-export function ActionGroupItem({ label, icon, to, onClick }: {
-  label: string; icon: ReactNode; to?: string; onClick?: () => void
+export function ActionGroupItem({ label, icon, to, onClick, danger }: {
+  label: string; icon: ReactNode; to?: string; onClick?: () => void; danger?: boolean
 }) {
+  const cls = danger ? dangerClass : itemClass
   return to
-    ? <Link to={to} className={itemClass} title={label} aria-label={label}>{icon}</Link>
-    : <button type="button" onClick={onClick} className={itemClass} title={label} aria-label={label}>{icon}</button>
+    ? <Link to={to} className={cls} title={label} aria-label={label}>{icon}</Link>
+    : <button type="button" onClick={onClick} className={cls} title={label} aria-label={label}>{icon}</button>
+}
+
+// The space one icon takes, so the icons after it line up down the table.
+export function ActionGroupSlot() {
+  return <span aria-hidden className="inline-block h-8 w-8" />
 }
 
 // Fixed width, so the groups beside it line up down the table whether or not

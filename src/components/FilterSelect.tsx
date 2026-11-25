@@ -95,8 +95,8 @@ export default function FilterSelect({ value, onChange, options, allLabel, ariaL
         className={chip
           ? `inline-flex max-w-[11rem] items-center gap-1.5 rounded-md border px-2 py-0.5 text-[12px] font-medium leading-5 transition-colors focus:outline-none focus:ring-2 focus:ring-clay-600/20 ${
               filtering
-                ? 'border-transparent bg-clay-100 text-clay-800 hover:bg-clay-200/70'
-                : 'border-dashed border-stone-300 bg-white text-stone-500 hover:border-clay-400 hover:text-clay-700'
+                ? 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'
+                : 'border-transparent bg-transparent text-stone-400 hover:bg-stone-100 hover:text-stone-700'
             }`
           : `flex w-full items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-sm transition-all focus:outline-none focus:ring-2 focus:ring-clay-600/15 ${
               filtering
@@ -106,7 +106,7 @@ export default function FilterSelect({ value, onChange, options, allLabel, ariaL
       >
         {chip ? (
           filtering
-            ? <>{chip.icon}<span className="min-w-0 truncate">{picked?.label ?? value}</span><ChevronDown size={13} className={`shrink-0 text-clay-500 transition-transform ${open ? 'rotate-180' : ''}`} /></>
+            ? <>{chip.icon}<span className="min-w-0 truncate">{picked?.label ?? value}</span><ChevronDown size={13} className={`shrink-0 text-stone-400 transition-transform ${open ? 'rotate-180' : ''}`} /></>
             : <><Plus size={13} className="shrink-0" /><span className="truncate">{chip.unsetLabel}</span></>
         ) : (
           <>

@@ -31,6 +31,8 @@ export const ui = {
   tableScroll: 'scroll-slim overflow-x-auto',
   table: 'w-full text-sm',
   thead: 'border-b border-clay-100 bg-clay-50/70 text-clay-800',
+  // the history tables: plain grey, nothing to compete with the rows
+  theadPlain: 'border-b border-stone-200 bg-stone-50/70 text-stone-500',
   th: 'whitespace-nowrap px-4 py-3 text-left text-xs font-semibold',
   tbody: 'divide-y divide-stone-100',
   tr: 'transition-colors hover:bg-clay-50/50',
