@@ -2,7 +2,8 @@ import { uiAlert, uiConfirm } from '../../components/dialog/dialogService'
 import EmptyRow from '../../components/EmptyRow'
 import { PageSkeleton } from '../../components/TableSkeleton'
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { useGoBack } from '../../shared/useGoBack'
 import { AtSign, FileText, KeyRound, Pencil, Printer, Signature, Trash2, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid } from '../../data/users'
@@ -17,7 +18,7 @@ import { formatDate } from '../../shared/date'
 import type { Filters } from '../../shared/submissionFilter'
 import { emptyFilters, applyFilters } from '../../shared/submissionFilter'
 import { canManageLogin, isSuperAdmin, passwordState, PASSWORD_STATE, roleLabel, roleTone } from '../../shared/roles'
-import { avatarTone, initialsOf } from '../../shared/initials'
+import { AVATAR_TONE, initialsOf } from '../../shared/initials'
 import { chainRows, chainLength } from '../../shared/revisionChain'
 import { usePagination } from '../../shared/usePagination'
 import SubmissionFilterBar from '../../components/SubmissionFilterBar'
@@ -43,7 +44,7 @@ const HEADERS = [
 
 export default function EmployeeDetailPage() {
   const { uid } = useParams()
-  const nav = useNavigate()
+  const goBack = useGoBack()
   const { profile: me, refresh } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [subs, setSubs] = useState<SubmissionSummary[]>([])
@@ -119,7 +120,7 @@ export default function EmployeeDetailPage() {
       <PageHeader
         icon={<UserRound size={20} />}
         title={name || 'ข้อมูลพนักงาน'}
-        onBack={() => nav('/admin/employees')}
+        onBack={() => goBack('/admin/employees')}
         actions={canEdit && (
           <Link to={`/admin/employees/${profile.uid}/edit`} className={ui.btnPrimary}>
             <Pencil size={16} /> แก้ไขข้อมูล
@@ -131,7 +132,7 @@ export default function EmployeeDetailPage() {
       <section className={`${ui.card} mb-8`}>
         <div className="flex flex-wrap items-start gap-x-10 gap-y-5">
           <div className="flex min-w-[16rem] items-center gap-4">
-            <span aria-hidden className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold ${avatarTone(profile.employeeId)}`}>
+            <span aria-hidden className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold ${AVATAR_TONE}`}>
               {initialsOf(profile.firstName, profile.lastName) || '?'}
             </span>
             <div className="min-w-0">
@@ -160,7 +161,7 @@ export default function EmployeeDetailPage() {
           {/* Signing in: the username, and the password while it is still the default */}
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-stone-900"><KeyRound size={15} className="text-clay-600" /> เข้าสู่ระบบ</h3>
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-stone-900"><KeyRound size={15} className="text-stone-500" /> เข้าสู่ระบบ</h3>
               <div className="ml-auto flex gap-1">
                 {viewerIsSuper && <button type="button" onClick={() => setChangingUsername(true)} className={ui.btnGhost}><AtSign size={15} /> แก้ชื่อผู้ใช้</button>}
                 {canSetPassword && <button type="button" onClick={() => setSettingPassword(true)} className={ui.btnGhost}><KeyRound size={15} /> ตั้งรหัสผ่านใหม่</button>}
@@ -184,7 +185,7 @@ export default function EmployeeDetailPage() {
           </div>
           {/* An admin can put a signature on the account so the person can sign online. */}
           <div className="lg:pl-6">
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-900"><Signature size={15} className="text-clay-600" /> ลายเซ็น</h3>
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-900"><Signature size={15} className="text-stone-500" /> ลายเซ็น</h3>
             <SignatureField uid={profile.uid} signature={profile.signatureImage} canEdit={canManage} onChanged={loadProfile} />
           </div>
         </div>
@@ -223,7 +224,7 @@ export default function EmployeeDetailPage() {
                     <td className={`${ui.td} whitespace-nowrap`}>
                       <span className="inline-flex items-center gap-2">
                         <StatusBadge sub={r} />
-                        {editLabel(r, vcounts) && <span className="text-xs text-ochre-700" title="จำนวนครั้งที่แก้ไขหลังบันทึก">✎ {editLabel(r, vcounts)}</span>}
+                        {editLabel(r, vcounts) && <span className="text-xs text-stone-500" title="จำนวนครั้งที่แก้ไขหลังบันทึก">· {editLabel(r, vcounts)}</span>}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-2">

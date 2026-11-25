@@ -174,7 +174,7 @@ export default function PrintHistoryPage() {
       <div className={ui.tableCard}>
       <div className={ui.tableScroll}>
         <table className={ui.table}>
-          <thead className={ui.theadPlain}>
+          <thead className={ui.thead}>
             <tr>
               {shown.map(c => <th key={c.key} className={`${ui.th} ${c.thCls ?? ''}`}>{c.label}</th>)}
               <th className={ui.th} aria-label="การจัดการ" />

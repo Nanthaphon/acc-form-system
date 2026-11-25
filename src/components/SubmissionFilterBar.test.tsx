@@ -47,8 +47,8 @@ describe('SubmissionFilterBar', () => {
     show({ ...emptyFilters, formType: 'r1' })
     const button = screen.getByRole('combobox', { name: 'ฟอร์ม' })
     expect(button).toHaveTextContent('ใบรับเงินคืนเข้าบริษัท')
-    expect(button.className).toContain('bg-clay-50')
-    expect(screen.getByRole('combobox', { name: 'สถานะ' }).className).not.toContain('bg-clay-50')
+    expect(button.className).toContain('text-stone-900')
+    expect(screen.getByRole('combobox', { name: 'สถานะ' }).className).not.toContain('text-stone-900')
     expect(within(open('ฟอร์ม')).getByRole('option', { selected: true })).toHaveTextContent('ใบรับเงินคืนเข้าบริษัท')
   })
 

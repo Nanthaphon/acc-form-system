@@ -10,7 +10,7 @@ import ColumnPicker from '../../components/ColumnPicker'
 import FilterSelect from '../../components/FilterSelect'
 import type { PickableColumn } from '../../components/ColumnPicker'
 import { useHiddenColumns } from '../../shared/useHiddenColumns'
-import { avatarTone, initialOf } from '../../shared/initials'
+import { AVATAR_TONE, initialOf } from '../../shared/initials'
 import { employeesCsvName, employeesToCsv } from '../../shared/employeeCsv'
 import { saveFile } from '../../shared/saveFile'
 import { Spinner } from '../../components/Spinner'
@@ -170,7 +170,7 @@ export default function EmployeeListPage() {
       case 'name': return (
         <td key={key} className={td}>
           <div className="flex items-center gap-3">
-            <span aria-hidden className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarTone(r.employeeId)}`}>
+            <span aria-hidden className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${AVATAR_TONE}`}>
               {initial(r)}
             </span>
             <Link to={`/admin/employees/${r.uid}`} className="whitespace-nowrap font-medium text-stone-900 transition-colors hover:text-clay-600">
@@ -293,7 +293,7 @@ export default function EmployeeListPage() {
               {loading && <SkeletonRows cols={shown.length + 1} />}
               {!loading && filtered.map(r => {
                 return (
-                  <tr key={r.uid} className={`group transition-colors duration-150 ${selected.has(r.uid) ? 'bg-rose-50/50' : 'hover:bg-clay-50/50'}`}>
+                  <tr key={r.uid} className={`group transition-colors duration-150 ${selected.has(r.uid) ? 'bg-rose-50/50' : 'hover:bg-stone-50/70'}`}>
                     <td className="w-10 px-4 py-3">
                       <input
                         type="checkbox"

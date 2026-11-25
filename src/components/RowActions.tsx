@@ -116,8 +116,8 @@ export function RowMenu({ items, label = 'ตัวเลือกเพิ่�
         title={label}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 ring-1 transition-colors hover:bg-stone-50 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay-600/40 ${
-          open ? 'bg-stone-50 text-stone-900 ring-stone-300' : 'bg-white ring-stone-200/80 shadow-sm'
+        className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay-600/30 ${
+          open ? 'bg-stone-100 text-stone-900' : ''
         }`}
       >
         <MoreHorizontal size={16} />

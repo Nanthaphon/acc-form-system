@@ -100,7 +100,7 @@ export default function FilterSelect({ value, onChange, options, allLabel, ariaL
             }`
           : `flex w-full items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-sm transition-all focus:outline-none focus:ring-2 focus:ring-clay-600/15 ${
               filtering
-                ? 'border-clay-200 bg-clay-50 text-clay-800 hover:border-clay-300'
+                ? 'border-stone-300 bg-white font-medium text-stone-900 hover:border-stone-400'
                 : 'border-stone-200/60 bg-white text-stone-700 hover:border-stone-300'
             } ${open ? 'border-clay-600 ring-2 ring-clay-600/15' : ''}`}
       >
@@ -111,7 +111,7 @@ export default function FilterSelect({ value, onChange, options, allLabel, ariaL
         ) : (
           <>
             <span className="min-w-0 flex-1 truncate">{picked?.label ?? allLabel}</span>
-            <ChevronDown size={15} className={`shrink-0 transition-transform ${filtering ? 'text-clay-600' : 'text-stone-400'} ${open ? 'rotate-180' : ''}`} />
+            <ChevronDown size={15} className={`shrink-0 transition-transform ${filtering ? 'text-stone-600' : 'text-stone-400'} ${open ? 'rotate-180' : ''}`} />
           </>
         )}
       </button>

@@ -8,7 +8,7 @@ export default function EmptyRow({ colSpan, children, icon }: { colSpan: number;
     <tr>
       <td colSpan={colSpan} className="px-4 py-12">
         <div className="flex flex-col items-center gap-2.5 text-center">
-          <span aria-hidden className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-50 text-clay-400">
+          <span aria-hidden className="flex h-11 w-11 items-center justify-center rounded-full bg-stone-100 text-stone-400">
             {icon ?? <Inbox size={20} />}
           </span>
           <span className="text-sm text-stone-500">{children}</span>

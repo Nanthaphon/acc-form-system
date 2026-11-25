@@ -32,7 +32,7 @@ export default function FolderCard({ name, count, active, isAdmin, noun, onOpen,
       {isAdmin && (
         <div className="mt-3 flex items-center justify-center gap-2" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
           <Switch on={active} onChange={onToggle} />
-          <span className={`text-xs font-medium ${active ? 'text-olive-600' : 'text-stone-400'}`}>{active ? 'เปิด' : 'ปิด'}</span>
+          <span className="inline-flex items-center gap-1.5 text-xs text-stone-500"><span aria-hidden className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-olive-600' : 'bg-stone-300'}`} />{active ? 'เปิด' : 'ปิด'}</span>
         </div>
       )}
       {isAdmin && (

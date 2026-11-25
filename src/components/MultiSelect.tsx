@@ -53,13 +53,13 @@ export default function MultiSelect({
         {value.length === 0 ? (
           <span className="px-1 text-stone-400">{placeholder}</span>
         ) : value.map(v => (
-          <span key={v} className="inline-flex items-center gap-1 rounded-md bg-clay-50 py-0.5 pl-2 pr-1 text-xs font-medium text-clay-700">
+          <span key={v} className="inline-flex items-center gap-1 rounded-md bg-stone-100 py-0.5 pl-2 pr-1 text-xs font-medium text-stone-700">
             {labelOf(v)}
             <button
               type="button"
               aria-label={`เอา ${labelOf(v)} ออก`}
               onClick={e => { e.stopPropagation(); toggle(v) }}
-              className="rounded p-0.5 hover:bg-clay-100"
+              className="rounded p-0.5 hover:bg-stone-200"
             >
               <X size={12} />
             </button>

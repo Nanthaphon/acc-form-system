@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { PageSkeleton } from '../components/TableSkeleton'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { useGoBack } from '../shared/useGoBack'
 import { Ban, ChevronDown, Eye, FileSpreadsheet, FileText, History, Printer, Signature } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import ExpenseClaimPreview from '../features/expense-claim/ExpenseClaimPreview'
@@ -22,7 +23,7 @@ import { loadChunk } from '../shared/loadChunk'
 
 export default function SubmissionPreviewPage() {
   const { id } = useParams()
-  const nav = useNavigate()
+  const goBack = useGoBack()
   const { profile } = useAuth()
   const [sub, setSub] = useState<Submission | null>(null)
   const [settings, setSettings] = useState<FormSettings | null>(null)
@@ -119,7 +120,7 @@ export default function SubmissionPreviewPage() {
         <PageHeader
           icon={<FileText size={20} />}
           title={`ดูตัวอย่าง — ${sub.docNumber}`}
-          onBack={() => nav(-1)}
+          onBack={() => goBack('/history')}
           actions={canPrint
             ? <div className="flex flex-wrap items-center gap-2">
                 <button type="button" onClick={onExportExcel} disabled={exporting} className={ui.btnSecondary}>

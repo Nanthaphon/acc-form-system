@@ -1,6 +1,7 @@
 import { uiAlert } from '../../components/dialog/dialogService'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useGoBack } from '../../shared/useGoBack'
 import { AtSign, KeyRound, Lock, Save, ShieldCheck, UserPen, UserRound } from 'lucide-react'
 import { useAuth } from '../../auth/AuthProvider'
 import { getProfileByUid, updateProfile } from '../../data/users'
@@ -19,6 +20,7 @@ import type { Company, UserProfile, AccessGroup } from '../../types/schema'
 export default function EditEmployeePage() {
   const { uid } = useParams<{ uid: string }>()
   const nav = useNavigate()
+  const goBack = useGoBack()
   const { profile: me, refresh } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
   const [groups, setGroups] = useState<AccessGroup[]>([])
@@ -96,7 +98,7 @@ export default function EditEmployeePage() {
         icon={<UserPen size={20} />}
         title="แก้ไขข้อมูลพนักงาน"
         subtitle={fullName || 'พนักงาน'}
-        onBack={() => nav('/admin/employees')}
+        onBack={() => goBack('/admin/employees')}
         // Save stays in sight at the top, however far down the form is filled.
         actions={
           <>

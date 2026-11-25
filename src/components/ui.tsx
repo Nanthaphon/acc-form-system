@@ -30,12 +30,11 @@ export const ui = {
   tableCard: 'overflow-hidden rounded-2xl border border-stone-200/60 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04),0_20px_50px_-28px_rgba(22,32,36,0.20)]',
   tableScroll: 'scroll-slim overflow-x-auto',
   table: 'w-full text-sm',
-  thead: 'border-b border-clay-100 bg-clay-50/70 text-clay-800',
-  // the history tables: plain grey, nothing to compete with the rows
-  theadPlain: 'border-b border-stone-200 bg-stone-50/70 text-stone-500',
+  // plain grey: nothing in the header competes with the rows
+  thead: 'border-b border-stone-200 bg-stone-50/70 text-stone-500',
   th: 'whitespace-nowrap px-4 py-3 text-left text-xs font-semibold',
   tbody: 'divide-y divide-stone-100',
-  tr: 'transition-colors hover:bg-clay-50/50',
+  tr: 'transition-colors hover:bg-stone-50/70',
   td: 'px-4 py-2.5 text-stone-700',
   emptyCell: 'px-4 py-10 text-center text-sm text-stone-400',
 } as const
@@ -69,14 +68,15 @@ export function PageHeader({ icon, title, subtitle, onBack, actions }: {
   )
 }
 
-// A tone name says what a badge MEANS, not what colour it is: `blue` is the
-// brand navy, `green` the sea green, `red` the brick.
+// A tone name says what a badge MEANS. The badge itself stays grey — words on
+// a light grey ground — and only a small dot carries the tone, as the
+// document status does (StatusBadge).
 const BADGE_TONES = {
-  gray: 'bg-stone-100 text-stone-700',
-  blue: 'bg-clay-100 text-clay-800',
-  green: 'bg-olive-100 text-olive-800',
-  amber: 'bg-ochre-50 text-ochre-700',
-  red: 'bg-rose-100 text-brick-700',
+  gray: '',
+  blue: 'bg-clay-600',
+  green: 'bg-olive-600',
+  amber: 'bg-ochre-500',
+  red: 'bg-brick-500',
 } as const
 
 // A card or section heading: the same icon tile in front of every one, so a
@@ -84,12 +84,17 @@ const BADGE_TONES = {
 export function SectionTitle({ icon, children, className = '' }: { icon: ReactNode; children: ReactNode; className?: string }) {
   return (
     <h2 className={`flex items-center gap-2.5 text-[15px] font-semibold text-stone-900 ${className}`}>
-      <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-clay-100 text-clay-700">{icon}</span>
+      <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600">{icon}</span>
       {children}
     </h2>
   )
 }
 
 export function Badge({ tone = 'gray', children }: { tone?: keyof typeof BADGE_TONES; children: ReactNode }) {
-  return <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium ${BADGE_TONES[tone]}`}>{children}</span>
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-700">
+      {BADGE_TONES[tone] && <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${BADGE_TONES[tone]}`} />}
+      {children}
+    </span>
+  )
 }

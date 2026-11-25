@@ -18,7 +18,7 @@ describe('ActionIconButton', () => {
     expect(link).toHaveClass('h-8')
   })
 
-  it('uses one neutral black icon style even when a tone is provided', () => {
+  it('uses one neutral grey icon style even when a tone is provided', () => {
     render(
       <MemoryRouter>
         <ActionIconButton label="พิมพ์" to="/print" tone="green" icon={<Pencil size={16} />} />
@@ -26,7 +26,7 @@ describe('ActionIconButton', () => {
     )
 
     const link = screen.getByRole('link', { name: 'พิมพ์' })
-    expect(link).toHaveClass('text-stone-900')
+    expect(link).toHaveClass('text-stone-500')
     expect(link.className).not.toContain('text-emerald')
   })
 })

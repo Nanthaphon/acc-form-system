@@ -17,7 +17,9 @@ interface BaseProps {
 
 type Props = BaseProps & { to?: string; onClick?: (e: MouseEvent<HTMLButtonElement>) => void }
 
-const iconOnlyClass = 'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-transparent bg-white align-middle text-stone-900 shadow-sm ring-1 ring-stone-200/80 transition hover:bg-stone-50 hover:ring-stone-300'
+const iconOnlyClass = 'inline-flex h-8 w-8 items-center justify-center rounded-md align-middle text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-clay-600/30'
+// A bare icon that deletes is grey like the rest, and turns red under the pointer.
+const iconOnlyDanger = 'inline-flex h-8 w-8 items-center justify-center rounded-md align-middle text-stone-500 transition-colors hover:bg-rose-50 hover:text-brick-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brick-600/30'
 const labelledClass = 'inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent bg-white px-2.5 align-middle text-xs font-medium shadow-sm ring-1 transition'
 const labelledNeutral = 'text-stone-700 ring-stone-200/80 hover:bg-stone-50 hover:ring-stone-300'
 // The ring has to darken on hover, so the two shades must differ — Harbor has
@@ -27,7 +29,7 @@ const labelledDanger = 'text-brick-600 ring-rose-100 hover:bg-rose-50 hover:ring
 export default function ActionIconButton({ label, short, icon, tone, showLabel, ...props }: Props) {
   const className = showLabel
     ? `${labelledClass} ${tone === 'red' ? labelledDanger : labelledNeutral}`
-    : iconOnlyClass
+    : tone === 'red' ? iconOnlyDanger : iconOnlyClass
   const content = showLabel ? <>{icon}<span>{short ?? label}</span></> : icon
 
   if (props.to) {

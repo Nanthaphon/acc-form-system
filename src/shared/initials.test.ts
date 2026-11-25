@@ -14,11 +14,9 @@ describe('initials', () => {
   })
 })
 
-describe('avatarTone', () => {
-  it('gives one person the same colour every time, and spreads people over the colours', async () => {
-    const { avatarTone } = await import('./initials')
-    expect(avatarTone('1010001')).toBe(avatarTone('1010001'))
-    const tones = new Set(Array.from({ length: 40 }, (_, i) => avatarTone(String(1010000 + i))))
-    expect(tones.size).toBeGreaterThan(1)
+describe('AVATAR_TONE', () => {
+  it('is one grey for everyone', async () => {
+    const { AVATAR_TONE } = await import('./initials')
+    expect(AVATAR_TONE).toContain('bg-stone-100')
   })
 })

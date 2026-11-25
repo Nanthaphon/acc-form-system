@@ -231,7 +231,7 @@ export default function FieldOptionsPage() {
                 )
               }
               return (
-                <li key={o.id} className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-clay-50/50">
+                <li key={o.id} className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-stone-50/70">
                   <span data-testid="option-value" className="min-w-0 flex-1 truncate text-sm text-stone-900" title={o.value}>{o.value}</span>
                   {used > 0
                     ? <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-xs tabular-nums text-stone-600">{used} คน</span>

@@ -2,6 +2,7 @@ import { uiAlert, uiPrompt } from '../../components/dialog/dialogService'
 import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useGoBack } from '../../shared/useGoBack'
 import { Ban, Check, Eye, FilePen, History, Lock, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
@@ -39,6 +40,7 @@ export default function FormPage() {
   const sourceId = cloneId ?? reviseId
   const { profile, refresh: refreshProfile } = useAuth()
   const nav = useNavigate()
+  const goBack = useGoBack()
   const [company, setCompany] = useState<Company | null>(null)
   const [companies, setCompanies] = useState<Company[]>([])
   const [settings, setSettings] = useState<FormSettings>(EXPENSE_CLAIM_DEFAULTS)
@@ -412,7 +414,7 @@ export default function FormPage() {
           </div>
         )}
         <PageHeader
-          onBack={() => nav(settings.groupId ? `/group/${settings.groupId}` : '/')}
+          onBack={() => goBack(settings.groupId ? `/group/${settings.groupId}` : '/')}
           title={settings.name || settings.title}
           subtitle={`เลขที่ ${docNumber}`}
         />

@@ -191,7 +191,7 @@ export default function GroupPage() {
     </span>
   )
   const activeLabel = (form: FormSettings) => (
-    <span className={`whitespace-nowrap text-xs font-medium ${isActive(form) ? 'text-olive-600' : 'text-stone-400'}`}>{isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}</span>
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-stone-500"><span aria-hidden className={`h-1.5 w-1.5 rounded-full ${isActive(form) ? 'bg-olive-600' : 'bg-stone-300'}`} />{isActive(form) ? 'เปิดใช้งาน' : 'ปิดปรับปรุง'}</span>
   )
   const sectionTitle = (title: string, n: number) => (
     <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-stone-700">
@@ -322,7 +322,7 @@ export default function GroupPage() {
                     className={`flex cursor-pointer flex-col rounded-xl border border-stone-200 bg-white p-5 transition hover:border-stone-300 hover:shadow-md ${isAdmin && !isActive(form) ? 'opacity-60' : ''}`}
                   >
                     <div className="mb-3 flex items-start justify-between gap-2">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileText size={20} /></div>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600"><FileText size={20} /></div>
                       {isAdmin && formActions(form)}
                     </div>
                     <div className="font-medium text-stone-900">{formDisplayName(form)}</div>
@@ -357,7 +357,7 @@ export default function GroupPage() {
                         onClick={() => nav(`/form/${form.formType}`)}
                         className="flex min-w-0 flex-1 items-center gap-3 text-left"
                       >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-clay-50 text-clay-600"><FileText size={18} /></span>
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600"><FileText size={18} /></span>
                         <span className="min-w-0">
                           <span className="block truncate font-medium text-stone-900">{formDisplayName(form)}</span>
                           <span className="block truncate text-xs text-stone-500">

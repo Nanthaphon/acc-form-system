@@ -59,7 +59,7 @@ export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
           {voided ? (
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 border-b border-stone-100 pb-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-50 text-brick-600"><Ban size={15} strokeWidth={2.2} /></span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-600"><Ban size={15} strokeWidth={2.2} /></span>
                 <div className="min-w-0">
                   <div className="font-semibold text-stone-900">ยกเลิกเอกสารแล้ว</div>
                   <div className="text-[11px] text-stone-500">{voided.byName || '—'} · {formatDateTime(voided.at)}</div>
@@ -67,13 +67,13 @@ export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
               </div>
               <div className="whitespace-pre-wrap rounded-md bg-stone-50 px-2 py-1.5"><span className="text-stone-500">เหตุผล: </span>{voided.reason}</div>
               {voided.replacedByNumber && (
-                <div className="rounded-md bg-clay-50 px-2 py-1.5 text-clay-800">ฉบับแก้ไข: <span className="font-mono font-medium">{voided.replacedByNumber}</span></div>
+                <div className="rounded-md bg-stone-50 px-2 py-1.5 text-stone-700">ฉบับแก้ไข: <span className="font-mono font-medium">{voided.replacedByNumber}</span></div>
               )}
             </div>
           ) : <>
           <div className="mb-2 flex items-center justify-between gap-2 border-b border-stone-100 pb-2">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ochre-50 text-ochre-600">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-600">
                 <Clock3 size={15} strokeWidth={2.2} />
               </span>
               <div className="min-w-0">
@@ -81,7 +81,7 @@ export default function StatusBadge({ sub }: { sub: SubmissionSummary }) {
                 <div className="text-[11px] text-stone-500">{pendingCountText(pending.length)}</div>
               </div>
             </div>
-            <span className="shrink-0 rounded-full bg-ochre-50 px-2 py-0.5 font-medium text-ochre-700">
+            <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 font-medium text-stone-700">
               {pending.length}/{sub.signatures?.length ?? pending.length}
             </span>
           </div>
