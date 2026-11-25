@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { pickOption, optionLabels } from '../../components/SelectMenu.testing'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import { EXPENSE_CLAIM_DEFAULT_COLUMNS, emptyRow } from '../../types/schema'
 
@@ -32,7 +33,7 @@ describe('ExpenseClaimForm', () => {
       />,
     )
     expect(screen.getByText('ภาษีมูลค่าเพิ่ม 7%')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' })).toHaveValue('3')
+    expect(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' })).toHaveAttribute('data-value', '3')
   })
 
   it('ช่องกรอกในข้อความ {{…}} บันทึกค่าลง header.fields', () => {
@@ -75,13 +76,13 @@ describe('ExpenseClaimForm', () => {
     const { unmount } = show()
     const pick = screen.getByRole('combobox', { name: 'วิธีชำระ' })
     expect(pick).toHaveClass('text-left')
-    expect([...pick.querySelectorAll('option')].map(o => o.textContent)).toEqual(['— วิธีชำระ —', 'เงินสด', 'โอนเงิน'])
-    fireEvent.change(pick, { target: { value: 'โอนเงิน' } })
+    expect(optionLabels(pick)).toEqual(['วิธีชำระ', 'เงินสด', 'โอนเงิน'])
+    pickOption(pick, 'โอนเงิน')
     expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ fields: { 'tpl:วิธีชำระ': 'โอนเงิน' } }))
     unmount()
     // A choice since taken off the list stays on the document that has it.
     show({ 'tpl:วิธีชำระ': 'เช็ค' })
-    expect(screen.getByRole('combobox', { name: 'วิธีชำระ' })).toHaveValue('เช็ค')
+    expect(screen.getByRole('combobox', { name: 'วิธีชำระ' })).toHaveAttribute('data-value', 'เช็ค')
   })
 
   it('ช่องอัตโนมัติแสดงค่าจากเอกสาร ไม่ใช่ช่องให้กรอก', () => {

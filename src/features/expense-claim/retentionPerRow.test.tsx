@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { pickOption } from '../../components/SelectMenu.testing'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
 import { retLines, taxBases, taxSummary, ROW_RET_RATE_KEY } from './calc'
@@ -62,15 +63,15 @@ describe('on the fill-in screen', () => {
 
   it('gives every line a rate to choose, and records it', () => {
     const { onItemsChange } = show(byLine)
-    expect(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 1' })).toHaveValue('5')
-    expect(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' })).toHaveValue('0')
-    fireEvent.change(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' }), { target: { value: '10' } })
+    expect(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 1' })).toHaveAttribute('data-value', '5')
+    expect(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' })).toHaveAttribute('data-value', '0')
+    pickOption(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' }), '10')
     expect(onItemsChange.mock.calls[0][0][1][ROW_RET_RATE_KEY]).toBe(10)
   })
 
   it('takes a rate typed under อื่นๆ', () => {
     const { onItemsChange } = show(byLine)
-    fireEvent.change(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' }), { target: { value: 'other' } })
+    pickOption(screen.getByRole('combobox', { name: 'ประกันงาน รายการที่ 2' }), 'other')
     fireEvent.change(screen.getByRole('spinbutton', { name: 'อัตราประกันงาน รายการที่ 2 (%)' }), { target: { value: '2.5' } })
     expect(onItemsChange.mock.calls.at(-1)![0][1][ROW_RET_RATE_KEY]).toBe(2.5)
   })

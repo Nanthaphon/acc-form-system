@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { pickOption, optionLabels } from '../../components/SelectMenu.testing'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
 import { taxBases, taxSummary, whtLines, ROW_WHT_KEY, ROW_WHT_RATE_KEY } from './calc'
@@ -85,15 +86,15 @@ describe('on the fill-in screen', () => {
   it('gives every line a rate to choose', () => {
     show(byLine)
     const pick = screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 2' })
-    expect(pick).toHaveValue('3')
-    expect([...within(pick).getAllByRole('option')].map(o => o.textContent))
+    expect(pick).toHaveAttribute('data-value', '3')
+    expect(optionLabels(pick))
       .toEqual(['ไม่หัก', '1%', '2%', '3%', '5%', 'อื่นๆ'])
-    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 4' })).toHaveValue('0')
+    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 4' })).toHaveAttribute('data-value', '0')
   })
 
   it('records the chosen rate on that line, and clears an older tick with it', () => {
     const { onItemsChange } = show(byLine, [row('a', 1000, { [ROW_WHT_KEY]: 1 })])
-    fireEvent.change(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' }), { target: { value: '5' } })
+    pickOption(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' }), '5')
     const saved = onItemsChange.mock.calls[0][0][0]
     expect(saved[ROW_WHT_RATE_KEY]).toBe(5)
     expect(saved[ROW_WHT_KEY]).toBe('')
@@ -101,7 +102,7 @@ describe('on the fill-in screen', () => {
 
   it('lets a line take a rate that is not on the list', () => {
     const { onItemsChange } = show(byLine, [row('a', 1000)])
-    fireEvent.change(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' }), { target: { value: 'other' } })
+    pickOption(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' }), 'other')
     fireEvent.change(screen.getByRole('spinbutton', { name: 'อัตราหัก ณ ที่จ่าย รายการที่ 1 (%)' }), { target: { value: '1.5' } })
     expect(onItemsChange.mock.calls.at(-1)![0][0][ROW_WHT_RATE_KEY]).toBe(1.5)
   })

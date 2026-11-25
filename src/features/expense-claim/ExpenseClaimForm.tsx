@@ -11,6 +11,7 @@ import { BLANK_LIMITS, blankWidth } from './blankSizing'
 import { FEATURES } from '../../shared/features'
 import TaxPanel from './TaxPanel'
 import GrowTextarea from '../../components/GrowTextarea'
+import SelectMenu from '../../components/SelectMenu'
 import { textPx, textSizeScale, DEFAULT_TEXT_PX, MAX_TEXT_PX, MIN_TEXT_PX } from '../../shared/textSize'
 
 interface Props {
@@ -131,17 +132,15 @@ function BlankInput({ field, value, onChange }: { field: TemplateField; value: s
     const choices = value && !options.includes(value) ? [...options, value] : options
     return (
       <span className="mx-1 inline-block max-w-full align-middle leading-normal">
-        <select
-          aria-label={field.label}
+        <SelectMenu
+          ariaLabel={field.label}
           title={field.label}
           style={{ minWidth: limits.min, maxWidth: limits.max }}
-          className={`${value ? blankClass : blankClass.replace('text-stone-900', 'text-stone-400')} max-w-full cursor-pointer text-left`}
+          className={`${blankClass} max-w-full`}
           value={value}
-          onChange={e => onChange(e.target.value)}
-        >
-          <option value="">— {field.label} —</option>
-          {choices.map(o => <option key={o} value={o} className="text-stone-900">{o}</option>)}
-        </select>
+          onChange={onChange}
+          options={[{ value: '', label: field.label }, ...choices.map(o => ({ value: o, label: o }))]}
+        />
       </span>
     )
   }
@@ -431,15 +430,14 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                               onChange={e => setCell(i, col.key, e.target.value === '' ? '' : Number(e.target.value))}
                             />
                           ) : col.type === 'select' ? (
-                            <select
+                            <SelectMenu
+                              ariaLabel={`${col.label.replace(/\s+/g, ' ')} รายการที่ ${i + 1}`}
                               className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 leading-snug focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
                               style={cellFont}
-                              value={row[col.key] as string}
-                              onChange={e => setCell(i, col.key, e.target.value)}
-                            >
-                              <option value="">— เลือก —</option>
-                              {(col.options ?? []).filter(o => o.trim()).map((o, oi) => <option key={oi} value={o}>{o}</option>)}
-                            </select>
+                              value={(row[col.key] ?? '') as string}
+                              onChange={v => setCell(i, col.key, v)}
+                              options={[{ value: '', label: 'เลือก' }, ...[...new Set((col.options ?? []).filter(o => o.trim()))].map(o => ({ value: o, label: o }))]}
+                            />
                           ) : (
                             <GrowTextarea
                               className={`w-full min-w-0 rounded-md border border-stone-200 bg-white px-2 py-1.5 leading-snug focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100`}
@@ -473,12 +471,16 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                         return (
                           <td key={t.key} className={`border-b border-stone-100 ${COL_RULE} bg-clay-50/40 p-1 text-center`}>
                             <div className="flex flex-col items-center gap-1">
-                              <select
-                                aria-label={`${t.label} รายการที่ ${i + 1}`}
-                                className={`w-full rounded-md border border-stone-200 bg-white px-1 py-1 text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 ${rate > 0 ? 'font-medium text-stone-900' : 'text-stone-400'}`}
+                              <SelectMenu
+                                ariaLabel={`${t.label} รายการที่ ${i + 1}`}
+                                className={`w-full rounded-md border border-stone-200 bg-white px-1.5 py-1 text-xs focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100 ${rate > 0 ? 'font-medium text-stone-900' : 'text-stone-500'}`}
                                 value={choice}
-                                onChange={e => {
-                                  const v = e.target.value
+                                options={[
+                                  { value: '0', label: 'ไม่หัก' },
+                                  ...ratePresets(kind).map(r => ({ value: String(r), label: `${r}%` })),
+                                  { value: 'other', label: 'อื่นๆ' },
+                                ]}
+                                onChange={v => {
                                   setOtherRateRows(prev => {
                                     const next = new Set(prev)
                                     if (v === 'other') next.add(`${kind}:${i}`)
@@ -487,11 +489,7 @@ export default function ExpenseClaimForm({ header, items, onHeaderChange, onItem
                                   })
                                   if (v !== 'other') setRowRate(kind, i, Number(v))
                                 }}
-                              >
-                                <option value="0">ไม่หัก</option>
-                                {ratePresets(kind).map(r => <option key={r} value={String(r)}>{r}%</option>)}
-                                <option value="other">อื่นๆ</option>
-                              </select>
+                              />
                               {rateAmount(kind, i, rate) > 0 && (
                                 <span data-rate-amount className="text-xs font-medium tabular-nums text-brick-600">
                                   {formatMoney(rateAmount(kind, i, rate))}

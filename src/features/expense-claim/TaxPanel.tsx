@@ -6,6 +6,7 @@ import type { RateLine, TaxBases, TaxResult } from './calc'
 import { bahtText } from '../../shared/bahttext'
 import { formatMoney as fmt } from '../../shared/money'
 import { FEATURES } from '../../shared/features'
+import SelectMenu from '../../components/SelectMenu'
 
 // The taxes on a document, one row each: a switch, the choices for that tax,
 // and what it comes to, side by side — so a row says what was set and what it
@@ -14,7 +15,13 @@ import { FEATURES } from '../../shared/features'
 const STANDARD_RETENTION = 5            // % — the usual ค่าประกันงาน held back
 
 const NUMBER_BOX = 'w-16 rounded-md border border-stone-200 bg-white px-2 py-1 text-right text-sm focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100'
-const SELECT_BOX = 'rounded-md border border-stone-200 bg-white px-2 py-1 text-sm focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100'
+const SELECT_BOX = 'w-24 rounded-md border border-stone-200 bg-white px-2 py-1 text-sm focus:border-clay-500 focus:outline-none focus:ring-2 focus:ring-clay-100'
+
+// The standard rates, and a rate set some other way shown (not pickable) so the box never reads wrong.
+const rateOptions = (rate: number) => [
+  ...WHT_PRESETS.map(r => ({ value: String(r), label: `${r}%` })),
+  ...(WHT_PRESETS.includes(rate) ? [] : [{ value: 'own', label: `${rate}%`, disabled: true }]),
+]
 
 function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) => void; label: string }) {
   return (
@@ -165,15 +172,13 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
         >
           {inTable.kind === 'all' ? (
             <span className="flex items-center gap-1.5">
-              <select
-                aria-label="อัตราหัก ณ ที่จ่ายทุกรายการ"
+              <SelectMenu
+                ariaLabel="อัตราหัก ณ ที่จ่ายทุกรายการ"
                 className={SELECT_BOX}
                 value={WHT_PRESETS.includes(inTable.rate) ? String(inTable.rate) : 'own'}
-                onChange={e => onItemsChange(withWhtRate(items, Number(e.target.value)))}
-              >
-                {WHT_PRESETS.map(r => <option key={r} value={String(r)}>{r}%</option>)}
-                {!WHT_PRESETS.includes(inTable.rate) && <option value="own" disabled>{inTable.rate}%</option>}
-              </select>
+                onChange={v => onItemsChange(withWhtRate(items, Number(v)))}
+                options={rateOptions(inTable.rate)}
+              />
               <span className="text-xs text-stone-500">ทุกรายการ · เปลี่ยนเป็นรายการได้ในตาราง</span>
             </span>
           ) : (
@@ -197,39 +202,34 @@ export default function TaxPanel({ header, onHeaderChange, items, onItemsChange,
       >
         {whtByRow && lineWht.kind === 'all' ? (
           <span className="flex items-center gap-1.5">
-            <select
-              aria-label="อัตราหัก ณ ที่จ่าย"
+            <SelectMenu
+              ariaLabel="อัตราหัก ณ ที่จ่าย"
               className={SELECT_BOX}
               value={WHT_PRESETS.includes(lineWht.rate) ? String(lineWht.rate) : 'own'}
-              onChange={e => {
+              onChange={v => {
                 // the same rate for every line again: the document's rate
-                onHeaderChange({ ...header, whtRate: Number(e.target.value), whtScope: 'all' })
+                onHeaderChange({ ...header, whtRate: Number(v), whtScope: 'all' })
                 onItemsChange(withWhtRate(items, 0))
               }}
-            >
-              {WHT_PRESETS.map(r => <option key={r} value={String(r)}>{r}%</option>)}
-              {!WHT_PRESETS.includes(lineWht.rate) && <option value="own" disabled>{lineWht.rate}%</option>}
-            </select>
+              options={rateOptions(lineWht.rate)}
+            />
             <span className="text-xs text-stone-500">ทุกรายการ · เปลี่ยนเป็นรายการได้ในตาราง</span>
           </span>
         ) : whtByRow ? (
           <span className="text-xs text-stone-500">อัตราเลือกในแต่ละรายการ</span>
         ) : (
           <span className="flex items-center gap-1.5">
-            <select
-              aria-label="อัตราหัก ณ ที่จ่าย"
+            <SelectMenu
+              ariaLabel="อัตราหัก ณ ที่จ่าย"
               className={SELECT_BOX}
               value={whtChoice}
-              onChange={e => {
-                const v = e.target.value
+              onChange={v => {
                 if (v === 'other') { setWhtOther(''); return }
                 setWhtOther(null)
                 onHeaderChange({ ...header, whtRate: Number(v) })
               }}
-            >
-              {WHT_PRESETS.map(r => <option key={r} value={String(r)}>{r}%</option>)}
-              <option value="other">อื่นๆ</option>
-            </select>
+              options={[...WHT_PRESETS.map(r => ({ value: String(r), label: `${r}%` })), { value: 'other', label: 'อื่นๆ' }]}
+            />
             {whtChoice === 'other' && (
               <span className="flex items-center gap-1 text-sm text-stone-500">
                 <input

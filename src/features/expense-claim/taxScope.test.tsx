@@ -73,7 +73,7 @@ describe('choosing it on the document', () => {
     expect(within(vat).getByRole('radio', { name: 'บางรายการ' })).not.toBeChecked()
     // withholding has no such choice: every line at one rate, changed line by line in the table
     expect(screen.queryByRole('radiogroup', { name: 'ขอบเขตหัก ณ ที่จ่าย' })).toBeNull()
-    expect(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' })).toHaveValue('3')
+    expect(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' })).toHaveAttribute('data-value', '3')
   })
 
   it('offers no choice for a tax that is off', () => {
@@ -92,7 +92,7 @@ describe('choosing it on the document', () => {
   // ticked before that shows the document's rate.
   it('a column appears only for the tax charged by line', () => {
     show({ ...taxed, whtScope: 'rows' })
-    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' })).toHaveValue('3')
+    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' })).toHaveAttribute('data-value', '3')
     expect(screen.queryByRole('checkbox', { name: /^VAT 7% รายการ/ })).not.toBeInTheDocument()
   })
 

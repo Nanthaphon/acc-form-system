@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { pickOption } from '../../components/SelectMenu.testing'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import ExpenseClaimPreview from './ExpenseClaimPreview'
 import { adoptDocumentWht, computeRow, grandTotal, taxBases, taxHeader, taxSubtotal, taxSummary, whtInTable, whtLines, ROW_WHT_KEY, ROW_WHT_RATE_KEY } from './calc'
@@ -62,7 +63,7 @@ describe('withholding worked out in the table', () => {
   it('asks each line for its rate without switching withholding on, and shows what the table took below it', () => {
     const onItemsChange = vi.fn()
     const { container, unmount } = render(<ExpenseClaimForm header={header} items={[row('ค่าบริการ', 5000)]} columns={cols} onHeaderChange={vi.fn()} onItemsChange={onItemsChange} />)
-    fireEvent.change(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' }), { target: { value: '3' } })
+    pickOption(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' }), '3')
     expect(onItemsChange).toHaveBeenCalledWith([expect.objectContaining({ [ROW_WHT_RATE_KEY]: 3 })])
     // the withholding row under the table stays, showing what the table took
     const whtTaxRow = (c: HTMLElement) => [...c.querySelectorAll('[data-tax-row]')].find(r => r.textContent?.includes('หัก ณ ที่จ่าย'))
@@ -122,7 +123,7 @@ describe('withholding every line of the table at once', () => {
 
   it('changes every line\'s rate at once while they all share one', () => {
     const { onItemsChange } = show([row('ค่าบริการ', 5000, 3), row('ค่าขนส่ง', 2000, 3)])
-    fireEvent.change(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่ายทุกรายการ' }), { target: { value: '1' } })
+    pickOption(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่ายทุกรายการ' }), '1')
     expect(onItemsChange).toHaveBeenLastCalledWith([
       expect.objectContaining({ [ROW_WHT_RATE_KEY]: 1 }), expect.objectContaining({ [ROW_WHT_RATE_KEY]: 1 }),
     ])
@@ -161,15 +162,15 @@ describe('withholding on a form without a column for it', () => {
 
   it('shows the document\'s rate on every line, with what it comes to', () => {
     const { container } = render(<ExpenseClaimForm header={{ ...header, whtRate: 3 }} items={lines} columns={plain} onHeaderChange={vi.fn()} onItemsChange={vi.fn()} />)
-    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' })).toHaveValue('3')
-    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 2' })).toHaveValue('3')
+    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 1' })).toHaveAttribute('data-value', '3')
+    expect(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 2' })).toHaveAttribute('data-value', '3')
     expect([...container.querySelectorAll('[data-rate-amount]')].map(e => e.textContent)).toEqual(['150.00', '60.00'])
     expect(screen.queryByRole('radiogroup', { name: 'ขอบเขตหัก ณ ที่จ่าย' })).toBeNull()
   })
 
   it('one line given its own rate: every line keeps a rate of its own from then on', () => {
     const { onHeaderChange, onItemsChange } = show({ ...header, whtRate: 3 })
-    fireEvent.change(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 2' }), { target: { value: '1' } })
+    pickOption(screen.getByRole('combobox', { name: 'หัก ณ ที่จ่าย รายการที่ 2' }), '1')
     expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ whtScope: 'rows' }))
     expect(onItemsChange).toHaveBeenLastCalledWith([
       expect.objectContaining({ [ROW_WHT_RATE_KEY]: 3 }), expect.objectContaining({ [ROW_WHT_RATE_KEY]: 1 }),
@@ -178,7 +179,7 @@ describe('withholding on a form without a column for it', () => {
 
   it('back to one rate for every line from the switch\'s picker', () => {
     const { onHeaderChange, onItemsChange } = show({ ...header, whtRate: 3, whtScope: 'rows' }, lines.map(l => ({ ...l, [ROW_WHT_RATE_KEY]: 5 })))
-    fireEvent.change(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' }), { target: { value: '2' } })
+    pickOption(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' }), '2')
     expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ whtRate: 2, whtScope: 'all' }))
     expect(onItemsChange).toHaveBeenCalled()
   })

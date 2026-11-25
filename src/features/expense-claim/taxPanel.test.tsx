@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { pickOption, optionLabels } from '../../components/SelectMenu.testing'
 import ExpenseClaimForm from './ExpenseClaimForm'
 import { ROW_VAT_KEY } from './calc'
 import type { ExpenseHeader, ExpenseRow, FormColumn } from '../../types/schema'
@@ -76,15 +77,15 @@ describe('the tax panel', () => {
   it('offers the withholding rate as a list — the same rates the lines use', () => {
     const { onHeaderChange } = show({ ...base, whtRate: 3 })
     const rate = screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' })
-    expect(rate).toHaveValue('3')
-    expect(within(rate).getAllByRole('option').map(o => o.textContent)).toEqual(['1%', '2%', '3%', '5%', 'อื่นๆ'])
-    fireEvent.change(rate, { target: { value: '5' } })
+    expect(rate).toHaveAttribute('data-value', '3')
+    expect(optionLabels(rate)).toEqual(['1%', '2%', '3%', '5%', 'อื่นๆ'])
+    pickOption(rate, '5')
     expect(onHeaderChange).toHaveBeenCalledWith(expect.objectContaining({ whtRate: 5 }))
   })
 
   it('lets the document take a rate that is not on the list', () => {
     const { onHeaderChange } = show({ ...base, whtRate: 3 })
-    fireEvent.change(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' }), { target: { value: 'other' } })
+    pickOption(screen.getByRole('combobox', { name: 'อัตราหัก ณ ที่จ่าย' }), 'other')
     fireEvent.change(screen.getByRole('spinbutton', { name: 'อัตราหัก ณ ที่จ่าย (%)' }), { target: { value: '1.5' } })
     expect(onHeaderChange).toHaveBeenLastCalledWith(expect.objectContaining({ whtRate: 1.5 }))
   })

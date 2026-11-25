@@ -3,6 +3,7 @@ import { dbErrorMessage } from '../../shared/dbError'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useGoBack } from '../../shared/useGoBack'
+import SelectMenu from '../../components/SelectMenu'
 import { Ban, Check, Eye, FilePen, History, Lock, Pencil, Printer, Save } from 'lucide-react'
 import { PageHeader, ui } from '../../components/ui'
 import { useAuth } from '../../auth/AuthProvider'
@@ -444,16 +445,13 @@ export default function FormPage() {
         {!showPreview && (
           <div className={ui.card}>
             <label className={ui.label}>บริษัท</label>
-            <select
+            <SelectMenu
+              ariaLabel="บริษัท"
               className={ui.input}
               value={header.companyId}
-              onChange={e => setHeader({ ...header, companyId: e.target.value })}
-            >
-              {!header.companyId && <option value="">— เลือกบริษัท —</option>}
-              {companies.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+              onChange={v => setHeader({ ...header, companyId: v })}
+              options={[...(header.companyId ? [] : [{ value: '', label: 'เลือกบริษัท', disabled: true }]), ...companies.map(c => ({ value: c.id, label: c.name }))]}
+            />
           </div>
         )}
         {!showPreview && <ExpenseClaimForm header={header} items={items} onHeaderChange={setHeader} onItemsChange={setItems} companyName={company?.name} columns={settings.columns} categories={settings.categories} headerFields={settings.headerFields} introText={settings.introText} bodyText={settings.bodyText} requesterTitle={settings.requesterTitle} itemsTitle={settings.itemsTitle} showSeq={settings.showSeq !== false} seqWidth={seqColumnWidth(settings)} />}
